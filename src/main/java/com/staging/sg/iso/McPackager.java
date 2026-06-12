@@ -89,7 +89,7 @@ public class McPackager extends ISOBasePackager {
         fields[100]= new IFA_LLNUM    (11,   "RECEIVING INSTITUTION ID CODE");
         fields[102]= new IFA_LLCHAR   (28,   "ACCOUNT IDENTIFICATION 1");
         fields[103]= new IFA_LLCHAR   (28,   "ACCOUNT IDENTIFICATION 2");
-        fields[128]= new IFA_BITMAP   (8,    "MAC 2");
+        fields[127]= new IFA_BITMAP   (8,    "MAC 2");
 
         return fields;
     }
