@@ -13,7 +13,7 @@
         </encoder>
     </appender>
 
-    <!-- Acquiring log -->
+    <!-- Acquiring log file -->
     <appender name="FILE_ACQ" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/acquiring.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
@@ -25,7 +25,7 @@
         </encoder>
     </appender>
 
-    <!-- Issuing log -->
+    <!-- Issuing log file -->
     <appender name="FILE_ISS" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/issuing.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
@@ -37,7 +37,19 @@
         </encoder>
     </appender>
 
-    <!-- Application log -->
+    <!-- Network log file (key exchange + sign-on + echo) -->
+    <appender name="FILE_NET" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/network.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/network.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level — %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Application log file -->
     <appender name="FILE_APP" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${LOG_DIR}/application.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
@@ -49,13 +61,14 @@
         </encoder>
     </appender>
 
-    <!-- Acquiring logger -->
+    <!-- Acquiring logger — McNetworkManager + McKeyExchangeManager -->
     <logger name="com.staging.sg.acquirer" level="${LOG_LEVEL_ACQ}" additivity="false">
         <appender-ref ref="FILE_ACQ"/>
+        <appender-ref ref="FILE_NET"/>
         <appender-ref ref="CONSOLE"/>
     </logger>
 
-    <!-- Issuing logger -->
+    <!-- Issuing logger — McIssuer -->
     <logger name="com.staging.sg.issuer" level="${LOG_LEVEL_ISS}" additivity="false">
         <appender-ref ref="FILE_ISS"/>
         <appender-ref ref="CONSOLE"/>
