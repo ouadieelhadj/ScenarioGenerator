@@ -71,7 +71,7 @@ public class McPackager extends ISOBasePackager {
         fields[50] = new IF_CHAR      (3,    "CURRENCY CODE SETTLEMENT");
         fields[51] = new IF_CHAR      (3,    "CURRENCY CODE CARDHOLDER BILLING");
         fields[52] = new IFA_BINARY   (8,    "PIN DATA");
-        fields[53] = new IFA_NUMERIC  (16,   "SECURITY RELATED CONTROL INFO");
+        fields[53] = new IFA_LLLCHAR  (48,   "SECURITY RELATED CONTROL INFO");
         fields[54] = new IFA_LLLCHAR  (120,  "ADDITIONAL AMOUNTS");
         fields[55] = new IFA_LLLBINARY(255,  "ICC DATA EMV");
         fields[56] = new IFA_LLLCHAR  (999,  "RESERVED ISO");
