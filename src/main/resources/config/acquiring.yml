@@ -1,0 +1,29 @@
+# ═══════════════════════════════════════════════════════════
+# Acquiring Simulator Configuration — Mastercard
+# ═══════════════════════════════════════════════════════════
+mc:
+  acquirer:
+    mode: loopback
+    mas:
+      host: ${MAS_HOST:127.0.0.1}
+      port: ${MAS_PORT:8200}
+      timeout-seconds: 30
+    test-bin: "555555"
+    pan-length: 16
+
+  kek: ${KEK:0123456789ABCDEF0123456789ABCDEF}
+
+  network:
+    auto-signon: true
+    echo-interval-seconds: 60
+
+  hsm:
+    host: ${HSM_HOST:127.0.0.1}
+    port: ${HSM_PORT:1500}
+    timeout-seconds: 10
+    simulated: true
+    header: "0001"
+
+  log:
+    dir: logs
+    acquiring-level: DEBUG

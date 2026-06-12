@@ -1,0 +1,16 @@
+spring:
+  application:
+    name: scenario-generator
+  config:
+    import:
+      - classpath:config/acquiring.yml
+      - classpath:config/issuing.yml
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
