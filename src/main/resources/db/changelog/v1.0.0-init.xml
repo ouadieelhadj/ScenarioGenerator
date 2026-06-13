@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="v1.0.0-001-users" author="admin">
+        <createTable tableName="users">
+            <column name="id"         type="BIGINT" autoIncrement="true"><constraints primaryKey="true"/></column>
+            <column name="login"      type="VARCHAR(50)"><constraints unique="true" nullable="false"/></column>
+            <column name="password"   type="VARCHAR(255)"><constraints nullable="false"/></column>
+            <column name="email"      type="VARCHAR(100)"/>
+            <column name="role"       type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="active"     type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="created_by" type="VARCHAR(50)"/>
+            <column name="last_login" type="TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v1.0.0-002-message-types" author="admin">
+        <createTable tableName="message_types">
+            <column name="id"               type="BIGINT" autoIncrement="true"><constraints primaryKey="true"/></column>
+            <column name="code"             type="VARCHAR(4)"><constraints nullable="false"/></column>
+            <column name="name"             type="VARCHAR(100)"><constraints nullable="false"/></column>
+            <column name="category"         type="VARCHAR(50)"><constraints nullable="false"/></column>
+            <column name="description"      type="VARCHAR(255)"/>
+            <column name="processing_codes" type="TEXT"/>
+            <column name="active"           type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at"       type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="v1.0.0-003-tests" author="admin">
+        <createTable tableName="tests">
+            <column name="id"              type="BIGINT" autoIncrement="true"><constraints primaryKey="true"/></column>
+            <column name="name"            type="VARCHAR(100)"><constraints nullable="false"/></column>
+            <column name="description"     type="VARCHAR(255)"/>
+            <column name="category"        type="VARCHAR(50)"/>
+            <column name="message_type_id" type="BIGINT"/>
+            <column name="config"          type="TEXT"/>
+            <column name="expected_de039"  type="VARCHAR(2)"/>
+            <column name="active"          type="BOOLEAN" defaultValueBoolean="true"/>
+            <column name="created_at"      type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="created_by"      type="BIGINT"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="tests" baseColumnNames="message_type_id"
+            referencedTableName="message_types" referencedColumnNames="id"
+            constraintName="fk_tests_message_type"/>
+        <addForeignKeyConstraint baseTableName="tests" baseColumnNames="created_by"
+            referencedTableName="users" referencedColumnNames="id"
+            constraintName="fk_tests_created_by"/>
+    </changeSet>
+
+    <changeSet id="v1.0.0-004-tps-steps" author="admin">
+        <createTable tableName="tps_steps">
+            <column name="id"            type="BIGINT" autoIncrement="true"><constraints primaryKey="true"/></column>
+            <column name="test_id"       type="BIGINT"><constraints nullable="false"/></column>
+            <column name="step_order"    type="INTEGER"><constraints nullable="false"/></column>
+            <column name="start_seconds" type="INTEGER"><constraints nullable="false"/></column>
+            <column name="end_seconds"   type="INTEGER"><constraints nullable="false"/></column>
+            <column name="tps_value"     type="INTEGER"><constraints nullable="false"/></column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="tps_steps" baseColumnNames="test_id"
+            referencedTableName="tests" referencedColumnNames="id"
+            constraintName="fk_tps_steps_test" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="v1.0.0-005-user-tests" author="admin">
+        <createTable tableName="user_tests">
+            <column name="user_id"     type="BIGINT"><constraints nullable="false"/></column>
+            <column name="test_id"     type="BIGINT"><constraints nullable="false"/></column>
+            <column name="assigned_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="assigned_by" type="BIGINT"/>
+        </createTable>
+        <addPrimaryKey tableName="user_tests" columnNames="user_id,test_id"/>
+        <addForeignKeyConstraint baseTableName="user_tests" baseColumnNames="user_id"
+            referencedTableName="users" referencedColumnNames="id"
+            constraintName="fk_user_tests_user" onDelete="CASCADE"/>
+        <addForeignKeyConstraint baseTableName="user_tests" baseColumnNames="test_id"
+            referencedTableName="tests" referencedColumnNames="id"
+            constraintName="fk_user_tests_test" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="v1.0.0-006-executions" author="admin">
+        <createTable tableName="executions">
+            <column name="id"                type="BIGINT" autoIncrement="true"><constraints primaryKey="true"/></column>
+            <column name="user_id"           type="BIGINT"><constraints nullable="false"/></column>
+            <column name="test_id"           type="BIGINT"><constraints nullable="false"/></column>
+            <column name="mode"              type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="status"            type="VARCHAR(20)"><constraints nullable="false"/></column>
+            <column name="tps_target"        type="INTEGER"/>
+            <column name="duration_seconds"  type="INTEGER"/>
+            <column name="tx_total"          type="INTEGER" defaultValueNumeric="0"/>
+            <column name="tx_sent"           type="INTEGER" defaultValueNumeric="0"/>
+            <column name="tx_approved"       type="INTEGER" defaultValueNumeric="0"/>
+            <column name="tx_declined"       type="INTEGER" defaultValueNumeric="0"/>
+            <column name="tps_actual_avg"    type="DECIMAL(10,2)"/>
+            <column name="response_time_avg" type="DECIMAL(10,2)"/>
+            <column name="response_time_min" type="DECIMAL(10,2)"/>
+            <column name="response_time_max" type="DECIMAL(10,2)"/>
+            <column name="response_time_p95" type="DECIMAL(10,2)"/>
+            <column name="response_time_p99" type="DECIMAL(10,2)"/>
+            <column name="started_at"        type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+            <column name="ended_at"          type="TIMESTAMP"/>
+            <column name="report_dir"        type="VARCHAR(255)"/>
+            <column name="report_pdf"        type="VARCHAR(255)"/>
+            <column name="report_excel"      type="VARCHAR(255)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="executions" baseColumnNames="user_id"
+            referencedTableName="users" referencedColumnNames="id"
+            constraintName="fk_executions_user"/>
+        <addForeignKeyConstraint baseTableName="executions" baseColumnNames="test_id"
+            referencedTableName="tests" referencedColumnNames="id"
+            constraintName="fk_executions_test"/>
+    </changeSet>
+
+    <changeSet id="v1.0.0-007-results" author="admin">
+        <createTable tableName="results">
+            <column name="id"              type="BIGINT" autoIncrement="true"><constraints primaryKey="true"/></column>
+            <column name="execution_id"    type="BIGINT"><constraints nullable="false"/></column>
+            <column name="pan_masked"      type="VARCHAR(20)"/>
+            <column name="de039"           type="VARCHAR(2)"/>
+            <column name="de038_auth_code" type="VARCHAR(6)"/>
+            <column name="approved"        type="BOOLEAN"/>
+            <column name="duration_ms"     type="INTEGER"/>
+            <column name="request_hex"     type="TEXT"/>
+            <column name="response_hex"    type="TEXT"/>
+            <column name="executed_at"     type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="results" baseColumnNames="execution_id"
+            referencedTableName="executions" referencedColumnNames="id"
+            constraintName="fk_results_execution" onDelete="CASCADE"/>
+    </changeSet>
+
+    <changeSet id="v1.0.0-008-indexes" author="admin">
+        <createIndex tableName="executions" indexName="idx_executions_user">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex tableName="executions" indexName="idx_executions_status">
+            <column name="status"/>
+        </createIndex>
+        <createIndex tableName="results" indexName="idx_results_execution">
+            <column name="execution_id"/>
+        </createIndex>
+        <createIndex tableName="results" indexName="idx_results_de039">
+            <column name="de039"/>
+        </createIndex>
+    </changeSet>
+
+    <changeSet id="v1.0.0-009-init-data" author="admin">
+        <!-- Admin par défaut password : Admin123! -->
+        <insert tableName="users">
+            <column name="login"      value="admin"/>
+            <column name="password"   value="$2a$12$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi"/>
+            <column name="email"      value="admin@staging.com"/>
+            <column name="role"       value="ADMIN"/>
+            <column name="active"     valueBoolean="true"/>
+            <column name="created_by" value="system"/>
+        </insert>
+
+        <!-- Types de messages -->
+        <insert tableName="message_types">
+            <column name="code"             value="0100"/>
+            <column name="name"             value="Authorization Request"/>
+            <column name="category"         value="AUTHORIZATION"/>
+            <column name="description"      value="Mastercard authorization request"/>
+            <column name="processing_codes" value='[{"code":"000000","label":"Purchase"},{"code":"010000","label":"Cash Advance"},{"code":"200000","label":"Refund"},{"code":"310000","label":"Balance Inquiry"},{"code":"340000","label":"Mini Statement"},{"code":"090000","label":"Cashback"}]'/>
+            <column name="active"           valueBoolean="true"/>
+        </insert>
+        <insert tableName="message_types">
+            <column name="code"             value="0200"/>
+            <column name="name"             value="Financial Transaction Request"/>
+            <column name="category"         value="FINANCIAL"/>
+            <column name="description"      value="Financial transaction request"/>
+            <column name="processing_codes" value='[{"code":"010000","label":"Cash Withdrawal"},{"code":"000000","label":"Purchase"}]'/>
+            <column name="active"           valueBoolean="true"/>
+        </insert>
+        <insert tableName="message_types">
+            <column name="code"             value="0400"/>
+            <column name="name"             value="Reversal Request"/>
+            <column name="category"         value="REVERSAL"/>
+            <column name="description"      value="Transaction reversal request"/>
+            <column name="processing_codes" value='[{"code":"000000","label":"Purchase Reversal"},{"code":"010000","label":"Cash Reversal"}]'/>
+            <column name="active"           valueBoolean="true"/>
+        </insert>
+        <insert tableName="message_types">
+            <column name="code"             value="0800"/>
+            <column name="name"             value="Network Management Request"/>
+            <column name="category"         value="NETWORK"/>
+            <column name="description"      value="Network management message"/>
+            <column name="processing_codes" value='[{"code":"301","label":"Sign-on"},{"code":"302","label":"Echo Test"}]'/>
+            <column name="active"           valueBoolean="true"/>
+        </insert>
+        <insert tableName="message_types">
+            <column name="code"             value="0820"/>
+            <column name="name"             value="Key Exchange Request"/>
+            <column name="category"         value="NETWORK"/>
+            <column name="description"      value="Key exchange message"/>
+            <column name="processing_codes" value='[{"code":"101","label":"ZMK Exchange"},{"code":"102","label":"ZPK Exchange"},{"code":"103","label":"ZAK Exchange"}]'/>
+            <column name="active"           valueBoolean="true"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog>

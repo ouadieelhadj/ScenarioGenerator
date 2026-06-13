@@ -6,6 +6,27 @@ spring:
       - classpath:config/acquiring.yml
       - classpath:config/issuing.yml
 
+  # ── Database ────────────────────────────────────────────────
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scenariogenerator
+    username: scenario_user
+    password: postgres123
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # ── Liquibase ────────────────────────────────────────────────
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.xml
+
 server:
   port: 8080
 
@@ -14,3 +35,30 @@ management:
     web:
       exposure:
         include: health, info
+
+# ── JWT ──────────────────────────────────────────────────────
+jwt:
+  secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
+  expiration-ms: 86400000   # 24 heures
+
+# ── Reports ──────────────────────────────────────────────────
+reports:
+  base-dir: ${REPORTS_DIR:D:/MoneyCore/ScenarioGenerator/reports}
+  generate-pdf: true
+  generate-excel: true
+  retention-days: 30
+
+# ── TPS ──────────────────────────────────────────────────────
+tps:
+  default: 10
+  max: 100
+  thread-pool-size: 20
+
+# ── App ──────────────────────────────────────────────────────
+app:
+  admin:
+    login: admin
+    password: Admin123!
+    email: admin@staging.com
+  cors:
+    allowed-origins: http://localhost:4200
