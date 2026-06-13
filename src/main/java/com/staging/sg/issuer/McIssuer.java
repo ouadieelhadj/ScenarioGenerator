@@ -123,10 +123,10 @@ public class McIssuer {
         // Step 2 : Decrypt and log PIN
         if (pinDecryptLog && request.hasField(52) && hsm.getSessionZpk() != null) {
             try {
-                byte[] pinBlock    = request.getBytes(52);
-                byte[] decrypted   = hsm.decryptPinBlock(pinBlock, hsm.getSessionZpk());
-                String pan         = net.safeGet(request, 2);
-                String pin         = extractPin(decrypted, pan);
+                byte[] pinBlock  = request.getBytes(52);
+                byte[] decrypted = hsm.decryptPinBlock(pinBlock, hsm.getSessionZpk());
+                String pan       = net.safeGet(request, 2);
+                String pin       = extractPin(decrypted, pan);
                 log.info("[ISSUING] PIN decrypted : {}", pin);
             } catch (Exception e) {
                 log.warn("[ISSUING] PIN decryption failed : {}", e.getMessage());
@@ -144,7 +144,6 @@ public class McIssuer {
         ISOMsg response = new ISOMsg();
         response.setPackager(net.getPackager());
         response.setMTI("0110");
-        // Echo fields
         int[] echo = {2,3,4,7,11,12,13,18,22,25,37,41,42,49};
         for (int f : echo)
             if (request.hasField(f)) response.set(f, request.getString(f));
@@ -177,8 +176,8 @@ public class McIssuer {
 
         if (request.hasField(53)) {
             try {
-                String de53        = request.getString(53);
-                String kcv         = de53.substring(0, 6);
+                String de53         = request.getString(53);
+                String kcv          = de53.substring(0, 6);
                 byte[] encryptedKey = hsm.hexToBytes(de53.substring(6));
                 switch (fc != null ? fc : "") {
                     case "101" -> {
@@ -243,16 +242,51 @@ public class McIssuer {
         return code.substring(0, Math.min(6, code.length())).toUpperCase();
     }
 
+    /**
+     * Extract clear PIN from decrypted PIN Block (ISO Format 0).
+     *
+     * ISO Format 0 PIN Block :
+     *   Encrypted PIN Block = PIN Block XOR PAN Block
+     *   PIN Block = 0 | PIN length | PIN digits | padding F
+     *   PAN Block = 0000 | 12 rightmost digits of PAN (excl. check digit)
+     *
+     * To extract PIN :
+     *   Clear PIN Block = Decrypted PIN Block XOR PAN Block
+     *   PIN = Clear PIN Block [2 .. 2+pinLen]
+     */
     private String extractPin(byte[] decryptedPinBlock, String pan) {
-        // ISO Format 0 : PIN Block XOR PAN Block
-        // PAN Block = 0000 + rightmost 12 digits of PAN (excluding check digit)
         try {
-            String pb  = hsm.bytesToHex(decryptedPinBlock);
-            int pinLen = Integer.parseInt(pb.substring(1, 2), 16);
-            return pb.substring(2, 2 + pinLen);
+            // Build PAN Block : 0000 + 12 rightmost digits of PAN excluding check digit
+            String panDigits = pan.replaceAll("\\D", "");
+            String panBlock  = "0000" + panDigits.substring(panDigits.length() - 13, panDigits.length() - 1);
+            byte[] panBlockBytes = hexToBytes(panBlock);
+
+            // XOR decrypted PIN Block with PAN Block to get clear PIN Block
+            byte[] clearPinBlock = new byte[8];
+            for (int i = 0; i < 8; i++)
+                clearPinBlock[i] = (byte)(decryptedPinBlock[i] ^ panBlockBytes[i]);
+
+            // Extract PIN from clear PIN Block
+            // Format : 0 | PIN length (1 digit) | PIN digits | padding F
+            String pb     = hsm.bytesToHex(clearPinBlock);
+            int    pinLen = Integer.parseInt(pb.substring(1, 2), 16);
+            String pin    = pb.substring(2, 2 + pinLen);
+
+            log.info("[ISSUING] PIN extracted — length={} value={}", pinLen, pin);
+            return pin;
         } catch (Exception e) {
+            log.warn("[ISSUING] PIN extraction failed : {}", e.getMessage());
             return "????";
         }
+    }
+
+    private byte[] hexToBytes(String hex) {
+        int len = hex.length();
+        byte[] data = new byte[len / 2];
+        for (int i = 0; i < len; i += 2)
+            data[i/2] = (byte)((Character.digit(hex.charAt(i), 16) << 4)
+                    + Character.digit(hex.charAt(i+1), 16));
+        return data;
     }
 
     private void logIsoMsg(String direction, String type, ISOMsg msg) {
