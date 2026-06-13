@@ -1,0 +1,13 @@
+package com.staging.sg.repository;
+
+import com.staging.sg.entity.TpsStep;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Repository
+public interface TpsStepRepository extends JpaRepository<TpsStep, Long> {
+    List<TpsStep> findByTestIdOrderByStepOrderAsc(Long testId);
+    void          deleteByTestId(Long testId);
+}
