@@ -1,11 +1,11 @@
 package com.staging.sg.issuer;
 
 import com.staging.sg.hsm.ThalesHsmService;
-import com.staging.sg.iso.McPackager;
 import com.staging.sg.iso.NetworkUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.jpos.iso.ISOMsg;
+import org.jpos.iso.ISOUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,13 +18,6 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicLong;
 
-/**
- * Issuing Simulator — Mastercard.
- * Listens on port 8200.
- * Handles :
- *   0820 — Key Exchange (FC=101 ZMK, FC=102 ZPK, FC=103 ZAK)
- *   0800 — Network Management (FC=301 Sign-on, FC=302 Echo)
- */
 @Service
 public class McIssuer {
 
@@ -50,7 +43,7 @@ public class McIssuer {
         serverThread = new Thread(this::runServer, "mc-issuer-server");
         serverThread.setDaemon(true);
         serverThread.start();
-        log.info("[ISSUING] ISOServer started — listening on port {}", issuerPort);
+        log.info("[ISSUING] ISOServer started — port {}", issuerPort);
     }
 
     @PreDestroy
@@ -61,8 +54,6 @@ public class McIssuer {
     }
 
     public long getMessageCount() { return msgCount.get(); }
-
-    // ── Server loop ──────────────────────────────────────────
 
     private void runServer() {
         try {
@@ -81,8 +72,6 @@ public class McIssuer {
         }
     }
 
-    // ── Connection handler ───────────────────────────────────
-
     private void handleConnection(Socket socket) {
         try {
             DataInputStream  in  = new DataInputStream(socket.getInputStream());
@@ -90,7 +79,6 @@ public class McIssuer {
 
             ISOMsg request = net.receive(in);
             String mti = request.getMTI();
-            log.debug("[ISSUING] Received MTI={}", mti);
 
             switch (mti) {
                 case "0820" -> handleKeyExchange(request, out);
@@ -107,11 +95,9 @@ public class McIssuer {
 
     // ── Key Exchange 0820 ────────────────────────────────────
 
-    private void handleKeyExchange(ISOMsg request,
-                                    DataOutputStream out) throws Exception {
+    private void handleKeyExchange(ISOMsg request, DataOutputStream out) throws Exception {
         String fc   = net.safeGet(request, 70);
         String stan = net.safeGet(request, 11);
-
         String keyName = switch (fc != null ? fc : "") {
             case "101" -> "ZMK{KEK}";
             case "102" -> "ZPK{ZMK}";
@@ -119,16 +105,14 @@ public class McIssuer {
             default    -> "KEY-" + fc;
         };
 
-        log.info("[ISSUING] 0820 Key-Exchange {} received — STAN={}", keyName, stan);
+        logIsoMsg("RECEIVED", "0820 Key-Exchange " + keyName, request);
 
         // Decrypt and store key from DE053
         if (request.hasField(53)) {
             try {
-                String de53 = request.getString(53);
-                // DE053 format : KCV(6) + encrypted key hex
+                String de53        = request.getString(53);
                 String kcv         = de53.substring(0, 6);
                 byte[] encryptedKey = hsm.hexToBytes(de53.substring(6));
-
                 switch (fc != null ? fc : "") {
                     case "101" -> {
                         byte[] zmk = hsm.decryptUnderKek(encryptedKey);
@@ -151,7 +135,7 @@ public class McIssuer {
             }
         }
 
-        // Send 0830 response
+        // Build 0830
         ISOMsg response = new ISOMsg();
         response.setPackager(net.getPackager());
         response.setMTI("0830");
@@ -160,24 +144,22 @@ public class McIssuer {
         response.set(39, "00");
         response.set(70, fc);
 
+        logIsoMsg("SENT", "0830 Key-Exchange Response " + keyName, response);
         net.send(out, response);
-        log.info("[ISSUING] 0830 Key-Exchange Response sent — {} DE39=00", keyName);
     }
 
     // ── Network Message 0800 ─────────────────────────────────
 
-    private void handleNetworkMessage(ISOMsg request,
-                                       DataOutputStream out) throws Exception {
+    private void handleNetworkMessage(ISOMsg request, DataOutputStream out) throws Exception {
         String fc   = net.safeGet(request, 70);
         String stan = net.safeGet(request, 11);
-
         String type = switch (fc != null ? fc : "") {
             case "301" -> "Sign-on";
             case "302" -> "Echo Test";
             default    -> "Network-" + fc;
         };
 
-        log.info("[ISSUING] 0800 {} received — STAN={}", type, stan);
+        logIsoMsg("RECEIVED", "0800 " + type, request);
 
         ISOMsg response = new ISOMsg();
         response.setPackager(net.getPackager());
@@ -187,7 +169,30 @@ public class McIssuer {
         response.set(39, "00");
         response.set(70, fc);
 
+        logIsoMsg("SENT", "0810 " + type + " Response", response);
         net.send(out, response);
-        log.info("[ISSUING] 0810 {} Response sent — DE39=00", type);
+    }
+
+    // ── Log ISO message ──────────────────────────────────────
+
+    private void logIsoMsg(String direction, String type, ISOMsg msg) {
+        try {
+            StringBuilder sb = new StringBuilder();
+            sb.append("\n┌─────────────────────────────────────────────────\n");
+            sb.append(String.format("│ [ISSUING] %s — %s\n", direction, type));
+            sb.append("├─────────────────────────────────────────────────\n");
+            try { sb.append(String.format("│ MTI                   : %s\n", msg.getMTI())); } catch (Exception ignored) {}
+            if (msg.hasField(7))  sb.append(String.format("│ DE007 Date/Time       : %s\n", msg.getString(7)));
+            if (msg.hasField(11)) sb.append(String.format("│ DE011 STAN            : %s\n", msg.getString(11)));
+            if (msg.hasField(39)) sb.append(String.format("│ DE039 Response Code   : %s\n", msg.getString(39)));
+            if (msg.hasField(53)) sb.append(String.format("│ DE053 Security Info   : %s\n", msg.getString(53).substring(0, Math.min(12, msg.getString(53).length())) + "..."));
+            if (msg.hasField(70)) sb.append(String.format("│ DE070 Network Code    : %s\n", msg.getString(70)));
+            sb.append("├─────────────────────────────────────────────────\n");
+            sb.append(String.format("│ HEX : %s\n", ISOUtil.hexString(msg.pack())));
+            sb.append("└─────────────────────────────────────────────────");
+            log.info(sb.toString());
+        } catch (Exception e) {
+            log.warn("[ISSUING] Error logging ISO message : {}", e.getMessage());
+        }
     }
 }
