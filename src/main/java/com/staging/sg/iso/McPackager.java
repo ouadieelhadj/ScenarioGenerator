@@ -82,6 +82,7 @@ public class McPackager extends ISOBasePackager {
         fields[61] = new IFA_LLLCHAR  (999,  "RESERVED PRIVATE 2");
         fields[62] = new IFA_LLLCHAR  (999,  "RESERVED PRIVATE 3");
         fields[63] = new IFA_LLLCHAR  (999,  "RESERVED PRIVATE 4");
+        fields[64] = new IFA_BINARY   (8,    "MESSAGE AUTHENTICATION CODE");
         fields[70] = new IFA_NUMERIC  (3,    "NETWORK MANAGEMENT CODE");
         fields[90] = new IFA_NUMERIC  (42,   "ORIGINAL DATA ELEMENTS");
         fields[95] = new IF_CHAR      (42,   "REPLACEMENT AMOUNTS");
