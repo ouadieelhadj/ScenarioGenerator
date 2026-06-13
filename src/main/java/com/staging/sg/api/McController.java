@@ -1,5 +1,8 @@
 package com.staging.sg.api;
 
+import com.staging.sg.acquirer.McAuthRequest;
+import com.staging.sg.acquirer.McAuthResult;
+import com.staging.sg.acquirer.McAcquirer;
 import com.staging.sg.acquirer.McKeyExchangeResult;
 import com.staging.sg.acquirer.McNetworkManager;
 import com.staging.sg.acquirer.McNetworkResult;
@@ -21,10 +24,14 @@ public class McController {
 
     private final McNetworkManager networkManager;
     private final McIssuer         issuer;
+    private final McAcquirer       acquirer;
 
-    public McController(McNetworkManager networkManager, McIssuer issuer) {
+    public McController(McNetworkManager networkManager,
+                        McIssuer issuer,
+                        McAcquirer acquirer) {
         this.networkManager = networkManager;
         this.issuer         = issuer;
+        this.acquirer       = acquirer;
     }
 
     // GET /api/status
@@ -38,12 +45,28 @@ public class McController {
         body.put("keysExchanged", networkManager.isKeysExchanged());
         body.put("signedOn",      networkManager.isSignedOn());
         body.put("endpoints", Map.of(
+                "authorize",     "POST /api/mc/authorize",
                 "keyExchange",   "POST /api/mc/network/key-exchange",
                 "signon",        "POST /api/mc/network/signon",
                 "echo",          "POST /api/mc/network/echo",
                 "networkStatus", "GET  /api/mc/network/status"
         ));
         return ResponseEntity.ok(body);
+    }
+
+    // POST /api/mc/authorize
+    @PostMapping("/mc/authorize")
+    public ResponseEntity<?> authorize(
+            @RequestBody(required = false) McAuthRequest request) {
+        if (request == null) request = new McAuthRequest();
+        try {
+            McAuthResult result = acquirer.authorize(request);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("[API] Authorization error : {}", e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
     // POST /api/mc/network/key-exchange
