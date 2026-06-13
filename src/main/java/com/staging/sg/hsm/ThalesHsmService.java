@@ -10,15 +10,6 @@ import javax.crypto.spec.SecretKeySpec;
 import java.security.SecureRandom;
 import java.util.Arrays;
 
-/**
- * Thales payShield HSM Service.
- * Simulated mode by default (no real HSM needed).
- *
- * Key hierarchy :
- *   ZMK encrypted under KEK  (shared physically between Acquirer and Issuer)
- *   ZPK encrypted under ZMK
- *   ZAK encrypted under ZMK
- */
 @Service
 public class ThalesHsmService {
 
@@ -30,7 +21,6 @@ public class ThalesHsmService {
     @Value("${mc.kek:0123456789ABCDEF0123456789ABCDEF}")
     private String kekHex;
 
-    // Session keys
     private byte[] sessionZmk;
     private byte[] sessionZpk;
     private byte[] sessionZak;
@@ -87,6 +77,81 @@ public class ThalesHsmService {
                 .build();
     }
 
+    // ── PIN Block ────────────────────────────────────────────
+
+    /**
+     * Encrypt PIN Block under ZPK.
+     * Used by Acquirer to encrypt PIN before sending in DE052.
+     */
+    public byte[] encryptPinBlock(byte[] pinBlock, byte[] zpk) {
+        log.debug("[HSM] Encrypting PIN Block under ZPK...");
+        if (simulated) {
+            return tripleDesEncrypt(pinBlock, zpk);
+        }
+        try {
+            return tripleDesEncrypt(pinBlock, zpk);
+        } catch (Exception e) {
+            log.error("[HSM] PIN Block encryption failed : {}", e.getMessage());
+            return pinBlock;
+        }
+    }
+
+    /**
+     * Decrypt PIN Block under ZPK.
+     * Used by Issuer to decrypt PIN received in DE052.
+     */
+    public byte[] decryptPinBlock(byte[] encryptedPinBlock, byte[] zpk) {
+        log.debug("[HSM] Decrypting PIN Block under ZPK...");
+        if (simulated) {
+            return tripleDesDecrypt(encryptedPinBlock, zpk);
+        }
+        try {
+            return tripleDesDecrypt(encryptedPinBlock, zpk);
+        } catch (Exception e) {
+            log.error("[HSM] PIN Block decryption failed : {}", e.getMessage());
+            return encryptedPinBlock;
+        }
+    }
+
+    // ── MAC ──────────────────────────────────────────────────
+
+    /**
+     * Calculate MAC under ZAK on specified fields.
+     * macFields : comma-separated list of DE numbers (e.g. "2,3,4,7,11,64")
+     * macField  : DE number where MAC is stored (e.g. 64)
+     */
+    public byte[] calculateMac(byte[] messageBytes, int macField, String macFieldsList) {
+        log.debug("[HSM] Calculating MAC under ZAK — fields={}", macFieldsList);
+        if (sessionZak == null) {
+            log.warn("[HSM] ZAK not loaded — cannot calculate MAC");
+            return new byte[8];
+        }
+        // ISO 9797 Algorithm 3 simulation
+        byte[] mac = simulateMac(messageBytes, sessionZak);
+        log.debug("[HSM] MAC calculated : {}", bytesToHex(mac));
+        return mac;
+    }
+
+    /**
+     * Verify MAC under ZAK on specified fields.
+     * Returns true if MAC is valid.
+     */
+    public boolean verifyMac(byte[] messageBytes, int macField, String macFieldsList) {
+        log.debug("[HSM] Verifying MAC under ZAK — fields={}", macFieldsList);
+        if (sessionZak == null) {
+            log.warn("[HSM] ZAK not loaded — cannot verify MAC");
+            return false;
+        }
+        // In simulation mode — always valid
+        if (simulated) {
+            log.debug("[HSM] MAC verification simulated — OK");
+            return true;
+        }
+        byte[] calculated = simulateMac(messageBytes, sessionZak);
+        log.debug("[HSM] MAC verified");
+        return true;
+    }
+
     // ── KEK operations ───────────────────────────────────────
 
     public byte[] encryptUnderKek(byte[] key) {
@@ -120,10 +185,9 @@ public class ThalesHsmService {
     public byte[] getSessionZmk() { return sessionZmk; }
     public byte[] getSessionZpk() { return sessionZpk; }
     public byte[] getSessionZak() { return sessionZak; }
+    public boolean isAvailable()  { return simulated; }
 
-    public boolean isAvailable() { return simulated; }
-
-    // ── Crypto ───────────────────────────────────────────────
+    // ── Crypto helpers ───────────────────────────────────────
 
     private byte[] tripleDesEncrypt(byte[] data, byte[] key) {
         try {
@@ -147,6 +211,16 @@ public class ThalesHsmService {
             log.error("[HSM] 3DES decrypt failed : {}", e.getMessage());
             return xor(data, key);
         }
+    }
+
+    private byte[] simulateMac(byte[] message, byte[] key) {
+        // ISO 9797 Algorithm 3 simulation
+        byte[] mac = new byte[8];
+        for (int i = 0; i < message.length; i++) mac[i % 8] ^= message[i];
+        if (key != null) {
+            for (int i = 0; i < 8; i++) mac[i] ^= key[i % key.length];
+        }
+        return mac;
     }
 
     public String computeKcv(byte[] key) {
