@@ -244,6 +244,8 @@ public class McIssuer {
     }
 
     private String extractPin(byte[] decryptedPinBlock, String pan) {
+        // ISO Format 0 : PIN Block XOR PAN Block
+        // PAN Block = 0000 + rightmost 12 digits of PAN (excluding check digit)
         try {
             String pb  = hsm.bytesToHex(decryptedPinBlock);
             int pinLen = Integer.parseInt(pb.substring(1, 2), 16);
