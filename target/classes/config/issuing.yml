@@ -1,0 +1,25 @@
+# ═══════════════════════════════════════════════════════════
+# Issuing Simulator Configuration — Mastercard
+# ═══════════════════════════════════════════════════════════
+mc:
+  issuer:
+    port: ${ISSUER_PORT:8200}
+    decision-mode: approve-all
+    rules:
+      max-amount: 500000
+      block-mcc:
+        - "7995"
+        - "6051"
+    force-response-code: ""
+
+  kek: ${KEK:0123456789ABCDEF0123456789ABCDEF}
+
+  hsm:
+    host: ${HSM_HOST:127.0.0.1}
+    port: ${HSM_PORT:1500}
+    timeout-seconds: 10
+    simulated: true
+    header: "0001"
+
+  log:
+    issuing-level: DEBUG

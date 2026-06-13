@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+
+    <springProperty name="LOG_LEVEL_ACQ" source="mc.log.acquiring-level" defaultValue="DEBUG"/>
+    <springProperty name="LOG_LEVEL_ISS" source="mc.log.issuing-level"   defaultValue="DEBUG"/>
+    <springProperty name="LOG_LEVEL_APP" source="mc.log.app-level"       defaultValue="INFO"/>
+    <springProperty name="LOG_DIR"       source="mc.log.dir"             defaultValue="logs"/>
+
+    <!-- Console -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss.SSS} %-5level %logger{36} — %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Acquiring log file -->
+    <appender name="FILE_ACQ" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/acquiring.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/acquiring.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level — %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Issuing log file -->
+    <appender name="FILE_ISS" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/issuing.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/issuing.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level — %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Network log file (key exchange + sign-on + echo) -->
+    <appender name="FILE_NET" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/network.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/network.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level — %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Application log file -->
+    <appender name="FILE_APP" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_DIR}/application.log</file>
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_DIR}/application.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>7</maxHistory>
+        </rollingPolicy>
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} — %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Acquiring logger — McNetworkManager + McKeyExchangeManager -->
+    <logger name="com.staging.sg.acquirer" level="${LOG_LEVEL_ACQ}" additivity="false">
+        <appender-ref ref="FILE_ACQ"/>
+        <appender-ref ref="FILE_NET"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <!-- Issuing logger — McIssuer -->
+    <logger name="com.staging.sg.issuer" level="${LOG_LEVEL_ISS}" additivity="false">
+        <appender-ref ref="FILE_ISS"/>
+        <appender-ref ref="CONSOLE"/>
+    </logger>
+
+    <!-- Root logger -->
+    <root level="${LOG_LEVEL_APP}">
+        <appender-ref ref="FILE_APP"/>
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>

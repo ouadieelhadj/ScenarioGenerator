@@ -1,0 +1,120 @@
+2026-06-13 12:34:49.350 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Starting ScenarioGeneratorApplication using Java 26.0.1 with PID 8912 (D:\MoneyCore\ScenarioGenerator\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-13 12:34:49.361 [main] INFO  c.s.sg.ScenarioGeneratorApplication — No active profile set, falling back to 1 default profile: "default"
+2026-06-13 12:34:51.574 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat initialized with port 8080 (http)
+2026-06-13 12:34:51.604 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Initializing ProtocolHandler ["http-nio-8080"]
+2026-06-13 12:34:51.615 [main] INFO  o.a.catalina.core.StandardService — Starting service [Tomcat]
+2026-06-13 12:34:51.618 [main] INFO  o.a.catalina.core.StandardEngine — Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-13 12:34:51.856 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring embedded WebApplicationContext
+2026-06-13 12:34:51.858 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext — Root WebApplicationContext: initialization completed in 2401 ms
+2026-06-13 12:34:52.834 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver — Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-13 12:34:52.898 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Starting ProtocolHandler ["http-nio-8080"]
+2026-06-13 12:34:52.925 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat started on port 8080 (http) with context path ''
+2026-06-13 12:34:52.941 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Started ScenarioGeneratorApplication in 4.743 seconds (process running for 6.407)
+2026-06-13 12:34:53.124 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-13 12:34:53.124 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   ScenarioGenerator — started successfully
+2026-06-13 12:34:53.124 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   API    : http://localhost:8080/api/status
+2026-06-13 12:34:53.124 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   Issuer : port 8200
+2026-06-13 12:34:53.124 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-13 12:34:54.244 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZMK...
+2026-06-13 12:34:54.308 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZMK generated — KCV=0E653F
+2026-06-13 12:34:54.322 [mc-issuer-client-1] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=0E653F ZPK KCV=null ZAK KCV=null
+2026-06-13 12:34:54.327 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZPK under ZMK...
+2026-06-13 12:34:54.328 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZPK generated — KCV=736150
+2026-06-13 12:34:54.331 [mc-issuer-client-2] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=0E653F ZPK KCV=736150 ZAK KCV=null
+2026-06-13 12:34:54.333 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZAK under ZMK...
+2026-06-13 12:34:54.334 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZAK generated — KCV=1F8F99
+2026-06-13 12:34:54.338 [mc-issuer-client-3] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=0E653F ZPK KCV=736150 ZAK KCV=1F8F99
+2026-06-13 12:34:54.341 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=0E653F ZPK KCV=736150 ZAK KCV=1F8F99
+2026-06-13 17:54:42.321 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Starting ScenarioGeneratorApplication using Java 26.0.1 with PID 6328 (D:\MoneyCore\ScenarioGenerator\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-13 17:54:42.324 [main] INFO  c.s.sg.ScenarioGeneratorApplication — No active profile set, falling back to 1 default profile: "default"
+2026-06-13 17:54:43.741 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat initialized with port 8080 (http)
+2026-06-13 17:54:43.753 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Initializing ProtocolHandler ["http-nio-8080"]
+2026-06-13 17:54:43.757 [main] INFO  o.a.catalina.core.StandardService — Starting service [Tomcat]
+2026-06-13 17:54:43.758 [main] INFO  o.a.catalina.core.StandardEngine — Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-13 17:54:43.840 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring embedded WebApplicationContext
+2026-06-13 17:54:43.840 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext — Root WebApplicationContext: initialization completed in 1460 ms
+2026-06-13 17:54:44.605 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver — Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-13 17:54:44.654 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Starting ProtocolHandler ["http-nio-8080"]
+2026-06-13 17:54:44.672 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat started on port 8080 (http) with context path ''
+2026-06-13 17:54:44.685 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Started ScenarioGeneratorApplication in 3.303 seconds (process running for 4.513)
+2026-06-13 17:54:44.884 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-13 17:54:44.884 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   ScenarioGenerator — started successfully
+2026-06-13 17:54:44.884 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   API    : http://localhost:8080/api/status
+2026-06-13 17:54:44.884 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   Issuer : port 8200
+2026-06-13 17:54:44.885 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-13 17:54:46.112 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZMK...
+2026-06-13 17:54:46.152 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZMK generated — KCV=9FF3AA
+2026-06-13 17:54:46.165 [mc-issuer-client-1] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=9FF3AA ZPK KCV=null ZAK KCV=null
+2026-06-13 17:54:46.169 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZPK under ZMK...
+2026-06-13 17:54:46.169 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZPK generated — KCV=F17A8E
+2026-06-13 17:54:46.173 [mc-issuer-client-2] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=9FF3AA ZPK KCV=F17A8E ZAK KCV=null
+2026-06-13 17:54:46.176 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZAK under ZMK...
+2026-06-13 17:54:46.177 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZAK generated — KCV=F0B1B9
+2026-06-13 17:54:46.181 [mc-issuer-client-3] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=9FF3AA ZPK KCV=F17A8E ZAK KCV=F0B1B9
+2026-06-13 17:54:46.184 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=9FF3AA ZPK KCV=F17A8E ZAK KCV=F0B1B9
+2026-06-13 17:54:56.458 [http-nio-8080-exec-2] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-13 17:54:56.458 [http-nio-8080-exec-2] INFO  o.s.web.servlet.DispatcherServlet — Initializing Servlet 'dispatcherServlet'
+2026-06-13 17:54:56.460 [http-nio-8080-exec-2] INFO  o.s.web.servlet.DispatcherServlet — Completed initialization in 1 ms
+2026-06-13 17:54:56.494 [http-nio-8080-exec-2] WARN  o.s.w.s.m.s.DefaultHandlerExceptionResolver — Resolved [org.springframework.web.HttpRequestMethodNotSupportedException: Request method 'GET' is not supported]
+2026-06-13 17:55:55.259 [http-nio-8080-exec-1] WARN  o.s.w.s.m.s.DefaultHandlerExceptionResolver — Resolved [org.springframework.web.HttpMediaTypeNotSupportedException: Content-Type 'application/xml;charset=UTF-8' is not supported]
+2026-06-13 17:56:07.540 [http-nio-8080-exec-4] ERROR com.staging.sg.api.McController — [API] Authorization error : error packing field 64
+2026-06-13 17:57:32.452 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Starting ScenarioGeneratorApplication using Java 26.0.1 with PID 7300 (D:\MoneyCore\ScenarioGenerator\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-13 17:57:32.455 [main] INFO  c.s.sg.ScenarioGeneratorApplication — No active profile set, falling back to 1 default profile: "default"
+2026-06-13 17:57:34.239 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat initialized with port 8080 (http)
+2026-06-13 17:57:34.255 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Initializing ProtocolHandler ["http-nio-8080"]
+2026-06-13 17:57:34.258 [main] INFO  o.a.catalina.core.StandardService — Starting service [Tomcat]
+2026-06-13 17:57:34.259 [main] INFO  o.a.catalina.core.StandardEngine — Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-13 17:57:34.352 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring embedded WebApplicationContext
+2026-06-13 17:57:34.353 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext — Root WebApplicationContext: initialization completed in 1822 ms
+2026-06-13 17:57:35.286 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver — Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-13 17:57:35.418 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Starting ProtocolHandler ["http-nio-8080"]
+2026-06-13 17:57:35.436 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat started on port 8080 (http) with context path ''
+2026-06-13 17:57:35.451 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Started ScenarioGeneratorApplication in 3.971 seconds (process running for 4.725)
+2026-06-13 17:57:35.572 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-13 17:57:35.572 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   ScenarioGenerator — started successfully
+2026-06-13 17:57:35.572 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   API    : http://localhost:8080/api/status
+2026-06-13 17:57:35.572 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   Issuer : port 8200
+2026-06-13 17:57:35.572 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-13 17:57:36.686 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZMK...
+2026-06-13 17:57:36.720 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZMK generated — KCV=91C686
+2026-06-13 17:57:36.730 [mc-issuer-client-1] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=91C686 ZPK KCV=null ZAK KCV=null
+2026-06-13 17:57:36.732 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZPK under ZMK...
+2026-06-13 17:57:36.733 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZPK generated — KCV=00FDB7
+2026-06-13 17:57:36.738 [mc-issuer-client-2] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=91C686 ZPK KCV=00FDB7 ZAK KCV=null
+2026-06-13 17:57:36.740 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZAK under ZMK...
+2026-06-13 17:57:36.741 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZAK generated — KCV=11A0E7
+2026-06-13 17:57:36.745 [mc-issuer-client-3] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=91C686 ZPK KCV=00FDB7 ZAK KCV=11A0E7
+2026-06-13 17:57:36.748 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=91C686 ZPK KCV=00FDB7 ZAK KCV=11A0E7
+2026-06-13 17:57:44.253 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-13 17:57:44.253 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet — Initializing Servlet 'dispatcherServlet'
+2026-06-13 17:57:44.254 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet — Completed initialization in 1 ms
+2026-06-13 18:08:29.331 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Starting ScenarioGeneratorApplication using Java 26.0.1 with PID 4216 (D:\MoneyCore\ScenarioGenerator\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-13 18:08:29.334 [main] INFO  c.s.sg.ScenarioGeneratorApplication — No active profile set, falling back to 1 default profile: "default"
+2026-06-13 18:08:31.886 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat initialized with port 8080 (http)
+2026-06-13 18:08:31.900 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Initializing ProtocolHandler ["http-nio-8080"]
+2026-06-13 18:08:31.903 [main] INFO  o.a.catalina.core.StandardService — Starting service [Tomcat]
+2026-06-13 18:08:31.904 [main] INFO  o.a.catalina.core.StandardEngine — Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-13 18:08:31.985 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring embedded WebApplicationContext
+2026-06-13 18:08:31.986 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext — Root WebApplicationContext: initialization completed in 2574 ms
+2026-06-13 18:08:32.777 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver — Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-13 18:08:32.829 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Starting ProtocolHandler ["http-nio-8080"]
+2026-06-13 18:08:32.847 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat started on port 8080 (http) with context path ''
+2026-06-13 18:08:32.859 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Started ScenarioGeneratorApplication in 4.461 seconds (process running for 5.162)
+2026-06-13 18:08:33.094 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-13 18:08:33.094 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   ScenarioGenerator — started successfully
+2026-06-13 18:08:33.094 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   API    : http://localhost:8080/api/status
+2026-06-13 18:08:33.094 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   Issuer : port 8200
+2026-06-13 18:08:33.094 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-13 18:08:34.301 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZMK...
+2026-06-13 18:08:34.329 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZMK generated — KCV=A069DF
+2026-06-13 18:08:34.344 [mc-issuer-client-1] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=A069DF ZPK KCV=null ZAK KCV=null
+2026-06-13 18:08:34.348 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZPK under ZMK...
+2026-06-13 18:08:34.348 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZPK generated — KCV=FEE6E7
+2026-06-13 18:08:34.352 [mc-issuer-client-2] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=A069DF ZPK KCV=FEE6E7 ZAK KCV=null
+2026-06-13 18:08:34.354 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZAK under ZMK...
+2026-06-13 18:08:34.355 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZAK generated — KCV=C2A0A6
+2026-06-13 18:08:34.359 [mc-issuer-client-3] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=A069DF ZPK KCV=FEE6E7 ZAK KCV=C2A0A6
+2026-06-13 18:08:34.362 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=A069DF ZPK KCV=FEE6E7 ZAK KCV=C2A0A6
+2026-06-13 18:08:51.872 [http-nio-8080-exec-2] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-13 18:08:51.873 [http-nio-8080-exec-2] INFO  o.s.web.servlet.DispatcherServlet — Initializing Servlet 'dispatcherServlet'
+2026-06-13 18:08:51.875 [http-nio-8080-exec-2] INFO  o.s.web.servlet.DispatcherServlet — Completed initialization in 2 ms
