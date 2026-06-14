@@ -84,7 +84,7 @@ info "Test     : 100_Achat_Par_Seconde"
 info "Paliers  : 10 TPS (30s) → 50 TPS (30s) → 100 TPS (30s)"
 info "Durée    : 90 secondes"
 
-RESPONSE=$(curl -s -X POST "$BASE_URL/api/executions/start/$TEST_ID?mode=CHARGE" \
+RESPONSE=$(curl -s -X POST "$BASE_URL/api/executions/start/$TEST_ID?mode=CHARGE&persist=true" \
   -H "$AUTH")
 
 if echo "$RESPONSE" | grep -q '"executionId"'; then

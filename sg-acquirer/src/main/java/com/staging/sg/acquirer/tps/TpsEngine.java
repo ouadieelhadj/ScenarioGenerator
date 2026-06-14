@@ -54,7 +54,7 @@ public class TpsEngine {
         this.objectMapper        = objectMapper;
     }
 
-    public TpsExecution start(Execution execution, Test test) {
+    public TpsExecution start(Execution execution, Test test, boolean persist) {
         Long executionId = execution.getId();
         TpsMetrics metrics = new TpsMetrics();
 

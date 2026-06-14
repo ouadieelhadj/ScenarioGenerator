@@ -24,16 +24,17 @@ public class ExecutionController {
         this.executionService = executionService;
     }
 
-    // POST /api/executions/start/{testId}
+    // POST /api/executions/start/{testId}?mode=CHARGE&persist=true
     @PostMapping("/start/{testId}")
     public ResponseEntity<?> start(@PathVariable Long testId,
                                     @RequestParam(defaultValue = "SIMPLE") String mode,
+                                    @RequestParam(defaultValue = "false") boolean persist,
                                     Authentication auth) {
         try {
             Map<String, Object> result = executionService.start(
-                    testId, auth.getName(), mode);
-            log.info("[API] Execution started — testId={} mode={} user={}",
-                    testId, mode, auth.getName());
+                    testId, auth.getName(), mode, persist);
+            log.info("[API] Execution started — testId={} mode={} persist={} user={}",
+                    testId, mode, persist, auth.getName());
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("[API] Start execution error : {}", e.getMessage());
@@ -46,10 +47,8 @@ public class ExecutionController {
     @PostMapping("/stop/{executionId}")
     public ResponseEntity<?> stop(@PathVariable Long executionId) {
         try {
-            Map<String, Object> result = executionService.stop(executionId);
-            return ResponseEntity.ok(result);
+            return ResponseEntity.ok(executionService.stop(executionId));
         } catch (Exception e) {
-            log.error("[API] Stop execution error : {}", e.getMessage());
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", e.getMessage()));
         }
@@ -59,10 +58,8 @@ public class ExecutionController {
     @GetMapping("/{executionId}/status")
     public ResponseEntity<?> status(@PathVariable Long executionId) {
         try {
-            Map<String, Object> result = executionService.getStatus(executionId);
-            return ResponseEntity.ok(result);
+            return ResponseEntity.ok(executionService.getStatus(executionId));
         } catch (Exception e) {
-            log.error("[API] Get status error : {}", e.getMessage());
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", e.getMessage()));
         }
@@ -72,23 +69,19 @@ public class ExecutionController {
     @GetMapping("/history")
     public ResponseEntity<List<Execution>> history(Authentication auth) {
         try {
-            List<Execution> history = executionService.getHistory(auth.getName());
-            return ResponseEntity.ok(history);
+            return ResponseEntity.ok(executionService.getHistory(auth.getName()));
         } catch (Exception e) {
-            log.error("[API] Get history error : {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
 
-    // GET /api/admin/executions/history (admin only)
+    // GET /api/executions/admin/history
     @GetMapping("/admin/history")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Execution>> adminHistory() {
         try {
-            List<Execution> history = executionService.getAllHistory();
-            return ResponseEntity.ok(history);
+            return ResponseEntity.ok(executionService.getAllHistory());
         } catch (Exception e) {
-            log.error("[API] Admin get history error : {}", e.getMessage());
             return ResponseEntity.internalServerError().build();
         }
     }
