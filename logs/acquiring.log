@@ -3668,3 +3668,79 @@
 │ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343136323831353233353031383030333032
 └─────────────────────────────────────────────────
 2026-06-14T16:28:15.736+01:00  INFO 1008 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T16:29:15.733+01:00  INFO 1008 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614162915
+│ DE011 STAN            : 812308
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313632393135383132333038333032
+└─────────────────────────────────────────────────
+2026-06-14T16:29:15.739+01:00  INFO 1008 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614162915
+│ DE011 STAN            : 812308
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343136323931353831323330383030333032
+└─────────────────────────────────────────────────
+2026-06-14T16:29:15.739+01:00  INFO 1008 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T16:30:15.734+01:00  INFO 1008 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614163015
+│ DE011 STAN            : 586524
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313633303135353836353234333032
+└─────────────────────────────────────────────────
+2026-06-14T16:30:15.748+01:00  INFO 1008 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614163015
+│ DE011 STAN            : 586524
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343136333031353538363532343030333032
+└─────────────────────────────────────────────────
+2026-06-14T16:30:15.748+01:00  INFO 1008 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T16:31:15.740+01:00  INFO 1008 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614163115
+│ DE011 STAN            : 610263
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313633313135363130323633333032
+└─────────────────────────────────────────────────
+2026-06-14T16:31:15.757+01:00  INFO 1008 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614163115
+│ DE011 STAN            : 610263
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343136333131353631303236333030333032
+└─────────────────────────────────────────────────
+2026-06-14T16:31:15.760+01:00  INFO 1008 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T16:31:44.480+01:00  INFO 1008 --- [sg-acquirer] [SpringApplicationShutdownHook] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Network manager stopped
+2026-06-14T16:31:44.488+01:00  INFO 1008 --- [sg-acquirer] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T16:31:44.585+01:00  INFO 1008 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-14T16:31:44.617+01:00  INFO 1008 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
