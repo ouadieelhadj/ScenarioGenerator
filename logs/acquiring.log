@@ -1276,3 +1276,567 @@
 2026-06-14T15:48:53.783+01:00  INFO 9976 --- [sg-acquirer] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
 2026-06-14T15:48:53.789+01:00  INFO 9976 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
 2026-06-14T15:48:53.800+01:00  INFO 9976 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-06-14T15:50:13.550+01:00  INFO 6460 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : Starting SgAcquirerApplication using Java 26.0.1 with PID 6460 (D:\MoneyCore\ScenarioGenerator\sg-acquirer\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-14T15:50:13.553+01:00  INFO 6460 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : No active profile set, falling back to 1 default profile: "default"
+2026-06-14T15:50:15.711+01:00  INFO 6460 --- [sg-acquirer] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-14T15:50:15.781+01:00  INFO 6460 --- [sg-acquirer] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 58 ms. Found 6 JPA repository interfaces.
+2026-06-14T15:50:17.570+01:00  INFO 6460 --- [sg-acquirer] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-14T15:50:17.588+01:00  INFO 6460 --- [sg-acquirer] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-14T15:50:17.588+01:00  INFO 6460 --- [sg-acquirer] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-14T15:50:17.723+01:00  INFO 6460 --- [sg-acquirer] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-14T15:50:17.723+01:00  INFO 6460 --- [sg-acquirer] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 4019 ms
+2026-06-14T15:50:18.309+01:00  INFO 6460 --- [sg-acquirer] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-14T15:50:18.414+01:00  INFO 6460 --- [sg-acquirer] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-06-14T15:50:18.471+01:00  INFO 6460 --- [sg-acquirer] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-14T15:50:18.909+01:00  INFO 6460 --- [sg-acquirer] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-14T15:50:18.954+01:00  INFO 6460 --- [sg-acquirer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-14T15:50:19.331+01:00  INFO 6460 --- [sg-acquirer] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@72e75786
+2026-06-14T15:50:19.332+01:00  INFO 6460 --- [sg-acquirer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-14T15:50:21.552+01:00  INFO 6460 --- [sg-acquirer] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-14T15:50:21.667+01:00  INFO 6460 --- [sg-acquirer] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T15:50:22.414+01:00  INFO 6460 --- [sg-acquirer] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-14T15:50:23.112+01:00  INFO 6460 --- [sg-acquirer] [main] c.s.sg.acquirer.config.DataInitializer   : [INIT] Admin user already exists — login=admin
+2026-06-14T15:50:23.185+01:00  WARN 6460 --- [sg-acquirer] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-14T15:50:23.795+01:00  INFO 6460 --- [sg-acquirer] [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-14T15:50:24.037+01:00  INFO 6460 --- [sg-acquirer] [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@5bb1c104, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@1184b542, org.springframework.security.web.context.SecurityContextHolderFilter@64d7737c, org.springframework.security.web.header.HeaderWriterFilter@52f1f54, org.springframework.web.filter.CorsFilter@6bd5ca02, org.springframework.security.web.authentication.logout.LogoutFilter@6dd65b79, com.staging.sg.common.JwtFilter@79add732, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@7bd6a7f9, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@3b8ec458, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@4758f533, org.springframework.security.web.session.SessionManagementFilter@7537f638, org.springframework.security.web.access.ExceptionTranslationFilter@45dc4d1a, org.springframework.security.web.access.intercept.AuthorizationFilter@51db8b10]
+2026-06-14T15:50:24.671+01:00  INFO 6460 --- [sg-acquirer] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path ''
+2026-06-14T15:50:24.692+01:00  INFO 6460 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : Started SgAcquirerApplication in 12.163 seconds (process running for 13.283)
+2026-06-14T15:50:24.837+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Step 1 — Key Exchange...
+2026-06-14T15:50:24.837+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Starting Key Exchange — ZMK{{KEK}} + ZPK{{ZMK}} + ZAK{{ZMK}}
+2026-06-14T15:50:24.837+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Step 1/3 — ZMK{{KEK}}...
+2026-06-14T15:50:24.837+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Generating ZMK...
+2026-06-14T15:50:24.911+01:00  INFO 6460 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : ================================================
+2026-06-14T15:50:24.911+01:00  INFO 6460 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    :   SG Acquirer — started successfully
+2026-06-14T15:50:24.912+01:00  INFO 6460 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    :   API    : http://localhost:8080/api/status
+2026-06-14T15:50:24.918+01:00  INFO 6460 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : ================================================
+2026-06-14T15:50:24.988+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] ZMK generated — KCV=4B4FD8
+2026-06-14T15:50:25.060+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0820 Key-Exchange ZMK{KEK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0820
+│ DE007 Date/Time       : 0614155025
+│ DE011 STAN            : 263543
+│ DE053 Security Info   : 4B4FD8F122FB...
+│ DE070 Network Code    : 101
+│ KCV                   : 4B4FD8
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135353032353236333534333033383442344644384631323246423445423137443034364646463730333345434343363132313144313031
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.859+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0830 Key-Exchange Response ZMK{KEK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0830
+│ DE007 Date/Time       : 0614155025
+│ DE011 STAN            : 263543
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 101
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135353032353236333534333030313031
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.860+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key-Exchange ZMK{KEK} — DE39=00 success=true
+2026-06-14T15:50:25.862+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] ZMK accepted — KCV=4B4FD8
+2026-06-14T15:50:25.862+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Step 2/3 — ZPK{{ZMK}}...
+2026-06-14T15:50:25.862+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Generating ZPK under ZMK...
+2026-06-14T15:50:25.863+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] ZPK generated — KCV=9FA61E
+2026-06-14T15:50:25.864+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0820 Key-Exchange ZPK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0820
+│ DE007 Date/Time       : 0614155025
+│ DE011 STAN            : 664032
+│ DE053 Security Info   : 9FA61E0AF451...
+│ DE070 Network Code    : 102
+│ KCV                   : 9FA61E
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135353032353636343033323033383946413631453041463435314145314144393739394542303833433633334437434436323439313032
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.882+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0830 Key-Exchange Response ZPK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0830
+│ DE007 Date/Time       : 0614155025
+│ DE011 STAN            : 664032
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 102
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135353032353636343033323030313032
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.883+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key-Exchange ZPK{ZMK} — DE39=00 success=true
+2026-06-14T15:50:25.883+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] ZPK accepted — KCV=9FA61E
+2026-06-14T15:50:25.884+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Step 3/3 — ZAK{{ZMK}}...
+2026-06-14T15:50:25.885+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Generating ZAK under ZMK...
+2026-06-14T15:50:25.886+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] ZAK generated — KCV=1F37EB
+2026-06-14T15:50:25.887+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0820 Key-Exchange ZAK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0820
+│ DE007 Date/Time       : 0614155025
+│ DE011 STAN            : 356621
+│ DE053 Security Info   : 1F37EB43B261...
+│ DE070 Network Code    : 103
+│ KCV                   : 1F37EB
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135353032353335363632313033383146333745423433423236313843364435343737463836373639313442374138413938393144313033
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.893+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0830 Key-Exchange Response ZAK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0830
+│ DE007 Date/Time       : 0614155025
+│ DE011 STAN            : 356621
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 103
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135353032353335363632313030313033
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.894+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key-Exchange ZAK{ZMK} — DE39=00 success=true
+2026-06-14T15:50:25.894+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] ZAK accepted — KCV=1F37EB
+2026-06-14T15:50:25.895+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Session keys loaded — ZMK KCV=4B4FD8 ZPK KCV=9FA61E ZAK KCV=1F37EB
+2026-06-14T15:50:25.896+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key Exchange completed — ZMK=4B4FD8 ZPK=9FA61E ZAK=1F37EB
+2026-06-14T15:50:25.896+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Key Exchange OK — ZMK=4B4FD8 ZPK=9FA61E ZAK=1F37EB
+2026-06-14T15:50:25.896+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Step 2 — Sign-on...
+2026-06-14T15:50:25.897+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Sign-on
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614155025
+│ DE011 STAN            : 272100
+│ DE070 Network Code    : 301
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535303235323732313030333031
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.905+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Sign-on Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614155025
+│ DE011 STAN            : 272100
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 301
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353032353237323130303030333031
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.905+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Sign-on — DE39=00 success=true
+2026-06-14T15:50:25.907+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Sign-on OK — session established
+2026-06-14T15:50:25.907+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Heartbeat started — interval 60s
+2026-06-14T15:51:25.923+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614155125
+│ DE011 STAN            : 789764
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535313235373839373634333032
+└─────────────────────────────────────────────────
+2026-06-14T15:51:25.936+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614155125
+│ DE011 STAN            : 789764
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353132353738393736343030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:51:25.936+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:52:25.908+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614155225
+│ DE011 STAN            : 818765
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535323235383138373635333032
+└─────────────────────────────────────────────────
+2026-06-14T15:52:25.917+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614155225
+│ DE011 STAN            : 818765
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353232353831383736353030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:52:25.917+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:53:25.910+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614155325
+│ DE011 STAN            : 388434
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535333235333838343334333032
+└─────────────────────────────────────────────────
+2026-06-14T15:53:25.922+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614155325
+│ DE011 STAN            : 388434
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353332353338383433343030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:53:25.922+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:54:25.911+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614155425
+│ DE011 STAN            : 493563
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535343235343933353633333032
+└─────────────────────────────────────────────────
+2026-06-14T15:54:26.702+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614155426
+│ DE011 STAN            : 493563
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353432363439333536333030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:54:26.703+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:54:49.727+01:00  INFO 6460 --- [sg-acquirer] [http-nio-8080-exec-2] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-14T15:54:49.733+01:00  INFO 6460 --- [sg-acquirer] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-14T15:54:49.861+01:00  INFO 6460 --- [sg-acquirer] [http-nio-8080-exec-2] o.s.web.servlet.DispatcherServlet        : Completed initialization in 126 ms
+2026-06-14T15:54:50.928+01:00  INFO 6460 --- [sg-acquirer] [http-nio-8080-exec-2] c.s.sg.acquirer.api.AuthController       : [AUTH] Login success — login=admin role=ADMIN
+2026-06-14T15:54:52.061+01:00  WARN 6460 --- [sg-acquirer] [http-nio-8080-exec-6] .w.s.m.s.DefaultHandlerExceptionResolver : Resolved [org.springframework.http.converter.HttpMessageNotReadableException: JSON parse error: Invalid UTF-8 start byte 0x97]
+2026-06-14T15:55:25.909+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614155525
+│ DE011 STAN            : 165427
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535353235313635343237333032
+└─────────────────────────────────────────────────
+2026-06-14T15:55:25.913+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614155525
+│ DE011 STAN            : 165427
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353532353136353432373030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:55:25.914+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:55:31.156+01:00  INFO 6460 --- [sg-acquirer] [http-nio-8080-exec-7] c.s.sg.acquirer.api.AuthController       : [AUTH] Login success — login=admin role=ADMIN
+2026-06-14T15:55:33.489+01:00  INFO 6460 --- [sg-acquirer] [http-nio-8080-exec-8] com.staging.sg.acquirer.TestService      : [TEST] Created — name=100_Achat_Par_Seconde
+2026-06-14T15:55:39.900+01:00  INFO 6460 --- [sg-acquirer] [http-nio-8080-exec-10] c.s.sg.acquirer.api.AuthController       : [AUTH] Login success — login=admin role=ADMIN
+2026-06-14T15:55:41.273+01:00  INFO 6460 --- [sg-acquirer] [http-nio-8080-exec-1] com.staging.sg.acquirer.TestService      : [TEST] Created — name=100_Achat_Par_Seconde
+2026-06-14T15:56:25.910+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614155625
+│ DE011 STAN            : 209946
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535363235323039393436333032
+└─────────────────────────────────────────────────
+2026-06-14T15:56:25.954+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614155625
+│ DE011 STAN            : 209946
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353632353230393934363030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:56:25.955+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:57:25.910+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614155725
+│ DE011 STAN            : 702892
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535373235373032383932333032
+└─────────────────────────────────────────────────
+2026-06-14T15:57:25.919+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614155725
+│ DE011 STAN            : 702892
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353732353730323839323030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:57:25.919+01:00  INFO 6460 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:58:02.421+01:00  INFO 6460 --- [sg-acquirer] [SpringApplicationShutdownHook] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Network manager stopped
+2026-06-14T15:58:02.425+01:00  INFO 6460 --- [sg-acquirer] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T15:58:02.457+01:00  INFO 6460 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-14T15:58:02.492+01:00  INFO 6460 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-06-14T15:59:20.469+01:00  INFO 16092 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : Starting SgAcquirerApplication using Java 26.0.1 with PID 16092 (D:\MoneyCore\ScenarioGenerator\sg-acquirer\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-14T15:59:20.474+01:00  INFO 16092 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : No active profile set, falling back to 1 default profile: "default"
+2026-06-14T15:59:21.696+01:00  INFO 16092 --- [sg-acquirer] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-14T15:59:21.806+01:00  INFO 16092 --- [sg-acquirer] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 98 ms. Found 6 JPA repository interfaces.
+2026-06-14T15:59:23.829+01:00  INFO 16092 --- [sg-acquirer] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-14T15:59:23.844+01:00  INFO 16092 --- [sg-acquirer] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-14T15:59:23.845+01:00  INFO 16092 --- [sg-acquirer] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-14T15:59:23.939+01:00  INFO 16092 --- [sg-acquirer] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-14T15:59:23.939+01:00  INFO 16092 --- [sg-acquirer] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3281 ms
+2026-06-14T15:59:24.431+01:00  INFO 16092 --- [sg-acquirer] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-14T15:59:24.524+01:00  INFO 16092 --- [sg-acquirer] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-06-14T15:59:24.636+01:00  INFO 16092 --- [sg-acquirer] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-14T15:59:25.074+01:00  INFO 16092 --- [sg-acquirer] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-14T15:59:25.110+01:00  INFO 16092 --- [sg-acquirer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-14T15:59:25.480+01:00  INFO 16092 --- [sg-acquirer] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6fbc7853
+2026-06-14T15:59:25.484+01:00  INFO 16092 --- [sg-acquirer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-14T15:59:27.983+01:00  INFO 16092 --- [sg-acquirer] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-14T15:59:28.051+01:00  INFO 16092 --- [sg-acquirer] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T15:59:28.995+01:00  INFO 16092 --- [sg-acquirer] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-14T15:59:29.636+01:00  INFO 16092 --- [sg-acquirer] [main] c.s.sg.acquirer.config.DataInitializer   : [INIT] Admin user already exists — login=admin
+2026-06-14T15:59:29.703+01:00  WARN 16092 --- [sg-acquirer] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-14T15:59:30.224+01:00  INFO 16092 --- [sg-acquirer] [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-14T15:59:30.436+01:00  INFO 16092 --- [sg-acquirer] [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@63f79099, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@4def8aaa, org.springframework.security.web.context.SecurityContextHolderFilter@2b5a659f, org.springframework.security.web.header.HeaderWriterFilter@a6e0e5f, org.springframework.web.filter.CorsFilter@43cc7bb7, org.springframework.security.web.authentication.logout.LogoutFilter@45ec9b22, com.staging.sg.common.JwtFilter@23121d14, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@428943a4, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@7b4fbedb, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@3ffa3cdb, org.springframework.security.web.session.SessionManagementFilter@78571a17, org.springframework.security.web.access.ExceptionTranslationFilter@47ba8e3c, org.springframework.security.web.access.intercept.AuthorizationFilter@7f6e9e03]
+2026-06-14T15:59:31.176+01:00  INFO 16092 --- [sg-acquirer] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path ''
+2026-06-14T15:59:31.201+01:00  INFO 16092 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : Started SgAcquirerApplication in 11.619 seconds (process running for 12.339)
+2026-06-14T15:59:31.365+01:00  INFO 16092 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : ================================================
+2026-06-14T15:59:31.365+01:00  INFO 16092 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    :   SG Acquirer — started successfully
+2026-06-14T15:59:31.366+01:00  INFO 16092 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    :   API    : http://localhost:8080/api/status
+2026-06-14T15:59:31.366+01:00  INFO 16092 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : ================================================
+2026-06-14T15:59:31.377+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Step 1 — Key Exchange...
+2026-06-14T15:59:31.377+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Starting Key Exchange — ZMK{{KEK}} + ZPK{{ZMK}} + ZAK{{ZMK}}
+2026-06-14T15:59:31.377+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Step 1/3 — ZMK{{KEK}}...
+2026-06-14T15:59:31.382+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Generating ZMK...
+2026-06-14T15:59:31.408+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] ZMK generated — KCV=97D9C3
+2026-06-14T15:59:31.438+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0820 Key-Exchange ZMK{KEK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0820
+│ DE007 Date/Time       : 0614155931
+│ DE011 STAN            : 333706
+│ DE053 Security Info   : 97D9C39991D6...
+│ DE070 Network Code    : 101
+│ KCV                   : 97D9C3
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135353933313333333730363033383937443943333939393144363831323131343039324531374135463341363241354346343839313031
+└─────────────────────────────────────────────────
+2026-06-14T15:59:31.590+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0830 Key-Exchange Response ZMK{KEK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0830
+│ DE007 Date/Time       : 0614155931
+│ DE011 STAN            : 333706
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 101
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135353933313333333730363030313031
+└─────────────────────────────────────────────────
+2026-06-14T15:59:31.591+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key-Exchange ZMK{KEK} — DE39=00 success=true
+2026-06-14T15:59:31.593+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] ZMK accepted — KCV=97D9C3
+2026-06-14T15:59:31.594+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Step 2/3 — ZPK{{ZMK}}...
+2026-06-14T15:59:31.595+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Generating ZPK under ZMK...
+2026-06-14T15:59:31.596+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] ZPK generated — KCV=69780D
+2026-06-14T15:59:31.597+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0820 Key-Exchange ZPK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0820
+│ DE007 Date/Time       : 0614155931
+│ DE011 STAN            : 514035
+│ DE053 Security Info   : 69780D51AAAA...
+│ DE070 Network Code    : 102
+│ KCV                   : 69780D
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135353933313531343033353033383639373830443531414141414434383837393631453842363444393931463432413839433932313032
+└─────────────────────────────────────────────────
+2026-06-14T15:59:31.606+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0830 Key-Exchange Response ZPK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0830
+│ DE007 Date/Time       : 0614155931
+│ DE011 STAN            : 514035
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 102
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135353933313531343033353030313032
+└─────────────────────────────────────────────────
+2026-06-14T15:59:31.607+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key-Exchange ZPK{ZMK} — DE39=00 success=true
+2026-06-14T15:59:31.608+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] ZPK accepted — KCV=69780D
+2026-06-14T15:59:31.608+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Step 3/3 — ZAK{{ZMK}}...
+2026-06-14T15:59:31.608+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Generating ZAK under ZMK...
+2026-06-14T15:59:31.609+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] ZAK generated — KCV=B33C26
+2026-06-14T15:59:31.610+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0820 Key-Exchange ZAK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0820
+│ DE007 Date/Time       : 0614155931
+│ DE011 STAN            : 093777
+│ DE053 Security Info   : B33C2669CD6D...
+│ DE070 Network Code    : 103
+│ KCV                   : B33C26
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135353933313039333737373033384233334332363639434436444542393332453835464636424333413633443045463433413131313033
+└─────────────────────────────────────────────────
+2026-06-14T15:59:31.619+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0830 Key-Exchange Response ZAK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0830
+│ DE007 Date/Time       : 0614155931
+│ DE011 STAN            : 093777
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 103
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135353933313039333737373030313033
+└─────────────────────────────────────────────────
+2026-06-14T15:59:31.620+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key-Exchange ZAK{ZMK} — DE39=00 success=true
+2026-06-14T15:59:31.620+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] ZAK accepted — KCV=B33C26
+2026-06-14T15:59:31.622+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Session keys loaded — ZMK KCV=97D9C3 ZPK KCV=69780D ZAK KCV=B33C26
+2026-06-14T15:59:31.622+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key Exchange completed — ZMK=97D9C3 ZPK=69780D ZAK=B33C26
+2026-06-14T15:59:31.622+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Key Exchange OK — ZMK=97D9C3 ZPK=69780D ZAK=B33C26
+2026-06-14T15:59:31.622+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Step 2 — Sign-on...
+2026-06-14T15:59:31.623+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Sign-on
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614155931
+│ DE011 STAN            : 209678
+│ DE070 Network Code    : 301
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535393331323039363738333031
+└─────────────────────────────────────────────────
+2026-06-14T15:59:31.628+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Sign-on Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614155931
+│ DE011 STAN            : 209678
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 301
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353933313230393637383030333031
+└─────────────────────────────────────────────────
+2026-06-14T15:59:31.629+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Sign-on — DE39=00 success=true
+2026-06-14T15:59:31.630+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Sign-on OK — session established
+2026-06-14T15:59:31.631+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Heartbeat started — interval 60s
+2026-06-14T16:00:31.632+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614160031
+│ DE011 STAN            : 302718
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313630303331333032373138333032
+└─────────────────────────────────────────────────
+2026-06-14T16:00:31.645+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614160031
+│ DE011 STAN            : 302718
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343136303033313330323731383030333032
+└─────────────────────────────────────────────────
+2026-06-14T16:00:31.645+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T16:00:59.504+01:00  INFO 16092 --- [sg-acquirer] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-14T16:00:59.505+01:00  INFO 16092 --- [sg-acquirer] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-14T16:00:59.508+01:00  INFO 16092 --- [sg-acquirer] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+2026-06-14T16:01:00.615+01:00  INFO 16092 --- [sg-acquirer] [http-nio-8080-exec-1] c.s.sg.acquirer.api.AuthController       : [AUTH] Login success — login=admin role=ADMIN
+2026-06-14T16:01:05.694+01:00  INFO 16092 --- [sg-acquirer] [http-nio-8080-exec-3] c.s.sg.acquirer.api.AuthController       : [AUTH] Login success — login=admin role=ADMIN
+2026-06-14T16:01:06.753+01:00  INFO 16092 --- [sg-acquirer] [http-nio-8080-exec-6] c.s.s.acquirer.service.ExecutionService  : [EXECUTION] Started — id=1 test=100_Achat_Par_Seconde user=admin mode=CHARGE
+2026-06-14T16:01:06.757+01:00  INFO 16092 --- [sg-acquirer] [http-nio-8080-exec-6] com.staging.sg.acquirer.tps.TpsEngine    : [TPS] Execution 1 started — test=100_Achat_Par_Seconde
+2026-06-14T16:01:06.759+01:00  INFO 16092 --- [sg-acquirer] [http-nio-8080-exec-6] c.s.sg.acquirer.api.ExecutionController  : [API] Execution started — testId=6 mode=CHARGE user=admin
+2026-06-14T16:01:06.766+01:00 ERROR 16092 --- [sg-acquirer] [pool-2-thread-1] com.staging.sg.acquirer.tps.TpsEngine    : [TPS] Execution 1 error : Cannot invoke "org.hibernate.engine.spi.SharedSessionContractImplementor.getPersistenceContext()" because "this.session" is null
+2026-06-14T16:01:31.652+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614160131
+│ DE011 STAN            : 579819
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313630313331353739383139333032
+└─────────────────────────────────────────────────
+2026-06-14T16:01:31.955+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614160131
+│ DE011 STAN            : 579819
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343136303133313537393831393030333032
+└─────────────────────────────────────────────────
+2026-06-14T16:01:31.956+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T16:02:31.641+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614160231
+│ DE011 STAN            : 150121
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313630323331313530313231333032
+└─────────────────────────────────────────────────
+2026-06-14T16:02:31.729+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614160231
+│ DE011 STAN            : 150121
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343136303233313135303132313030333032
+└─────────────────────────────────────────────────
+2026-06-14T16:02:31.733+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true

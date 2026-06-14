@@ -1215,3 +1215,302 @@ This generated password is for development use only. Your security configuration
 2026-06-14T15:48:54.817+01:00  INFO 11248 --- [sg-issuer] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
 2026-06-14T15:48:54.826+01:00  INFO 11248 --- [sg-issuer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
 2026-06-14T15:48:54.842+01:00  INFO 11248 --- [sg-issuer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-06-14T15:49:05.974+01:00  INFO 26988 --- [sg-issuer] [main] c.staging.sg.issuer.SgIssuerApplication  : Starting SgIssuerApplication using Java 26.0.1 with PID 26988 (D:\MoneyCore\ScenarioGenerator\sg-issuer\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-14T15:49:05.977+01:00  INFO 26988 --- [sg-issuer] [main] c.staging.sg.issuer.SgIssuerApplication  : No active profile set, falling back to 1 default profile: "default"
+2026-06-14T15:49:07.087+01:00  INFO 26988 --- [sg-issuer] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-14T15:49:07.180+01:00  INFO 26988 --- [sg-issuer] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 82 ms. Found 6 JPA repository interfaces.
+2026-06-14T15:49:08.699+01:00  INFO 26988 --- [sg-issuer] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8201 (http)
+2026-06-14T15:49:08.715+01:00  INFO 26988 --- [sg-issuer] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-14T15:49:08.715+01:00  INFO 26988 --- [sg-issuer] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-14T15:49:08.804+01:00  INFO 26988 --- [sg-issuer] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-14T15:49:08.805+01:00  INFO 26988 --- [sg-issuer] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 2730 ms
+2026-06-14T15:49:09.178+01:00  INFO 26988 --- [sg-issuer] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-14T15:49:09.290+01:00  INFO 26988 --- [sg-issuer] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-06-14T15:49:09.345+01:00  INFO 26988 --- [sg-issuer] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-14T15:49:09.744+01:00  INFO 26988 --- [sg-issuer] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-14T15:49:09.795+01:00  INFO 26988 --- [sg-issuer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-14T15:49:10.005+01:00  INFO 26988 --- [sg-issuer] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@92fd091
+2026-06-14T15:49:10.007+01:00  INFO 26988 --- [sg-issuer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-14T15:49:11.700+01:00  INFO 26988 --- [sg-issuer] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-14T15:49:11.760+01:00  INFO 26988 --- [sg-issuer] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T15:49:11.813+01:00  INFO 26988 --- [sg-issuer] [main] com.staging.sg.issuer.issuer.McIssuer    : [ISSUING] ISOServer started — port 8200
+2026-06-14T15:49:11.814+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-server] com.staging.sg.issuer.issuer.McIssuer    : [ISSUING] Listening on :8200
+2026-06-14T15:49:12.366+01:00  INFO 26988 --- [sg-issuer] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-14T15:49:12.774+01:00  WARN 26988 --- [sg-issuer] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-14T15:49:13.530+01:00  WARN 26988 --- [sg-issuer] [main] .s.s.UserDetailsServiceAutoConfiguration : 
+
+Using generated security password: 38d1a0da-3ef8-4138-a510-dc4de29b5b19
+
+This generated password is for development use only. Your security configuration must be updated before running your application in production.
+
+2026-06-14T15:49:13.717+01:00  INFO 26988 --- [sg-issuer] [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-14T15:49:13.763+01:00  INFO 26988 --- [sg-issuer] [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@79ae2d13, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@7ce87f9d, org.springframework.security.web.context.SecurityContextHolderFilter@61427cd3, org.springframework.security.web.header.HeaderWriterFilter@515d6c9f, org.springframework.web.filter.CorsFilter@e944541, org.springframework.security.web.csrf.CsrfFilter@7537f638, org.springframework.security.web.authentication.logout.LogoutFilter@563f53d8, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter@250988e5, org.springframework.security.web.authentication.ui.DefaultLoginPageGeneratingFilter@22a7ff5d, org.springframework.security.web.authentication.ui.DefaultLogoutPageGeneratingFilter@1c89cec5, org.springframework.security.web.authentication.www.BasicAuthenticationFilter@63100783, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@59f2a9e9, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@333ab718, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@1447bef2, org.springframework.security.web.access.ExceptionTranslationFilter@63f79099, org.springframework.security.web.access.intercept.AuthorizationFilter@344ab465]
+2026-06-14T15:49:13.998+01:00  INFO 26988 --- [sg-issuer] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8201 (http) with context path ''
+2026-06-14T15:49:14.018+01:00  INFO 26988 --- [sg-issuer] [main] c.staging.sg.issuer.SgIssuerApplication  : Started SgIssuerApplication in 8.79 seconds (process running for 9.575)
+2026-06-14T15:49:14.139+01:00  INFO 26988 --- [sg-issuer] [main] c.staging.sg.issuer.SgIssuerApplication  : ================================================
+2026-06-14T15:49:14.139+01:00  INFO 26988 --- [sg-issuer] [main] c.staging.sg.issuer.SgIssuerApplication  :   SG Issuer — started successfully
+2026-06-14T15:49:14.139+01:00  INFO 26988 --- [sg-issuer] [main] c.staging.sg.issuer.SgIssuerApplication  :   Listening on port 8200
+2026-06-14T15:49:14.139+01:00  INFO 26988 --- [sg-issuer] [main] c.staging.sg.issuer.SgIssuerApplication  : ================================================
+2026-06-14T15:50:25.755+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-1] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] RECEIVED — 0820 Key-Exchange ZMK{KEK}
+├─────────────────────────────────────────────────
+│ MTI                          : 0820
+│ DE007_TRANSMISSION_DATE_TIME : 0614155025
+│ DE011_STAN                   : 263543
+│ DE070_NETWORK_CODE           : 101
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135353032353236333534333033383442344644384631323246423445423137443034364646463730333345434343363132313144313031
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.823+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-1] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Session keys loaded — ZMK KCV=4B4FD8 ZPK KCV=null ZAK KCV=null
+2026-06-14T15:50:25.827+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-1] com.staging.sg.issuer.issuer.McIssuer    : [ISSUING] ZMK loaded — KCV=4B4FD8
+2026-06-14T15:50:25.844+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-1] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] SENT — 0830 Key-Exchange Response ZMK{KEK}
+├─────────────────────────────────────────────────
+│ MTI                          : 0830
+│ DE007_TRANSMISSION_DATE_TIME : 0614155025
+│ DE011_STAN                   : 263543
+│ DE039_RESPONSE_CODE          : 00
+│ DE070_NETWORK_CODE           : 101
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135353032353236333534333030313031
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.869+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-2] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] RECEIVED — 0820 Key-Exchange ZPK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                          : 0820
+│ DE007_TRANSMISSION_DATE_TIME : 0614155025
+│ DE011_STAN                   : 664032
+│ DE070_NETWORK_CODE           : 102
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135353032353636343033323033383946413631453041463435314145314144393739394542303833433633334437434436323439313032
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.870+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-2] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Session keys loaded — ZMK KCV=4B4FD8 ZPK KCV=9FA61E ZAK KCV=null
+2026-06-14T15:50:25.871+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-2] com.staging.sg.issuer.issuer.McIssuer    : [ISSUING] ZPK loaded — KCV=9FA61E
+2026-06-14T15:50:25.881+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-2] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] SENT — 0830 Key-Exchange Response ZPK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                          : 0830
+│ DE007_TRANSMISSION_DATE_TIME : 0614155025
+│ DE011_STAN                   : 664032
+│ DE039_RESPONSE_CODE          : 00
+│ DE070_NETWORK_CODE           : 102
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135353032353636343033323030313032
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.889+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-3] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] RECEIVED — 0820 Key-Exchange ZAK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                          : 0820
+│ DE007_TRANSMISSION_DATE_TIME : 0614155025
+│ DE011_STAN                   : 356621
+│ DE070_NETWORK_CODE           : 103
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135353032353335363632313033383146333745423433423236313843364435343737463836373639313442374138413938393144313033
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.891+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-3] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Session keys loaded — ZMK KCV=4B4FD8 ZPK KCV=9FA61E ZAK KCV=1F37EB
+2026-06-14T15:50:25.892+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-3] com.staging.sg.issuer.issuer.McIssuer    : [ISSUING] ZAK loaded — KCV=1F37EB
+2026-06-14T15:50:25.892+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-3] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] SENT — 0830 Key-Exchange Response ZAK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                          : 0830
+│ DE007_TRANSMISSION_DATE_TIME : 0614155025
+│ DE011_STAN                   : 356621
+│ DE039_RESPONSE_CODE          : 00
+│ DE070_NETWORK_CODE           : 103
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135353032353335363632313030313033
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.899+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-4] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] RECEIVED — 0800 Sign-on
+├─────────────────────────────────────────────────
+│ MTI                          : 0800
+│ DE007_TRANSMISSION_DATE_TIME : 0614155025
+│ DE011_STAN                   : 272100
+│ DE070_NETWORK_CODE           : 301
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535303235323732313030333031
+└─────────────────────────────────────────────────
+2026-06-14T15:50:25.903+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-4] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] SENT — 0810 Sign-on Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0810
+│ DE007_TRANSMISSION_DATE_TIME : 0614155025
+│ DE011_STAN                   : 272100
+│ DE039_RESPONSE_CODE          : 00
+│ DE070_NETWORK_CODE           : 301
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353032353237323130303030333031
+└─────────────────────────────────────────────────
+2026-06-14T15:51:25.932+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-5] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] RECEIVED — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                          : 0800
+│ DE007_TRANSMISSION_DATE_TIME : 0614155125
+│ DE011_STAN                   : 789764
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535313235373839373634333032
+└─────────────────────────────────────────────────
+2026-06-14T15:51:25.934+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-5] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] SENT — 0810 Echo Test Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0810
+│ DE007_TRANSMISSION_DATE_TIME : 0614155125
+│ DE011_STAN                   : 789764
+│ DE039_RESPONSE_CODE          : 00
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353132353738393736343030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:52:25.914+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-6] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] RECEIVED — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                          : 0800
+│ DE007_TRANSMISSION_DATE_TIME : 0614155225
+│ DE011_STAN                   : 818765
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535323235383138373635333032
+└─────────────────────────────────────────────────
+2026-06-14T15:52:25.916+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-6] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] SENT — 0810 Echo Test Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0810
+│ DE007_TRANSMISSION_DATE_TIME : 0614155225
+│ DE011_STAN                   : 818765
+│ DE039_RESPONSE_CODE          : 00
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353232353831383736353030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:53:25.917+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-7] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] RECEIVED — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                          : 0800
+│ DE007_TRANSMISSION_DATE_TIME : 0614155325
+│ DE011_STAN                   : 388434
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535333235333838343334333032
+└─────────────────────────────────────────────────
+2026-06-14T15:53:25.921+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-7] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] SENT — 0810 Echo Test Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0810
+│ DE007_TRANSMISSION_DATE_TIME : 0614155325
+│ DE011_STAN                   : 388434
+│ DE039_RESPONSE_CODE          : 00
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353332353338383433343030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:54:26.696+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-8] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] RECEIVED — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                          : 0800
+│ DE007_TRANSMISSION_DATE_TIME : 0614155425
+│ DE011_STAN                   : 493563
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535343235343933353633333032
+└─────────────────────────────────────────────────
+2026-06-14T15:54:26.699+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-8] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] SENT — 0810 Echo Test Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0810
+│ DE007_TRANSMISSION_DATE_TIME : 0614155426
+│ DE011_STAN                   : 493563
+│ DE039_RESPONSE_CODE          : 00
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353432363439333536333030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:55:25.911+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-9] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] RECEIVED — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                          : 0800
+│ DE007_TRANSMISSION_DATE_TIME : 0614155525
+│ DE011_STAN                   : 165427
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535353235313635343237333032
+└─────────────────────────────────────────────────
+2026-06-14T15:55:25.912+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-9] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] SENT — 0810 Echo Test Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0810
+│ DE007_TRANSMISSION_DATE_TIME : 0614155525
+│ DE011_STAN                   : 165427
+│ DE039_RESPONSE_CODE          : 00
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353532353136353432373030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:56:25.951+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-10] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] RECEIVED — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                          : 0800
+│ DE007_TRANSMISSION_DATE_TIME : 0614155625
+│ DE011_STAN                   : 209946
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535363235323039393436333032
+└─────────────────────────────────────────────────
+2026-06-14T15:56:25.953+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-10] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] SENT — 0810 Echo Test Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0810
+│ DE007_TRANSMISSION_DATE_TIME : 0614155625
+│ DE011_STAN                   : 209946
+│ DE039_RESPONSE_CODE          : 00
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353632353230393934363030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:57:25.916+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-11] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] RECEIVED — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                          : 0800
+│ DE007_TRANSMISSION_DATE_TIME : 0614155725
+│ DE011_STAN                   : 702892
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313535373235373032383932333032
+└─────────────────────────────────────────────────
+2026-06-14T15:57:25.917+01:00  INFO 26988 --- [sg-issuer] [mc-issuer-client-11] com.staging.sg.issuer.issuer.McIssuer    : 
+┌─────────────────────────────────────────────────
+│ [ISSUING] SENT — 0810 Echo Test Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0810
+│ DE007_TRANSMISSION_DATE_TIME : 0614155725
+│ DE011_STAN                   : 702892
+│ DE039_RESPONSE_CODE          : 00
+│ DE070_NETWORK_CODE           : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135353732353730323839323030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:58:01.144+01:00  INFO 26988 --- [sg-issuer] [SpringApplicationShutdownHook] com.staging.sg.issuer.issuer.McIssuer    : [ISSUING] ISOServer stopped
+2026-06-14T15:58:01.157+01:00  INFO 26988 --- [sg-issuer] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T15:58:01.391+01:00  INFO 26988 --- [sg-issuer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-14T15:58:01.503+01:00  INFO 26988 --- [sg-issuer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

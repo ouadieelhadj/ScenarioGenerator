@@ -7,6 +7,7 @@ import com.staging.sg.common.entity.*;
 import com.staging.sg.common.repository.ExecutionRepository;
 import com.staging.sg.common.repository.ResultRepository;
 import com.staging.sg.common.repository.TestRepository;
+import com.staging.sg.common.repository.TpsStepRepository;
 import com.staging.sg.common.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,26 +29,32 @@ public class ExecutionService {
     private final ResultRepository    resultRepository;
     private final TestRepository      testRepository;
     private final UserRepository      userRepository;
+    private final TpsStepRepository   tpsStepRepository;
 
     public ExecutionService(TpsEngine tpsEngine,
                             ExecutionRepository executionRepository,
                             ResultRepository resultRepository,
                             TestRepository testRepository,
-                            UserRepository userRepository) {
+                            UserRepository userRepository,
+                            TpsStepRepository tpsStepRepository) {
         this.tpsEngine           = tpsEngine;
         this.executionRepository = executionRepository;
         this.resultRepository    = resultRepository;
         this.testRepository      = testRepository;
         this.userRepository      = userRepository;
+        this.tpsStepRepository   = tpsStepRepository;
     }
-
-    // ── Start execution ──────────────────────────────────────
 
     @Transactional
     public Map<String, Object> start(Long testId, String userLogin, String mode) {
         // Load test
         Test test = testRepository.findById(testId)
                 .orElseThrow(() -> new RuntimeException("Test not found : " + testId));
+
+        // Load TPS steps eagerly before starting thread
+        List<TpsStep> steps = tpsStepRepository.findByTestIdOrderByStepOrderAsc(testId);
+        test.setTpsSteps(steps);
+        log.info("[EXECUTION] Test {} has {} TPS steps", test.getName(), steps.size());
 
         // Load user
         User user = userRepository.findByLogin(userLogin)
@@ -66,8 +73,8 @@ public class ExecutionService {
         execution.setStartedAt(LocalDateTime.now());
         execution = executionRepository.save(execution);
 
-        log.info("[EXECUTION] Started — id={} test={} user={} mode={}",
-                execution.getId(), test.getName(), userLogin, execMode);
+        log.info("[EXECUTION] Started — id={} test={} user={} mode={} steps={}",
+                execution.getId(), test.getName(), userLogin, execMode, steps.size());
 
         // Start TPS engine
         TpsExecution tpsExecution = tpsEngine.start(execution, test);
@@ -78,15 +85,13 @@ public class ExecutionService {
         result.put("testName", test.getName());
         result.put("mode", execMode);
         result.put("status", "RUNNING");
+        result.put("tpsSteps", steps.size());
         result.put("startedAt", execution.getStartedAt());
         return result;
     }
 
-    // ── Stop execution ───────────────────────────────────────
-
     public Map<String, Object> stop(Long executionId) {
         tpsEngine.stop(executionId);
-
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("executionId", executionId);
         result.put("status", "STOPPED");
@@ -94,44 +99,39 @@ public class ExecutionService {
         return result;
     }
 
-    // ── Get status ───────────────────────────────────────────
-
     public Map<String, Object> getStatus(Long executionId) {
         TpsMetrics metrics = tpsEngine.getMetrics(executionId);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("executionId", executionId);
 
         if (metrics != null) {
-            result.put("status",           metrics.getStatus());
-            result.put("txTotal",          metrics.getTxTotal());
-            result.put("txApproved",       metrics.getTxApproved());
-            result.put("txDeclined",       metrics.getTxDeclined());
-            result.put("currentTps",       metrics.getCurrentTps());
-            result.put("currentStep",      metrics.getCurrentStep());
-            result.put("avgTps",           String.format("%.1f", metrics.getAvgTps()));
-            result.put("avgResponseMs",    String.format("%.0f", metrics.getAvgResponseMs()));
-            result.put("minResponseMs",    metrics.getMinResponseMs());
-            result.put("maxResponseMs",    metrics.getMaxResponseMs());
-            result.put("p95ResponseMs",    String.format("%.0f", metrics.getP95ResponseMs()));
-            result.put("p99ResponseMs",    String.format("%.0f", metrics.getP99ResponseMs()));
-            result.put("elapsedSeconds",   String.format("%.1f", metrics.getElapsedSeconds()));
-            result.put("running",          tpsEngine.isRunning(executionId));
+            result.put("status",          metrics.getStatus());
+            result.put("txTotal",         metrics.getTxTotal());
+            result.put("txApproved",      metrics.getTxApproved());
+            result.put("txDeclined",      metrics.getTxDeclined());
+            result.put("currentTps",      metrics.getCurrentTps());
+            result.put("currentStep",     metrics.getCurrentStep());
+            result.put("avgTps",          String.format("%.1f", metrics.getAvgTps()));
+            result.put("avgResponseMs",   String.format("%.0f", metrics.getAvgResponseMs()));
+            result.put("minResponseMs",   metrics.getMinResponseMs());
+            result.put("maxResponseMs",   metrics.getMaxResponseMs());
+            result.put("p95ResponseMs",   String.format("%.0f", metrics.getP95ResponseMs()));
+            result.put("p99ResponseMs",   String.format("%.0f", metrics.getP99ResponseMs()));
+            result.put("elapsedSeconds",  String.format("%.1f", metrics.getElapsedSeconds()));
+            result.put("running",         tpsEngine.isRunning(executionId));
         } else {
-            // Load from database
             executionRepository.findById(executionId).ifPresent(exec -> {
-                result.put("status",      exec.getStatus());
-                result.put("txTotal",     exec.getTxTotal());
-                result.put("txApproved",  exec.getTxApproved());
-                result.put("txDeclined",  exec.getTxDeclined());
-                result.put("avgTps",      exec.getTpsActualAvg());
+                result.put("status",        exec.getStatus());
+                result.put("txTotal",       exec.getTxTotal());
+                result.put("txApproved",    exec.getTxApproved());
+                result.put("txDeclined",    exec.getTxDeclined());
+                result.put("avgTps",        exec.getTpsActualAvg());
                 result.put("avgResponseMs", exec.getResponseTimeAvg());
-                result.put("running",     false);
+                result.put("running",       false);
             });
         }
         return result;
     }
-
-    // ── Get history ──────────────────────────────────────────
 
     public List<Execution> getHistory(String userLogin) {
         User user = userRepository.findByLogin(userLogin)
