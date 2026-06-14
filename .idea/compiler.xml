@@ -2,7 +2,10 @@
 <project version="4">
   <component name="JavacSettings">
     <option name="ADDITIONAL_OPTIONS_OVERRIDE">
-      <module name="scenario-generator" options="-parameters -proc:none" />
+      <module name="scenario-generator" options="" />
+      <module name="sg-acquirer" options="-parameters -proc:none" />
+      <module name="sg-common" options="-parameters -proc:none" />
+      <module name="sg-issuer" options="-parameters -proc:none" />
     </option>
   </component>
 </project>

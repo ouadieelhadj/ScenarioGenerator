@@ -1,6 +1,6 @@
 package com.staging.sg.common.dto;
 
-import com.staging.sg.entity.TpsStep;
+import com.staging.sg.common.entity.TpsStep;
 import java.util.List;
 
 public class TestDto {

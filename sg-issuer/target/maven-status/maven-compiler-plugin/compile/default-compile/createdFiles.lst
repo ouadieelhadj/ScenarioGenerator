@@ -1,0 +1,4 @@
+com\staging\sg\issuer\issuer\McIssuer.class
+com\staging\sg\issuer\issuer\McDecisionEngine.class
+com\staging\sg\issuer\SgIssuerApplication.class
+com\staging\sg\issuer\issuer\McDecisionEngine$Decision.class

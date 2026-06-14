@@ -1,6 +1,6 @@
 package com.staging.sg.common.dto;
 
-import com.staging.sg.entity.Role;
+import com.staging.sg.common.entity.Role;
 
 public class CreateUserRequest {
     private String login;

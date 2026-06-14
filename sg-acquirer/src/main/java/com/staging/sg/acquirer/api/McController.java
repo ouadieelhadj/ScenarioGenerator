@@ -1,13 +1,12 @@
 package com.staging.sg.acquirer.api;
 
-import com.staging.sg.acquirer.McAuthRequest;
-import com.staging.sg.acquirer.McAuthResult;
-import com.staging.sg.acquirer.McAcquirer;
+import com.staging.sg.acquirer.acquirer.McAcquirer;
+import com.staging.sg.acquirer.acquirer.McAuthRequest;
+import com.staging.sg.acquirer.acquirer.McAuthResult;
 import com.staging.sg.acquirer.network.McKeyExchangeResult;
 import com.staging.sg.acquirer.network.McNetworkManager;
 import com.staging.sg.acquirer.network.McNetworkResult;
 import com.staging.sg.acquirer.network.McNetworkStatus;
-import com.staging.sg.issuer.McIssuer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -23,14 +22,11 @@ public class McController {
     private static final Logger log = LoggerFactory.getLogger(McController.class);
 
     private final McNetworkManager networkManager;
-    private final McIssuer         issuer;
     private final McAcquirer       acquirer;
 
     public McController(McNetworkManager networkManager,
-                        McIssuer issuer,
                         McAcquirer acquirer) {
         this.networkManager = networkManager;
-        this.issuer         = issuer;
         this.acquirer       = acquirer;
     }
 
@@ -38,10 +34,8 @@ public class McController {
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> status() {
         Map<String, Object> body = new LinkedHashMap<>();
-        body.put("application",   "ScenarioGenerator");
+        body.put("application",   "SG Acquirer");
         body.put("version",       "1.0.0-SNAPSHOT");
-        body.put("issuerPort",    8200);
-        body.put("msgProcessed",  issuer.getMessageCount());
         body.put("keysExchanged", networkManager.isKeysExchanged());
         body.put("signedOn",      networkManager.isSignedOn());
         body.put("endpoints", Map.of(
