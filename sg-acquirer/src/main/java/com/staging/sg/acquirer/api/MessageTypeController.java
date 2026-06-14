@@ -1,0 +1,54 @@
+package com.staging.sg.acquirer.api;
+
+import com.staging.sg.common.entity.MessageType;
+import com.staging.sg.common.repository.MessageTypeRepository;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/admin/message-types")
+public class MessageTypeController {
+
+    private final MessageTypeRepository messageTypeRepository;
+
+    public MessageTypeController(MessageTypeRepository messageTypeRepository) {
+        this.messageTypeRepository = messageTypeRepository;
+    }
+
+    // GET /api/admin/message-types
+    @GetMapping
+    public ResponseEntity<List<MessageType>> findAll() {
+        return ResponseEntity.ok(messageTypeRepository.findByActiveTrue());
+    }
+
+    // POST /api/admin/message-types
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MessageType> create(@RequestBody MessageType mt) {
+        return ResponseEntity.ok(messageTypeRepository.save(mt));
+    }
+
+    // PUT /api/admin/message-types/{id}
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<MessageType> update(@PathVariable Long id,
+                                               @RequestBody MessageType mt) {
+        mt.setId(id);
+        return ResponseEntity.ok(messageTypeRepository.save(mt));
+    }
+
+    // DELETE /api/admin/message-types/{id}
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> delete(@PathVariable Long id) {
+        messageTypeRepository.findById(id).ifPresent(m -> {
+            m.setActive(false);
+            messageTypeRepository.save(m);
+        });
+        return ResponseEntity.ok(Map.of("message", "MessageType disabled"));
+    }
+}

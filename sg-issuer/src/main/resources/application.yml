@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: sg-issuer
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scenariogenerator
+    username: scenario_user
+    password: postgres123
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  liquibase:
+    enabled: false
+
+server:
+  port: 8200
+
+mc:
+  issuer:
+    port: 8200
+    decision-mode: approve-all
+    rules:
+      max-amount: 500000
+      block-mcc:
+        - "7995"
+        - "6051"
+    force-response-code: ""
+
+  kek: ${KEK:0123456789ABCDEF0123456789ABCDEF}
+
+  hsm:
+    simulated: true
+
+  security:
+    mac-verify: true
+    mac-fields: "2,3,4,7,11,12,13,18,22,37,41,42,49,64"
+    mac-field: 64
+    pin-decrypt-log: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+
+logging:
+  file:
+    name: D:/MoneyCore/ScenarioGenerator/logs/issuing.log

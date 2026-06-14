@@ -157,3 +157,208 @@ Caused by: org.hibernate.query.sqm.PathElementException: Could not resolve attri
 	... 73 common frames omitted
 2026-06-14 11:04:55.187 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZMK...
 2026-06-14 11:04:55.203 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZMK generated — KCV=8DFB0D
+2026-06-14 11:10:24.597 [background-preinit] INFO  o.h.validator.internal.util.Version — HV000001: Hibernate Validator 8.0.1.Final
+2026-06-14 11:10:24.654 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Starting ScenarioGeneratorApplication using Java 26.0.1 with PID 19256 (D:\MoneyCore\ScenarioGenerator\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-14 11:10:24.655 [main] INFO  c.s.sg.ScenarioGeneratorApplication — No active profile set, falling back to 1 default profile: "default"
+2026-06-14 11:10:25.999 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate — Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-14 11:10:26.082 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate — Finished Spring Data repository scanning in 73 ms. Found 6 JPA repository interfaces.
+2026-06-14 11:10:27.107 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat initialized with port 8080 (http)
+2026-06-14 11:10:27.119 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Initializing ProtocolHandler ["http-nio-8080"]
+2026-06-14 11:10:27.121 [main] INFO  o.a.catalina.core.StandardService — Starting service [Tomcat]
+2026-06-14 11:10:27.122 [main] INFO  o.a.catalina.core.StandardEngine — Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-14 11:10:27.213 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring embedded WebApplicationContext
+2026-06-14 11:10:27.213 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext — Root WebApplicationContext: initialization completed in 2491 ms
+2026-06-14 11:10:27.640 [main] INFO  o.h.jpa.internal.util.LogHelper — HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-14 11:10:27.713 [main] INFO  org.hibernate.Version — HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-06-14 11:10:27.753 [main] INFO  o.h.c.i.RegionFactoryInitiator — HHH000026: Second-level cache disabled
+2026-06-14 11:10:28.065 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo — No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-14 11:10:28.096 [main] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Starting...
+2026-06-14 11:10:28.427 [main] INFO  com.zaxxer.hikari.pool.HikariPool — HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@d271a54
+2026-06-14 11:10:28.427 [main] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Start completed.
+2026-06-14 11:10:28.543 [main] WARN  org.hibernate.orm.deprecation — HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-14 11:10:29.970 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator — HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-14 11:10:30.150 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean — Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14 11:10:30.712 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory — Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-14 11:10:31.264 [main] INFO  c.staging.sg.config.DataInitializer — [INIT] Admin user already exists — login=admin
+2026-06-14 11:10:31.332 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration — spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-14 11:10:31.968 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver — Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-14 11:10:32.083 [main] INFO  o.s.s.web.DefaultSecurityFilterChain — Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@106277d6, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@61186191, org.springframework.security.web.context.SecurityContextHolderFilter@3ef2816a, org.springframework.security.web.header.HeaderWriterFilter@66b16770, org.springframework.web.filter.CorsFilter@1761383f, org.springframework.security.web.authentication.logout.LogoutFilter@7856b790, com.staging.sg.auth.JwtFilter@54c11750, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@5e05f3eb, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@6ad4d333, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@abb1c3e, org.springframework.security.web.session.SessionManagementFilter@4b27a3fc, org.springframework.security.web.access.ExceptionTranslationFilter@6e5506c9, org.springframework.security.web.access.intercept.AuthorizationFilter@21aa0ec5]
+2026-06-14 11:10:32.234 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZMK...
+2026-06-14 11:10:32.242 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZMK generated — KCV=52E65A
+2026-06-14 11:10:32.256 [mc-issuer-client-1] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=52E65A ZPK KCV=null ZAK KCV=null
+2026-06-14 11:10:32.260 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZPK under ZMK...
+2026-06-14 11:10:32.260 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZPK generated — KCV=D8B9A5
+2026-06-14 11:10:32.264 [mc-issuer-client-2] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=52E65A ZPK KCV=D8B9A5 ZAK KCV=null
+2026-06-14 11:10:32.267 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZAK under ZMK...
+2026-06-14 11:10:32.267 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZAK generated — KCV=B25BC8
+2026-06-14 11:10:32.271 [mc-issuer-client-3] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=52E65A ZPK KCV=D8B9A5 ZAK KCV=B25BC8
+2026-06-14 11:10:32.273 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=52E65A ZPK KCV=D8B9A5 ZAK KCV=B25BC8
+2026-06-14 11:10:32.684 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Starting ProtocolHandler ["http-nio-8080"]
+2026-06-14 11:10:32.719 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat started on port 8080 (http) with context path ''
+2026-06-14 11:10:32.733 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Started ScenarioGeneratorApplication in 8.989 seconds (process running for 10.725)
+2026-06-14 11:10:32.884 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-14 11:10:32.884 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   ScenarioGenerator — started successfully
+2026-06-14 11:10:32.884 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   API    : http://localhost:8080/api/status
+2026-06-14 11:10:32.884 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   Issuer : port 8200
+2026-06-14 11:10:32.884 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-14 11:14:42.465 [http-nio-8080-exec-2] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-14 11:14:42.466 [http-nio-8080-exec-2] INFO  o.s.web.servlet.DispatcherServlet — Initializing Servlet 'dispatcherServlet'
+2026-06-14 11:14:42.487 [http-nio-8080-exec-2] INFO  o.s.web.servlet.DispatcherServlet — Completed initialization in 20 ms
+2026-06-14 11:14:43.257 [http-nio-8080-exec-2] WARN  com.staging.sg.api.AuthController — [AUTH] Login failed — login=admin
+2026-06-14 11:14:55.875 [http-nio-8080-exec-3] WARN  com.staging.sg.api.AuthController — [AUTH] Login failed — login=admin
+2026-06-14 11:15:09.036 [http-nio-8080-exec-4] WARN  com.staging.sg.api.AuthController — [AUTH] Login failed — login=admin
+2026-06-14 11:15:19.687 [http-nio-8080-exec-5] WARN  com.staging.sg.api.AuthController — [AUTH] Login failed — login=admin
+2026-06-14 11:18:36.010 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean — Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14 11:18:36.101 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Shutdown initiated...
+2026-06-14 11:18:36.121 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Shutdown completed.
+2026-06-14 11:18:48.450 [background-preinit] INFO  o.h.validator.internal.util.Version — HV000001: Hibernate Validator 8.0.1.Final
+2026-06-14 11:18:48.550 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Starting ScenarioGeneratorApplication using Java 26.0.1 with PID 4732 (D:\MoneyCore\ScenarioGenerator\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-14 11:18:48.553 [main] INFO  c.s.sg.ScenarioGeneratorApplication — No active profile set, falling back to 1 default profile: "default"
+2026-06-14 11:18:52.040 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate — Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-14 11:18:52.168 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate — Finished Spring Data repository scanning in 107 ms. Found 6 JPA repository interfaces.
+2026-06-14 11:18:53.601 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat initialized with port 8080 (http)
+2026-06-14 11:18:53.616 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Initializing ProtocolHandler ["http-nio-8080"]
+2026-06-14 11:18:53.618 [main] INFO  o.a.catalina.core.StandardService — Starting service [Tomcat]
+2026-06-14 11:18:53.619 [main] INFO  o.a.catalina.core.StandardEngine — Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-14 11:18:53.716 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring embedded WebApplicationContext
+2026-06-14 11:18:53.717 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext — Root WebApplicationContext: initialization completed in 4983 ms
+2026-06-14 11:18:54.213 [main] INFO  o.h.jpa.internal.util.LogHelper — HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-14 11:18:54.297 [main] INFO  org.hibernate.Version — HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-06-14 11:18:54.342 [main] INFO  o.h.c.i.RegionFactoryInitiator — HHH000026: Second-level cache disabled
+2026-06-14 11:18:54.667 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo — No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-14 11:18:54.701 [main] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Starting...
+2026-06-14 11:18:54.965 [main] INFO  com.zaxxer.hikari.pool.HikariPool — HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@b849fa6
+2026-06-14 11:18:54.968 [main] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Start completed.
+2026-06-14 11:18:55.026 [main] WARN  org.hibernate.orm.deprecation — HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-14 11:18:56.655 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator — HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-14 11:18:56.751 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean — Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14 11:18:57.324 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory — Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-14 11:18:57.952 [main] INFO  c.staging.sg.config.DataInitializer — [INIT] Admin user already exists — login=admin
+2026-06-14 11:18:58.011 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration — spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-14 11:18:58.675 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver — Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-14 11:18:58.793 [main] INFO  o.s.s.web.DefaultSecurityFilterChain — Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@2bd2fa2c, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@356c8fa9, org.springframework.security.web.context.SecurityContextHolderFilter@40e28324, org.springframework.security.web.header.HeaderWriterFilter@12e33c7b, org.springframework.web.filter.CorsFilter@67e42fd6, org.springframework.security.web.authentication.logout.LogoutFilter@7d5238b4, com.staging.sg.auth.JwtFilter@563317c1, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@4f90b4c9, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@3e5f458f, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@4e9ab294, org.springframework.security.web.session.SessionManagementFilter@3ef2816a, org.springframework.security.web.access.ExceptionTranslationFilter@33b3e47, org.springframework.security.web.access.intercept.AuthorizationFilter@61186191]
+2026-06-14 11:18:58.816 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZMK...
+2026-06-14 11:18:58.825 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZMK generated — KCV=F5CA22
+2026-06-14 11:18:58.844 [mc-issuer-client-1] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=F5CA22 ZPK KCV=null ZAK KCV=null
+2026-06-14 11:18:58.849 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZPK under ZMK...
+2026-06-14 11:18:58.850 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZPK generated — KCV=C84AFF
+2026-06-14 11:18:58.854 [mc-issuer-client-2] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=F5CA22 ZPK KCV=C84AFF ZAK KCV=null
+2026-06-14 11:18:58.857 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZAK under ZMK...
+2026-06-14 11:18:58.857 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZAK generated — KCV=41F4CC
+2026-06-14 11:18:58.862 [mc-issuer-client-3] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=F5CA22 ZPK KCV=C84AFF ZAK KCV=41F4CC
+2026-06-14 11:18:58.865 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=F5CA22 ZPK KCV=C84AFF ZAK KCV=41F4CC
+2026-06-14 11:18:59.607 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Starting ProtocolHandler ["http-nio-8080"]
+2026-06-14 11:18:59.625 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat started on port 8080 (http) with context path ''
+2026-06-14 11:18:59.639 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Started ScenarioGeneratorApplication in 12.287 seconds (process running for 13.652)
+2026-06-14 11:18:59.757 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-14 11:18:59.757 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   ScenarioGenerator — started successfully
+2026-06-14 11:18:59.757 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   API    : http://localhost:8080/api/status
+2026-06-14 11:18:59.757 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   Issuer : port 8200
+2026-06-14 11:18:59.757 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-14 11:20:01.961 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-14 11:20:01.961 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet — Initializing Servlet 'dispatcherServlet'
+2026-06-14 11:20:02.002 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet — Completed initialization in 39 ms
+2026-06-14 11:20:02.686 [http-nio-8080-exec-1] WARN  com.staging.sg.api.AuthController — [AUTH] Login failed — login=admin
+2026-06-14 11:20:15.749 [http-nio-8080-exec-2] WARN  com.staging.sg.api.AuthController — [AUTH] Login failed — login=admin
+2026-06-14 11:21:49.431 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean — Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14 11:21:49.595 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Shutdown initiated...
+2026-06-14 11:21:49.681 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Shutdown completed.
+2026-06-14 11:21:58.489 [background-preinit] INFO  o.h.validator.internal.util.Version — HV000001: Hibernate Validator 8.0.1.Final
+2026-06-14 11:21:58.549 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Starting ScenarioGeneratorApplication using Java 26.0.1 with PID 11400 (D:\MoneyCore\ScenarioGenerator\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-14 11:21:58.550 [main] INFO  c.s.sg.ScenarioGeneratorApplication — No active profile set, falling back to 1 default profile: "default"
+2026-06-14 11:22:00.271 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate — Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-14 11:22:00.387 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate — Finished Spring Data repository scanning in 106 ms. Found 6 JPA repository interfaces.
+2026-06-14 11:22:01.506 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat initialized with port 8080 (http)
+2026-06-14 11:22:01.518 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Initializing ProtocolHandler ["http-nio-8080"]
+2026-06-14 11:22:01.521 [main] INFO  o.a.catalina.core.StandardService — Starting service [Tomcat]
+2026-06-14 11:22:01.522 [main] INFO  o.a.catalina.core.StandardEngine — Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-14 11:22:01.633 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring embedded WebApplicationContext
+2026-06-14 11:22:01.634 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext — Root WebApplicationContext: initialization completed in 3020 ms
+2026-06-14 11:22:02.217 [main] INFO  o.h.jpa.internal.util.LogHelper — HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-14 11:22:02.374 [main] INFO  org.hibernate.Version — HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-06-14 11:22:02.415 [main] INFO  o.h.c.i.RegionFactoryInitiator — HHH000026: Second-level cache disabled
+2026-06-14 11:22:02.809 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo — No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-14 11:22:02.844 [main] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Starting...
+2026-06-14 11:22:03.208 [main] INFO  com.zaxxer.hikari.pool.HikariPool — HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@586486c
+2026-06-14 11:22:03.210 [main] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Start completed.
+2026-06-14 11:22:03.273 [main] WARN  org.hibernate.orm.deprecation — HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-14 11:22:05.008 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator — HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-14 11:22:05.123 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean — Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14 11:22:05.810 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory — Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-14 11:22:06.451 [main] INFO  c.staging.sg.config.DataInitializer — [INIT] Admin user already exists — login=admin
+2026-06-14 11:22:06.549 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration — spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-14 11:22:07.190 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZMK...
+2026-06-14 11:22:07.206 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZMK generated — KCV=29D0B1
+2026-06-14 11:22:07.228 [mc-issuer-client-1] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=29D0B1 ZPK KCV=null ZAK KCV=null
+2026-06-14 11:22:07.234 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZPK under ZMK...
+2026-06-14 11:22:07.238 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZPK generated — KCV=8D6477
+2026-06-14 11:22:07.299 [mc-issuer-client-2] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=29D0B1 ZPK KCV=8D6477 ZAK KCV=null
+2026-06-14 11:22:07.307 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZAK under ZMK...
+2026-06-14 11:22:07.309 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZAK generated — KCV=14A518
+2026-06-14 11:22:07.321 [mc-issuer-client-3] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=29D0B1 ZPK KCV=8D6477 ZAK KCV=14A518
+2026-06-14 11:22:07.332 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=29D0B1 ZPK KCV=8D6477 ZAK KCV=14A518
+2026-06-14 11:22:07.762 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver — Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-14 11:22:07.941 [main] INFO  o.s.s.web.DefaultSecurityFilterChain — Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@99e68b5, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@5f092eaa, org.springframework.security.web.context.SecurityContextHolderFilter@87affb5, org.springframework.security.web.header.HeaderWriterFilter@5f8a0d7f, org.springframework.web.filter.CorsFilter@264e0b8e, org.springframework.security.web.authentication.logout.LogoutFilter@70cc0601, com.staging.sg.auth.JwtFilter@563317c1, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@77d771a2, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@2cde0397, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@294c1b45, org.springframework.security.web.session.SessionManagementFilter@5d39797a, org.springframework.security.web.access.ExceptionTranslationFilter@735ed1d2, org.springframework.security.web.access.intercept.AuthorizationFilter@30c31e10]
+2026-06-14 11:22:09.498 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Starting ProtocolHandler ["http-nio-8080"]
+2026-06-14 11:22:09.522 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat started on port 8080 (http) with context path ''
+2026-06-14 11:22:09.537 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Started ScenarioGeneratorApplication in 11.908 seconds (process running for 12.983)
+2026-06-14 11:22:09.745 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-14 11:22:09.746 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   ScenarioGenerator — started successfully
+2026-06-14 11:22:09.747 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   API    : http://localhost:8080/api/status
+2026-06-14 11:22:09.747 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   Issuer : port 8200
+2026-06-14 11:22:09.747 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-14 11:26:41.912 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean — Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14 11:26:41.974 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Shutdown initiated...
+2026-06-14 11:26:42.022 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Shutdown completed.
+2026-06-14 11:26:52.058 [background-preinit] INFO  o.h.validator.internal.util.Version — HV000001: Hibernate Validator 8.0.1.Final
+2026-06-14 11:26:52.108 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Starting ScenarioGeneratorApplication using Java 26.0.1 with PID 12000 (D:\MoneyCore\ScenarioGenerator\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-14 11:26:52.110 [main] INFO  c.s.sg.ScenarioGeneratorApplication — No active profile set, falling back to 1 default profile: "default"
+2026-06-14 11:26:53.412 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate — Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-14 11:26:53.493 [main] INFO  o.s.d.r.c.RepositoryConfigurationDelegate — Finished Spring Data repository scanning in 74 ms. Found 6 JPA repository interfaces.
+2026-06-14 11:26:54.442 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat initialized with port 8080 (http)
+2026-06-14 11:26:54.454 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Initializing ProtocolHandler ["http-nio-8080"]
+2026-06-14 11:26:54.457 [main] INFO  o.a.catalina.core.StandardService — Starting service [Tomcat]
+2026-06-14 11:26:54.457 [main] INFO  o.a.catalina.core.StandardEngine — Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-14 11:26:54.553 [main] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring embedded WebApplicationContext
+2026-06-14 11:26:54.554 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext — Root WebApplicationContext: initialization completed in 2383 ms
+2026-06-14 11:26:54.973 [main] INFO  o.h.jpa.internal.util.LogHelper — HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-14 11:26:55.047 [main] INFO  org.hibernate.Version — HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-06-14 11:26:55.103 [main] INFO  o.h.c.i.RegionFactoryInitiator — HHH000026: Second-level cache disabled
+2026-06-14 11:26:55.427 [main] INFO  o.s.o.j.p.SpringPersistenceUnitInfo — No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-14 11:26:55.460 [main] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Starting...
+2026-06-14 11:26:55.655 [main] INFO  com.zaxxer.hikari.pool.HikariPool — HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@79ec57b8
+2026-06-14 11:26:55.658 [main] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Start completed.
+2026-06-14 11:26:55.704 [main] WARN  org.hibernate.orm.deprecation — HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2026-06-14 11:26:57.434 [main] INFO  o.h.e.t.j.p.i.JtaPlatformInitiator — HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-14 11:26:57.507 [main] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean — Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14 11:26:58.113 [main] INFO  o.s.d.j.r.query.QueryEnhancerFactory — Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-14 11:26:58.938 [main] INFO  c.staging.sg.config.DataInitializer — [INIT] Admin user created — login=admin
+2026-06-14 11:26:59.000 [main] WARN  o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration — spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-14 11:26:59.503 [main] INFO  o.s.b.a.e.web.EndpointLinksResolver — Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-14 11:26:59.586 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZMK...
+2026-06-14 11:26:59.595 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZMK generated — KCV=E99941
+2026-06-14 11:26:59.607 [mc-issuer-client-1] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=E99941 ZPK KCV=null ZAK KCV=null
+2026-06-14 11:26:59.611 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZPK under ZMK...
+2026-06-14 11:26:59.612 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZPK generated — KCV=582808
+2026-06-14 11:26:59.620 [mc-issuer-client-2] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=E99941 ZPK KCV=582808 ZAK KCV=null
+2026-06-14 11:26:59.624 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Generating ZAK under ZMK...
+2026-06-14 11:26:59.625 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] ZAK generated — KCV=CC0267
+2026-06-14 11:26:59.626 [main] INFO  o.s.s.web.DefaultSecurityFilterChain — Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@a809a62, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@4b2713b1, org.springframework.security.web.context.SecurityContextHolderFilter@3b4e0786, org.springframework.security.web.header.HeaderWriterFilter@1ff9d66b, org.springframework.web.filter.CorsFilter@6a844, org.springframework.security.web.authentication.logout.LogoutFilter@2c17ebb7, com.staging.sg.auth.JwtFilter@7e18ced7, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@6ac93b87, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@fe739e7, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@604a9d87, org.springframework.security.web.session.SessionManagementFilter@3b47178c, org.springframework.security.web.access.ExceptionTranslationFilter@6fab250b, org.springframework.security.web.access.intercept.AuthorizationFilter@42e74fa3]
+2026-06-14 11:26:59.630 [mc-issuer-client-3] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=E99941 ZPK KCV=582808 ZAK KCV=CC0267
+2026-06-14 11:26:59.633 [mc-network-manager] INFO  com.staging.sg.hsm.ThalesHsmService — [HSM] Session keys loaded — ZMK KCV=E99941 ZPK KCV=582808 ZAK KCV=CC0267
+2026-06-14 11:27:00.256 [main] INFO  o.a.coyote.http11.Http11NioProtocol — Starting ProtocolHandler ["http-nio-8080"]
+2026-06-14 11:27:00.273 [main] INFO  o.s.b.w.e.tomcat.TomcatWebServer — Tomcat started on port 8080 (http) with context path ''
+2026-06-14 11:27:00.287 [main] INFO  c.s.sg.ScenarioGeneratorApplication — Started ScenarioGeneratorApplication in 9.022 seconds (process running for 9.869)
+2026-06-14 11:27:00.379 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-14 11:27:00.379 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   ScenarioGenerator — started successfully
+2026-06-14 11:27:00.379 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   API    : http://localhost:8080/api/status
+2026-06-14 11:27:00.379 [main] INFO  c.s.sg.ScenarioGeneratorApplication —   Issuer : port 8200
+2026-06-14 11:27:00.379 [main] INFO  c.s.sg.ScenarioGeneratorApplication — ================================================
+2026-06-14 11:27:10.235 [http-nio-8080-exec-1] INFO  o.a.c.c.C.[Tomcat].[localhost].[/] — Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-14 11:27:10.235 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet — Initializing Servlet 'dispatcherServlet'
+2026-06-14 11:27:10.236 [http-nio-8080-exec-1] INFO  o.s.web.servlet.DispatcherServlet — Completed initialization in 1 ms
+2026-06-14 11:27:10.533 [http-nio-8080-exec-1] INFO  com.staging.sg.api.AuthController — [AUTH] Login success — login=admin role=ADMIN
+2026-06-14 11:34:16.272 [http-nio-8080-exec-4] INFO  com.staging.sg.api.AuthController — [AUTH] Login success — login=admin role=ADMIN
+2026-06-14 11:35:45.985 [SpringApplicationShutdownHook] INFO  o.s.o.j.LocalContainerEntityManagerFactoryBean — Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14 11:35:46.109 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Shutdown initiated...
+2026-06-14 11:35:46.158 [SpringApplicationShutdownHook] INFO  com.zaxxer.hikari.HikariDataSource — HikariPool-1 - Shutdown completed.
