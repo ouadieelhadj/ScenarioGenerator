@@ -3,7 +3,9 @@ package com.staging.sg.entity;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "tests")
@@ -46,20 +48,25 @@ public class Test {
     @OrderBy("stepOrder ASC")
     private List<TpsStep> tpsSteps = new ArrayList<>();
 
+    // Relation inverse de User.assignedTests
+    @ManyToMany(mappedBy = "assignedTests", fetch = FetchType.LAZY)
+    private Set<User> assignedUsers = new HashSet<>();
+
     public Test() {}
 
     // Getters
-    public Long          getId()           { return id; }
-    public String        getName()         { return name; }
-    public String        getDescription()  { return description; }
-    public String        getCategory()     { return category; }
-    public MessageType   getMessageType()  { return messageType; }
-    public String        getConfig()       { return config; }
-    public String        getExpectedDe039(){ return expectedDe039; }
-    public boolean       isActive()        { return active; }
-    public LocalDateTime getCreatedAt()    { return createdAt; }
-    public User          getCreatedBy()    { return createdBy; }
-    public List<TpsStep> getTpsSteps()     { return tpsSteps; }
+    public Long          getId()            { return id; }
+    public String        getName()          { return name; }
+    public String        getDescription()   { return description; }
+    public String        getCategory()      { return category; }
+    public MessageType   getMessageType()   { return messageType; }
+    public String        getConfig()        { return config; }
+    public String        getExpectedDe039() { return expectedDe039; }
+    public boolean       isActive()         { return active; }
+    public LocalDateTime getCreatedAt()     { return createdAt; }
+    public User          getCreatedBy()     { return createdBy; }
+    public List<TpsStep> getTpsSteps()      { return tpsSteps; }
+    public Set<User>     getAssignedUsers() { return assignedUsers; }
 
     // Setters
     public void setId(Long v)                  { this.id = v; }
@@ -73,4 +80,5 @@ public class Test {
     public void setCreatedAt(LocalDateTime v)  { this.createdAt = v; }
     public void setCreatedBy(User v)           { this.createdBy = v; }
     public void setTpsSteps(List<TpsStep> v)   { this.tpsSteps = v; }
+    public void setAssignedUsers(Set<User> v)  { this.assignedUsers = v; }
 }

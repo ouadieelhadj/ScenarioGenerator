@@ -10,6 +10,7 @@ import java.util.List;
 
 @Repository
 public interface TestRepository extends JpaRepository<Test, Long> {
+
     List<Test> findByActiveTrue();
 
     @Query("SELECT t FROM Test t JOIN t.assignedUsers u WHERE u.id = :userId AND t.active = true")
