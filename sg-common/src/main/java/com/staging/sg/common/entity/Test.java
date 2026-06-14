@@ -44,7 +44,7 @@ public class Test {
     @JoinColumn(name = "created_by")
     private User createdBy;
 
-    @OneToMany(mappedBy = "test", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "test", fetch = FetchType.LAZY)
     @OrderBy("stepOrder ASC")
     private List<TpsStep> tpsSteps = new ArrayList<>();
 

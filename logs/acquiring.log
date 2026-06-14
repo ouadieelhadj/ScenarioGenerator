@@ -1840,3 +1840,31 @@
 │ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343136303233313135303132313030333032
 └─────────────────────────────────────────────────
 2026-06-14T16:02:31.733+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T16:03:31.634+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614160331
+│ DE011 STAN            : 032211
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313630333331303332323131333032
+└─────────────────────────────────────────────────
+2026-06-14T16:03:31.652+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614160331
+│ DE011 STAN            : 032211
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343136303333313033323231313030333032
+└─────────────────────────────────────────────────
+2026-06-14T16:03:31.653+01:00  INFO 16092 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T16:04:24.350+01:00  INFO 16092 --- [sg-acquirer] [SpringApplicationShutdownHook] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Network manager stopped
+2026-06-14T16:04:24.354+01:00  INFO 16092 --- [sg-acquirer] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T16:04:24.392+01:00  INFO 16092 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-14T16:04:24.408+01:00  INFO 16092 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
