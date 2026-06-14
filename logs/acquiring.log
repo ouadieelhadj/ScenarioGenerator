@@ -76,3 +76,1203 @@
 │ HEX : 30313130373233383434383030454330383030313136353535353535313835393138353339393030303030303030303030303030303030303036313431353232353333313839313231353232353330363134353939393035313030575054474938485033524C534D433331383930304D435445524D30314D434D45524348414E54303030312039373833394638303731444639303639364433
 └─────────────────────────────────────────────────
 2026-06-14T15:22:53.992+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-3] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0110 — DE039=00 DE038=MC3189 approved=true
+2026-06-14T15:23:50.754+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614152350
+│ DE011 STAN            : 540931
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313532333530353430393331333032
+└─────────────────────────────────────────────────
+2026-06-14T15:23:50.767+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614152350
+│ DE011 STAN            : 540931
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135323335303534303933313030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:23:50.767+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:24:50.753+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614152450
+│ DE011 STAN            : 691524
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313532343530363931353234333032
+└─────────────────────────────────────────────────
+2026-06-14T15:24:50.760+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614152450
+│ DE011 STAN            : 691524
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135323435303639313532343030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:24:50.761+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:25:50.754+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614152550
+│ DE011 STAN            : 780902
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313532353530373830393032333032
+└─────────────────────────────────────────────────
+2026-06-14T15:25:50.758+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614152550
+│ DE011 STAN            : 780902
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135323535303738303930323030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:25:50.758+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:26:50.753+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614152650
+│ DE011 STAN            : 763329
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313532363530373633333239333032
+└─────────────────────────────────────────────────
+2026-06-14T15:26:50.764+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614152650
+│ DE011 STAN            : 763329
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135323635303736333332393030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:26:50.765+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:27:50.753+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614152750
+│ DE011 STAN            : 797123
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313532373530373937313233333032
+└─────────────────────────────────────────────────
+2026-06-14T15:27:50.760+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614152750
+│ DE011 STAN            : 797123
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135323735303739373132333030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:27:50.761+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:28:50.753+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614152850
+│ DE011 STAN            : 461908
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313532383530343631393038333032
+└─────────────────────────────────────────────────
+2026-06-14T15:28:50.758+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614152850
+│ DE011 STAN            : 461908
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135323835303436313930383030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:28:50.759+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:29:50.753+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614152950
+│ DE011 STAN            : 946420
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313532393530393436343230333032
+└─────────────────────────────────────────────────
+2026-06-14T15:29:50.760+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614152950
+│ DE011 STAN            : 946420
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135323935303934363432303030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:29:50.760+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:30:50.756+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153050
+│ DE011 STAN            : 748325
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533303530373438333235333032
+└─────────────────────────────────────────────────
+2026-06-14T15:30:50.760+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153050
+│ DE011 STAN            : 748325
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333035303734383332353030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:30:50.760+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:31:50.754+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153150
+│ DE011 STAN            : 830071
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533313530383330303731333032
+└─────────────────────────────────────────────────
+2026-06-14T15:31:50.759+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153150
+│ DE011 STAN            : 830071
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333135303833303037313030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:31:50.760+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:32:50.754+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153250
+│ DE011 STAN            : 641447
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533323530363431343437333032
+└─────────────────────────────────────────────────
+2026-06-14T15:32:50.760+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153250
+│ DE011 STAN            : 641447
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333235303634313434373030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:32:50.760+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:33:50.753+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153350
+│ DE011 STAN            : 575210
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533333530353735323130333032
+└─────────────────────────────────────────────────
+2026-06-14T15:33:50.759+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153350
+│ DE011 STAN            : 575210
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333335303537353231303030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:33:50.759+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:34:50.753+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153450
+│ DE011 STAN            : 273788
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533343530323733373838333032
+└─────────────────────────────────────────────────
+2026-06-14T15:34:50.762+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153450
+│ DE011 STAN            : 273788
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333435303237333738383030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:34:50.762+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:35:17.881+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-5] c.s.sg.acquirer.api.AuthController       : [AUTH] Login success — login=admin role=ADMIN
+2026-06-14T15:35:20.041+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-8] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153520
+│ DE011 STAN            : 699313
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533353230363939333133333032
+└─────────────────────────────────────────────────
+2026-06-14T15:35:20.057+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-8] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153520
+│ DE011 STAN            : 699313
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333532303639393331333030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:35:20.058+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-8] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:35:21.952+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-4] com.staging.sg.acquirer.UserService      : [USER] Created — login=mohamed role=EXPLOITATION
+2026-06-14T15:35:22.626+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-6] com.staging.sg.acquirer.TestService      : [TEST] Created — name=Achat nominal CB
+2026-06-14T15:35:23.124+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-8] com.staging.sg.acquirer.UserService      : [USER] Test 4 assigned to user 3
+2026-06-14T15:35:23.468+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-9] c.s.sg.acquirer.api.AuthController       : [AUTH] Login success — login=mohamed role=EXPLOITATION
+2026-06-14T15:35:24.257+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-2] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0100 — PAN=555555******6645 amount=0
+2026-06-14T15:35:24.265+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-2] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0100 Authorization
+├─────────────────────────────────────────────────
+│ MTI                          : 0100
+│ DE002_PAN                    : 555555******6645
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153524 [AUTO]
+│ DE011_STAN                   : 635604 [AUTO]
+│ DE012_LOCAL_TIME             : 153524 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE032_ACQUIRING_BIN          : 411111
+│ DE033_FORWARDING_BIN         : 555555
+│ DE037_RRN                    : 4X6Z29GTJNV5 [AUTO]
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE043_MERCHANT_NAME          : DEFAULT MERCHANT PARIS FR               
+│ DE049_CURRENCY_CODE          : 978
+│ DE052_PIN_BLOCK              : ********
+│ DE064_MAC                    : 51996414957B86CC
+├─────────────────────────────────────────────────
+│ HEX : 30313030373233383434383138384530393030313136353535353535313633353834363634353030303030303030303030303030303030303036313431353335323436333536303431353335323430363134353939393035313030303634313131313130363535353535353458365A323947544A4E56354D435445524D30314D434D45524348414E54303030312044454641554C54204D45524348414E542050415249532046522020202020202020202020202020203937383732364342364143353242373332313735313939363431343935374238364343
+└─────────────────────────────────────────────────
+2026-06-14T15:35:24.321+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-2] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0110 Authorization Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0110
+│ DE002_PAN                    : 555555******6645
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153524 [AUTO]
+│ DE011_STAN                   : 635604 [AUTO]
+│ DE012_LOCAL_TIME             : 153524 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE037_RRN                    : 4X6Z29GTJNV5 [AUTO]
+│ DE038_AUTH_CODE              : MC6356
+│ DE039_RESPONSE_CODE          : 00
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE049_CURRENCY_CODE          : 978
+│ DE064_MAC                    : 36F9060AE574EBA5
+├─────────────────────────────────────────────────
+│ HEX : 303131303732333834343830304543303830303131363535353535353136333538343636343530303030303030303030303030303030303030363134313533353234363335363034313533353234303631343539393930353130303458365A323947544A4E56354D433633353630304D435445524D30314D434D45524348414E54303030312039373833364639303630414535373445424135
+└─────────────────────────────────────────────────
+2026-06-14T15:35:24.321+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-2] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0110 — DE039=00 DE038=MC6356 approved=true
+2026-06-14T15:35:24.683+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-3] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0100 — PAN=555555******2285 amount=0
+2026-06-14T15:35:24.686+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-3] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0100 Authorization
+├─────────────────────────────────────────────────
+│ MTI                          : 0100
+│ DE002_PAN                    : 555555******2285
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153524 [AUTO]
+│ DE011_STAN                   : 370817 [AUTO]
+│ DE012_LOCAL_TIME             : 153524 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE032_ACQUIRING_BIN          : 411111
+│ DE033_FORWARDING_BIN         : 555555
+│ DE037_RRN                    : 3G85CDW7MHIL [AUTO]
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE043_MERCHANT_NAME          : DEFAULT MERCHANT PARIS FR               
+│ DE049_CURRENCY_CODE          : 978
+│ DE052_PIN_BLOCK              : ********
+│ DE064_MAC                    : 2388711EF61492B3
+├─────────────────────────────────────────────────
+│ HEX : 303130303732333834343831383845303930303131363535353535353633303837353232383530303030303030303030303030303030303030363134313533353234333730383137313533353234303631343539393930353130303036343131313131303635353535353533473835434457374D48494C4D435445524D30314D434D45524348414E54303030312044454641554C54204D45524348414E542050415249532046522020202020202020202020202020203937384134464333354641434338433731363532333838373131454636313439324233
+└─────────────────────────────────────────────────
+2026-06-14T15:35:24.691+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-3] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0110 Authorization Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0110
+│ DE002_PAN                    : 555555******2285
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153524 [AUTO]
+│ DE011_STAN                   : 370817 [AUTO]
+│ DE012_LOCAL_TIME             : 153524 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE037_RRN                    : 3G85CDW7MHIL [AUTO]
+│ DE038_AUTH_CODE              : MC3708
+│ DE039_RESPONSE_CODE          : 00
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE049_CURRENCY_CODE          : 978
+│ DE064_MAC                    : 44ED600FFC6EFFDA
+├─────────────────────────────────────────────────
+│ HEX : 3031313037323338343438303045433038303031313635353535353536333038373532323835303030303030303030303030303030303030303631343135333532343337303831373135333532343036313435393939303531303033473835434457374D48494C4D433337303830304D435445524D30314D434D45524348414E54303030312039373834344544363030464643364546464441
+└─────────────────────────────────────────────────
+2026-06-14T15:35:24.691+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-3] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0110 — DE039=00 DE038=MC3708 approved=true
+2026-06-14T15:35:25.131+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-5] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0100 — PAN=555555******8735 amount=0
+2026-06-14T15:35:25.132+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-5] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0100 Authorization
+├─────────────────────────────────────────────────
+│ MTI                          : 0100
+│ DE002_PAN                    : 555555******8735
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153525 [AUTO]
+│ DE011_STAN                   : 281173 [AUTO]
+│ DE012_LOCAL_TIME             : 153525 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE032_ACQUIRING_BIN          : 411111
+│ DE033_FORWARDING_BIN         : 555555
+│ DE037_RRN                    : QV5PTUVSZJ4Z [AUTO]
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE043_MERCHANT_NAME          : DEFAULT MERCHANT PARIS FR               
+│ DE049_CURRENCY_CODE          : 978
+│ DE052_PIN_BLOCK              : ********
+│ DE064_MAC                    : 46F961119A6894A4
+├─────────────────────────────────────────────────
+│ HEX : 303130303732333834343831383845303930303131363535353535353339303635353837333530303030303030303030303030303030303030363134313533353235323831313733313533353235303631343539393930353130303036343131313131303635353535353551563550545556535A4A345A4D435445524D30314D434D45524348414E54303030312044454641554C54204D45524348414E542050415249532046522020202020202020202020202020203937383239363332413846413138433836424434364639363131313941363839344134
+└─────────────────────────────────────────────────
+2026-06-14T15:35:25.137+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-5] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0110 Authorization Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0110
+│ DE002_PAN                    : 555555******8735
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153525 [AUTO]
+│ DE011_STAN                   : 281173 [AUTO]
+│ DE012_LOCAL_TIME             : 153525 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE037_RRN                    : QV5PTUVSZJ4Z [AUTO]
+│ DE038_AUTH_CODE              : MC2811
+│ DE039_RESPONSE_CODE          : 00
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE049_CURRENCY_CODE          : 978
+│ DE064_MAC                    : 57EC0071E91C8AC7
+├─────────────────────────────────────────────────
+│ HEX : 3031313037323338343438303045433038303031313635353535353533393036353538373335303030303030303030303030303030303030303631343135333532353238313137333135333532353036313435393939303531303051563550545556535A4A345A4D433238313130304D435445524D30314D434D45524348414E54303030312039373835374543303037314539314338414337
+└─────────────────────────────────────────────────
+2026-06-14T15:35:25.137+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-5] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0110 — DE039=00 DE038=MC2811 approved=true
+2026-06-14T15:35:25.565+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-7] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0100 — PAN=555555******4632 amount=0
+2026-06-14T15:35:25.566+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-7] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0100 Authorization
+├─────────────────────────────────────────────────
+│ MTI                          : 0100
+│ DE002_PAN                    : 555555******4632
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153525 [AUTO]
+│ DE011_STAN                   : 988241 [AUTO]
+│ DE012_LOCAL_TIME             : 153525 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE032_ACQUIRING_BIN          : 411111
+│ DE033_FORWARDING_BIN         : 555555
+│ DE037_RRN                    : 8SRRLKX8OAN2 [AUTO]
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE043_MERCHANT_NAME          : DEFAULT MERCHANT PARIS FR               
+│ DE049_CURRENCY_CODE          : 978
+│ DE052_PIN_BLOCK              : ********
+│ DE064_MAC                    : 51F879679C738FB1
+├─────────────────────────────────────────────────
+│ HEX : 3031303037323338343438313838453039303031313635353535353535323238383834363332303030303030303030303030303030303030303631343135333532353938383234313135333532353036313435393939303531303030363431313131313036353535353535385352524C4B58384F414E324D435445524D30314D434D45524348414E54303030312044454641554C54204D45524348414E542050415249532046522020202020202020202020202020203937384338313546343936324434424533423035314638373936373943373338464231
+└─────────────────────────────────────────────────
+2026-06-14T15:35:25.575+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-7] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0110 Authorization Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0110
+│ DE002_PAN                    : 555555******4632
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153525 [AUTO]
+│ DE011_STAN                   : 988241 [AUTO]
+│ DE012_LOCAL_TIME             : 153525 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE037_RRN                    : 8SRRLKX8OAN2 [AUTO]
+│ DE038_AUTH_CODE              : MC9882
+│ DE039_RESPONSE_CODE          : 00
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE049_CURRENCY_CODE          : 978
+│ DE064_MAC                    : 44E46C05EB0EE1D3
+├─────────────────────────────────────────────────
+│ HEX : 30313130373233383434383030454330383030313136353535353535353232383838343633323030303030303030303030303030303030303036313431353335323539383832343131353335323530363134353939393035313030385352524C4B58384F414E324D433938383230304D435445524D30314D434D45524348414E54303030312039373834344534364330354542304545314433
+└─────────────────────────────────────────────────
+2026-06-14T15:35:25.575+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-7] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0110 — DE039=00 DE038=MC9882 approved=true
+2026-06-14T15:35:50.755+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153550
+│ DE011 STAN            : 830261
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533353530383330323631333032
+└─────────────────────────────────────────────────
+2026-06-14T15:35:50.776+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153550
+│ DE011 STAN            : 830261
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333535303833303236313030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:35:50.776+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:36:42.508+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-9] c.s.sg.acquirer.api.AuthController       : [AUTH] Login success — login=admin role=ADMIN
+2026-06-14T15:36:44.100+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-4] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153644
+│ DE011 STAN            : 464293
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533363434343634323933333032
+└─────────────────────────────────────────────────
+2026-06-14T15:36:44.104+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-4] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153644
+│ DE011 STAN            : 464293
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333634343436343239333030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:36:44.104+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-4] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:36:45.236+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-9] com.staging.sg.acquirer.TestService      : [TEST] Created — name=Achat nominal CB
+2026-06-14T15:36:45.622+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-2] com.staging.sg.acquirer.UserService      : [USER] Test 5 assigned to user 3
+2026-06-14T15:36:45.922+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-1] c.s.sg.acquirer.api.AuthController       : [AUTH] Login success — login=mohamed role=EXPLOITATION
+2026-06-14T15:36:46.445+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-6] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0100 — PAN=555555******4372 amount=0
+2026-06-14T15:36:46.446+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-6] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0100 Authorization
+├─────────────────────────────────────────────────
+│ MTI                          : 0100
+│ DE002_PAN                    : 555555******4372
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153646 [AUTO]
+│ DE011_STAN                   : 527911 [AUTO]
+│ DE012_LOCAL_TIME             : 153646 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE032_ACQUIRING_BIN          : 411111
+│ DE033_FORWARDING_BIN         : 555555
+│ DE037_RRN                    : 8I3VVS3D0QDP [AUTO]
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE043_MERCHANT_NAME          : DEFAULT MERCHANT PARIS FR               
+│ DE049_CURRENCY_CODE          : 978
+│ DE052_PIN_BLOCK              : ********
+│ DE064_MAC                    : 399B00159A6199DE
+├─────────────────────────────────────────────────
+│ HEX : 30313030373233383434383138384530393030313136353535353535383133323939343337323030303030303030303030303030303030303036313431353336343635323739313131353336343630363134353939393035313030303634313131313130363535353535353849335656533344305144504D435445524D30314D434D45524348414E54303030312044454641554C54204D45524348414E542050415249532046522020202020202020202020202020203937384344323841353241383136433046353033393942303031353941363139394445
+└─────────────────────────────────────────────────
+2026-06-14T15:36:46.449+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-6] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0110 Authorization Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0110
+│ DE002_PAN                    : 555555******4372
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153646 [AUTO]
+│ DE011_STAN                   : 527911 [AUTO]
+│ DE012_LOCAL_TIME             : 153646 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE037_RRN                    : 8I3VVS3D0QDP [AUTO]
+│ DE038_AUTH_CODE              : MC5279
+│ DE039_RESPONSE_CODE          : 00
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE049_CURRENCY_CODE          : 978
+│ DE064_MAC                    : 5B811679EA6E83C0
+├─────────────────────────────────────────────────
+│ HEX : 303131303732333834343830304543303830303131363535353535353831333239393433373230303030303030303030303030303030303030363134313533363436353237393131313533363436303631343539393930353130303849335656533344305144504D433532373930304D435445524D30314D434D45524348414E54303030312039373835423831313637394541364538334330
+└─────────────────────────────────────────────────
+2026-06-14T15:36:46.449+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-6] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0110 — DE039=00 DE038=MC5279 approved=true
+2026-06-14T15:36:46.639+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-8] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0100 — PAN=555555******6393 amount=0
+2026-06-14T15:36:46.640+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-8] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0100 Authorization
+├─────────────────────────────────────────────────
+│ MTI                          : 0100
+│ DE002_PAN                    : 555555******6393
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153646 [AUTO]
+│ DE011_STAN                   : 419025 [AUTO]
+│ DE012_LOCAL_TIME             : 153646 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE032_ACQUIRING_BIN          : 411111
+│ DE033_FORWARDING_BIN         : 555555
+│ DE037_RRN                    : 10BY0BSS2860 [AUTO]
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE043_MERCHANT_NAME          : DEFAULT MERCHANT PARIS FR               
+│ DE049_CURRENCY_CODE          : 978
+│ DE052_PIN_BLOCK              : ********
+│ DE064_MAC                    : 268E656F891A84B7
+├─────────────────────────────────────────────────
+│ HEX : 30313030373233383434383138384530393030313136353535353535303030313630363339333030303030303030303030303030303030303036313431353336343634313930323531353336343630363134353939393035313030303634313131313130363535353535353130425930425353323836304D435445524D30314D434D45524348414E54303030312044454641554C54204D45524348414E542050415249532046522020202020202020202020202020203937383332453238423933343633423843364332363845363536463839314138344237
+└─────────────────────────────────────────────────
+2026-06-14T15:36:46.642+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-8] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0110 Authorization Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0110
+│ DE002_PAN                    : 555555******6393
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153646 [AUTO]
+│ DE011_STAN                   : 419025 [AUTO]
+│ DE012_LOCAL_TIME             : 153646 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE037_RRN                    : 10BY0BSS2860 [AUTO]
+│ DE038_AUTH_CODE              : MC4190
+│ DE039_RESPONSE_CODE          : 00
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE049_CURRENCY_CODE          : 978
+│ DE064_MAC                    : 45E9017FFB64ECA1
+├─────────────────────────────────────────────────
+│ HEX : 303131303732333834343830304543303830303131363535353535353030303136303633393330303030303030303030303030303030303030363134313533363436343139303235313533363436303631343539393930353130303130425930425353323836304D433431393030304D435445524D30314D434D45524348414E54303030312039373834354539303137464642363445434131
+└─────────────────────────────────────────────────
+2026-06-14T15:36:46.642+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-8] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0110 — DE039=00 DE038=MC4190 approved=true
+2026-06-14T15:36:46.875+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-10] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0100 — PAN=555555******5813 amount=0
+2026-06-14T15:36:46.876+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-10] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0100 Authorization
+├─────────────────────────────────────────────────
+│ MTI                          : 0100
+│ DE002_PAN                    : 555555******5813
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153646 [AUTO]
+│ DE011_STAN                   : 653678 [AUTO]
+│ DE012_LOCAL_TIME             : 153646 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE032_ACQUIRING_BIN          : 411111
+│ DE033_FORWARDING_BIN         : 555555
+│ DE037_RRN                    : FYJTFLMWLDK3 [AUTO]
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE043_MERCHANT_NAME          : DEFAULT MERCHANT PARIS FR               
+│ DE049_CURRENCY_CODE          : 978
+│ DE052_PIN_BLOCK              : ********
+│ DE064_MAC                    : 2E9D631BE11C89CE
+├─────────────────────────────────────────────────
+│ HEX : 303130303732333834343831383845303930303131363535353535353133363231363538313330303030303030303030303030303030303030363134313533363436363533363738313533363436303631343539393930353130303036343131313131303635353535353546594A54464C4D574C444B334D435445524D30314D434D45524348414E54303030312044454641554C54204D45524348414E542050415249532046522020202020202020202020202020203937383832343734353746343530394234393732453944363331424531314338394345
+└─────────────────────────────────────────────────
+2026-06-14T15:36:46.879+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-10] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0110 Authorization Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0110
+│ DE002_PAN                    : 555555******5813
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153646 [AUTO]
+│ DE011_STAN                   : 653678 [AUTO]
+│ DE012_LOCAL_TIME             : 153646 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE037_RRN                    : FYJTFLMWLDK3 [AUTO]
+│ DE038_AUTH_CODE              : MC6536
+│ DE039_RESPONSE_CODE          : 00
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE049_CURRENCY_CODE          : 978
+│ DE064_MAC                    : 4CF30073EB14E1D9
+├─────────────────────────────────────────────────
+│ HEX : 3031313037323338343438303045433038303031313635353535353531333632313635383133303030303030303030303030303030303030303631343135333634363635333637383135333634363036313435393939303531303046594A54464C4D574C444B334D433635333630304D435445524D30314D434D45524348414E54303030312039373834434633303037334542313445314439
+└─────────────────────────────────────────────────
+2026-06-14T15:36:46.879+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-10] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0110 — DE039=00 DE038=MC6536 approved=true
+2026-06-14T15:36:47.246+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-2] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0100 — PAN=555555******7001 amount=0
+2026-06-14T15:36:47.247+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-2] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0100 Authorization
+├─────────────────────────────────────────────────
+│ MTI                          : 0100
+│ DE002_PAN                    : 555555******7001
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153647 [AUTO]
+│ DE011_STAN                   : 302185 [AUTO]
+│ DE012_LOCAL_TIME             : 153647 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE032_ACQUIRING_BIN          : 411111
+│ DE033_FORWARDING_BIN         : 555555
+│ DE037_RRN                    : 3SI2J5KW3MPZ [AUTO]
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE043_MERCHANT_NAME          : DEFAULT MERCHANT PARIS FR               
+│ DE049_CURRENCY_CODE          : 978
+│ DE052_PIN_BLOCK              : ********
+│ DE064_MAC                    : 239266199B748EC4
+├─────────────────────────────────────────────────
+│ HEX : 3031303037323338343438313838453039303031313635353535353531363330373737303031303030303030303030303030303030303030303631343135333634373330323138353135333634373036313435393939303531303030363431313131313036353535353535335349324A354B57334D505A4D435445524D30314D434D45524348414E54303030312044454641554C54204D45524348414E542050415249532046522020202020202020202020202020203937383732453644353434323744414336333732333932363631393942373438454334
+└─────────────────────────────────────────────────
+2026-06-14T15:36:47.252+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-2] c.s.sg.acquirer.acquirer.McAcquirer      : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0110 Authorization Response
+├─────────────────────────────────────────────────
+│ MTI                          : 0110
+│ DE002_PAN                    : 555555******7001
+│ DE003_PROCESSING_CODE        : 000000
+│ DE004_AMOUNT                 : 000000000000
+│ DE007_TRANSMISSION_DATE_TIME : 0614153647 [AUTO]
+│ DE011_STAN                   : 302185 [AUTO]
+│ DE012_LOCAL_TIME             : 153647 [AUTO]
+│ DE013_LOCAL_DATE             : 0614 [AUTO]
+│ DE018_MCC                    : 5999
+│ DE022_POS_ENTRY_MODE         : 051
+│ DE025_POS_CONDITION_CODE     : 00
+│ DE037_RRN                    : 3SI2J5KW3MPZ [AUTO]
+│ DE038_AUTH_CODE              : MC3021
+│ DE039_RESPONSE_CODE          : 00
+│ DE041_TERMINAL_ID            : MCTERM01
+│ DE042_MERCHANT_ID            : MCMERCHANT0001 
+│ DE049_CURRENCY_CODE          : 978
+│ DE064_MAC                    : 33F00275EF0DE4DA
+├─────────────────────────────────────────────────
+│ HEX : 30313130373233383434383030454330383030313136353535353535313633303737373030313030303030303030303030303030303030303036313431353336343733303231383531353336343730363134353939393035313030335349324A354B57334D505A4D433330323130304D435445524D30314D434D45524348414E54303030312039373833334630303237354546304445344441
+└─────────────────────────────────────────────────
+2026-06-14T15:36:47.252+01:00  INFO 17288 --- [sg-acquirer] [http-nio-8080-exec-2] c.s.sg.acquirer.acquirer.McAcquirer      : [ACQUIRING] 0110 — DE039=00 DE038=MC3021 approved=true
+2026-06-14T15:36:50.754+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153650
+│ DE011 STAN            : 930242
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533363530393330323432333032
+└─────────────────────────────────────────────────
+2026-06-14T15:36:50.763+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153650
+│ DE011 STAN            : 930242
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333635303933303234323030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:36:50.764+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:37:50.753+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153750
+│ DE011 STAN            : 781028
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533373530373831303238333032
+└─────────────────────────────────────────────────
+2026-06-14T15:37:50.768+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153750
+│ DE011 STAN            : 781028
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333735303738313032383030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:37:50.769+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:38:50.758+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153850
+│ DE011 STAN            : 854879
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533383530383534383739333032
+└─────────────────────────────────────────────────
+2026-06-14T15:38:50.762+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153850
+│ DE011 STAN            : 854879
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333835303835343837393030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:38:50.762+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:39:50.756+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614153950
+│ DE011 STAN            : 493814
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313533393530343933383134333032
+└─────────────────────────────────────────────────
+2026-06-14T15:39:50.766+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614153950
+│ DE011 STAN            : 493814
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135333935303439333831343030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:39:50.766+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:40:50.753+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614154050
+│ DE011 STAN            : 545991
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313534303530353435393931333032
+└─────────────────────────────────────────────────
+2026-06-14T15:40:50.764+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614154050
+│ DE011 STAN            : 545991
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135343035303534353939313030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:40:50.765+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:41:50.754+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614154150
+│ DE011 STAN            : 856627
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313534313530383536363237333032
+└─────────────────────────────────────────────────
+2026-06-14T15:41:50.759+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614154150
+│ DE011 STAN            : 856627
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135343135303835363632373030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:41:50.760+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:42:50.753+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614154250
+│ DE011 STAN            : 203046
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313534323530323033303436333032
+└─────────────────────────────────────────────────
+2026-06-14T15:42:50.759+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614154250
+│ DE011 STAN            : 203046
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135343235303230333034363030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:42:50.759+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:43:50.754+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614154350
+│ DE011 STAN            : 653375
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313534333530363533333735333032
+└─────────────────────────────────────────────────
+2026-06-14T15:43:50.761+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614154350
+│ DE011 STAN            : 653375
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135343335303635333337353030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:43:50.761+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:44:50.754+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614154450
+│ DE011 STAN            : 379328
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313534343530333739333238333032
+└─────────────────────────────────────────────────
+2026-06-14T15:44:50.767+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614154450
+│ DE011 STAN            : 379328
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135343435303337393332383030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:44:50.767+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:45:50.762+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Echo Test
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614154550
+│ DE011 STAN            : 618550
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313534353530363138353530333032
+└─────────────────────────────────────────────────
+2026-06-14T15:45:50.792+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Echo Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614154550
+│ DE011 STAN            : 618550
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 302
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135343535303631383535303030333032
+└─────────────────────────────────────────────────
+2026-06-14T15:45:50.792+01:00  INFO 17288 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Echo — DE39=00 success=true
+2026-06-14T15:46:19.652+01:00  INFO 17288 --- [sg-acquirer] [SpringApplicationShutdownHook] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Network manager stopped
+2026-06-14T15:46:19.687+01:00  INFO 17288 --- [sg-acquirer] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T15:46:19.929+01:00  INFO 17288 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-14T15:46:20.433+01:00  INFO 17288 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-06-14T15:47:59.337+01:00  INFO 9976 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : Starting SgAcquirerApplication using Java 26.0.1 with PID 9976 (D:\MoneyCore\ScenarioGenerator\sg-acquirer\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-14T15:47:59.340+01:00  INFO 9976 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : No active profile set, falling back to 1 default profile: "default"
+2026-06-14T15:48:00.703+01:00  INFO 9976 --- [sg-acquirer] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-14T15:48:00.788+01:00  INFO 9976 --- [sg-acquirer] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 74 ms. Found 6 JPA repository interfaces.
+2026-06-14T15:48:03.156+01:00  INFO 9976 --- [sg-acquirer] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-14T15:48:03.173+01:00  INFO 9976 --- [sg-acquirer] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-14T15:48:03.174+01:00  INFO 9976 --- [sg-acquirer] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-14T15:48:03.260+01:00  INFO 9976 --- [sg-acquirer] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-14T15:48:03.261+01:00  INFO 9976 --- [sg-acquirer] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3814 ms
+2026-06-14T15:48:03.735+01:00  INFO 9976 --- [sg-acquirer] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-14T15:48:03.800+01:00  INFO 9976 --- [sg-acquirer] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-06-14T15:48:03.837+01:00  INFO 9976 --- [sg-acquirer] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-14T15:48:04.135+01:00  INFO 9976 --- [sg-acquirer] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-14T15:48:04.163+01:00  INFO 9976 --- [sg-acquirer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-14T15:48:04.344+01:00  INFO 9976 --- [sg-acquirer] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@41bd6a0f
+2026-06-14T15:48:04.348+01:00  INFO 9976 --- [sg-acquirer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-14T15:48:06.173+01:00  INFO 9976 --- [sg-acquirer] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-14T15:48:06.232+01:00  INFO 9976 --- [sg-acquirer] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T15:48:06.900+01:00  INFO 9976 --- [sg-acquirer] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-06-14T15:48:07.481+01:00  INFO 9976 --- [sg-acquirer] [main] c.s.sg.acquirer.config.DataInitializer   : [INIT] Admin user already exists — login=admin
+2026-06-14T15:48:07.559+01:00  WARN 9976 --- [sg-acquirer] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-06-14T15:48:08.055+01:00  INFO 9976 --- [sg-acquirer] [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoint(s) beneath base path '/actuator'
+2026-06-14T15:48:08.176+01:00  INFO 9976 --- [sg-acquirer] [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with [org.springframework.security.web.session.DisableEncodeUrlFilter@51db8b10, org.springframework.security.web.context.request.async.WebAsyncManagerIntegrationFilter@3afe1020, org.springframework.security.web.context.SecurityContextHolderFilter@4a842e8a, org.springframework.security.web.header.HeaderWriterFilter@3af4b14e, org.springframework.web.filter.CorsFilter@91e76b6, org.springframework.security.web.authentication.logout.LogoutFilter@7fcbed77, com.staging.sg.common.JwtFilter@2f8c4fae, org.springframework.security.web.savedrequest.RequestCacheAwareFilter@64d7737c, org.springframework.security.web.servletapi.SecurityContextHolderAwareRequestFilter@24456c9e, org.springframework.security.web.authentication.AnonymousAuthenticationFilter@563f53d8, org.springframework.security.web.session.SessionManagementFilter@584f12eb, org.springframework.security.web.access.ExceptionTranslationFilter@2b7b6f58, org.springframework.security.web.access.intercept.AuthorizationFilter@1a48e48e]
+2026-06-14T15:48:08.767+01:00  INFO 9976 --- [sg-acquirer] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path ''
+2026-06-14T15:48:08.783+01:00  INFO 9976 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : Started SgAcquirerApplication in 10.368 seconds (process running for 11.158)
+2026-06-14T15:48:08.871+01:00  INFO 9976 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : ================================================
+2026-06-14T15:48:08.872+01:00  INFO 9976 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    :   SG Acquirer — started successfully
+2026-06-14T15:48:08.872+01:00  INFO 9976 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    :   API    : http://localhost:8080/api/status
+2026-06-14T15:48:08.872+01:00  INFO 9976 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : ================================================
+2026-06-14T15:48:09.237+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Step 1 — Key Exchange...
+2026-06-14T15:48:09.237+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Starting Key Exchange — ZMK{{KEK}} + ZPK{{ZMK}} + ZAK{{ZMK}}
+2026-06-14T15:48:09.237+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Step 1/3 — ZMK{{KEK}}...
+2026-06-14T15:48:09.238+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Generating ZMK...
+2026-06-14T15:48:09.250+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] ZMK generated — KCV=61DBF1
+2026-06-14T15:48:09.265+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0820 Key-Exchange ZMK{KEK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0820
+│ DE007 Date/Time       : 0614154809
+│ DE011 STAN            : 970568
+│ DE053 Security Info   : 61DBF1E25715...
+│ DE070 Network Code    : 101
+│ KCV                   : 61DBF1
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135343830393937303536383033383631444246314532353731353039383633313041344633303136463045434631443234363945313031
+└─────────────────────────────────────────────────
+2026-06-14T15:48:09.288+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0830 Key-Exchange Response ZMK{KEK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0830
+│ DE007 Date/Time       : 0614154809
+│ DE011 STAN            : 970568
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 101
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135343830393937303536383030313031
+└─────────────────────────────────────────────────
+2026-06-14T15:48:09.288+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key-Exchange ZMK{KEK} — DE39=00 success=true
+2026-06-14T15:48:09.288+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] ZMK accepted — KCV=61DBF1
+2026-06-14T15:48:09.289+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Step 2/3 — ZPK{{ZMK}}...
+2026-06-14T15:48:09.289+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Generating ZPK under ZMK...
+2026-06-14T15:48:09.290+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] ZPK generated — KCV=9D1E43
+2026-06-14T15:48:09.291+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0820 Key-Exchange ZPK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0820
+│ DE007 Date/Time       : 0614154809
+│ DE011 STAN            : 807954
+│ DE053 Security Info   : 9D1E43E58646...
+│ DE070 Network Code    : 102
+│ KCV                   : 9D1E43
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135343830393830373935343033383944314534334535383634364443434144444346394336393345363434323433444544333641313032
+└─────────────────────────────────────────────────
+2026-06-14T15:48:09.300+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0830 Key-Exchange Response ZPK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0830
+│ DE007 Date/Time       : 0614154809
+│ DE011 STAN            : 807954
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 102
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135343830393830373935343030313032
+└─────────────────────────────────────────────────
+2026-06-14T15:48:09.301+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key-Exchange ZPK{ZMK} — DE39=00 success=true
+2026-06-14T15:48:09.302+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] ZPK accepted — KCV=9D1E43
+2026-06-14T15:48:09.302+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Step 3/3 — ZAK{{ZMK}}...
+2026-06-14T15:48:09.302+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Generating ZAK under ZMK...
+2026-06-14T15:48:09.303+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] ZAK generated — KCV=0415EB
+2026-06-14T15:48:09.304+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0820 Key-Exchange ZAK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0820
+│ DE007 Date/Time       : 0614154809
+│ DE011 STAN            : 726046
+│ DE053 Security Info   : 0415EBC0B92B...
+│ DE070 Network Code    : 103
+│ KCV                   : 0415EB
+├─────────────────────────────────────────────────
+│ HEX : 303832303832323030303030303030303038303030343030303030303030303030303030303631343135343830393732363034363033383034313545424330423932423846354646383635413435344636313731304143453339413539313033
+└─────────────────────────────────────────────────
+2026-06-14T15:48:09.314+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0830 Key-Exchange Response ZAK{ZMK}
+├─────────────────────────────────────────────────
+│ MTI                   : 0830
+│ DE007 Date/Time       : 0614154809
+│ DE011 STAN            : 726046
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 103
+├─────────────────────────────────────────────────
+│ HEX : 303833303832323030303030303230303030303030343030303030303030303030303030303631343135343830393732363034363030313033
+└─────────────────────────────────────────────────
+2026-06-14T15:48:09.315+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key-Exchange ZAK{ZMK} — DE39=00 success=true
+2026-06-14T15:48:09.316+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] ZAK accepted — KCV=0415EB
+2026-06-14T15:48:09.317+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.sg.common.hsm.ThalesHsmService       : [HSM] Session keys loaded — ZMK KCV=61DBF1 ZPK KCV=9D1E43 ZAK KCV=0415EB
+2026-06-14T15:48:09.317+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.a.network.McKeyExchangeManager     : [ACQUIRING] Key Exchange completed — ZMK=61DBF1 ZPK=9D1E43 ZAK=0415EB
+2026-06-14T15:48:09.318+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Key Exchange OK — ZMK=61DBF1 ZPK=9D1E43 ZAK=0415EB
+2026-06-14T15:48:09.318+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Step 2 — Sign-on...
+2026-06-14T15:48:09.318+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] SENT — 0800 Sign-on
+├─────────────────────────────────────────────────
+│ MTI                   : 0800
+│ DE007 Date/Time       : 0614154809
+│ DE011 STAN            : 163212
+│ DE070 Network Code    : 301
+├─────────────────────────────────────────────────
+│ HEX : 30383030383232303030303030303030303030303034303030303030303030303030303030363134313534383039313633323132333031
+└─────────────────────────────────────────────────
+2026-06-14T15:48:09.322+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : 
+┌─────────────────────────────────────────────────
+│ [ACQUIRING] RECEIVED — 0810 Sign-on Response
+├─────────────────────────────────────────────────
+│ MTI                   : 0810
+│ DE007 Date/Time       : 0614154809
+│ DE011 STAN            : 163212
+│ DE039 Response Code   : 00
+│ DE070 Network Code    : 301
+├─────────────────────────────────────────────────
+│ HEX : 303831303832323030303030303230303030303030343030303030303030303030303030303631343135343830393136333231323030333031
+└─────────────────────────────────────────────────
+2026-06-14T15:48:09.322+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Sign-on — DE39=00 success=true
+2026-06-14T15:48:09.323+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Sign-on OK — session established
+2026-06-14T15:48:09.323+01:00  INFO 9976 --- [sg-acquirer] [mc-network-manager] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Heartbeat started — interval 60s
+2026-06-14T15:48:53.782+01:00  INFO 9976 --- [sg-acquirer] [SpringApplicationShutdownHook] c.s.s.acquirer.network.McNetworkManager  : [ACQUIRING] Network manager stopped
+2026-06-14T15:48:53.783+01:00  INFO 9976 --- [sg-acquirer] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T15:48:53.789+01:00  INFO 9976 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-14T15:48:53.800+01:00  INFO 9976 --- [sg-acquirer] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.

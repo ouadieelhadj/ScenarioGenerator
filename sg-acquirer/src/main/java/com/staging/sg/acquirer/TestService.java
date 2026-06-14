@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -71,10 +72,13 @@ public class TestService {
         }
 
         userRepository.findByLogin(createdByLogin).ifPresent(test::setCreatedBy);
+
+        // Save test first
         Test saved = testRepository.save(test);
 
-        // TPS Steps
-        if (dto.getTpsSteps() != null) {
+        // Save TPS Steps separately
+        if (dto.getTpsSteps() != null && !dto.getTpsSteps().isEmpty()) {
+            List<TpsStep> steps = new ArrayList<>();
             for (TpsStepDto stepDto : dto.getTpsSteps()) {
                 TpsStep step = new TpsStep();
                 step.setTest(saved);
@@ -82,12 +86,14 @@ public class TestService {
                 step.setStartSeconds(stepDto.getStartSeconds());
                 step.setEndSeconds(stepDto.getEndSeconds());
                 step.setTpsValue(stepDto.getTpsValue());
-                tpsStepRepository.save(step);
+                steps.add(step);
             }
+            tpsStepRepository.saveAll(steps);
+            log.info("[TEST] Saved {} TPS steps for test id={}", steps.size(), saved.getId());
         }
 
-        log.info("[TEST] Created — name={}", saved.getName());
-        return toDto(saved);
+        // Reload to get steps
+        return toDto(testRepository.findById(saved.getId()).orElse(saved));
     }
 
     @Transactional
@@ -95,10 +101,10 @@ public class TestService {
         Test test = testRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Test not found : " + id));
 
-        if (dto.getName()        != null) test.setName(dto.getName());
-        if (dto.getDescription() != null) test.setDescription(dto.getDescription());
-        if (dto.getCategory()    != null) test.setCategory(dto.getCategory());
-        if (dto.getConfig()      != null) test.setConfig(dto.getConfig());
+        if (dto.getName()          != null) test.setName(dto.getName());
+        if (dto.getDescription()   != null) test.setDescription(dto.getDescription());
+        if (dto.getCategory()      != null) test.setCategory(dto.getCategory());
+        if (dto.getConfig()        != null) test.setConfig(dto.getConfig());
         if (dto.getExpectedDe039() != null) test.setExpectedDe039(dto.getExpectedDe039());
 
         if (dto.getMessageTypeId() != null) {
@@ -144,7 +150,7 @@ public class TestService {
             dto.setMessageTypeId(t.getMessageType().getId());
             dto.setMessageTypeName(t.getMessageType().getName());
         }
-        if (t.getTpsSteps() != null) {
+        if (t.getTpsSteps() != null && !t.getTpsSteps().isEmpty()) {
             dto.setTpsSteps(t.getTpsSteps().stream().map(s -> {
                 TpsStepDto sd = new TpsStepDto();
                 sd.setId(s.getId());
