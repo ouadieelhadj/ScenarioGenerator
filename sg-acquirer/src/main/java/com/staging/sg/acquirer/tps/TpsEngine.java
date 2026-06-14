@@ -9,12 +9,15 @@ import com.staging.sg.common.entity.Execution;
 import com.staging.sg.common.entity.ExecutionStatus;
 import com.staging.sg.common.entity.Result;
 import com.staging.sg.common.entity.Test;
+import com.staging.sg.common.entity.TpsStep;
 import com.staging.sg.common.repository.ExecutionRepository;
 import com.staging.sg.common.repository.ResultRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -23,16 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
-/**
- * TPS Engine — sends transactions at configured rate.
- *
- * Flow :
- *   1. Read TPS steps from test config
- *   2. For each step : send X TPS during Y seconds
- *   3. Record metrics
- *   4. Save results to database
- *   5. Update execution status
- */
 @Service
 public class TpsEngine {
 
@@ -49,7 +42,6 @@ public class TpsEngine {
     @Value("${tps.thread-pool-size:20}")
     private int threadPoolSize;
 
-    // Active executions map
     private final Map<Long, TpsExecution> activeExecutions = new ConcurrentHashMap<>();
 
     public TpsEngine(McAcquirer acquirer,
@@ -62,38 +54,36 @@ public class TpsEngine {
         this.objectMapper        = objectMapper;
     }
 
-    // ── Start execution ──────────────────────────────────────
-
     public TpsExecution start(Execution execution, Test test) {
         Long executionId = execution.getId();
         TpsMetrics metrics = new TpsMetrics();
 
+        // Extract steps before thread
+        List<TpsStepDto> steps = extractSteps(test);
+        String config = test.getConfig();
+
         ExecutorService executor = Executors.newFixedThreadPool(threadPoolSize);
-        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
         Future<?> future = executor.submit(() ->
-            runExecution(execution, test, metrics, executor, scheduler));
+            runExecution(execution.getId(), config, steps, metrics, executor));
 
         TpsExecution tpsExecution = new TpsExecution(executionId, test.getId(), metrics, future);
         activeExecutions.put(executionId, tpsExecution);
 
-        log.info("[TPS] Execution {} started — test={}", executionId, test.getName());
+        log.info("[TPS] Execution {} started — test={} steps={}",
+                executionId, test.getName(), steps.size());
         return tpsExecution;
     }
-
-    // ── Stop execution ───────────────────────────────────────
 
     public void stop(Long executionId) {
         TpsExecution exec = activeExecutions.get(executionId);
         if (exec != null) {
             exec.stop();
             activeExecutions.remove(executionId);
-            updateExecutionStatus(executionId, ExecutionStatus.STOPPED, exec.getMetrics());
+            saveMetrics(executionId, ExecutionStatus.STOPPED, exec.getMetrics());
             log.info("[TPS] Execution {} stopped", executionId);
         }
     }
-
-    // ── Get metrics ──────────────────────────────────────────
 
     public TpsMetrics getMetrics(Long executionId) {
         TpsExecution exec = activeExecutions.get(executionId);
@@ -107,46 +97,39 @@ public class TpsEngine {
 
     // ── Run execution ────────────────────────────────────────
 
-    private void runExecution(Execution execution, Test test,
+    private void runExecution(Long executionId,
+                               String config,
+                               List<TpsStepDto> steps,
                                TpsMetrics metrics,
-                               ExecutorService executor,
-                               ScheduledExecutorService scheduler) {
+                               ExecutorService executor) {
         try {
-            // Parse test config
-            McAuthRequest baseRequest = parseConfig(test.getConfig());
-
-            // Get TPS steps
-            List<TpsStepDto> steps = getTpsSteps(test);
+            McAuthRequest baseRequest = parseConfig(config);
 
             if (steps.isEmpty()) {
-                // Mode SIMPLE — send one transaction
                 log.info("[TPS] Mode SIMPLE — sending one transaction");
-                sendTransaction(baseRequest, metrics, execution.getId());
+                sendTransaction(baseRequest, metrics, executionId);
                 metrics.setStatus("COMPLETED");
-                updateExecutionStatus(execution.getId(), ExecutionStatus.COMPLETED, metrics);
+                saveMetrics(executionId, ExecutionStatus.COMPLETED, metrics);
                 return;
             }
 
-            // Mode CHARGE — send transactions at TPS rate
             log.info("[TPS] Mode CHARGE — {} steps", steps.size());
 
             for (int s = 0; s < steps.size(); s++) {
                 TpsStepDto step = steps.get(s);
                 metrics.setCurrentStep(s + 1);
 
-                int tpsValue = Math.min(step.getTpsValue(), maxTps);
+                int tpsValue    = Math.min(step.getTpsValue(), maxTps);
                 int durationSec = step.getEndSeconds() - step.getStartSeconds();
                 metrics.setCurrentTps(tpsValue);
 
                 log.info("[TPS] Step {}/{} — {} TPS for {}s",
                         s + 1, steps.size(), tpsValue, durationSec);
 
-                // Calculate interval between transactions
                 long intervalMs = tpsValue > 0 ? 1000L / tpsValue : 1000L;
-
-                long stepEnd = System.currentTimeMillis() + (durationSec * 1000L);
+                long stepEnd    = System.currentTimeMillis() + (durationSec * 1000L);
                 long secondStart = System.currentTimeMillis();
-                int txThisSecond = 0;
+                int  txThisSecond = 0;
 
                 while (System.currentTimeMillis() < stepEnd) {
                     if (Thread.currentThread().isInterrupted()) {
@@ -154,22 +137,20 @@ public class TpsEngine {
                         return;
                     }
 
-                    // Send transaction in thread pool
                     final McAuthRequest req = cloneRequest(baseRequest);
-                    executor.submit(() -> sendTransaction(req, metrics, execution.getId()));
+                    executor.submit(() -> sendTransaction(req, metrics, executionId));
                     txThisSecond++;
 
-                    // Calculate actual TPS every second
                     long now = System.currentTimeMillis();
                     if (now - secondStart >= 1000) {
                         double actualTps = txThisSecond * 1000.0 / (now - secondStart);
                         metrics.recordTps(actualTps);
-                        log.debug("[TPS] Step {} — actual TPS={}", s + 1, String.format("%.1f", actualTps));
-                        secondStart = now;
-                        txThisSecond = 0;
+                        log.debug("[TPS] Step {} — actual TPS={}", s + 1,
+                                String.format("%.1f", actualTps));
+                        secondStart   = now;
+                        txThisSecond  = 0;
                     }
 
-                    // Wait for next transaction
                     Thread.sleep(intervalMs);
                 }
             }
@@ -179,22 +160,24 @@ public class TpsEngine {
             executor.awaitTermination(30, TimeUnit.SECONDS);
 
             metrics.setStatus("COMPLETED");
-            updateExecutionStatus(execution.getId(), ExecutionStatus.COMPLETED, metrics);
-            log.info("[TPS] Execution {} completed — TX={} approved={} declined={}",
-                    execution.getId(), metrics.getTxTotal(),
-                    metrics.getTxApproved(), metrics.getTxDeclined());
+            saveMetrics(executionId, ExecutionStatus.COMPLETED, metrics);
+
+            log.info("[TPS] Execution {} completed — TX={} approved={} declined={} avgTPS={} avgMs={}",
+                    executionId, metrics.getTxTotal(), metrics.getTxApproved(),
+                    metrics.getTxDeclined(),
+                    String.format("%.1f", metrics.getAvgTps()),
+                    String.format("%.0f", metrics.getAvgResponseMs()));
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             metrics.setStatus("STOPPED");
-            updateExecutionStatus(execution.getId(), ExecutionStatus.STOPPED, metrics);
+            saveMetrics(executionId, ExecutionStatus.STOPPED, metrics);
         } catch (Exception e) {
-            log.error("[TPS] Execution {} error : {}", execution.getId(), e.getMessage());
+            log.error("[TPS] Execution {} error : {}", executionId, e.getMessage());
             metrics.setStatus("ERROR");
-            updateExecutionStatus(execution.getId(), ExecutionStatus.ERROR, metrics);
+            saveMetrics(executionId, ExecutionStatus.ERROR, metrics);
         } finally {
-            activeExecutions.remove(execution.getId());
-            scheduler.shutdown();
+            activeExecutions.remove(executionId);
         }
     }
 
@@ -207,12 +190,8 @@ public class TpsEngine {
         try {
             McAuthResult result = acquirer.authorize(request);
             long duration = System.currentTimeMillis() - start;
-
             metrics.record(result.isApproved(), duration);
-
-            // Save result to database
             saveResult(executionId, result, duration);
-
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - start;
             metrics.record(false, duration);
@@ -222,10 +201,11 @@ public class TpsEngine {
 
     // ── Save result ──────────────────────────────────────────
 
-    private void saveResult(Long executionId, McAuthResult result, long durationMs) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveResult(Long executionId, McAuthResult result, long durationMs) {
         try {
-            Execution execution = new Execution();
-            execution.setId(executionId);
+            Execution execution = executionRepository.findById(executionId).orElse(null);
+            if (execution == null) return;
 
             Result r = new Result();
             r.setExecution(execution);
@@ -237,18 +217,16 @@ public class TpsEngine {
             r.setRequestHex(result.getRequestHex());
             r.setResponseHex(result.getResponseHex());
             r.setExecutedAt(LocalDateTime.now());
-
             resultRepository.save(r);
         } catch (Exception e) {
             log.warn("[TPS] Error saving result : {}", e.getMessage());
         }
     }
 
-    // ── Update execution status ──────────────────────────────
+    // ── Save metrics ─────────────────────────────────────────
 
-    private void updateExecutionStatus(Long executionId,
-                                        ExecutionStatus status,
-                                        TpsMetrics metrics) {
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void saveMetrics(Long executionId, ExecutionStatus status, TpsMetrics metrics) {
         try {
             executionRepository.findById(executionId).ifPresent(exec -> {
                 exec.setStatus(status);
@@ -263,13 +241,32 @@ public class TpsEngine {
                 exec.setResponseTimeP95(BigDecimal.valueOf(metrics.getP95ResponseMs()));
                 exec.setResponseTimeP99(BigDecimal.valueOf(metrics.getP99ResponseMs()));
                 executionRepository.save(exec);
+                log.info("[TPS] Metrics saved — execution={} status={} TX={} avgTPS={} avgMs={}",
+                        executionId, status, metrics.getTxTotal(),
+                        String.format("%.1f", metrics.getAvgTps()),
+                        String.format("%.0f", metrics.getAvgResponseMs()));
             });
         } catch (Exception e) {
-            log.warn("[TPS] Error updating execution status : {}", e.getMessage());
+            log.warn("[TPS] Error saving metrics : {}", e.getMessage());
         }
     }
 
-    // ── Parse config ─────────────────────────────────────────
+    // ── Helpers ──────────────────────────────────────────────
+
+    private List<TpsStepDto> extractSteps(Test test) {
+        List<TpsStepDto> steps = new ArrayList<>();
+        if (test.getTpsSteps() != null) {
+            test.getTpsSteps().forEach(s -> {
+                TpsStepDto dto = new TpsStepDto();
+                dto.setStepOrder(s.getStepOrder());
+                dto.setStartSeconds(s.getStartSeconds());
+                dto.setEndSeconds(s.getEndSeconds());
+                dto.setTpsValue(s.getTpsValue());
+                steps.add(dto);
+            });
+        }
+        return steps;
+    }
 
     @SuppressWarnings("unchecked")
     private McAuthRequest parseConfig(String config) {
@@ -308,21 +305,5 @@ public class TpsEngine {
         clone.setDE049_CURRENCY_CODE(original.getDE049_CURRENCY_CODE());
         clone.setDE052_PIN(original.getDE052_PIN());
         return clone;
-    }
-
-    @SuppressWarnings("unchecked")
-    private List<TpsStepDto> getTpsSteps(Test test) {
-        List<TpsStepDto> steps = new ArrayList<>();
-        if (test.getTpsSteps() != null) {
-            test.getTpsSteps().forEach(s -> {
-                TpsStepDto dto = new TpsStepDto();
-                dto.setStepOrder(s.getStepOrder());
-                dto.setStartSeconds(s.getStartSeconds());
-                dto.setEndSeconds(s.getEndSeconds());
-                dto.setTpsValue(s.getTpsValue());
-                steps.add(dto);
-            });
-        }
-        return steps;
     }
 }
