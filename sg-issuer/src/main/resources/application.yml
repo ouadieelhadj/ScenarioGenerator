@@ -13,8 +13,9 @@ spring:
   liquibase:
     enabled: false
 
+# Tomcat sur 8201 — le port ISO 8200 est géré par McIssuer (ServerSocket)
 server:
-  port: 8200
+  port: 8201
 
 mc:
   issuer:
@@ -37,6 +38,10 @@ mc:
     mac-fields: "2,3,4,7,11,12,13,18,22,37,41,42,49,64"
     mac-field: 64
     pin-decrypt-log: true
+
+jwt:
+  secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
+  expiration-ms: 86400000
 
 management:
   endpoints:

@@ -2444,3 +2444,44 @@
 └─────────────────────────────────────────────────
 2026-06-14 12:31:04.847 INFO  — [ACQUIRING] Echo — DE39=00 success=true
 2026-06-14 12:31:54.118 INFO  — [ACQUIRING] Network manager stopped
+2026-06-14T13:00:11.828+01:00  INFO 1992 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : Starting SgAcquirerApplication using Java 26.0.1 with PID 1992 (D:\MoneyCore\ScenarioGenerator\sg-acquirer\target\classes started by Admin in D:\MoneyCore\ScenarioGenerator)
+2026-06-14T13:00:11.832+01:00  INFO 1992 --- [sg-acquirer] [main] c.s.sg.acquirer.SgAcquirerApplication    : No active profile set, falling back to 1 default profile: "default"
+2026-06-14T13:00:13.831+01:00  INFO 1992 --- [sg-acquirer] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-06-14T13:00:13.869+01:00  INFO 1992 --- [sg-acquirer] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 25 ms. Found 0 JPA repository interfaces.
+2026-06-14T13:00:15.536+01:00  INFO 1992 --- [sg-acquirer] [main] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2026-06-14T13:00:15.563+01:00  INFO 1992 --- [sg-acquirer] [main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-14T13:00:15.564+01:00  INFO 1992 --- [sg-acquirer] [main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.20]
+2026-06-14T13:00:15.719+01:00  INFO 1992 --- [sg-acquirer] [main] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2026-06-14T13:00:15.720+01:00  INFO 1992 --- [sg-acquirer] [main] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3769 ms
+2026-06-14T13:00:16.386+01:00  INFO 1992 --- [sg-acquirer] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-06-14T13:00:16.513+01:00  INFO 1992 --- [sg-acquirer] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.4.4.Final
+2026-06-14T13:00:16.563+01:00  INFO 1992 --- [sg-acquirer] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-06-14T13:00:16.971+01:00  INFO 1992 --- [sg-acquirer] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-06-14T13:00:17.008+01:00  INFO 1992 --- [sg-acquirer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-06-14T13:00:17.217+01:00  INFO 1992 --- [sg-acquirer] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@1dcca426
+2026-06-14T13:00:17.220+01:00  INFO 1992 --- [sg-acquirer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-06-14T13:00:17.843+01:00  INFO 1992 --- [sg-acquirer] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-06-14T13:00:17.850+01:00  INFO 1992 --- [sg-acquirer] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T13:00:17.924+01:00  WARN 1992 --- [sg-acquirer] [main] ConfigServletWebServerApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'authController' defined in file [D:\MoneyCore\ScenarioGenerator\sg-acquirer\target\classes\com\staging\sg\acquirer\api\AuthController.class]: Unsatisfied dependency expressed through constructor parameter 0: No qualifying bean of type 'com.staging.sg.common.repository.UserRepository' available: expected at least 1 bean which qualifies as autowire candidate. Dependency annotations: {}
+2026-06-14T13:00:17.925+01:00  INFO 1992 --- [sg-acquirer] [main] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2026-06-14T13:00:17.929+01:00  INFO 1992 --- [sg-acquirer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2026-06-14T13:00:17.936+01:00  INFO 1992 --- [sg-acquirer] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2026-06-14T13:00:17.940+01:00  INFO 1992 --- [sg-acquirer] [main] o.apache.catalina.core.StandardService   : Stopping service [Tomcat]
+2026-06-14T13:00:17.972+01:00  INFO 1992 --- [sg-acquirer] [main] .s.b.a.l.ConditionEvaluationReportLogger : 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-06-14T13:00:18.001+01:00 ERROR 1992 --- [sg-acquirer] [main] o.s.b.d.LoggingFailureAnalysisReporter   : 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Parameter 0 of constructor in com.staging.sg.acquirer.api.AuthController required a bean of type 'com.staging.sg.common.repository.UserRepository' that could not be found.
+
+
+Action:
+
+Consider defining a bean of type 'com.staging.sg.common.repository.UserRepository' in your configuration.
+
