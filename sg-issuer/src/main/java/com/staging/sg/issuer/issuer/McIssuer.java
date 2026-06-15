@@ -1,6 +1,12 @@
 package com.staging.sg.issuer.issuer;
 
+import com.staging.sg.common.entity.IssAuthorization;
+import com.staging.sg.common.entity.IssReversal;
+import com.staging.sg.common.entity.IssAdvice;
 import com.staging.sg.common.hsm.ThalesHsmService;
+import com.staging.sg.common.repository.IssAuthorizationRepository;
+import com.staging.sg.common.repository.IssReversalRepository;
+import com.staging.sg.common.repository.IssAdviceRepository;
 import com.staging.sg.common.iso.NetworkUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -25,7 +31,10 @@ public class McIssuer {
 
     private final NetworkUtil       net;
     private final ThalesHsmService  hsm;
-    private final McDecisionEngine  decisionEngine;
+    private final McDecisionEngine       decisionEngine;
+    private final IssAuthorizationRepository issAuthRepository;
+    private final IssReversalRepository      issReversalRepository;
+    private final IssAdviceRepository        issAdviceRepository;
 
     @Value("${mc.issuer.port:8200}")
     private int issuerPort;
@@ -46,10 +55,16 @@ public class McIssuer {
     private ServerSocket serverSocket;
     private final AtomicLong msgCount = new AtomicLong(0);
 
-    public McIssuer(NetworkUtil net, ThalesHsmService hsm, McDecisionEngine decisionEngine) {
+    public McIssuer(NetworkUtil net, ThalesHsmService hsm, McDecisionEngine decisionEngine,
+                    IssAuthorizationRepository issAuthRepository,
+                    IssReversalRepository issReversalRepository,
+                    IssAdviceRepository issAdviceRepository) {
         this.net            = net;
         this.hsm            = hsm;
-        this.decisionEngine = decisionEngine;
+        this.decisionEngine       = decisionEngine;
+        this.issAuthRepository    = issAuthRepository;
+        this.issReversalRepository = issReversalRepository;
+        this.issAdviceRepository  = issAdviceRepository;
     }
 
     @PostConstruct
@@ -162,6 +177,7 @@ public class McIssuer {
 
         logIsoMsg("SENT", "0110 Authorization Response", response);
         net.send(out, response);
+        saveIssAuthorization(request, response, decision, macVerify && hsm.getSessionZak() != null);
     }
 
     // ── Key Exchange 0820 ────────────────────────────────────
@@ -354,6 +370,7 @@ public class McIssuer {
 
         logIsoMsg("SENT", "0410 Reversal Response", response);
         net.send(out, response);
+        saveIssReversal(request, response);
     }
 
     // ── Advice 0120 ──────────────────────────────────────────
@@ -373,6 +390,7 @@ public class McIssuer {
 
         logIsoMsg("SENT", "0130 Advice Response", response);
         net.send(out, response);
+        saveIssAdvice(request, response);
     }
 
     // ── Administrative 0600 ──────────────────────────────────
@@ -389,6 +407,96 @@ public class McIssuer {
 
         logIsoMsg("SENT", "0610 Administrative Response", response);
         net.send(out, response);
+    }
+
+    // ── Save to iss_authorizations ───────────────────────
+    private void saveIssAuthorization(ISOMsg request, ISOMsg response,
+            McDecisionEngine.Decision decision, boolean macVerified) {
+        try {
+            IssAuthorization auth = new IssAuthorization();
+            auth.setDe002Pan(mask(net.safeGet(request, 2)));
+            auth.setDe003ProcCode(net.safeGet(request, 3));
+            auth.setDe004Amount(parseLong(net.safeGet(request, 4)));
+            auth.setDe007Datetime(net.safeGet(request, 7));
+            auth.setDe011Stan(net.safeGet(request, 11));
+            auth.setDe012LocalTime(net.safeGet(request, 12));
+            auth.setDe013LocalDate(net.safeGet(request, 13));
+            auth.setDe018Mcc(net.safeGet(request, 18));
+            auth.setDe022PosMode(net.safeGet(request, 22));
+            auth.setDe032AcqId(net.safeGet(request, 32));
+            auth.setDe037Rrn(net.safeGet(request, 37));
+            auth.setDe041TermId(net.safeGet(request, 41));
+            auth.setDe042MerchId(net.safeGet(request, 42));
+            auth.setDe049Currency(net.safeGet(request, 49));
+            auth.setDe052PinPresent(request.hasField(52));
+            auth.setMacVerified(macVerified);
+            auth.setDe038AuthCode(net.safeGet(response, 38));
+            auth.setDe039Response(decision.responseCode());
+            auth.setDecisionReason(decision.reason());
+            auth.setApproved(decision.isApproved());
+            auth.setRequestHex(ISOUtil.hexString(request.pack()));
+            auth.setResponseHex(ISOUtil.hexString(response.pack()));
+            auth.setRespondedAt(java.time.LocalDateTime.now());
+            issAuthRepository.save(auth);
+            log.debug("[ISSUING] IssAuthorization saved — de039={}", decision.responseCode());
+        } catch (Exception e) {
+            log.error("[ISSUING] Error saving IssAuthorization : {}", e.getMessage());
+        }
+    }
+
+    // ── Save to iss_reversals ────────────────────────────
+    private void saveIssReversal(ISOMsg request, ISOMsg response) {
+        try {
+            IssReversal rev = new IssReversal();
+            rev.setDe002Pan(mask(net.safeGet(request, 2)));
+            rev.setDe003ProcCode(net.safeGet(request, 3));
+            rev.setDe004Amount(parseLong(net.safeGet(request, 4)));
+            rev.setDe007Datetime(net.safeGet(request, 7));
+            rev.setDe011Stan(net.safeGet(request, 11));
+            rev.setDe037Rrn(net.safeGet(request, 37));
+            rev.setDe038AuthCode(net.safeGet(request, 38));
+            rev.setDe041TermId(net.safeGet(request, 41));
+            rev.setDe049Currency(net.safeGet(request, 49));
+            rev.setDe039Response(net.safeGet(response, 39));
+            rev.setReversed("00".equals(net.safeGet(response, 39)));
+            rev.setRequestHex(ISOUtil.hexString(request.pack()));
+            rev.setResponseHex(ISOUtil.hexString(response.pack()));
+            issReversalRepository.save(rev);
+            log.debug("[ISSUING] IssReversal saved — de039={}", net.safeGet(response, 39));
+        } catch (Exception e) {
+            log.error("[ISSUING] Error saving IssReversal : {}", e.getMessage());
+        }
+    }
+
+    // ── Save to iss_advices ──────────────────────────────
+    private void saveIssAdvice(ISOMsg request, ISOMsg response) {
+        try {
+            IssAdvice adv = new IssAdvice();
+            adv.setDe002Pan(mask(net.safeGet(request, 2)));
+            adv.setDe003ProcCode(net.safeGet(request, 3));
+            adv.setDe004Amount(parseLong(net.safeGet(request, 4)));
+            adv.setDe007Datetime(net.safeGet(request, 7));
+            adv.setDe011Stan(net.safeGet(request, 11));
+            adv.setDe037Rrn(net.safeGet(request, 37));
+            adv.setDe038AuthCode(net.safeGet(request, 38));
+            adv.setDe039Response(net.safeGet(request, 39));
+            adv.setDe049Currency(net.safeGet(request, 49));
+            adv.setDe060Reason(net.safeGet(request, 60));
+            adv.setDe039AdviceResponse(net.safeGet(response, 39));
+            adv.setAccepted("00".equals(net.safeGet(response, 39)));
+            adv.setRequestHex(ISOUtil.hexString(request.pack()));
+            adv.setResponseHex(ISOUtil.hexString(response.pack()));
+            issAdviceRepository.save(adv);
+            log.debug("[ISSUING] IssAdvice saved — de039={}", net.safeGet(response, 39));
+        } catch (Exception e) {
+            log.error("[ISSUING] Error saving IssAdvice : {}", e.getMessage());
+        }
+    }
+
+    // ── Parse Long ───────────────────────────────────────
+    private Long parseLong(String s) {
+        try { return s != null ? Long.parseLong(s.trim()) : null; }
+        catch (Exception e) { return null; }
     }
 
     private String mask(String pan) {
