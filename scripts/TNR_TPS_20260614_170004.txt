@@ -1,0 +1,17 @@
+═══════════════════════════════════════════════════
+  ScenarioGenerator — Rapport TPS
+  Date      : Sun Jun 14 17:00:04     2026
+  Test      : 100_Achat_Par_Seconde
+  Execution : 5
+  Status    : COMPLETED
+═══════════════════════════════════════════════════
+  TX Total    : 4003
+  Approuvées  : 4003
+  Refusées    : 0
+  TPS Moyen   :  /s
+  Réponse Avg : ms
+  Réponse Min : 1ms
+  Réponse Max : 433ms
+  P95         : ms
+  P99         : ms
+═══════════════════════════════════════════════════

@@ -4,12 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.staging.sg.acquirer.acquirer.McAcquirer;
 import com.staging.sg.acquirer.acquirer.McAuthRequest;
 import com.staging.sg.acquirer.acquirer.McAuthResult;
+import com.staging.sg.acquirer.report.ReportService;
 import com.staging.sg.common.dto.TpsStepDto;
-import com.staging.sg.common.entity.Execution;
-import com.staging.sg.common.entity.ExecutionStatus;
-import com.staging.sg.common.entity.Result;
-import com.staging.sg.common.entity.Test;
-import com.staging.sg.common.entity.TpsStep;
+import com.staging.sg.common.entity.*;
 import com.staging.sg.common.repository.ExecutionRepository;
 import com.staging.sg.common.repository.ResultRepository;
 import org.slf4j.Logger;
@@ -21,9 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.*;
 
 @Service
@@ -34,6 +29,7 @@ public class TpsEngine {
     private final McAcquirer          acquirer;
     private final ExecutionRepository executionRepository;
     private final ResultRepository    resultRepository;
+    private final ReportService       reportService;
     private final ObjectMapper        objectMapper;
 
     @Value("${tps.max:100}")
@@ -47,43 +43,52 @@ public class TpsEngine {
     public TpsEngine(McAcquirer acquirer,
                      ExecutionRepository executionRepository,
                      ResultRepository resultRepository,
+                     ReportService reportService,
                      ObjectMapper objectMapper) {
         this.acquirer            = acquirer;
         this.executionRepository = executionRepository;
         this.resultRepository    = resultRepository;
+        this.reportService       = reportService;
         this.objectMapper        = objectMapper;
     }
+
+    // ── Start ────────────────────────────────────────────────
 
     public TpsExecution start(Execution execution, Test test, boolean persist) {
         Long executionId = execution.getId();
         TpsMetrics metrics = new TpsMetrics();
 
-        // Extract steps before thread
+        // Extract steps + config before thread
         List<TpsStepDto> steps = extractSteps(test);
-        String config = test.getConfig();
+        String config   = test.getConfig();
+        String testName = test.getName();
 
         ExecutorService executor = Executors.newFixedThreadPool(threadPoolSize);
 
         Future<?> future = executor.submit(() ->
-            runExecution(execution.getId(), config, steps, metrics, executor));
+            runExecution(executionId, testName, config, steps, metrics, executor, persist));
 
         TpsExecution tpsExecution = new TpsExecution(executionId, test.getId(), metrics, future);
         activeExecutions.put(executionId, tpsExecution);
 
-        log.info("[TPS] Execution {} started — test={} steps={}",
-                executionId, test.getName(), steps.size());
+        log.info("[TPS] Execution {} started — test={} steps={} persist={}",
+                executionId, testName, steps.size(), persist);
         return tpsExecution;
     }
+
+    // ── Stop ─────────────────────────────────────────────────
 
     public void stop(Long executionId) {
         TpsExecution exec = activeExecutions.get(executionId);
         if (exec != null) {
             exec.stop();
             activeExecutions.remove(executionId);
-            saveMetrics(executionId, ExecutionStatus.STOPPED, exec.getMetrics());
+            saveFinal(executionId, ExecutionStatus.STOPPED, exec.getMetrics(), false);
             log.info("[TPS] Execution {} stopped", executionId);
         }
     }
+
+    // ── Getters ──────────────────────────────────────────────
 
     public TpsMetrics getMetrics(Long executionId) {
         TpsExecution exec = activeExecutions.get(executionId);
@@ -98,21 +103,31 @@ public class TpsEngine {
     // ── Run execution ────────────────────────────────────────
 
     private void runExecution(Long executionId,
+                               String testName,
                                String config,
                                List<TpsStepDto> steps,
                                TpsMetrics metrics,
-                               ExecutorService executor) {
+                               ExecutorService executor,
+                               boolean persist) {
         try {
             McAuthRequest baseRequest = parseConfig(config);
 
             if (steps.isEmpty()) {
-                log.info("[TPS] Mode SIMPLE — sending one transaction");
-                sendTransaction(baseRequest, metrics, executionId);
+                // Mode SIMPLE
+                log.info("[TPS] Mode SIMPLE");
+                long start = System.currentTimeMillis();
+                McAuthResult result = acquirer.authorize(baseRequest);
+                long duration = System.currentTimeMillis() - start;
+                metrics.record(
+                    result.getDE002_PAN(), result.getDE039_RESPONSE_CODE(),
+                    result.getDE038_AUTH_CODE(), result.isApproved(),
+                    duration, result.getRequestHex(), result.getResponseHex());
                 metrics.setStatus("COMPLETED");
-                saveMetrics(executionId, ExecutionStatus.COMPLETED, metrics);
+                finalize(executionId, testName, metrics, persist);
                 return;
             }
 
+            // Mode CHARGE
             log.info("[TPS] Mode CHARGE — {} steps", steps.size());
 
             for (int s = 0; s < steps.size(); s++) {
@@ -123,13 +138,17 @@ public class TpsEngine {
                 int durationSec = step.getEndSeconds() - step.getStartSeconds();
                 metrics.setCurrentTps(tpsValue);
 
+                TpsMetrics.StepRecord stepRecord = new TpsMetrics.StepRecord(
+                        s + 1, tpsValue, step.getStartSeconds(), step.getEndSeconds());
+
                 log.info("[TPS] Step {}/{} — {} TPS for {}s",
                         s + 1, steps.size(), tpsValue, durationSec);
 
-                long intervalMs = tpsValue > 0 ? 1000L / tpsValue : 1000L;
-                long stepEnd    = System.currentTimeMillis() + (durationSec * 1000L);
-                long secondStart = System.currentTimeMillis();
+                long intervalMs   = tpsValue > 0 ? 1000L / tpsValue : 1000L;
+                long stepEnd      = System.currentTimeMillis() + (durationSec * 1000L);
+                long secondStart  = System.currentTimeMillis();
                 int  txThisSecond = 0;
+                int  stepTxBefore = metrics.getTxTotal();
 
                 while (System.currentTimeMillis() < stepEnd) {
                     if (Thread.currentThread().isInterrupted()) {
@@ -138,21 +157,41 @@ public class TpsEngine {
                     }
 
                     final McAuthRequest req = cloneRequest(baseRequest);
-                    executor.submit(() -> sendTransaction(req, metrics, executionId));
+                    executor.submit(() -> {
+                        long start = System.currentTimeMillis();
+                        try {
+                            McAuthResult result = acquirer.authorize(req);
+                            long duration = System.currentTimeMillis() - start;
+                            metrics.record(
+                                result.getDE002_PAN(),
+                                result.getDE039_RESPONSE_CODE(),
+                                result.getDE038_AUTH_CODE(),
+                                result.isApproved(), duration,
+                                result.getRequestHex(),
+                                result.getResponseHex());
+                        } catch (Exception e) {
+                            long duration = System.currentTimeMillis() - start;
+                            metrics.record(false, duration);
+                            log.warn("[TPS] TX error : {}", e.getMessage());
+                        }
+                    });
                     txThisSecond++;
 
                     long now = System.currentTimeMillis();
                     if (now - secondStart >= 1000) {
                         double actualTps = txThisSecond * 1000.0 / (now - secondStart);
                         metrics.recordTps(actualTps);
-                        log.debug("[TPS] Step {} — actual TPS={}", s + 1,
-                                String.format("%.1f", actualTps));
                         secondStart   = now;
                         txThisSecond  = 0;
                     }
 
                     Thread.sleep(intervalMs);
                 }
+
+                // Save step record
+                stepRecord.txSent     = metrics.getTxTotal() - stepTxBefore;
+                stepRecord.txApproved = metrics.getTxApproved();
+                metrics.addStepRecord(stepRecord);
             }
 
             // Wait for remaining transactions
@@ -160,73 +199,50 @@ public class TpsEngine {
             executor.awaitTermination(30, TimeUnit.SECONDS);
 
             metrics.setStatus("COMPLETED");
-            saveMetrics(executionId, ExecutionStatus.COMPLETED, metrics);
 
-            log.info("[TPS] Execution {} completed — TX={} approved={} declined={} avgTPS={} avgMs={}",
+            log.info("[TPS] Execution {} COMPLETED — TX={} approved={} declined={} avgTPS={} avgMs={}",
                     executionId, metrics.getTxTotal(), metrics.getTxApproved(),
                     metrics.getTxDeclined(),
                     String.format("%.1f", metrics.getAvgTps()),
                     String.format("%.0f", metrics.getAvgResponseMs()));
 
+            finalize(executionId, testName, metrics, persist);
+
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             metrics.setStatus("STOPPED");
-            saveMetrics(executionId, ExecutionStatus.STOPPED, metrics);
+            saveFinal(executionId, ExecutionStatus.STOPPED, metrics, false);
         } catch (Exception e) {
-            log.error("[TPS] Execution {} error : {}", executionId, e.getMessage());
+            log.error("[TPS] Execution {} error : {}", executionId, e.getMessage(), e);
             metrics.setStatus("ERROR");
-            saveMetrics(executionId, ExecutionStatus.ERROR, metrics);
+            saveFinal(executionId, ExecutionStatus.ERROR, metrics, false);
         } finally {
             activeExecutions.remove(executionId);
         }
     }
 
-    // ── Send transaction ─────────────────────────────────────
+    // ── Finalize — TXT + persist + PDF + Excel ────────────────
 
-    private void sendTransaction(McAuthRequest request,
-                                  TpsMetrics metrics,
-                                  Long executionId) {
-        long start = System.currentTimeMillis();
-        try {
-            McAuthResult result = acquirer.authorize(request);
-            long duration = System.currentTimeMillis() - start;
-            metrics.record(result.isApproved(), duration);
-            saveResult(executionId, result, duration);
-        } catch (Exception e) {
-            long duration = System.currentTimeMillis() - start;
-            metrics.record(false, duration);
-            log.warn("[TPS] Transaction error : {}", e.getMessage());
+    private void finalize(Long executionId, String testName,
+                           TpsMetrics metrics, boolean persist) {
+        // 1. Generate TXT from memory
+        reportService.generateTxtReport(executionId, testName, metrics);
+
+        // 2. Save to database
+        saveFinal(executionId, ExecutionStatus.COMPLETED, metrics, persist);
+
+        // 3. Generate PDF + Excel from database
+        if (persist) {
+            reportService.generatePdfReport(executionId);
+            reportService.generateExcelReport(executionId);
         }
     }
 
-    // ── Save result ──────────────────────────────────────────
+    // ── Save final ───────────────────────────────────────────
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void saveResult(Long executionId, McAuthResult result, long durationMs) {
-        try {
-            Execution execution = executionRepository.findById(executionId).orElse(null);
-            if (execution == null) return;
-
-            Result r = new Result();
-            r.setExecution(execution);
-            r.setPanMasked(result.getDE002_PAN());
-            r.setDe039(result.getDE039_RESPONSE_CODE());
-            r.setDe038AuthCode(result.getDE038_AUTH_CODE());
-            r.setApproved(result.isApproved());
-            r.setDurationMs((int) durationMs);
-            r.setRequestHex(result.getRequestHex());
-            r.setResponseHex(result.getResponseHex());
-            r.setExecutedAt(LocalDateTime.now());
-            resultRepository.save(r);
-        } catch (Exception e) {
-            log.warn("[TPS] Error saving result : {}", e.getMessage());
-        }
-    }
-
-    // ── Save metrics ─────────────────────────────────────────
-
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void saveMetrics(Long executionId, ExecutionStatus status, TpsMetrics metrics) {
+    public void saveFinal(Long executionId, ExecutionStatus status,
+                           TpsMetrics metrics, boolean persist) {
         try {
             executionRepository.findById(executionId).ifPresent(exec -> {
                 exec.setStatus(status);
@@ -241,13 +257,36 @@ public class TpsEngine {
                 exec.setResponseTimeP95(BigDecimal.valueOf(metrics.getP95ResponseMs()));
                 exec.setResponseTimeP99(BigDecimal.valueOf(metrics.getP99ResponseMs()));
                 executionRepository.save(exec);
-                log.info("[TPS] Metrics saved — execution={} status={} TX={} avgTPS={} avgMs={}",
+                log.info("[TPS] Execution {} saved — status={} TX={} avgTPS={} avgMs={}",
                         executionId, status, metrics.getTxTotal(),
                         String.format("%.1f", metrics.getAvgTps()),
                         String.format("%.0f", metrics.getAvgResponseMs()));
             });
+
+            // Batch insert results
+            if (persist && !metrics.getTxRecords().isEmpty()) {
+                Execution execution = executionRepository.findById(executionId).orElse(null);
+                if (execution != null) {
+                    List<Result> results = new ArrayList<>();
+                    for (TpsMetrics.TxRecord rec : metrics.getTxRecords()) {
+                        Result r = new Result();
+                        r.setExecution(execution);
+                        r.setPanMasked(rec.panMasked);
+                        r.setDe039(rec.de039);
+                        r.setDe038AuthCode(rec.de038AuthCode);
+                        r.setApproved(rec.approved);
+                        r.setDurationMs((int) rec.durationMs);
+                        r.setRequestHex(rec.requestHex);
+                        r.setResponseHex(rec.responseHex);
+                        r.setExecutedAt(LocalDateTime.now());
+                        results.add(r);
+                    }
+                    resultRepository.saveAll(results);
+                    log.info("[TPS] {} results saved to database", results.size());
+                }
+            }
         } catch (Exception e) {
-            log.warn("[TPS] Error saving metrics : {}", e.getMessage());
+            log.error("[TPS] Error saving final : {}", e.getMessage(), e);
         }
     }
 
@@ -295,15 +334,15 @@ public class TpsEngine {
         return request;
     }
 
-    private McAuthRequest cloneRequest(McAuthRequest original) {
-        McAuthRequest clone = new McAuthRequest();
-        clone.setDE002_PAN(original.getDE002_PAN());
-        clone.setDE004_AMOUNT(original.getDE004_AMOUNT());
-        clone.setDE003_PROCESSING_CODE(original.getDE003_PROCESSING_CODE());
-        clone.setDE018_MCC(original.getDE018_MCC());
-        clone.setDE022_POS_ENTRY_MODE(original.getDE022_POS_ENTRY_MODE());
-        clone.setDE049_CURRENCY_CODE(original.getDE049_CURRENCY_CODE());
-        clone.setDE052_PIN(original.getDE052_PIN());
-        return clone;
+    private McAuthRequest cloneRequest(McAuthRequest o) {
+        McAuthRequest c = new McAuthRequest();
+        c.setDE002_PAN(o.getDE002_PAN());
+        c.setDE004_AMOUNT(o.getDE004_AMOUNT());
+        c.setDE003_PROCESSING_CODE(o.getDE003_PROCESSING_CODE());
+        c.setDE018_MCC(o.getDE018_MCC());
+        c.setDE022_POS_ENTRY_MODE(o.getDE022_POS_ENTRY_MODE());
+        c.setDE049_CURRENCY_CODE(o.getDE049_CURRENCY_CODE());
+        c.setDE052_PIN(o.getDE052_PIN());
+        return c;
     }
 }
