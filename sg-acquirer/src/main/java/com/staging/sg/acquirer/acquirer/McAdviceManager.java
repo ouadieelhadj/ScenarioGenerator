@@ -1,6 +1,8 @@
 package com.staging.sg.acquirer.acquirer;
 
+import com.staging.sg.common.entity.AcqAdvice;
 import com.staging.sg.common.hsm.ThalesHsmService;
+import com.staging.sg.common.repository.AcqAdviceRepository;
 import com.staging.sg.common.iso.McPackager;
 import com.staging.sg.common.iso.NetworkUtil;
 import org.jpos.iso.ISOMsg;
@@ -21,6 +23,7 @@ public class McAdviceManager {
     private final McPackager       packager;
     private final ThalesHsmService hsm;
     private final NetworkUtil      networkUtil;
+    private final AcqAdviceRepository acqAdviceRepository;
 
     @Value("${mc.acquirer.mas.host:127.0.0.1}")
     private String masHost;
@@ -49,14 +52,17 @@ public class McAdviceManager {
     private final Random random = new Random();
 
     public McAdviceManager(McPackager packager,
+                           AcqAdviceRepository acqAdviceRepository,
                            ThalesHsmService hsm,
                            NetworkUtil networkUtil) {
         this.packager    = packager;
         this.hsm         = hsm;
         this.networkUtil = networkUtil;
+        this.acqAdviceRepository = acqAdviceRepository;
     }
 
     public McAdviceResult sendAdvice(McAdviceRequest request) {
+        long startTime = System.currentTimeMillis();
         McAdviceResult result = new McAdviceResult();
         try {
             ISOMsg msg = new ISOMsg();
@@ -138,7 +144,9 @@ public class McAdviceManager {
             if (response == null) {
                 result.setError("No response received");
                 result.setAccepted(false);
-                return result;
+                long durationMs = System.currentTimeMillis() - startTime;
+        saveAcqAdvice(request, result, durationMs);
+        return result;
             }
 
             byte[] respPacked = response.pack();
@@ -160,11 +168,38 @@ public class McAdviceManager {
             result.setError(e.getMessage());
             result.setAccepted(false);
         }
+        long durationMs = System.currentTimeMillis() - startTime;
+        saveAcqAdvice(request, result, durationMs);
         return result;
     }
 
     private String generatePan() {
         return testBin + String.format("%010d", random.nextInt(999999999));
+    }
+
+    // ── Save to acq_advices ──────────────────────────────
+    private void saveAcqAdvice(McAdviceRequest request,
+            McAdviceResult result, long durationMs) {
+        try {
+            AcqAdvice adv = new AcqAdvice();
+            adv.setDe002Pan(result.getDE002_PAN());
+            adv.setDe003ProcCode(request.getDE003_PROCESSING_CODE());
+            adv.setDe004Amount(request.getDE004_AMOUNT());
+            adv.setDe037Rrn(result.getDE037_RETRIEVAL_REF());
+            adv.setDe038AuthCode(request.getDE038_AUTH_CODE());
+            adv.setDe039Response(request.getDE039_RESPONSE_CODE());
+            adv.setDe049Currency(request.getDE049_CURRENCY_CODE());
+            adv.setDe060Reason(request.getDE060_ADVICE_REASON());
+            adv.setDe039AdviceResponse(result.getDE039_RESPONSE_CODE());
+            adv.setAccepted(result.isAccepted());
+            adv.setDurationMs((int) durationMs);
+            adv.setRequestHex(result.getRequestHex());
+            adv.setResponseHex(result.getResponseHex());
+            acqAdviceRepository.save(adv);
+            log.debug("[ADVICE] AcqAdvice saved — de039={}", result.getDE039_RESPONSE_CODE());
+        } catch (Exception e) {
+            log.error("[ADVICE] Error saving AcqAdvice : {}", e.getMessage());
+        }
     }
 
     private String maskPan(String pan) {

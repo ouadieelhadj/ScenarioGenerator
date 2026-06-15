@@ -1,6 +1,8 @@
 package com.staging.sg.acquirer.acquirer;
 
+import com.staging.sg.common.entity.AcqReversal;
 import com.staging.sg.common.hsm.ThalesHsmService;
+import com.staging.sg.common.repository.AcqReversalRepository;
 import com.staging.sg.common.iso.McPackager;
 import com.staging.sg.common.iso.NetworkUtil;
 import org.jpos.iso.ISOMsg;
@@ -21,6 +23,7 @@ public class McReversalManager {
     private final McPackager       packager;
     private final ThalesHsmService hsm;
     private final NetworkUtil      networkUtil;
+    private final AcqReversalRepository acqReversalRepository;
 
     @Value("${mc.acquirer.mas.host:127.0.0.1}")
     private String masHost;
@@ -49,14 +52,17 @@ public class McReversalManager {
     private final Random random = new Random();
 
     public McReversalManager(McPackager packager,
+                              AcqReversalRepository acqReversalRepository,
                               ThalesHsmService hsm,
                               NetworkUtil networkUtil) {
         this.packager    = packager;
         this.hsm         = hsm;
         this.networkUtil = networkUtil;
+        this.acqReversalRepository = acqReversalRepository;
     }
 
     public McReversalResult sendReversal(McReversalRequest request) {
+        long startTime = System.currentTimeMillis();
         McReversalResult result = new McReversalResult();
         try {
             ISOMsg msg = new ISOMsg();
@@ -143,7 +149,9 @@ public class McReversalManager {
             if (response == null) {
                 result.setError("No response received");
                 result.setReversed(false);
-                return result;
+                long durationMs = System.currentTimeMillis() - startTime;
+        saveAcqReversal(request, result, durationMs);
+        return result;
             }
 
             byte[] respPacked = response.pack();
@@ -165,11 +173,39 @@ public class McReversalManager {
             result.setError(e.getMessage());
             result.setReversed(false);
         }
+        long durationMs = System.currentTimeMillis() - startTime;
+        saveAcqReversal(request, result, durationMs);
         return result;
     }
 
     private String generatePan() {
         return testBin + String.format("%010d", random.nextInt(999999999));
+    }
+
+    // ── Save to acq_reversals ────────────────────────────
+    private void saveAcqReversal(McReversalRequest request,
+            McReversalResult result, long durationMs) {
+        try {
+            AcqReversal rev = new AcqReversal();
+            rev.setDe002Pan(result.getDE002_PAN());
+            rev.setDe003ProcCode(request.getDE003_PROCESSING_CODE());
+            rev.setDe004Amount(request.getDE004_AMOUNT());
+            rev.setDe037Rrn(result.getDE037_RETRIEVAL_REF());
+            rev.setDe038AuthCode(request.getDE038_AUTH_CODE());
+            rev.setDe039Original(request.getDE039_RESPONSE_CODE());
+            rev.setDe041TermId(terminalId);
+            rev.setDe042MerchId(merchantId);
+            rev.setDe049Currency(request.getDE049_CURRENCY_CODE());
+            rev.setDe039Response(result.getDE039_RESPONSE_CODE());
+            rev.setReversed(result.isReversed());
+            rev.setDurationMs((int) durationMs);
+            rev.setRequestHex(result.getRequestHex());
+            rev.setResponseHex(result.getResponseHex());
+            acqReversalRepository.save(rev);
+            log.debug("[REVERSAL] AcqReversal saved — de039={}", result.getDE039_RESPONSE_CODE());
+        } catch (Exception e) {
+            log.error("[REVERSAL] Error saving AcqReversal : {}", e.getMessage());
+        }
     }
 
     private String maskPan(String pan) {
