@@ -19,7 +19,7 @@ public class ExcelReportGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(ExcelReportGenerator.class);
 
-    public static void generate(Path outputPath, Execution exec, List<Result> results) {
+    public static void generate(Path outputPath, Execution exec, String testName, List<Result> results) {
         try (XSSFWorkbook wb = new XSSFWorkbook()) {
 
             // ── Styles ───────────────────────────────────────
@@ -50,7 +50,7 @@ public class ExcelReportGenerator {
 
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
             addSheetRow(sheet1, row++, normalStyle,
-                    "Test", exec.getTest() != null ? exec.getTest().getName() : "N/A");
+                    "Test", testName);
             addSheetRow(sheet1, row++, normalStyle,
                     "Execution ID", String.valueOf(exec.getId()));
             addSheetRow(sheet1, row++, normalStyle,

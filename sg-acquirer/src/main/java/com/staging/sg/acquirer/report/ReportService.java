@@ -5,6 +5,7 @@ import com.staging.sg.common.entity.Execution;
 import com.staging.sg.common.entity.Result;
 import com.staging.sg.common.repository.ExecutionRepository;
 import com.staging.sg.common.repository.ResultRepository;
+import com.staging.sg.common.repository.TestRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,14 +27,17 @@ public class ReportService {
 
     private final ExecutionRepository executionRepository;
     private final ResultRepository    resultRepository;
+    private final TestRepository      testRepository;
 
     @Value("${reports.base-dir:D:/MoneyCore/ScenarioGenerator/reports}")
     private String baseDir;
 
     public ReportService(ExecutionRepository executionRepository,
-                         ResultRepository resultRepository) {
+                         ResultRepository resultRepository,
+                         TestRepository testRepository) {
         this.executionRepository = executionRepository;
         this.resultRepository    = resultRepository;
+        this.testRepository      = testRepository;
     }
 
     // ── Générer répertoire rapport ────────────────────────────
@@ -153,8 +157,10 @@ public class ReportService {
 
             Path pdfFile = dir.resolve("rapport_" + executionId + ".pdf");
 
+            String testName = exec.getTest() != null ?
+                    testRepository.findById(exec.getTest().getId()).map(t -> t.getName()).orElse("N/A") : "N/A";
             // PDF generation with OpenPDF
-            PdfReportGenerator.generate(pdfFile, exec, results);
+            PdfReportGenerator.generate(pdfFile, exec, testName, results);
 
             exec.setReportPdf(pdfFile.toString());
             executionRepository.save(exec);
@@ -184,8 +190,10 @@ public class ReportService {
 
             Path excelFile = dir.resolve("rapport_" + executionId + ".xlsx");
 
+            String testName = exec.getTest() != null ?
+                    testRepository.findById(exec.getTest().getId()).map(t -> t.getName()).orElse("N/A") : "N/A";
             // Excel generation with Apache POI
-            ExcelReportGenerator.generate(excelFile, exec, results);
+            ExcelReportGenerator.generate(excelFile, exec, testName, results);
 
             exec.setReportExcel(excelFile.toString());
             executionRepository.save(exec);

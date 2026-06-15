@@ -32,15 +32,15 @@ public class PdfReportGenerator {
     private static final Color COLOR_DANGER  = new Color(231, 76, 60);
     private static final Color COLOR_LIGHT   = new Color(236, 240, 241);
 
-    public static void generate(Path outputPath, Execution exec, List<Result> results) {
+    public static void generate(Path outputPath, Execution exec, String testName, List<Result> results) {
         try {
             Document doc = new Document(PageSize.A4, 36, 36, 54, 36);
             PdfWriter.getInstance(doc, new FileOutputStream(outputPath.toFile()));
             doc.open();
 
             // ── Page 1 — Résumé ──────────────────────────────
-            addTitle(doc, exec);
-            addSummary(doc, exec, results);
+            addTitle(doc, exec, testName);
+            addSummary(doc, exec, testName, results);
 
             doc.newPage();
 
@@ -55,7 +55,7 @@ public class PdfReportGenerator {
         }
     }
 
-    private static void addTitle(Document doc, Execution exec) throws Exception {
+    private static void addTitle(Document doc, Execution exec, String testName) throws Exception {
         // Header banner
         PdfPTable banner = new PdfPTable(1);
         banner.setWidthPercentage(100);
@@ -69,7 +69,7 @@ public class PdfReportGenerator {
         cell.addElement(title);
 
         Paragraph subtitle = new Paragraph(
-                exec.getTest() != null ? exec.getTest().getName() : "N/A",
+                testName,
                 new Font(Font.HELVETICA, 11, Font.NORMAL, Color.WHITE));
         subtitle.setAlignment(Element.ALIGN_CENTER);
         cell.addElement(subtitle);
@@ -78,7 +78,7 @@ public class PdfReportGenerator {
         doc.add(Chunk.NEWLINE);
     }
 
-    private static void addSummary(Document doc, Execution exec,
+    private static void addSummary(Document doc, Execution exec, String testName,
                                     List<Result> results) throws Exception {
         // Info table
         Paragraph h2 = new Paragraph("Informations générales", FONT_H2);
@@ -91,7 +91,7 @@ public class PdfReportGenerator {
 
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
-        addInfoRow(infoTable, "Test",       exec.getTest() != null ? exec.getTest().getName() : "N/A");
+        addInfoRow(infoTable, "Test",       testName);
         addInfoRow(infoTable, "Execution",  String.valueOf(exec.getId()));
         addInfoRow(infoTable, "Mode",       exec.getMode() != null ? exec.getMode().name() : "N/A");
         addInfoRow(infoTable, "Status",     exec.getStatus() != null ? exec.getStatus().name() : "N/A");
