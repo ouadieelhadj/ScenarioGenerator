@@ -22,6 +22,8 @@
         <module>sg-common</module>
         <module>sg-acquirer</module>
         <module>sg-issuer</module>
+        <module>sg-dmcs-generator</module>
+        <module>sg-dmcs-reader</module>
     </modules>
 
     <properties>
