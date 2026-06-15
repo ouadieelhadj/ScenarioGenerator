@@ -96,6 +96,9 @@ public class McIssuer {
                 case "0100" -> handleAuthorization(request, out);
                 case "0820" -> handleKeyExchange(request, out);
                 case "0800" -> handleNetworkMessage(request, out);
+                case "0400" -> handleReversal(request, out);
+                case "0120" -> handleAdvice(request, out);
+                case "0600" -> handleAdministrative(request, out);
                 default     -> log.warn("[ISSUING] Unknown MTI : {}", mti);
             }
         } catch (Exception e) {
@@ -322,6 +325,70 @@ public class McIssuer {
         } catch (Exception e) {
             log.warn("[ISSUING] Error logging : {}", e.getMessage());
         }
+    }
+
+    // ── Reversal 0400 ──────────────────────────────────────
+    private void handleReversal(ISOMsg request, DataOutputStream out) throws Exception {
+        logIsoMsg("RECEIVED", "0400 Reversal Request", request);
+
+        ISOMsg response = new ISOMsg();
+        response.setPackager(net.getPackager());
+        response.setMTI("0410");
+        response.set(2,  request.getString(2));
+        response.set(3,  request.getString(3));
+        response.set(4,  request.getString(4));
+        response.set(7,  request.getString(7));
+        response.set(11, request.getString(11));
+        response.set(37, request.getString(37));
+        response.set(38, request.getString(38));
+        response.set(39, "00");
+        response.set(41, request.getString(41));
+        response.set(49, request.getString(49));
+
+        // MAC
+        if (hsm.getSessionZak() != null) {
+            byte[] packed0 = response.pack();
+            byte[] mac = hsm.calculateMac(packed0, 64, macFields);
+            response.set(64, mac);
+        }
+
+        logIsoMsg("SENT", "0410 Reversal Response", response);
+        net.send(out, response);
+    }
+
+    // ── Advice 0120 ──────────────────────────────────────────
+    private void handleAdvice(ISOMsg request, DataOutputStream out) throws Exception {
+        logIsoMsg("RECEIVED", "0120 Authorization Advice", request);
+
+        ISOMsg response = new ISOMsg();
+        response.setPackager(net.getPackager());
+        response.setMTI("0130");
+        response.set(2,  request.getString(2));
+        response.set(3,  request.getString(3));
+        response.set(4,  request.getString(4));
+        response.set(7,  request.getString(7));
+        response.set(11, request.getString(11));
+        response.set(37, request.getString(37));
+        response.set(39, "00");
+
+        logIsoMsg("SENT", "0130 Advice Response", response);
+        net.send(out, response);
+    }
+
+    // ── Administrative 0600 ──────────────────────────────────
+    private void handleAdministrative(ISOMsg request, DataOutputStream out) throws Exception {
+        logIsoMsg("RECEIVED", "0600 Administrative Request", request);
+
+        ISOMsg response = new ISOMsg();
+        response.setPackager(net.getPackager());
+        response.setMTI("0610");
+        response.set(7,  request.getString(7));
+        response.set(11, request.getString(11));
+        response.set(33, request.getString(33));
+        response.set(39, "00");
+
+        logIsoMsg("SENT", "0610 Administrative Response", response);
+        net.send(out, response);
     }
 
     private String mask(String pan) {
