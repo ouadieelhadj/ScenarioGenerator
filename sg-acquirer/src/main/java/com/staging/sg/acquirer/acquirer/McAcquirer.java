@@ -1,6 +1,8 @@
 package com.staging.sg.acquirer.acquirer;
 
+import com.staging.sg.common.entity.AcqAuthorization;
 import com.staging.sg.common.hsm.ThalesHsmService;
+import com.staging.sg.common.repository.AcqAuthorizationRepository;
 import com.staging.sg.common.iso.NetworkUtil;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOUtil;
@@ -30,7 +32,8 @@ public class McAcquirer {
 
     private static final Logger log = LoggerFactory.getLogger(McAcquirer.class);
 
-    private final NetworkUtil      net;
+    private final NetworkUtil                net;
+    private final AcqAuthorizationRepository acqAuthRepository;
     private final ThalesHsmService hsm;
 
     @Value("${mc.acquirer.mas.host:127.0.0.1}")     private String  masHost;
@@ -58,12 +61,15 @@ public class McAcquirer {
     @Value("${mc.security.mac-field:64}")       private int macField;
     @Value("${mc.security.pin-enabled:true}")   private boolean pinEnabled;
 
-    public McAcquirer(NetworkUtil net, ThalesHsmService hsm) {
+    public McAcquirer(NetworkUtil net, ThalesHsmService hsm,
+                      AcqAuthorizationRepository acqAuthRepository) {
         this.net = net;
         this.hsm = hsm;
+        this.acqAuthRepository = acqAuthRepository;
     }
 
     public McAuthResult authorize(McAuthRequest request) throws Exception {
+        long startTime = System.currentTimeMillis();
         long seed = request.getSeed() != null
                 ? request.getSeed() : System.currentTimeMillis();
 
@@ -133,7 +139,12 @@ public class McAcquirer {
         String authCode = net.safeGet(isoResponse, 38);
         boolean approved = "00".equals(rc);
 
+        long durationMs = System.currentTimeMillis() - startTime;
         log.info("[ACQUIRING] 0110 — DE039={} DE038={} approved={}", rc, authCode, approved);
+        // Save to acq_authorizations
+        saveAcqAuthorization(request, approved, rc, authCode, rrn, stan, txDt, lTime, lDate,
+                pinBlock != null, durationMs, ISOUtil.hexString(isoRequest.pack()),
+                ISOUtil.hexString(isoResponse.pack()));
 
         return McAuthResult.builder()
                 .mode("ACQUIRING").seed(seed).host(masHost).port(masPort)
@@ -316,6 +327,43 @@ public class McAcquirer {
     // ── Helpers ──────────────────────────────────────────────
 
     private boolean isEmpty(String s) { return s == null || s.isBlank(); }
+
+    // ── Save to acq_authorizations ────────────────────────────
+    private void saveAcqAuthorization(McAuthRequest request, boolean approved,
+            String rc, String authCode, String rrn, String stan,
+            String txDt, String lTime, String lDate,
+            boolean pinPresent, long durationMs,
+            String requestHex, String responseHex) {
+        try {
+            AcqAuthorization auth = new AcqAuthorization();
+            auth.setDe002Pan(mask(request.getDE002_PAN()));
+            auth.setDe003ProcCode(request.getDE003_PROCESSING_CODE());
+            auth.setDe004Amount(request.getDE004_AMOUNT());
+            auth.setDe007Datetime(txDt);
+            auth.setDe011Stan(stan);
+            auth.setDe012LocalTime(lTime);
+            auth.setDe013LocalDate(lDate);
+            auth.setDe018Mcc(request.getDE018_MCC());
+            auth.setDe022PosMode(request.getDE022_POS_ENTRY_MODE());
+            auth.setDe032AcqId(request.getDE032_ACQUIRING_BIN());
+            auth.setDe037Rrn(rrn);
+            auth.setDe041TermId(request.getDE041_TERMINAL_ID());
+            auth.setDe042MerchId(request.getDE042_MERCHANT_ID());
+            auth.setDe043MerchName(request.getDE043_MERCHANT_NAME());
+            auth.setDe049Currency(request.getDE049_CURRENCY_CODE());
+            auth.setDe052PinPresent(pinPresent);
+            auth.setDe038AuthCode(authCode);
+            auth.setDe039Response(rc);
+            auth.setApproved(approved);
+            auth.setDurationMs((int) durationMs);
+            auth.setRequestHex(requestHex);
+            auth.setResponseHex(responseHex);
+            acqAuthRepository.save(auth);
+            log.debug("[ACQUIRING] AcqAuthorization saved — pan={} de039={}", mask(request.getDE002_PAN()), rc);
+        } catch (Exception e) {
+            log.error("[ACQUIRING] Error saving AcqAuthorization : {}", e.getMessage());
+        }
+    }
 
     private String mask(String pan) {
         if (pan == null || pan.length() < 10) return "****";
