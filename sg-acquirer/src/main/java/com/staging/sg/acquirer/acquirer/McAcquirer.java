@@ -146,7 +146,7 @@ public class McAcquirer {
         long durationMs = System.currentTimeMillis() - startTime;
         log.info("[ACQUIRING] 0110 — DE039={} DE038={} approved={}", rc, authCode, approved);
         // Save to acq_authorizations
-        saveAcqAuthorization(request, approved, rc, authCode, rrn, stan, txDt, lTime, lDate,
+        saveAcqAuthorization(request, pan, approved, rc, authCode, rrn, stan, txDt, lTime, lDate,
                 pinBlock != null, durationMs, ISOUtil.hexString(isoRequest.pack()),
                 ISOUtil.hexString(isoResponse.pack()));
 
@@ -333,15 +333,15 @@ public class McAcquirer {
     private boolean isEmpty(String s) { return s == null || s.isBlank(); }
 
     // ── Save to acq_authorizations ────────────────────────────
-    private void saveAcqAuthorization(McAuthRequest request, boolean approved,
+    private void saveAcqAuthorization(McAuthRequest request, String pan, boolean approved,
             String rc, String authCode, String rrn, String stan,
             String txDt, String lTime, String lDate,
             boolean pinPresent, long durationMs,
             String requestHex, String responseHex) {
         try {
             AcqAuthorization auth = new AcqAuthorization();
-            auth.setDe002Pan(mask(request.getDE002_PAN()));
-            auth.setDe002PanRaw(request.getDE002_PAN());
+            auth.setDe002Pan(mask(pan));
+            auth.setDe002PanRaw(pan);
             auth.setDe003ProcCode(request.getDE003_PROCESSING_CODE());
             auth.setDe004Amount(request.getDE004_AMOUNT());
             auth.setDe007Datetime(txDt);
