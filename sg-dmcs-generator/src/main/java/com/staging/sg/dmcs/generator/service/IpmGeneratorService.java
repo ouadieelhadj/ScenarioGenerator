@@ -158,7 +158,7 @@ public class IpmGeneratorService {
         r.setRecordType("PRESENTMENT");
         r.setMti("1240");
         r.setFunctionCode("200");
-        r.setDe002Pan(auth.getDe002Pan());
+        r.setDe002Pan(auth.getDe002PanRaw() != null ? auth.getDe002PanRaw() : auth.getDe002Pan());
         r.setDe003ProcCode(auth.getDe003ProcCode());
         r.setDe004Amount(auth.getDe004Amount());
         r.setDe012LocalDt(safe(auth.getDe012LocalTime())

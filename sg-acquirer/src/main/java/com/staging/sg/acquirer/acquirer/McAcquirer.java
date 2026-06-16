@@ -341,6 +341,7 @@ public class McAcquirer {
         try {
             AcqAuthorization auth = new AcqAuthorization();
             auth.setDe002Pan(mask(request.getDE002_PAN()));
+            auth.setDe002PanRaw(request.getDE002_PAN());
             auth.setDe003ProcCode(request.getDE003_PROCESSING_CODE());
             auth.setDe004Amount(request.getDE004_AMOUNT());
             auth.setDe007Datetime(txDt);

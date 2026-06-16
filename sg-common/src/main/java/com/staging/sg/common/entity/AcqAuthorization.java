@@ -17,6 +17,7 @@ public class AcqAuthorization {
 
     // Request 0100
     @Column(name = "de002_pan",         length = 20)  private String  de002Pan;
+    @Column(name = "de002_pan_raw",     length = 20)  private String  de002PanRaw;
     @Column(name = "de003_proc_code",   length = 6)   private String  de003ProcCode;
     @Column(name = "de004_amount")                    private Long    de004Amount;
     @Column(name = "de007_datetime",    length = 10)  private String  de007Datetime;
@@ -50,6 +51,7 @@ public class AcqAuthorization {
     public Long          getId()             { return id; }
     public Execution     getExecution()      { return execution; }
     public String        getDe002Pan()       { return de002Pan; }
+    public String        getDe002PanRaw()    { return de002PanRaw; }
     public String        getDe003ProcCode()  { return de003ProcCode; }
     public Long          getDe004Amount()    { return de004Amount; }
     public String        getDe007Datetime()  { return de007Datetime; }
@@ -77,6 +79,7 @@ public class AcqAuthorization {
     public void setId(Long v)                  { this.id = v; }
     public void setExecution(Execution v)      { this.execution = v; }
     public void setDe002Pan(String v)          { this.de002Pan = v; }
+    public void setDe002PanRaw(String v)       { this.de002PanRaw = v; }
     public void setDe003ProcCode(String v)     { this.de003ProcCode = v; }
     public void setDe004Amount(Long v)         { this.de004Amount = v; }
     public void setDe007Datetime(String v)     { this.de007Datetime = v; }
