@@ -64,10 +64,6 @@ public class IpmGeneratorService {
 
         log.info("[DMCS-GEN] Found {} approved authorizations", authorizations.size());
 
-        if (authorizations.isEmpty()) {
-            log.warn("[DMCS-GEN] No approved authorizations — skipping");
-            return null;
-        }
 
         // Create directories
         try { Files.createDirectories(Paths.get(baseDir)); }
