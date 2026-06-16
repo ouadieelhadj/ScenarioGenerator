@@ -31,3 +31,6 @@ logging:
     com.staging.sg: INFO
   file:
     name: D:/MoneyCore/ScenarioGenerator/logs/dmcs-reader.log
+
+  liquibase:
+    enabled: false

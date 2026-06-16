@@ -5,6 +5,8 @@
       <module name="scenario-generator" options="" />
       <module name="sg-acquirer" options="-parameters -proc:none" />
       <module name="sg-common" options="-parameters -proc:none" />
+      <module name="sg-dmcs-generator" options="-parameters -proc:none" />
+      <module name="sg-dmcs-reader" options="-parameters -proc:none" />
       <module name="sg-issuer" options="-parameters -proc:none" />
     </option>
   </component>
