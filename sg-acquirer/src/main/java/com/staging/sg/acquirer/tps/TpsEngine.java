@@ -111,6 +111,8 @@ public class TpsEngine {
                                boolean persist) {
         try {
             McAuthRequest baseRequest = parseConfig(config);
+            baseRequest.setExecutionId(executionId);
+            baseRequest.setExecutionId(executionId);
 
             if (steps.isEmpty()) {
                 // Mode SIMPLE
@@ -343,6 +345,7 @@ public class TpsEngine {
         c.setDE022_POS_ENTRY_MODE(o.getDE022_POS_ENTRY_MODE());
         c.setDE049_CURRENCY_CODE(o.getDE049_CURRENCY_CODE());
         c.setDE052_PIN(o.getDE052_PIN());
+        c.setExecutionId(o.getExecutionId());
         return c;
     }
 }

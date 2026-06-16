@@ -3,6 +3,7 @@ package com.staging.sg.acquirer.acquirer;
 import com.staging.sg.common.entity.AcqAuthorization;
 import com.staging.sg.common.hsm.ThalesHsmService;
 import com.staging.sg.common.repository.AcqAuthorizationRepository;
+import com.staging.sg.common.repository.ExecutionRepository;
 import com.staging.sg.common.iso.NetworkUtil;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOUtil;
@@ -34,6 +35,7 @@ public class McAcquirer {
 
     private final NetworkUtil                net;
     private final AcqAuthorizationRepository acqAuthRepository;
+    private final ExecutionRepository            executionRepository;
     private final ThalesHsmService hsm;
 
     @Value("${mc.acquirer.mas.host:127.0.0.1}")     private String  masHost;
@@ -62,10 +64,12 @@ public class McAcquirer {
     @Value("${mc.security.pin-enabled:true}")   private boolean pinEnabled;
 
     public McAcquirer(NetworkUtil net, ThalesHsmService hsm,
-                      AcqAuthorizationRepository acqAuthRepository) {
+                      AcqAuthorizationRepository acqAuthRepository,
+                      ExecutionRepository executionRepository) {
         this.net = net;
         this.hsm = hsm;
-        this.acqAuthRepository = acqAuthRepository;
+        this.acqAuthRepository  = acqAuthRepository;
+        this.executionRepository = executionRepository;
     }
 
     public McAuthResult authorize(McAuthRequest request) throws Exception {
@@ -358,6 +362,9 @@ public class McAcquirer {
             auth.setDurationMs((int) durationMs);
             auth.setRequestHex(requestHex);
             auth.setResponseHex(responseHex);
+            if (request.getExecutionId() != null) {
+                executionRepository.findById(request.getExecutionId()).ifPresent(auth::setExecution);
+            }
             acqAuthRepository.save(auth);
             log.debug("[ACQUIRING] AcqAuthorization saved — pan={} de039={}", mask(request.getDE002_PAN()), rc);
         } catch (Exception e) {

@@ -50,6 +50,7 @@ public class McAuthRequest {
 
     // ── Seed for reproducibility ──────────────────────────────
     private Long seed;
+    private Long executionId;
 
     public McAuthRequest() {}
 
@@ -68,6 +69,7 @@ public class McAuthRequest {
     public String getDE049_CURRENCY_CODE()      { return DE049_CURRENCY_CODE; }
     public String getDE052_PIN()                { return DE052_PIN; }
     public Long   getSeed()                     { return seed; }
+    public Long   getExecutionId()               { return executionId; }
 
     // Setters
     public void setDE002_PAN(String v)                { this.DE002_PAN = v; }
@@ -84,4 +86,5 @@ public class McAuthRequest {
     public void setDE049_CURRENCY_CODE(String v)      { this.DE049_CURRENCY_CODE = v; }
     public void setDE052_PIN(String v)                { this.DE052_PIN = v; }
     public void setSeed(Long v)                       { this.seed = v; }
+    public void setExecutionId(Long v)                { this.executionId = v; }
 }
