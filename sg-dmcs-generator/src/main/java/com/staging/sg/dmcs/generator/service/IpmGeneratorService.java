@@ -175,10 +175,16 @@ public class IpmGeneratorService {
         r.setDe043MerchName(auth.getDe043MerchName());
         r.setDe049Currency(auth.getDe049Currency());
         r.setDe071MsgNum(String.format("%08d", msgNum));
+        // Priority 1 — Mandatory IPM fields
+        r.setDe005AmountRecon(auth.getDe004Amount());           // DE005 = DE004 (same currency)
+        r.setDe050CurrencyRecon(auth.getDe049Currency());       // DE050 = DE049
+        r.setDe031AcqRefData(buildAcqRefData(auth, msgNum));    // DE031 ARN 23 pos
+        r.setDe063NetworkData(auth.getDe037Rrn());              // DE063 = RRN trace
         String ascii = String.format(
             "1240|200|PAN=%s|PC=%s|AMT=%012d|DT=%s|MCC=%s|" +
-            "ACQ=%s|RRN=%s|AUTH=%s|TID=%s|MID=%s|CCY=%s|MSG=%08d",
-            safe(auth.getDe002Pan()),
+            "ACQ=%s|RRN=%s|AUTH=%s|TID=%s|MID=%s|CCY=%s|" +
+            "AMT_RECON=%012d|CCY_RECON=%s|ARN=%s|NET=%s|MSG=%08d",
+            safe(auth.getDe002PanRaw() != null ? auth.getDe002PanRaw() : auth.getDe002Pan()),
             safe(auth.getDe003ProcCode()),
             auth.getDe004Amount() != null ? auth.getDe004Amount() : 0,
             safe(auth.getDe012LocalTime()) + safe(auth.getDe013LocalDate()),
@@ -189,6 +195,10 @@ public class IpmGeneratorService {
             safe(auth.getDe041TermId()),
             safe(auth.getDe042MerchId()),
             safe(auth.getDe049Currency()),
+            auth.getDe004Amount() != null ? auth.getDe004Amount() : 0,
+            safe(auth.getDe049Currency()),
+            buildAcqRefData(auth, msgNum),
+            safe(auth.getDe037Rrn()),
             msgNum);
         r.setRawAscii(ascii);
         r.setRawHex(toHex(ascii.getBytes()));
@@ -279,6 +289,38 @@ public class IpmGeneratorService {
         String d = date.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         long count = ipmFileRepository.findByFileDate(date).size() + 1;
         return String.format("%s%s%03d", fileIdPrefix, d, count);
+    }
+
+    // ── DE031 Acquirer Reference Data (23 positions) ────────
+    private String buildAcqRefData(AcqAuthorization auth, int msgNum) {
+        // Pos 1 : Mixed use (0)
+        // Pos 2-7 : Acquirer BIN (6 digits)
+        // Pos 8-11 : Julian date YDDD
+        // Pos 12-22 : Sequence (11 digits)
+        // Pos 23 : Check digit
+        String acqBin = safe(auth.getDe032AcqId());
+        if (acqBin.length() > 6) acqBin = acqBin.substring(0, 6);
+        acqBin = String.format("%6s", acqBin).replace(" ", "0");
+        java.time.LocalDate now = java.time.LocalDate.now();
+        int year = now.getYear() % 10;
+        int doy  = now.getDayOfYear();
+        String julian = String.format("%d%03d", year, doy);
+        String seq = String.format("%011d", msgNum);
+        String base = "0" + acqBin + julian + seq;
+        if (base.length() > 22) base = base.substring(0, 22);
+        base = String.format("%-22s", base).replace(" ", "0");
+        int checkDigit = computeLuhn(base);
+        return base + checkDigit;
+    }
+
+    private int computeLuhn(String num) {
+        int sum = 0; boolean alt = false;
+        for (int i = num.length() - 1; i >= 0; i--) {
+            int d = Character.getNumericValue(num.charAt(i));
+            if (alt) { d *= 2; if (d > 9) d -= 9; }
+            sum += d; alt = !alt;
+        }
+        return (10 - (sum % 10)) % 10;
     }
 
     private String safe(String s)  { return s != null ? s : ""; }

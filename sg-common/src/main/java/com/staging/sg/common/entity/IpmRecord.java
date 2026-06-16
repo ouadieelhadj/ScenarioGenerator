@@ -39,6 +39,10 @@ public class IpmRecord {
     @Column(name = "de043_merch_name",length = 40)        private String  de043MerchName;
     @Column(name = "de049_currency", length = 3)          private String  de049Currency;
     @Column(name = "de071_msg_num",  length = 8)          private String  de071MsgNum;
+    @Column(name = "de005_amount_recon")                 private Long    de005AmountRecon;
+    @Column(name = "de031_acq_ref_data", length = 23)    private String  de031AcqRefData;
+    @Column(name = "de050_currency_recon", length = 3)   private String  de050CurrencyRecon;
+    @Column(name = "de063_network_data", length = 50)    private String  de063NetworkData;
     @Column(name = "raw_hex",        columnDefinition = "TEXT") private String rawHex;
     @Column(name = "raw_ascii",      columnDefinition = "TEXT") private String rawAscii;
     @Column(name = "status",         length = 10)         private String  status;
@@ -74,6 +78,10 @@ public class IpmRecord {
     public String           getDe043MerchName(){ return de043MerchName; }
     public String           getDe049Currency() { return de049Currency; }
     public String           getDe071MsgNum()   { return de071MsgNum; }
+    public Long             getDe005AmountRecon()   { return de005AmountRecon; }
+    public String           getDe031AcqRefData()    { return de031AcqRefData; }
+    public String           getDe050CurrencyRecon() { return de050CurrencyRecon; }
+    public String           getDe063NetworkData()   { return de063NetworkData; }
     public String           getRawHex()        { return rawHex; }
     public String           getRawAscii()      { return rawAscii; }
     public String           getStatus()        { return status; }
@@ -104,6 +112,10 @@ public class IpmRecord {
     public void setDe043MerchName(String v)         { this.de043MerchName = v; }
     public void setDe049Currency(String v)          { this.de049Currency = v; }
     public void setDe071MsgNum(String v)            { this.de071MsgNum = v; }
+    public void setDe005AmountRecon(Long v)         { this.de005AmountRecon = v; }
+    public void setDe031AcqRefData(String v)        { this.de031AcqRefData = v; }
+    public void setDe050CurrencyRecon(String v)     { this.de050CurrencyRecon = v; }
+    public void setDe063NetworkData(String v)       { this.de063NetworkData = v; }
     public void setRawHex(String v)                 { this.rawHex = v; }
     public void setRawAscii(String v)               { this.rawAscii = v; }
     public void setStatus(String v)                 { this.status = v; }
