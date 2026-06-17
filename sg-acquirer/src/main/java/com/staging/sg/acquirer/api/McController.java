@@ -3,6 +3,12 @@ package com.staging.sg.acquirer.api;
 import com.staging.sg.acquirer.acquirer.McAcquirer;
 import com.staging.sg.acquirer.acquirer.McAuthRequest;
 import com.staging.sg.acquirer.acquirer.McAuthResult;
+import com.staging.sg.acquirer.acquirer.McReversalManager;
+import com.staging.sg.acquirer.acquirer.McReversalRequest;
+import com.staging.sg.acquirer.acquirer.McReversalResult;
+import com.staging.sg.acquirer.acquirer.McAdviceManager;
+import com.staging.sg.acquirer.acquirer.McAdviceRequest;
+import com.staging.sg.acquirer.acquirer.McAdviceResult;
 import com.staging.sg.acquirer.network.McKeyExchangeResult;
 import com.staging.sg.acquirer.network.McNetworkManager;
 import com.staging.sg.acquirer.network.McNetworkResult;
@@ -23,11 +29,17 @@ public class McController {
 
     private final McNetworkManager networkManager;
     private final McAcquirer       acquirer;
+    private final McReversalManager reversalManager;
+    private final McAdviceManager   adviceManager;
 
     public McController(McNetworkManager networkManager,
-                        McAcquirer acquirer) {
-        this.networkManager = networkManager;
-        this.acquirer       = acquirer;
+                        McAcquirer acquirer,
+                        McReversalManager reversalManager,
+                        McAdviceManager adviceManager) {
+        this.networkManager  = networkManager;
+        this.acquirer        = acquirer;
+        this.reversalManager = reversalManager;
+        this.adviceManager   = adviceManager;
     }
 
     // GET /api/status
@@ -40,6 +52,8 @@ public class McController {
         body.put("signedOn",      networkManager.isSignedOn());
         body.put("endpoints", Map.of(
                 "authorize",     "POST /api/mc/authorize",
+                "reversal",      "POST /api/mc/reversal",
+                "advice",        "POST /api/mc/advice",
                 "keyExchange",   "POST /api/mc/network/key-exchange",
                 "signon",        "POST /api/mc/network/signon",
                 "echo",          "POST /api/mc/network/echo",
@@ -58,6 +72,36 @@ public class McController {
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("[API] Authorization error : {}", e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // POST /api/mc/reversal
+    @PostMapping("/mc/reversal")
+    public ResponseEntity<?> reversal(
+            @RequestBody(required = false) McReversalRequest request) {
+        if (request == null) request = new McReversalRequest();
+        try {
+            McReversalResult result = reversalManager.sendReversal(request);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("[API] Reversal error : {}", e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // POST /api/mc/advice
+    @PostMapping("/mc/advice")
+    public ResponseEntity<?> advice(
+            @RequestBody(required = false) McAdviceRequest request) {
+        if (request == null) request = new McAdviceRequest();
+        try {
+            McAdviceResult result = adviceManager.sendAdvice(request);
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("[API] Advice error : {}", e.getMessage());
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", e.getMessage()));
         }
