@@ -1,24 +1,26 @@
 package com.staging.sg.acquirer.acquirer;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 public class McReversalRequest {
 
     // Original Authorization data
-    private String DE002_PAN;
-    private Long   DE004_AMOUNT;
-    private String DE003_PROCESSING_CODE;
-    private String DE018_MCC;
-    private String DE022_POS_ENTRY_MODE;
-    private String DE049_CURRENCY_CODE;
-    private String DE052_PIN;
+    @JsonProperty("DE002_PAN") private String DE002_PAN;
+    @JsonProperty("DE004_AMOUNT") private Long DE004_AMOUNT;
+    @JsonProperty("DE003_PROCESSING_CODE") private String DE003_PROCESSING_CODE;
+    @JsonProperty("DE018_MCC") private String DE018_MCC;
+    @JsonProperty("DE022_POS_ENTRY_MODE") private String DE022_POS_ENTRY_MODE;
+    @JsonProperty("DE049_CURRENCY_CODE") private String DE049_CURRENCY_CODE;
+    @JsonProperty("DE052_PIN") private String DE052_PIN;
 
     // Original Authorization response data
-    private String DE037_RETRIEVAL_REF;
-    private String DE038_AUTH_CODE;
-    private String DE039_RESPONSE_CODE;
-    private String DE011_STAN_ORIGINAL;
+    @JsonProperty("DE037_RETRIEVAL_REF") private String DE037_RETRIEVAL_REF;
+    @JsonProperty("DE038_AUTH_CODE") private String DE038_AUTH_CODE;
+    @JsonProperty("DE039_RESPONSE_CODE") private String DE039_RESPONSE_CODE;
+    @JsonProperty("DE011_STAN_ORIGINAL") private String DE011_STAN_ORIGINAL;
 
     // Reversal reason
-    private String REVERSAL_REASON;  // 4000=Full reversal
+    @JsonProperty("REVERSAL_REASON") private String REVERSAL_REASON;  // 4000=Full reversal
     private Long   executionId;
 
     public McReversalRequest() {}

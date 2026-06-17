@@ -1,5 +1,7 @@
 package com.staging.sg.acquirer.acquirer;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Request for Mastercard 0100 Authorization.
  *
@@ -29,24 +31,25 @@ package com.staging.sg.acquirer.acquirer;
  *   DE052_PIN_BLOCK (encrypted under ZPK)
  *   DE064_MAC       (calculated under ZAK)
  */
+
 public class McAuthRequest {
 
     // ── Mandatory ─────────────────────────────────────────────
-    private String DE002_PAN;
-    private long   DE004_AMOUNT;
+    @JsonProperty("DE002_PAN") private String DE002_PAN;
+    @JsonProperty("DE004_AMOUNT") private long DE004_AMOUNT;
 
     // ── Optional ──────────────────────────────────────────────
-    private String DE003_PROCESSING_CODE;
-    private String DE018_MCC;
-    private String DE022_POS_ENTRY_MODE;
-    private String DE025_POS_CONDITION_CODE;
-    private String DE032_ACQUIRING_BIN;
-    private String DE033_FORWARDING_BIN;
-    private String DE041_TERMINAL_ID;
-    private String DE042_MERCHANT_ID;
-    private String DE043_MERCHANT_NAME;
-    private String DE049_CURRENCY_CODE;
-    private String DE052_PIN;
+    @JsonProperty("DE003_PROCESSING_CODE") private String DE003_PROCESSING_CODE;
+    @JsonProperty("DE018_MCC") private String DE018_MCC;
+    @JsonProperty("DE022_POS_ENTRY_MODE") private String DE022_POS_ENTRY_MODE;
+    @JsonProperty("DE025_POS_CONDITION_CODE") private String DE025_POS_CONDITION_CODE;
+    @JsonProperty("DE032_ACQUIRING_BIN") private String DE032_ACQUIRING_BIN;
+    @JsonProperty("DE033_FORWARDING_BIN") private String DE033_FORWARDING_BIN;
+    @JsonProperty("DE041_TERMINAL_ID") private String DE041_TERMINAL_ID;
+    @JsonProperty("DE042_MERCHANT_ID") private String DE042_MERCHANT_ID;
+    @JsonProperty("DE043_MERCHANT_NAME") private String DE043_MERCHANT_NAME;
+    @JsonProperty("DE049_CURRENCY_CODE") private String DE049_CURRENCY_CODE;
+    @JsonProperty("DE052_PIN") private String DE052_PIN;
 
     // ── Seed for reproducibility ──────────────────────────────
     private Long seed;

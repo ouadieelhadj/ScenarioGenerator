@@ -73,6 +73,7 @@ public class McAcquirer {
     }
 
     public McAuthResult authorize(McAuthRequest request) throws Exception {
+        log.info("[DEBUG] PAN reçu={} AMOUNT reçu={} MCC reçu={}", request.getDE002_PAN(), request.getDE004_AMOUNT(), request.getDE018_MCC());
         long startTime = System.currentTimeMillis();
         long seed = request.getSeed() != null
                 ? request.getSeed() : System.currentTimeMillis();
