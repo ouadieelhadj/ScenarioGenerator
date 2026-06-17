@@ -1,9 +1,13 @@
 package com.staging.sg.dmcs.generator.service;
 
 import com.staging.sg.common.entity.AcqAuthorization;
+import com.staging.sg.common.entity.AcqReversal;
+import com.staging.sg.common.entity.AcqAdvice;
 import com.staging.sg.common.entity.IpmFile;
 import com.staging.sg.common.entity.IpmRecord;
 import com.staging.sg.common.repository.AcqAuthorizationRepository;
+import com.staging.sg.common.repository.AcqReversalRepository;
+import com.staging.sg.common.repository.AcqAdviceRepository;
 import com.staging.sg.common.repository.IpmFileRepository;
 import com.staging.sg.common.repository.IpmRecordRepository;
 import org.slf4j.Logger;
@@ -26,6 +30,8 @@ public class IpmGeneratorService {
     private static final Logger log = LoggerFactory.getLogger(IpmGeneratorService.class);
 
     private final AcqAuthorizationRepository acqAuthRepository;
+    private final AcqReversalRepository      acqReversalRepository;
+    private final AcqAdviceRepository        acqAdviceRepository;
     private final IpmFileRepository          ipmFileRepository;
     private final IpmRecordRepository        ipmRecordRepository;
 
@@ -39,9 +45,13 @@ public class IpmGeneratorService {
     private String fileIdPrefix;
 
     public IpmGeneratorService(AcqAuthorizationRepository acqAuthRepository,
+                                AcqReversalRepository acqReversalRepository,
+                                AcqAdviceRepository acqAdviceRepository,
                                 IpmFileRepository ipmFileRepository,
                                 IpmRecordRepository ipmRecordRepository) {
-        this.acqAuthRepository   = acqAuthRepository;
+        this.acqAuthRepository    = acqAuthRepository;
+        this.acqReversalRepository = acqReversalRepository;
+        this.acqAdviceRepository  = acqAdviceRepository;
         this.ipmFileRepository   = ipmFileRepository;
         this.ipmRecordRepository = ipmRecordRepository;
     }
@@ -63,6 +73,15 @@ public class IpmGeneratorService {
         }
 
         log.info("[DMCS-GEN] Found {} approved authorizations", authorizations.size());
+
+        // Load reversals + advices for this execution
+        List<AcqReversal> reversals = executionId != null
+                ? acqReversalRepository.findByExecutionId(executionId)
+                : java.util.Collections.emptyList();
+        List<AcqAdvice> advices = executionId != null
+                ? acqAdviceRepository.findByExecutionId(executionId)
+                : java.util.Collections.emptyList();
+        log.info("[DMCS-GEN] Found {} reversals, {} advices", reversals.size(), advices.size());
 
 
         // Create directories
@@ -90,7 +109,8 @@ public class IpmGeneratorService {
         ipmFile.setCreatedBy(createdBy);
         ipmFile.setFilePathBinary(binaryPath.toString());
         ipmFile.setFilePathAscii(asciiPath.toString());
-        ipmFile.setNbTransactions(authorizations.size());
+        int totalTx = authorizations.size() + reversals.size() + advices.size();
+        ipmFile.setNbTransactions(totalTx);
         ipmFile.setTotalAmount(totalAmount);
         ipmFile.setTotalAmountCurrency("978");
         ipmFile = ipmFileRepository.save(ipmFile);
@@ -105,6 +125,14 @@ public class IpmGeneratorService {
         // Presentments
         for (AcqAuthorization auth : authorizations) {
             records.add(buildPresentment(ipmFile, auth, msgNum++));
+        }
+        // Reversals -> 1240
+        for (AcqReversal rev : reversals) {
+            records.add(buildReversalPresentment(ipmFile, rev, msgNum++));
+        }
+        // Advices -> 1240
+        for (AcqAdvice adv : advices) {
+            records.add(buildAdvicePresentment(ipmFile, adv, msgNum++));
         }
 
         // Trailer
@@ -200,6 +228,75 @@ public class IpmGeneratorService {
             buildAcqRefData(auth, msgNum),
             safe(auth.getDe037Rrn()),
             msgNum);
+        r.setRawAscii(ascii);
+        r.setRawHex(toHex(ascii.getBytes()));
+        return r;
+    }
+
+    // ── Build Presentment from Reversal 0400 (Function 200 + reason) ──
+    private IpmRecord buildReversalPresentment(IpmFile ipmFile,
+                                                AcqReversal rev, int msgNum) {
+        IpmRecord r = new IpmRecord();
+        r.setIpmFile(ipmFile);
+        r.setMessageNumber(msgNum);
+        r.setRecordType("PRESENTMENT_REV");
+        r.setMti("1240");
+        r.setFunctionCode("200");
+        r.setDe002Pan(rev.getDe002Pan());
+        r.setDe003ProcCode(rev.getDe003ProcCode());
+        r.setDe004Amount(rev.getDe004Amount());
+        r.setDe024FuncCode("200");
+        r.setDe025Reason("4000");        // Full reversal reason
+        r.setDe037Rrn(rev.getDe037Rrn());
+        r.setDe038AuthCode(rev.getDe038AuthCode());
+        r.setDe041TermId(rev.getDe041TermId());
+        r.setDe042MerchId(rev.getDe042MerchId());
+        r.setDe049Currency(rev.getDe049Currency());
+        r.setDe071MsgNum(String.format("%08d", msgNum));
+        r.setDe005AmountRecon(rev.getDe004Amount());
+        r.setDe050CurrencyRecon(rev.getDe049Currency());
+        r.setDe063NetworkData(rev.getDe037Rrn());
+        String ascii = String.format(
+            "1240|200|TYPE=REVERSAL|PAN=%s|PC=%s|AMT=%012d|RRN=%s|" +
+            "AUTH=%s|TID=%s|MID=%s|CCY=%s|REASON=4000|MSG=%08d",
+            safe(rev.getDe002Pan()), safe(rev.getDe003ProcCode()),
+            rev.getDe004Amount() != null ? rev.getDe004Amount() : 0,
+            safe(rev.getDe037Rrn()), safe(rev.getDe038AuthCode()),
+            safe(rev.getDe041TermId()), safe(rev.getDe042MerchId()),
+            safe(rev.getDe049Currency()), msgNum);
+        r.setRawAscii(ascii);
+        r.setRawHex(toHex(ascii.getBytes()));
+        return r;
+    }
+
+    // ── Build Presentment from Advice 0120 (Function 200) ──
+    private IpmRecord buildAdvicePresentment(IpmFile ipmFile,
+                                              AcqAdvice adv, int msgNum) {
+        IpmRecord r = new IpmRecord();
+        r.setIpmFile(ipmFile);
+        r.setMessageNumber(msgNum);
+        r.setRecordType("PRESENTMENT_ADV");
+        r.setMti("1240");
+        r.setFunctionCode("200");
+        r.setDe002Pan(adv.getDe002Pan());
+        r.setDe003ProcCode(adv.getDe003ProcCode());
+        r.setDe004Amount(adv.getDe004Amount());
+        r.setDe024FuncCode("200");
+        r.setDe025Reason("00");
+        r.setDe037Rrn(adv.getDe037Rrn());
+        r.setDe038AuthCode(adv.getDe038AuthCode());
+        r.setDe049Currency(adv.getDe049Currency());
+        r.setDe071MsgNum(String.format("%08d", msgNum));
+        r.setDe005AmountRecon(adv.getDe004Amount());
+        r.setDe050CurrencyRecon(adv.getDe049Currency());
+        r.setDe063NetworkData(adv.getDe037Rrn());
+        String ascii = String.format(
+            "1240|200|TYPE=ADVICE|PAN=%s|PC=%s|AMT=%012d|RRN=%s|" +
+            "AUTH=%s|CCY=%s|REASON=%s|MSG=%08d",
+            safe(adv.getDe002Pan()), safe(adv.getDe003ProcCode()),
+            adv.getDe004Amount() != null ? adv.getDe004Amount() : 0,
+            safe(adv.getDe037Rrn()), safe(adv.getDe038AuthCode()),
+            safe(adv.getDe049Currency()), safe(adv.getDe060Reason()), msgNum);
         r.setRawAscii(ascii);
         r.setRawHex(toHex(ascii.getBytes()));
         return r;
