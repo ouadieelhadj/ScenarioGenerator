@@ -19,6 +19,7 @@ public class McReversalRequest {
 
     // Reversal reason
     private String REVERSAL_REASON;  // 4000=Full reversal
+    private Long   executionId;
 
     public McReversalRequest() {}
 
@@ -35,6 +36,7 @@ public class McReversalRequest {
     public String getDE039_RESPONSE_CODE()  { return DE039_RESPONSE_CODE; }
     public String getDE011_STAN_ORIGINAL()  { return DE011_STAN_ORIGINAL; }
     public String getREVERSAL_REASON()      { return REVERSAL_REASON; }
+    public Long   getExecutionId()          { return executionId; }
 
     // Setters
     public void setDE002_PAN(String v)            { this.DE002_PAN = v; }
@@ -49,4 +51,5 @@ public class McReversalRequest {
     public void setDE039_RESPONSE_CODE(String v)  { this.DE039_RESPONSE_CODE = v; }
     public void setDE011_STAN_ORIGINAL(String v)  { this.DE011_STAN_ORIGINAL = v; }
     public void setREVERSAL_REASON(String v)      { this.REVERSAL_REASON = v; }
+    public void setExecutionId(Long v)      { this.executionId = v; }
 }

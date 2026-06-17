@@ -3,6 +3,7 @@ package com.staging.sg.acquirer.acquirer;
 import com.staging.sg.common.entity.AcqAdvice;
 import com.staging.sg.common.hsm.ThalesHsmService;
 import com.staging.sg.common.repository.AcqAdviceRepository;
+import com.staging.sg.common.repository.ExecutionRepository;
 import com.staging.sg.common.iso.McPackager;
 import com.staging.sg.common.iso.NetworkUtil;
 import org.jpos.iso.ISOMsg;
@@ -24,6 +25,7 @@ public class McAdviceManager {
     private final ThalesHsmService hsm;
     private final NetworkUtil      networkUtil;
     private final AcqAdviceRepository acqAdviceRepository;
+    private final ExecutionRepository executionRepository;
 
     @Value("${mc.acquirer.mas.host:127.0.0.1}")
     private String masHost;
@@ -54,11 +56,13 @@ public class McAdviceManager {
     public McAdviceManager(McPackager packager,
                            AcqAdviceRepository acqAdviceRepository,
                            ThalesHsmService hsm,
-                           NetworkUtil networkUtil) {
+                           NetworkUtil networkUtil,
+                           ExecutionRepository executionRepository) {
         this.packager    = packager;
         this.hsm         = hsm;
         this.networkUtil = networkUtil;
         this.acqAdviceRepository = acqAdviceRepository;
+        this.executionRepository = executionRepository;
     }
 
     public McAdviceResult sendAdvice(McAdviceRequest request) {
@@ -195,6 +199,9 @@ public class McAdviceManager {
             adv.setDurationMs((int) durationMs);
             adv.setRequestHex(result.getRequestHex());
             adv.setResponseHex(result.getResponseHex());
+            if (request.getExecutionId() != null) {
+                executionRepository.findById(request.getExecutionId()).ifPresent(adv::setExecution);
+            }
             acqAdviceRepository.save(adv);
             log.debug("[ADVICE] AcqAdvice saved — de039={}", result.getDE039_RESPONSE_CODE());
         } catch (Exception e) {

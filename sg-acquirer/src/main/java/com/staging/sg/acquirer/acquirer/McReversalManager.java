@@ -3,6 +3,7 @@ package com.staging.sg.acquirer.acquirer;
 import com.staging.sg.common.entity.AcqReversal;
 import com.staging.sg.common.hsm.ThalesHsmService;
 import com.staging.sg.common.repository.AcqReversalRepository;
+import com.staging.sg.common.repository.ExecutionRepository;
 import com.staging.sg.common.iso.McPackager;
 import com.staging.sg.common.iso.NetworkUtil;
 import org.jpos.iso.ISOMsg;
@@ -24,6 +25,7 @@ public class McReversalManager {
     private final ThalesHsmService hsm;
     private final NetworkUtil      networkUtil;
     private final AcqReversalRepository acqReversalRepository;
+    private final ExecutionRepository executionRepository;
 
     @Value("${mc.acquirer.mas.host:127.0.0.1}")
     private String masHost;
@@ -54,11 +56,13 @@ public class McReversalManager {
     public McReversalManager(McPackager packager,
                               AcqReversalRepository acqReversalRepository,
                               ThalesHsmService hsm,
-                              NetworkUtil networkUtil) {
+                              NetworkUtil networkUtil,
+                              ExecutionRepository executionRepository) {
         this.packager    = packager;
         this.hsm         = hsm;
         this.networkUtil = networkUtil;
         this.acqReversalRepository = acqReversalRepository;
+        this.executionRepository = executionRepository;
     }
 
     public McReversalResult sendReversal(McReversalRequest request) {
@@ -201,6 +205,9 @@ public class McReversalManager {
             rev.setDurationMs((int) durationMs);
             rev.setRequestHex(result.getRequestHex());
             rev.setResponseHex(result.getResponseHex());
+            if (request.getExecutionId() != null) {
+                executionRepository.findById(request.getExecutionId()).ifPresent(rev::setExecution);
+            }
             acqReversalRepository.save(rev);
             log.debug("[REVERSAL] AcqReversal saved — de039={}", result.getDE039_RESPONSE_CODE());
         } catch (Exception e) {

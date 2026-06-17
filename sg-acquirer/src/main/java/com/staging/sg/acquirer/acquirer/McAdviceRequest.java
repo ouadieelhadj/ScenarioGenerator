@@ -12,6 +12,7 @@ public class McAdviceRequest {
     private String DE038_AUTH_CODE;
     private String DE039_RESPONSE_CODE;
     private String DE060_ADVICE_REASON;  // 191=Acquirer Completed
+    private Long   executionId;
 
     public McAdviceRequest() {}
 
@@ -26,6 +27,7 @@ public class McAdviceRequest {
     public String getDE038_AUTH_CODE()      { return DE038_AUTH_CODE; }
     public String getDE039_RESPONSE_CODE()  { return DE039_RESPONSE_CODE; }
     public String getDE060_ADVICE_REASON()  { return DE060_ADVICE_REASON; }
+    public Long   getExecutionId()          { return executionId; }
 
     // Setters
     public void setDE002_PAN(String v)            { this.DE002_PAN = v; }
@@ -38,4 +40,5 @@ public class McAdviceRequest {
     public void setDE038_AUTH_CODE(String v)      { this.DE038_AUTH_CODE = v; }
     public void setDE039_RESPONSE_CODE(String v)  { this.DE039_RESPONSE_CODE = v; }
     public void setDE060_ADVICE_REASON(String v)  { this.DE060_ADVICE_REASON = v; }
+    public void setExecutionId(Long v)      { this.executionId = v; }
 }
