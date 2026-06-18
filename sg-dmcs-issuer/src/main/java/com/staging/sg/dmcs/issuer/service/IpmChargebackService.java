@@ -109,7 +109,7 @@ public class IpmChargebackService {
             r.setRecordType("CHARGEBACK");
             r.setMti("1442");
             r.setFunctionCode(functionCode);
-            r.setDe002Pan(a.getDe002Pan());
+            r.setDe002Pan(a.getDe002PanRaw() != null ? a.getDe002PanRaw() : a.getDe002Pan());
             r.setDe003ProcCode(a.getDe003ProcCode());
             r.setDe004Amount(a.getDe004Amount());
             r.setDe005AmountRecon(a.getDe004Amount());
@@ -136,7 +136,7 @@ public class IpmChargebackService {
                 "AUTH=%s|MCC=%s|TID=%s|MID=%s|CCY=%s|REASON=%s|ORIG=%012d|" +
                 "DEST=%s|ORIGIN=%s|MSG=%08d",
                 functionCode,
-                safe(a.getDe002Pan()), safe(a.getDe003ProcCode()),
+                safe(a.getDe002PanRaw() != null ? a.getDe002PanRaw() : a.getDe002Pan()), safe(a.getDe003ProcCode()),
                 a.getDe004Amount() != null ? a.getDe004Amount() : 0,
                 safe(a.getDe037Rrn()), safe(a.getDe038AuthCode()),
                 safe(a.getDe018Mcc()), safe(a.getDe041TermId()),

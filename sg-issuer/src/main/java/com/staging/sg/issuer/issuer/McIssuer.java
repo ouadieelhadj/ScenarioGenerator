@@ -415,6 +415,7 @@ public class McIssuer {
         try {
             IssAuthorization auth = new IssAuthorization();
             auth.setDe002Pan(mask(net.safeGet(request, 2)));
+            auth.setDe002PanRaw(net.safeGet(request, 2));
             auth.setDe003ProcCode(net.safeGet(request, 3));
             auth.setDe004Amount(parseLong(net.safeGet(request, 4)));
             auth.setDe007Datetime(net.safeGet(request, 7));
