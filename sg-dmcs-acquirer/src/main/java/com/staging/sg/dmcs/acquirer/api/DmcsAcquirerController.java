@@ -3,6 +3,7 @@ package com.staging.sg.dmcs.acquirer.api;
 import com.staging.sg.common.entity.AcqIpmFile;
 import com.staging.sg.common.entity.AcqIpmRecord;
 import com.staging.sg.dmcs.acquirer.service.IpmAcquirerService;
+import com.staging.sg.dmcs.acquirer.service.IpmReaderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.io.FileSystemResource;
@@ -27,9 +28,12 @@ public class DmcsAcquirerController {
             LoggerFactory.getLogger(DmcsAcquirerController.class);
 
     private final IpmAcquirerService generatorService;
+    private final IpmReaderService readerService;
 
-    public DmcsAcquirerController(IpmAcquirerService generatorService) {
+    public DmcsAcquirerController(IpmAcquirerService generatorService,
+                                  IpmReaderService readerService) {
         this.generatorService = generatorService;
+        this.readerService = readerService;
     }
 
     // POST /api/dmcs/generate
@@ -159,5 +163,25 @@ public class DmcsAcquirerController {
                 "ascii",    "GET  /api/dmcs/files/{id}/download/ascii"
         ));
         return ResponseEntity.ok(body);
+    }
+
+    // POST /api/dmcs/read?path=... (lit un 1442 chargeback reçu, direction=IN)
+    @PostMapping("/read")
+    public ResponseEntity<?> read(@org.springframework.web.bind.annotation.RequestParam String path) {
+        try {
+            com.staging.sg.common.entity.AcqIpmFile file = readerService.readFile(path);
+            java.util.Map<String, Object> body = new java.util.LinkedHashMap<>();
+            body.put("fileId",         file.getId());
+            body.put("fileName",       file.getFileName());
+            body.put("direction",      file.getDirection());
+            body.put("nbTransactions", file.getNbTransactions());
+            body.put("totalAmount",    file.getTotalAmount());
+            body.put("status",         file.getStatus());
+            return ResponseEntity.ok(body);
+        } catch (Exception e) {
+            log.error("[API] Read error: {}", e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(java.util.Map.of("error", e.getMessage()));
+        }
     }
 }
