@@ -5,6 +5,7 @@ import com.staging.sg.common.entity.IssIpmRecord;
 import com.staging.sg.common.repository.IssIpmFileRepository;
 import com.staging.sg.common.repository.IssIpmRecordRepository;
 import com.staging.sg.dmcs.issuer.service.IpmChargebackService;
+import com.staging.sg.dmcs.issuer.service.IpmReaderService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -17,17 +18,20 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/dmcs")
 public class DmcsChargebackController {
-
     private static final Logger log = LoggerFactory.getLogger(DmcsChargebackController.class);
 
+
     private final IpmChargebackService   chargebackService;
+    private final IpmReaderService       readerService;
     private final IssIpmFileRepository    issIpmFileRepository;
     private final IssIpmRecordRepository  issIpmRecordRepository;
 
     public DmcsChargebackController(IpmChargebackService chargebackService,
+                                    IpmReaderService readerService,
                                     IssIpmFileRepository issIpmFileRepository,
                                     IssIpmRecordRepository issIpmRecordRepository) {
         this.chargebackService     = chargebackService;
+        this.readerService         = readerService;
         this.issIpmFileRepository  = issIpmFileRepository;
         this.issIpmRecordRepository = issIpmRecordRepository;
     }
@@ -84,5 +88,25 @@ public class DmcsChargebackController {
     @GetMapping("/files/{id}/records")
     public ResponseEntity<List<IssIpmRecord>> records(@PathVariable Long id) {
         return ResponseEntity.ok(issIpmRecordRepository.findByIpmFileId(id));
+    }
+
+    // POST /api/dmcs/read?path=... (lit un fichier IPM reçu, direction=IN)
+    @PostMapping("/read")
+    public ResponseEntity<?> read(@RequestParam String path) {
+        try {
+            IssIpmFile file = readerService.readFile(path);
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("fileId",         file.getId());
+            body.put("fileName",       file.getFileName());
+            body.put("direction",      file.getDirection());
+            body.put("nbTransactions", file.getNbTransactions());
+            body.put("totalAmount",    file.getTotalAmount());
+            body.put("status",         file.getStatus());
+            return ResponseEntity.ok(body);
+        } catch (Exception e) {
+            log.error("[API] Read error: {}", e.getMessage());
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 }
