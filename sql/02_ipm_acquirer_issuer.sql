@@ -157,3 +157,9 @@ ALTER TABLE iss_authorizations
     ADD COLUMN IF NOT EXISTS ipm_file_id      BIGINT,
     ADD COLUMN IF NOT EXISTS ipm_file_name    VARCHAR(100),
     ADD COLUMN IF NOT EXISTS ipm_generated_at TIMESTAMP;
+
+-- PAN en clair côté émetteur (pour 1442 conforme)
+ALTER TABLE iss_authorizations ADD COLUMN IF NOT EXISTS de002_pan_raw VARCHAR(19);
+
+-- PAN en clair côté émetteur (pour 1442 conforme)
+ALTER TABLE iss_authorizations ADD COLUMN IF NOT EXISTS de002_pan_raw VARCHAR(19);
