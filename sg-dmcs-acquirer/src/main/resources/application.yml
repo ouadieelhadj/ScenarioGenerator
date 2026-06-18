@@ -1,0 +1,42 @@
+server:
+  port: 8082
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: sg-dmcs-acquirer
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scenariogenerator
+    username: scenario_user
+    password: postgres123
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  security:
+    user:
+      name: admin
+      password: Admin123!
+
+dmcs:
+  base-dir: D:/MoneyCore/ScenarioGenerator/dmcs
+  file-id-prefix: MC
+
+mc:
+  acquirer:
+    defaults:
+      DE032_ACQUIRING_BIN: "411111"
+
+logging:
+  level:
+    com.staging.sg: INFO
+  file:
+    name: D:/MoneyCore/ScenarioGenerator/logs/dmcs-acquirer.log
+
+  liquibase:
+    enabled: false
