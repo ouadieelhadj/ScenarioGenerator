@@ -24,6 +24,7 @@
         <module>sg-issuer</module>
         <module>sg-dmcs-generator</module>
         <module>sg-dmcs-reader</module>
+        <module>sg-dmcs-issuer</module>
     </modules>
 
     <properties>
