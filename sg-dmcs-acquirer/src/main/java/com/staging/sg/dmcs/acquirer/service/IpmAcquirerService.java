@@ -125,6 +125,7 @@ public class IpmAcquirerService {
         // Presentments
         for (AcqAuthorization auth : authorizations) {
             records.add(buildPresentment(ipmFile, auth, msgNum++));
+            records.add(buildAddendum(ipmFile, auth, msgNum++));
         }
         // Reversals -> 1240
         for (AcqReversal rev : reversals) {
@@ -301,6 +302,41 @@ public class IpmAcquirerService {
         r.setRawHex(toHex(ascii.getBytes()));
         return r;
     }
+    // ── Build 1644 Financial Detail Addendum (function 696) ──
+    // Complète un 1240 First Presentment avec des données métier (PDS).
+    private AcqIpmRecord buildAddendum(AcqIpmFile ipmFile,
+                                       AcqAuthorization auth, int msgNum) {
+        AcqIpmRecord r = new AcqIpmRecord();
+        r.setIpmFile(ipmFile);
+        r.setAcqAuthId(auth.getId());
+        r.setMessageNumber(msgNum);
+        r.setRecordType("ADDENDUM");
+        r.setMti("1644");
+        r.setFunctionCode("696");
+        r.setDe002Pan(auth.getDe002PanRaw() != null ? auth.getDe002PanRaw() : auth.getDe002Pan());
+        r.setDe004Amount(auth.getDe004Amount());
+        r.setDe024FuncCode("696");
+        r.setDe037Rrn(auth.getDe037Rrn());
+        r.setDe049Currency(auth.getDe049Currency());
+        r.setDe071MsgNum(String.format("%08d", msgNum));
+        // PDS : 0501 Usage Code + 0502 Custom Identifier (RRN comme lien)
+        String pds = com.staging.sg.common.iso.PdsUtil.concat(
+            com.staging.sg.common.iso.PdsUtil.pds0501UsageCode("696"),
+            com.staging.sg.common.iso.PdsUtil.encode(502, safe(auth.getDe037Rrn()))
+        );
+        r.setPdsData(pds);
+        String ascii = String.format(
+            "1644|696|TYPE=ADDENDUM|PAN=%s|AMT=%012d|RRN=%s|CCY=%s|PDS=%s|MSG=%08d",
+            safe(auth.getDe002PanRaw() != null ? auth.getDe002PanRaw() : auth.getDe002Pan()),
+            auth.getDe004Amount() != null ? auth.getDe004Amount() : 0,
+            safe(auth.getDe037Rrn()),
+            safe(auth.getDe049Currency()),
+            pds, msgNum);
+        r.setRawAscii(ascii);
+        r.setRawHex(toHex(ascii.getBytes()));
+        return r;
+    }
+
 
     private AcqIpmRecord buildTrailer(AcqIpmFile ipmFile, String fileId,
                                     int msgNum, int txCount, long totalAmount) {
