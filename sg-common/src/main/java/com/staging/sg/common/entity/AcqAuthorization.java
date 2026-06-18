@@ -45,6 +45,20 @@ public class AcqAuthorization {
     @Column(name = "response_hex", columnDefinition = "TEXT") private String responseHex;
     @Column(name = "sent_at")                         private LocalDateTime sentAt = LocalDateTime.now();
 
+    @Column(name = "ipm_generated")              private Boolean ipmGenerated = false;
+    @Column(name = "ipm_file_id")                private Long ipmFileId;
+    @Column(name = "ipm_file_name", length = 100) private String ipmFileName;
+    @Column(name = "ipm_generated_at")           private java.time.LocalDateTime ipmGeneratedAt;
+
+    public Boolean getIpmGenerated()                 { return ipmGenerated; }
+    public Long    getIpmFileId()                    { return ipmFileId; }
+    public String  getIpmFileName()                  { return ipmFileName; }
+    public java.time.LocalDateTime getIpmGeneratedAt() { return ipmGeneratedAt; }
+    public void setIpmGenerated(Boolean v)           { this.ipmGenerated = v; }
+    public void setIpmFileId(Long v)                 { this.ipmFileId = v; }
+    public void setIpmFileName(String v)             { this.ipmFileName = v; }
+    public void setIpmGeneratedAt(java.time.LocalDateTime v) { this.ipmGeneratedAt = v; }
+
     public AcqAuthorization() {}
 
     // Getters
