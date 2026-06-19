@@ -27,7 +27,7 @@ public interface HsmService {
 
     KeyResult generateWorkingKey(String keyType, int keyLengthBytes, String kekClearHex) throws Exception;
 
-    KeyResult importWorkingKey(String keyUnderKekHex, String kekClearHex, int keyLengthBytes) throws Exception;
+    KeyResult importWorkingKey(String keyType, String keyUnderKekHex, String kekClearHex, int keyLengthBytes) throws Exception;
 
     String computeKcv(byte[] clearKey) throws Exception;
 

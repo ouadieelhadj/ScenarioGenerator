@@ -148,7 +148,7 @@ public class JposHsmService implements HsmService {
     }
 
     @Override
-    public KeyResult importWorkingKey(String keyUnderKekHex, String kekClearHex, int keyLengthBytes) throws Exception {
+    public KeyResult importWorkingKey(String keyType, String keyUnderKekHex, String kekClearHex, int keyLengthBytes) throws Exception {
         short len = jposLen(keyLengthBytes);
         byte[] underKek = ISOUtil.hex2byte(keyUnderKekHex);
 
@@ -156,7 +156,7 @@ public class JposHsmService implements HsmService {
         SecureDESKey kekUnderLmk = formClearKey("KEK", kekClearHex);
 
         // 2. Importer la clé (déchiffre sous KEK, re-chiffre sous LMK)
-        SecureDESKey workUnderLmk = sm.importKey(len, SMAdapter.TYPE_ZPK, underKek, kekUnderLmk, false);
+        SecureDESKey workUnderLmk = sm.importKey(len, smType(keyType), underKek, kekUnderLmk, false);
 
         // 3. KCV de la clé importée
         byte[] kcvBytes = sm.generateKeyCheckValue(workUnderLmk);
@@ -164,7 +164,7 @@ public class JposHsmService implements HsmService {
 
         // 4. Commande Thales équivalente (A6 import)
         ThalesCommand.A6 a6 = new ThalesCommand.A6(
-                "0000", THALES_ZPK,
+                "0000", thalesType(keyType),
                 ISOUtil.hexString(kekUnderLmk.getKeyBytes()),
                 keyUnderKekHex, keyLengthBytes);
 

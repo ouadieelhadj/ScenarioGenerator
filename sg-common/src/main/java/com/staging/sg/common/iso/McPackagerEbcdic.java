@@ -35,6 +35,8 @@ public class McPackagerEbcdic extends ISOBasePackager {
         fields[11] = new IFE_NUMERIC (6,  "SYSTEM TRACE AUDIT NUMBER");
         // DE39 : response code (présent sur 0810)
         fields[39] = new IFE_CHAR    (2,  "RESPONSE CODE");
+        // DE48 : private data (Key Exchange Block en DMAS) — LLLVAR EBCDIC
+        fields[48] = new IFE_LLLCHAR (999, "ADDITIONAL DATA PRIVATE");
         // DE70 : network management code (001 sign-on, 002 sign-off, 270 echo)
         fields[70] = new IFE_NUMERIC (3,  "NETWORK MANAGEMENT CODE");
 

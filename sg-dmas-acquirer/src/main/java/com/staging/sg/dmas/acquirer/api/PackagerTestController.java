@@ -67,4 +67,38 @@ public class PackagerTestController {
             return ResponseEntity.status(500).body(Map.of("error", String.valueOf(e.getMessage())));
         }
     }
+
+    @GetMapping("/de48-roundtrip")
+    public ResponseEntity<?> de48Roundtrip(@RequestParam(defaultValue = "PE16ABCDEF0123456789ABCDEF01234567D5D44F") String de048) {
+        try {
+            ISOMsg msg = new ISOMsg();
+            msg.setPackager(packager);
+            msg.setMTI("0800");
+            msg.set(7,  "0619103045");
+            msg.set(11, "000001");
+            msg.set(48, de048);
+            msg.set(70, "101");
+
+            byte[] packed = msg.pack();
+            String hex = ISOUtil.hexString(packed);
+
+            ISOMsg parsed = new ISOMsg();
+            parsed.setPackager(packager);
+            parsed.unpack(packed);
+
+            Map<String,Object> result = new LinkedHashMap<>();
+            result.put("packed_hex", hex);
+            result.put("packed_length", packed.length);
+            result.put("de48_sent", de048);
+            result.put("de48_parsed", parsed.getString(48));
+            result.put("de70_parsed", parsed.getString(70));
+            boolean ok = de048.equals(parsed.getString(48)) && "101".equals(parsed.getString(70));
+            result.put("roundtrip_ok", ok);
+            log.info("[DMAS-PKG] DE48 roundtrip — ok={} len={}", ok, de048.length());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("[DMAS-PKG] DE48 roundtrip failed : {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(Map.of("error", String.valueOf(e.getMessage())));
+        }
+    }
 }
