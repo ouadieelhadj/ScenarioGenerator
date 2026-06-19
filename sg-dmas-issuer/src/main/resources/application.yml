@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: sg-dmas-issuer
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scenariogenerator
+    username: dmas_issuer_user
+    password: postgres123
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  liquibase:
+    enabled: false
+
+# Tomcat sur 8501 — le port ISO 8500 sera géré par le futur McDmasIssuer (ServerSocket)
+server:
+  port: 8501
+
+dmas:
+  member-group-id: TESTGRP01
+  iso-port: 8500
+  lmk:
+    file: D:/MoneyCore/ScenarioGenerator/keys/dmas-lmk.lmk
+    rebuild: false
+
+jwt:
+  secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
+  expiration-ms: 86400000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+
+logging:
+  file:
+    name: D:/MoneyCore/ScenarioGenerator/logs/dmas-issuer.log
