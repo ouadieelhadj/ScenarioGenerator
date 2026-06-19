@@ -21,7 +21,7 @@ dmas:
   member-group-id: TESTGRP01
   iso-port: 8500
   lmk:
-    file: D:/MoneyCore/ScenarioGenerator/keys/dmas-lmk.lmk
+    file: D:/MoneyCore/ScenarioGenerator/keys/dmas-lmk-iss.lmk
     rebuild: false
 
 jwt:
