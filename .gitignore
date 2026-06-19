@@ -23,3 +23,5 @@ scripts/TNR_*.txt
 .DS_Store
 Thumbs.db
 dmas_context_dump.txt
+keys/
+dmas_net_dump.txt
