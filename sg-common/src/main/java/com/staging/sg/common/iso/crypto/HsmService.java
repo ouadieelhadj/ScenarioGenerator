@@ -21,6 +21,7 @@ public interface HsmService {
         public String clearKeyHex;
         public byte[] keyUnderKek;
         public String keyUnderKekHex;
+        public String keyUnderLmkHex;
         public String kcv;
         public String thalesCommand;
     }

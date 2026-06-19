@@ -6,6 +6,8 @@ import com.staging.sg.common.iso.DmasNetworkUtil;
 import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.repository.DmasKekRepository;
 import com.staging.sg.common.repository.KeyStoreRepository;
+import com.staging.sg.common.repository.DmasIssKeyRepository;
+import com.staging.sg.common.entity.DmasIssKey;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.jpos.iso.ISOMsg;
@@ -36,6 +38,7 @@ public class McDmasIssuer {
     private final HsmService hsm;
     private final DmasKekRepository kekRepo;
     private final KeyStoreRepository keyStoreRepo;
+    private final DmasIssKeyRepository issKeyRepo;
 
     @Value("${dmas.iso-port:8500}")
     private int isoPort;
@@ -48,11 +51,13 @@ public class McDmasIssuer {
     private final AtomicLong msgCount = new AtomicLong(0);
 
     public McDmasIssuer(DmasNetworkUtil net, HsmService hsm,
-                        DmasKekRepository kekRepo, KeyStoreRepository keyStoreRepo) {
+                        DmasKekRepository kekRepo, KeyStoreRepository keyStoreRepo,
+                        DmasIssKeyRepository issKeyRepo) {
         this.net = net;
         this.hsm = hsm;
         this.kekRepo = kekRepo;
         this.keyStoreRepo = keyStoreRepo;
+        this.issKeyRepo = issKeyRepo;
     }
 
     @PostConstruct
@@ -156,19 +161,19 @@ public class McDmasIssuer {
                     keyType, kcvReceived, imp.kcv, kcvOk);
 
             if (kcvOk) {
-                // Stocker dans key_store
-                KeyStore ks = keyStoreRepo
+                // Stocker dans dmas_iss_keys (clé sous LMK émetteur)
+                DmasIssKey ik = issKeyRepo
                         .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup, keyType, "ACTIVE")
-                        .orElseGet(KeyStore::new);
-                ks.setMemberGroupId(memberGroup);
-                ks.setKeyType(keyType);
-                ks.setKeyLength(keyLen);
-                ks.setEncryptedValue(keyUnderKekHex.length() > 64 ? keyUnderKekHex.substring(0,64) : keyUnderKekHex);
-                ks.setKcv(imp.kcv);
-                ks.setStatus("ACTIVE");
-                ks.setDescription("Imported via DMAS key exchange");
-                keyStoreRepo.save(ks);
-                log.info("[DMAS-ISS] {} stockée dans key_store (KCV={})", keyType, imp.kcv);
+                        .orElseGet(DmasIssKey::new);
+                ik.setMemberGroupId(memberGroup);
+                ik.setKeyType(keyType);
+                ik.setKeyLength(keyLen);
+                ik.setKeyUnderLmk(imp.keyUnderLmkHex);
+                ik.setKeyUnderKek(keyUnderKekHex.length() > 64 ? keyUnderKekHex.substring(0,64) : keyUnderKekHex);
+                ik.setKcv(imp.kcv);
+                ik.setStatus("ACTIVE");
+                issKeyRepo.save(ik);
+                log.info("[DMAS-ISS] {} stockée dans dmas_iss_keys (KCV={})", keyType, imp.kcv);
             } else {
                 rc = "30"; // format error / KCV mismatch
             }

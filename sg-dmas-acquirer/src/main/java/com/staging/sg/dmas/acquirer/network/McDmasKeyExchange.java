@@ -4,6 +4,8 @@ import com.staging.sg.common.entity.DmasKek;
 import com.staging.sg.common.iso.DmasNetworkUtil;
 import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.repository.DmasKekRepository;
+import com.staging.sg.common.repository.DmasAcqKeyRepository;
+import com.staging.sg.common.entity.DmasAcqKey;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOUtil;
 import org.slf4j.Logger;
@@ -34,15 +36,17 @@ public class McDmasKeyExchange {
     private final DmasNetworkUtil net;
     private final HsmService hsm;
     private final DmasKekRepository kekRepo;
+    private final DmasAcqKeyRepository acqKeyRepo;
 
     @Value("${dmas.issuer-host:localhost}") private String issuerHost;
     @Value("${dmas.issuer-port:8500}")      private int    issuerPort;
     @Value("${dmas.timeout-seconds:30}")    private int    timeoutSeconds;
 
-    public McDmasKeyExchange(DmasNetworkUtil net, HsmService hsm, DmasKekRepository kekRepo) {
+    public McDmasKeyExchange(DmasNetworkUtil net, HsmService hsm, DmasKekRepository kekRepo, DmasAcqKeyRepository acqKeyRepo) {
         this.net = net;
         this.hsm = hsm;
         this.kekRepo = kekRepo;
+        this.acqKeyRepo = acqKeyRepo;
     }
 
     public Map<String,Object> exchangePek(String memberGroupId) throws Exception {
@@ -100,6 +104,22 @@ public class McDmasKeyExchange {
         r.put("request_hex", reqHex);
         r.put("response_hex", ISOUtil.hexString(resp.pack()));
         log.info("[DMAS-ACQ] Key exchange {} <- 0810 DE39={} ok={}", keyType, rc, ok);
+
+        // Persister la clé sous LMK acquéreur si l'échange a réussi
+        if (ok) {
+            DmasAcqKey ak = acqKeyRepo
+                    .findByMemberGroupIdAndKeyTypeAndStatus(mgid, keyType, "ACTIVE")
+                    .orElseGet(DmasAcqKey::new);
+            ak.setMemberGroupId(mgid);
+            ak.setKeyType(keyType);
+            ak.setKeyLength(keyLen);
+            ak.setKeyUnderLmk(gen.keyUnderLmkHex);
+            ak.setKeyUnderKek(gen.keyUnderKekHex.length() > 64 ? gen.keyUnderKekHex.substring(0,64) : gen.keyUnderKekHex);
+            ak.setKcv(gen.kcv);
+            ak.setStatus("ACTIVE");
+            acqKeyRepo.save(ak);
+            log.info("[DMAS-ACQ] {} persistée dans dmas_acq_keys (KCV={})", keyType, gen.kcv);
+        }
         return r;
     }
 }

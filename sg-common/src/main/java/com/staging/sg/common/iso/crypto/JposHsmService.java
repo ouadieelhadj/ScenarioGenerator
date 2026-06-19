@@ -140,6 +140,7 @@ public class JposHsmService implements HsmService {
         KeyResult r = new KeyResult();
         r.keyUnderKek = underKek;
         r.keyUnderKekHex = ISOUtil.hexString(underKek).toUpperCase();
+        r.keyUnderLmkHex = ISOUtil.hexString(workUnderLmk.getKeyBytes()).toUpperCase();
         r.kcv = kcv;
         r.thalesCommand = a0.toWire();
         log.info("[HSM] generateWorkingKey {} — KCV={} underKEK={} thales={}",
@@ -170,6 +171,7 @@ public class JposHsmService implements HsmService {
 
         KeyResult r = new KeyResult();
         r.keyUnderKekHex = keyUnderKekHex.toUpperCase();
+        r.keyUnderLmkHex = ISOUtil.hexString(workUnderLmk.getKeyBytes()).toUpperCase();
         r.kcv = kcv;
         r.thalesCommand = a6.toWire();
         log.info("[HSM] importWorkingKey — KCV={} thales={}", kcv, r.thalesCommand);
