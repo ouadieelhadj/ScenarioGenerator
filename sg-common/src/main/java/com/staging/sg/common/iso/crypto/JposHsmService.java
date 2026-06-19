@@ -95,6 +95,26 @@ public class JposHsmService implements HsmService {
         return sm.formKEYfromClearComponents(len, smType(keyType), clearHex);
     }
 
+    /** Résultat du formage d'un KEK sous LMK local. */
+    public static class KekUnderLmk {
+        public String underLmkHex;   // SecureDESKey (KEK) chiffré sous LMK local, en hex
+        public String kcv;           // KCV du KEK
+    }
+
+    /**
+     * Forme le KEK (valeur claire hex) sous le LMK local et retourne
+     * sa représentation chiffrée sous LMK + son KCV.
+     * Utilisé par le bootstrap KEK (un appel par module).
+     */
+    public KekUnderLmk formKekUnderLmk(String kekClearHex) throws Exception {
+        SecureDESKey kek = formClearKey("KEK", kekClearHex);
+        KekUnderLmk r = new KekUnderLmk();
+        r.underLmkHex = ISOUtil.hexString(kek.getKeyBytes()).toUpperCase();
+        byte[] kcvBytes = sm.generateKeyCheckValue(kek);
+        r.kcv = ISOUtil.hexString(kcvBytes).substring(0, 6).toUpperCase();
+        return r;
+    }
+
     @Override
     public KeyResult generateWorkingKey(String keyType, int keyLengthBytes, String kekClearHex) throws Exception {
         short len = jposLen(keyLengthBytes);
