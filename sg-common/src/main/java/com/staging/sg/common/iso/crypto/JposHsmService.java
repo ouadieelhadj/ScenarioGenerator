@@ -196,13 +196,25 @@ public class JposHsmService implements HsmService {
         throw new UnsupportedOperationException("decryptPinBlock: à implémenter étape PIN");
     }
 
-    @Override
-    public byte[] generateMac(byte[] data, byte[] makClear) throws Exception {
-        throw new UnsupportedOperationException("generateMac: à implémenter étape MAC");
+    /** Reconstruit un SecureDESKey (sous LMK local) depuis hex + KCV. */
+    private SecureDESKey rebuildKey(String keyType, String underLmkHex, String kcv, int keyLenBytes) {
+        short len = jposLen(keyLenBytes);
+        return new SecureDESKey(len, smType(keyType), underLmkHex, kcv);
     }
 
     @Override
-    public boolean verifyMac(byte[] data, byte[] makClear, byte[] expectedMac) throws Exception {
-        throw new UnsupportedOperationException("verifyMac: à implémenter étape MAC");
+    public byte[] generateMac(byte[] data, String makUnderLmkHex, String kcv, int keyLenBytes) throws Exception {
+        SecureDESKey mak = rebuildKey("MAK", makUnderLmkHex, kcv, keyLenBytes);
+        byte[] mac = sm.generateCBC_MAC(data, mak);
+        log.info("[HSM] generateMac — dataLen={} macLen={}", data.length, mac.length);
+        return mac;
+    }
+
+    @Override
+    public boolean verifyMac(byte[] data, String makUnderLmkHex, String kcv, int keyLenBytes, byte[] expectedMac) throws Exception {
+        byte[] computed = generateMac(data, makUnderLmkHex, kcv, keyLenBytes);
+        boolean ok = java.util.Arrays.equals(computed, expectedMac);
+        log.info("[HSM] verifyMac — match={}", ok);
+        return ok;
     }
 }

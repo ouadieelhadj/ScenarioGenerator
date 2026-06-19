@@ -36,7 +36,7 @@ public interface HsmService {
 
     byte[] decryptPinBlock(byte[] encryptedPinBlock, byte[] pekClear) throws Exception;
 
-    byte[] generateMac(byte[] data, byte[] makClear) throws Exception;
+    byte[] generateMac(byte[] data, String makUnderLmkHex, String kcv, int keyLenBytes) throws Exception;
 
-    boolean verifyMac(byte[] data, byte[] makClear, byte[] expectedMac) throws Exception;
+    boolean verifyMac(byte[] data, String makUnderLmkHex, String kcv, int keyLenBytes, byte[] expectedMac) throws Exception;
 }
