@@ -39,7 +39,7 @@ public class CryptoTestController {
             r.put("kcv_generated", gen.kcv);
             r.put("thales_a0", gen.thalesCommand);
 
-            HsmService.KeyResult imp = hsm.importWorkingKey(gen.keyUnderKekHex, testKekClear, len);
+            HsmService.KeyResult imp = hsm.importWorkingKey(type, gen.keyUnderKekHex, testKekClear, len);
             r.put("kcv_imported", imp.kcv);
             r.put("thales_a6", imp.thalesCommand);
 
