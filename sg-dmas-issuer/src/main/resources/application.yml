@@ -23,6 +23,9 @@ dmas:
   lmk:
     file: D:/MoneyCore/ScenarioGenerator/keys/dmas-lmk-iss.lmk
     rebuild: false
+  mac:
+    fields: "4,11,37,41,42"
+    representation: ebcdic
 
 jwt:
   secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
