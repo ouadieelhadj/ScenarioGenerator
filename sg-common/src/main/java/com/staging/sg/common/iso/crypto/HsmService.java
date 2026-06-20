@@ -32,9 +32,9 @@ public interface HsmService {
 
     String computeKcv(byte[] clearKey) throws Exception;
 
-    byte[] encryptPinBlock(byte[] pinBlock, byte[] pekClear) throws Exception;
+    byte[] encryptPinBlock(String pin, String pan, String pekUnderLmkHex, String kcv, int keyLenBytes) throws Exception;
 
-    byte[] decryptPinBlock(byte[] encryptedPinBlock, byte[] pekClear) throws Exception;
+    String decryptPinBlock(byte[] pinBlockUnderPek, String pan, String pekUnderLmkHex, String kcv, int keyLenBytes) throws Exception;
 
     byte[] generateMac(byte[] data, String makUnderLmkHex, String kcv, int keyLenBytes) throws Exception;
 

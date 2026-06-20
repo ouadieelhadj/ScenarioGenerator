@@ -3,6 +3,7 @@ package com.staging.sg.common.iso.crypto;
 import org.jpos.iso.ISOUtil;
 import org.jpos.security.SMAdapter;
 import org.jpos.security.SecureDESKey;
+import org.jpos.security.EncryptedPIN;
 import org.jpos.security.jceadapter.JCESecurityModule;
 import org.jpos.core.SimpleConfiguration;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
@@ -185,15 +186,43 @@ public class JposHsmService implements HsmService {
         return ISOUtil.hexString(kcv).substring(0, 6).toUpperCase();
     }
 
-    @Override
-    public byte[] encryptPinBlock(byte[] pinBlock, byte[] pekClear) throws Exception {
-        // placeholder — sera implémenté à l'étape PIN (DE052)
-        throw new UnsupportedOperationException("encryptPinBlock: à implémenter étape PIN");
+    /** Extrait les 12 chiffres ISO-0 : 12 droits hors check digit. */
+    private static String extractPan12(String pan) {
+        String digits = pan.replaceAll("[^0-9]", "");
+        if (digits.length() < 13) {
+            // pad à gauche pour atteindre au moins 13
+            digits = String.format("%013d", Long.parseLong(digits.isEmpty() ? "0" : digits));
+        }
+        return digits.substring(digits.length() - 13, digits.length() - 1);
     }
 
     @Override
-    public byte[] decryptPinBlock(byte[] encryptedPinBlock, byte[] pekClear) throws Exception {
-        throw new UnsupportedOperationException("decryptPinBlock: à implémenter étape PIN");
+    public byte[] encryptPinBlock(String pin, String pan, String pekUnderLmkHex, String kcv, int keyLenBytes) throws Exception {
+        SecureDESKey pek = rebuildKey("PEK", pekUnderLmkHex, kcv, keyLenBytes);
+        // 1. PIN -> PIN block sous LMK (FORMAT00 = ISO-0)
+        String pan12 = extractPan12(pan);
+        EncryptedPIN underLmk = sm.encryptPIN(pin, pan12, true);
+        // 2. Export sous PEK -> PIN block destiné au DE052
+        EncryptedPIN underPek = sm.exportPIN(underLmk, pek, SMAdapter.FORMAT00);
+        byte[] block = underPek.getPINBlock();
+        log.info("[HSM] encryptPinBlock — pan=***{} blockLen={} block={}",
+                pan.length() >= 4 ? pan.substring(pan.length()-4) : pan,
+                block.length, ISOUtil.hexString(block));
+        return block;
+    }
+
+    @Override
+    public String decryptPinBlock(byte[] pinBlockUnderPek, String pan, String pekUnderLmkHex, String kcv, int keyLenBytes) throws Exception {
+        SecureDESKey pek = rebuildKey("PEK", pekUnderLmkHex, kcv, keyLenBytes);
+        // 1. Reconstruire l'EncryptedPIN reçu (sous PEK)
+        String pan12 = extractPan12(pan);
+        EncryptedPIN underPek = new EncryptedPIN(pinBlockUnderPek, SMAdapter.FORMAT00, pan12, true);
+        // 2. Importer sous LMK puis déchiffrer
+        EncryptedPIN underLmk = sm.importPIN(underPek, pek);
+        String pin = sm.decryptPIN(underLmk);
+        log.info("[HSM] decryptPinBlock — pan=***{} pinLen={}",
+                pan.length() >= 4 ? pan.substring(pan.length()-4) : pan, pin.length());
+        return pin;
     }
 
     /** Reconstruit un SecureDESKey (sous LMK local) depuis hex + KCV. */
