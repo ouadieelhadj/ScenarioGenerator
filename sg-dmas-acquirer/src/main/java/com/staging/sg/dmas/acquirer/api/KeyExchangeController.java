@@ -29,11 +29,6 @@ public class KeyExchangeController {
         return run(() -> keyExchange.exchangePek(memberGroupId), "PEK");
     }
 
-    @PostMapping("/mak")
-    public ResponseEntity<?> mak(@RequestParam(defaultValue = "TESTGRP01") String memberGroupId) {
-        return run(() -> keyExchange.exchangeMak(memberGroupId), "MAK");
-    }
-
     private interface ExchangeCall { Map<String,Object> call() throws Exception; }
 
     private ResponseEntity<?> run(ExchangeCall c, String label) {

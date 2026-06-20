@@ -6,6 +6,7 @@ import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.repository.DmasKekRepository;
 import com.staging.sg.common.repository.DmasAcqKeyRepository;
 import com.staging.sg.common.entity.DmasAcqKey;
+import com.staging.sg.common.iso.crypto.KeyExchangeBlock;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOUtil;
 import org.slf4j.Logger;
@@ -41,6 +42,7 @@ public class McDmasKeyExchange {
     @Value("${dmas.issuer-host:localhost}") private String issuerHost;
     @Value("${dmas.issuer-port:8500}")      private int    issuerPort;
     @Value("${dmas.timeout-seconds:30}")    private int    timeoutSeconds;
+    private static final String FORWARDING_ID = "002202";
 
     public McDmasKeyExchange(DmasNetworkUtil net, HsmService hsm, DmasKekRepository kekRepo, DmasAcqKeyRepository acqKeyRepo) {
         this.net = net;
@@ -50,14 +52,11 @@ public class McDmasKeyExchange {
     }
 
     public Map<String,Object> exchangePek(String memberGroupId) throws Exception {
-        return exchange(memberGroupId, "PEK", "PE", "101");
+        return exchange(memberGroupId, "PEK", "161");
     }
 
-    public Map<String,Object> exchangeMak(String memberGroupId) throws Exception {
-        return exchange(memberGroupId, "MAK", "MA", "102");
-    }
 
-    private Map<String,Object> exchange(String mgid, String keyType, String typeCode, String de070) throws Exception {
+    private Map<String,Object> exchange(String mgid, String keyType, String de070) throws Exception {
         DmasKek kek = kekRepo.findByMemberGroupId(mgid)
                 .orElseThrow(() -> new IllegalStateException("KEK introuvable pour " + mgid));
         if (kek.getKekClear() == null)
@@ -65,31 +64,51 @@ public class McDmasKeyExchange {
 
         int keyLen = (kek.getKeyLength() != null) ? kek.getKeyLength() : 24;
 
-        // 1+2. Générer la clé de travail chiffrée sous KEK (valeur claire du KEK)
+        // 1. Le RESEAU (acquereur) genere le PEK, chiffre sous KEK
         HsmService.KeyResult gen = hsm.generateWorkingKey(keyType, keyLen, kek.getKekClear());
 
-        // 3. Construire le DE048 : [Type 2c][Len 2c][clé hex][KCV 6hex]
-        String lenField = String.format("%02d", keyLen);
-        String de048 = typeCode + lenField + gen.keyUnderKekHex + gen.kcv;
+        // 2. Construire le DE48 subelement 11 (Key Exchange Block officiel)
+        KeyExchangeBlock keb = new KeyExchangeBlock();
+        keb.keyClassId      = KeyExchangeBlock.KEY_CLASS_PIN; // PK
+        keb.keyIndex        = "00";
+        keb.keyCycle        = "00";
+        keb.encryptedKeyHex = gen.keyUnderKekHex;
+        keb.kcv             = gen.kcv;
+        String de048 = keb.buildDe48();
 
-        // 4. Envoyer 0800
+        // 3. Network Data (DE63) : Banknet Reference Number genere par le reseau
+        String banknetRef = "BNET" + net.generateStan();
+
+        // 4. Construire et envoyer le 0800 (DE70=161)
         String stan = net.generateStan();
         String dt   = new SimpleDateFormat("MMddHHmmss").format(new Date());
         ISOMsg req = new ISOMsg();
         req.setPackager(net.getPackager());
         req.setMTI("0800");
+        req.set(2,  mgid);           // Member Group ID
         req.set(7,  dt);
         req.set(11, stan);
-        req.set(48, de048);
-        req.set(70, de070);
+        req.set(33, FORWARDING_ID);  // 002202 = reseau MC
+        req.set(48, de048);          // Key Exchange Block subelement 11
+        req.set(63, banknetRef);     // Network Data
+        req.set(70, de070);          // 161
+
+        // LOG detaille de tous les DE du 0800
+        log.info("[DMAS-ACQ] === 0800 PEK exchange (DE70=161) ===");
+        log.info("[DMAS-ACQ] DE2  Member Group ID      = {}", mgid);
+        log.info("[DMAS-ACQ] DE7  Transmission DateTime = {}", dt);
+        log.info("[DMAS-ACQ] DE11 STAN                  = {}", stan);
+        log.info("[DMAS-ACQ] DE33 Forwarding Inst ID    = {}", FORWARDING_ID);
+        log.info("[DMAS-ACQ] DE63 Network Data          = {}", banknetRef);
+        log.info("[DMAS-ACQ] DE70 Network Mgmt Code     = {}", de070);
+        keb.logDetail("0800 envoye (DE48)");
 
         String reqHex = ISOUtil.hexString(req.pack());
-        log.info("[DMAS-ACQ] Key exchange {} -> 0800 DE70={} KCV={} de48len={}",
-                keyType, de070, gen.kcv, de048.length());
-
         ISOMsg resp = net.sendAndReceive(req, issuerHost, issuerPort, timeoutSeconds);
         String rc = net.safeGet(resp, 39);
         boolean ok = "00".equals(rc);
+
+        log.info("[DMAS-ACQ] <- 0810 DE39={} ok={}", rc, ok);
 
         Map<String,Object> r = new LinkedHashMap<>();
         r.put("key_type", keyType);
@@ -98,14 +117,14 @@ public class McDmasKeyExchange {
         r.put("stan", stan);
         r.put("kcv_sent", gen.kcv);
         r.put("de048_sent", de048);
+        r.put("de063_sent", banknetRef);
         r.put("thales_a0", gen.thalesCommand);
         r.put("de039", rc);
         r.put("success", ok);
         r.put("request_hex", reqHex);
         r.put("response_hex", ISOUtil.hexString(resp.pack()));
-        log.info("[DMAS-ACQ] Key exchange {} <- 0810 DE39={} ok={}", keyType, rc, ok);
 
-        // Persister la clé sous LMK acquéreur si l'échange a réussi
+        // Persister le PEK sous LMK reseau (dmas_acq_keys) si succes
         if (ok) {
             DmasAcqKey ak = acqKeyRepo
                     .findByMemberGroupIdAndKeyTypeAndStatus(mgid, keyType, "ACTIVE")
@@ -118,7 +137,7 @@ public class McDmasKeyExchange {
             ak.setKcv(gen.kcv);
             ak.setStatus("ACTIVE");
             acqKeyRepo.save(ak);
-            log.info("[DMAS-ACQ] {} persistée dans dmas_acq_keys (KCV={})", keyType, gen.kcv);
+            log.info("[DMAS-ACQ] {} persiste dans dmas_acq_keys (KCV={})", keyType, gen.kcv);
         }
         return r;
     }

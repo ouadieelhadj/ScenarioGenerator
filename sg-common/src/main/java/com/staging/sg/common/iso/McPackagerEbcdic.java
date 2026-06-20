@@ -29,14 +29,20 @@ public class McPackagerEbcdic extends ISOBasePackager {
 
         fields[0]  = new IFE_NUMERIC (4,  "MESSAGE TYPE INDICATOR");
         fields[1]  = new IFB_BITMAP  (16, "BIT MAP");
+        // DE2 : PAN / Member Group ID — LLVAR numerique EBCDIC
+        fields[2]  = new IFE_LLNUM   (19, "PRIMARY ACCOUNT NUMBER");
         // DE7 : MMDDhhmmss (transmission date & time)
         fields[7]  = new IFE_NUMERIC (10, "TRANSMISSION DATE AND TIME");
         // DE11 : STAN
         fields[11] = new IFE_NUMERIC (6,  "SYSTEM TRACE AUDIT NUMBER");
+        // DE33 : forwarding institution id (002202 = reseau MC) — n-6
+        fields[33] = new IFE_NUMERIC (6,  "FORWARDING INSTITUTION ID");
         // DE39 : response code (présent sur 0810)
         fields[39] = new IFE_CHAR    (2,  "RESPONSE CODE");
         // DE48 : private data (Key Exchange Block en DMAS) — LLLVAR EBCDIC
         fields[48] = new IFE_LLLCHAR (999, "ADDITIONAL DATA PRIVATE");
+        // DE63 : network data (Banknet ref) — LLLVAR EBCDIC
+        fields[63] = new IFE_LLLCHAR (50, "NETWORK DATA");
         // DE70 : network management code (001 sign-on, 002 sign-off, 270 echo)
         fields[70] = new IFE_NUMERIC (3,  "NETWORK MANAGEMENT CODE");
 

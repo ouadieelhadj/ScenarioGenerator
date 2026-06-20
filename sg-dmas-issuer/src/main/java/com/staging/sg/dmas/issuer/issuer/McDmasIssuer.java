@@ -4,6 +4,7 @@ import com.staging.sg.common.entity.DmasKek;
 import com.staging.sg.common.entity.KeyStore;
 import com.staging.sg.common.iso.DmasNetworkUtil;
 import com.staging.sg.common.iso.crypto.HsmService;
+import com.staging.sg.common.iso.crypto.KeyExchangeBlock;
 import com.staging.sg.common.repository.DmasKekRepository;
 import com.staging.sg.common.repository.KeyStoreRepository;
 import com.staging.sg.common.repository.DmasIssKeyRepository;
@@ -113,7 +114,7 @@ public class McDmasIssuer {
 
     private void handleNetworkMessage(ISOMsg request, DataOutputStream out) throws Exception {
         String de70 = net.safeGet(request, 70);
-        if ("101".equals(de70) || "102".equals(de70)) {
+        if ("161".equals(de70)) {
             handleKeyExchange(request, out, de70);
         } else {
             handleSignOn(request, out, de70);
@@ -134,34 +135,46 @@ public class McDmasIssuer {
         net.send(out, response);
         log.info("[DMAS-ISS] {} -> réponse 0810 DE39=00", label);
     }
-
     private void handleKeyExchange(ISOMsg request, DataOutputStream out, String de70) throws Exception {
-        String keyType = "101".equals(de70) ? "PEK" : "MAK";
+        // LOG detaille de tous les DE recus du 0800
+        log.info("[DMAS-ISS] === Recu 0800 PEK exchange (DE70=161) ===");
+        log.info("[DMAS-ISS] DE2  Member Group ID      = {}", net.safeGet(request, 2));
+        log.info("[DMAS-ISS] DE7  Transmission DateTime = {}", net.safeGet(request, 7));
+        log.info("[DMAS-ISS] DE11 STAN                  = {}", net.safeGet(request, 11));
+        log.info("[DMAS-ISS] DE33 Forwarding Inst ID    = {}", net.safeGet(request, 33));
+        log.info("[DMAS-ISS] DE63 Network Data          = {}", net.safeGet(request, 63));
+        log.info("[DMAS-ISS] DE70 Network Mgmt Code     = {}", de70);
+
         String de048 = net.safeGet(request, 48);
-        log.info("[DMAS-ISS] Reçu 0800 KEY-EXCHANGE {} — DE48={}", keyType, de048);
-
         String rc = "00";
+        String keyType = "PEK";
         try {
-            // Parse DE048 : [Type 2c][Len 2c][clé hex][KCV 6hex]
-            String typeCode = de048.substring(0, 2);
-            int keyLen      = Integer.parseInt(de048.substring(2, 4));
-            int hexLen      = keyLen * 2;
-            String keyUnderKekHex = de048.substring(4, 4 + hexLen);
-            String kcvReceived    = de048.substring(4 + hexLen);
+            // Parser le DE48 subelement 11 (Key Exchange Block officiel)
+            KeyExchangeBlock keb = KeyExchangeBlock.parseDe48(de048);
+            keb.logDetail("0800 recu (DE48)");
 
-            // Lire kek_under_iss_lmk + kek_clear
+            // Key Class ID PK = PIN key (PEK)
+            if (!KeyExchangeBlock.KEY_CLASS_PIN.equals(keb.keyClassId)) {
+                log.warn("[DMAS-ISS] Key Class ID inattendu : {}", keb.keyClassId);
+            }
+
+            String keyUnderKekHex = keb.encryptedKeyHex;
+            // KCV recu sur 16 hex : on compare sur les 6 premiers (KCV jPOS = 3 octets)
+            String kcvReceived = keb.kcv != null && keb.kcv.length() >= 6
+                    ? keb.kcv.substring(0, 6) : keb.kcv;
+            int keyLen = keyUnderKekHex.length() / 2;
+
             DmasKek kek = kekRepo.findByMemberGroupId(memberGroup)
                     .orElseThrow(() -> new IllegalStateException("KEK introuvable " + memberGroup));
 
-            // Importer la clé sous notre LMK (via KEK clair)
+            // Importer le PEK sous notre LMK (via KEK clair)
             HsmService.KeyResult imp = hsm.importWorkingKey(keyType, keyUnderKekHex, kek.getKekClear(), keyLen);
 
             boolean kcvOk = imp.kcv.equalsIgnoreCase(kcvReceived);
-            log.info("[DMAS-ISS] {} import — KCV reçu={} calculé={} match={}",
+            log.info("[DMAS-ISS] {} import — KCV recu={} calcule={} match={}",
                     keyType, kcvReceived, imp.kcv, kcvOk);
 
             if (kcvOk) {
-                // Stocker dans dmas_iss_keys (clé sous LMK émetteur)
                 DmasIssKey ik = issKeyRepo
                         .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup, keyType, "ACTIVE")
                         .orElseGet(DmasIssKey::new);
@@ -173,7 +186,7 @@ public class McDmasIssuer {
                 ik.setKcv(imp.kcv);
                 ik.setStatus("ACTIVE");
                 issKeyRepo.save(ik);
-                log.info("[DMAS-ISS] {} stockée dans dmas_iss_keys (KCV={})", keyType, imp.kcv);
+                log.info("[DMAS-ISS] {} stocke dans dmas_iss_keys (KCV={})", keyType, imp.kcv);
             } else {
                 rc = "30"; // format error / KCV mismatch
             }
@@ -184,7 +197,7 @@ public class McDmasIssuer {
 
         ISOMsg response = buildResponse(request, rc);
         net.send(out, response);
-        log.info("[DMAS-ISS] KEY-EXCHANGE {} -> réponse 0810 DE39={}", keyType, rc);
+        log.info("[DMAS-ISS] -> reponse 0810 PEK exchange DE39={}", rc);
     }
 
     private ISOMsg buildResponse(ISOMsg request, String rc) throws Exception {

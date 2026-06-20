@@ -26,6 +26,9 @@ dmas:
   mac:
     fields: "4,11,37,41,42"
     representation: ebcdic
+  session:
+    auto-start: false
+    startup-delay-ms: 3000
 
 jwt:
   secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
