@@ -291,19 +291,37 @@ public class McDmasIssuer {
                 log.info("[DMAS-ISS] PIN correct ✓");
             }
 
-            // 3. Solde suffisant ? (montant DE4 en centimes)
+            // 3. Sens de l'operation selon DE3 subfield 1 (Cardholder Transaction Type Code)
             long amount = (amountS != null && !amountS.isEmpty()) ? Long.parseLong(amountS) : 0L;
-            if (card.getBalance() < amount) {
-                log.info("[DMAS-ISS] Décision : solde insuffisant ({} < {}) -> 51",
-                        card.getBalance(), amount);
-                return "51"; // insufficient funds
+            String procCode = net.safeGet(request, 3);
+            String txType = (procCode != null && procCode.length() >= 2) ? procCode.substring(0, 2) : "00";
+            String sens = operationSens(txType);
+            log.info("[DMAS-ISS] Type transaction DE3 sf1={} -> {}", txType, sens);
+
+            switch (sens) {
+                case "DEBIT" -> {
+                    if (card.getBalance() < amount) {
+                        log.info("[DMAS-ISS] Decision : solde insuffisant ({} < {}) -> 51", card.getBalance(), amount);
+                        return "51";
+                    }
+                    card.setBalance(card.getBalance() - amount);
+                    cardRepo.save(card);
+                    log.info("[DMAS-ISS] DEBIT {} -> nouveau solde={}", amount, card.getBalance());
+                }
+                case "CREDIT" -> {
+                    card.setBalance(card.getBalance() + amount);
+                    cardRepo.save(card);
+                    log.info("[DMAS-ISS] CREDIT {} -> nouveau solde={}", amount, card.getBalance());
+                }
+                case "INQUIRY" -> {
+                    log.info("[DMAS-ISS] INQUIRY : consultation solde={} (aucun mouvement)", card.getBalance());
+                }
+                default -> {
+                    log.info("[DMAS-ISS] Type {} : approuve sans mouvement de solde", txType);
+                }
             }
 
-            // 4. Approuvé : débiter
-            card.setBalance(card.getBalance() - amount);
-            cardRepo.save(card);
-
-            // Mémoriser la transaction approuvée (pour reversal éventuel)
+            // 4. Memoriser la transaction approuvee (pour reversal eventuel)
             String stan = net.safeGet(request, 11);
             String dt   = net.safeGet(request, 7);
             DmasTransaction tx = txRepo.findByStanAndTransmissionDt(stan, dt).orElseGet(DmasTransaction::new);
@@ -311,20 +329,29 @@ public class McDmasIssuer {
             tx.setStan(stan);
             tx.setTransmissionDt(dt);
             tx.setMti("0100");
-            tx.setProcessingCode(net.safeGet(request, 3));
+            tx.setProcessingCode(procCode);
             tx.setAmount(amount);
             tx.setCurrency(net.safeGet(request, 49));
             tx.setResponseCode("00");
             tx.setStatus("APPROVED");
             txRepo.save(tx);
-
-            log.info("[DMAS-ISS] Décision : APPROUVÉ -> 00 (nouveau solde={}, tx STAN={} mémorisée)", card.getBalance(), stan);
-            return "00"; // approved
+            log.info("[DMAS-ISS] Decision : APPROUVE -> 00 (solde={}, tx STAN={})", card.getBalance(), stan);
+            return "00";
 
         } catch (Exception e) {
             log.error("[DMAS-ISS] Erreur moteur décision : {}", e.getMessage(), e);
             return "96"; // system malfunction
         }
+    }
+
+    /** Sens de l'opération selon le Cardholder Transaction Type Code (DE3 sf1). */
+    private String operationSens(String txType) {
+        return switch (txType) {
+            case "00", "01", "09", "17", "18" -> "DEBIT";   // purchase, withdrawal, cashback, cash disb, scrip
+            case "20", "21", "22", "28"       -> "CREDIT";  // refund, deposit, credit adj, payment
+            case "30"                         -> "INQUIRY"; // balance inquiry
+            default                            -> "NEUTRAL"; // transfer, PIN change/unblock...
+        };
     }
 
     private String rcLabel(String rc) {
