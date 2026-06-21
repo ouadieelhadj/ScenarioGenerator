@@ -115,6 +115,7 @@ public class McDmasIssuer {
                 case "0800" -> handleNetworkMessage(request, out);
                 case "0100" -> handleAuthorization(request, out);
                 case "0400" -> handleReversal(request, out);
+                case "0120" -> handleAdvice(request, out);
                 default     -> log.warn("[DMAS-ISS] MTI non géré : {}", mti);
             }
         } catch (Exception e) {
@@ -421,6 +422,108 @@ public class McDmasIssuer {
 
         } catch (Exception e) {
             log.error("[DMAS-ISS] Erreur reversal : {}", e.getMessage(), e);
+            return "96";
+        }
+    }
+
+    /**
+     * Traite un Authorization Advice/0120 (côté BANQUE).
+     * - completion (DE90 présent) : ajuste le solde par rapport à la preauth originale
+     * - advice simple (pas de DE90) : enregistre + débite la transaction offline
+     * Accuse réception via 0130 en échoant le DE48 subelement 15.
+     */
+    private void handleAdvice(ISOMsg request, DataOutputStream out) throws Exception {
+        String pan     = net.safeGet(request, 2);
+        String amountS = net.safeGet(request, 4);
+        String de48    = net.safeGet(request, 48);
+        String de90    = net.safeGet(request, 90);
+        boolean isCompletion = (de90 != null && de90.length() >= 20);
+
+        log.info("[DMAS-ISS] === Reçu 0120 Advice ({}) ===", isCompletion ? "COMPLETION" : "SIMPLE");
+        log.info("[DMAS-ISS] DE2  PAN              = {}", maskPan(pan));
+        log.info("[DMAS-ISS] DE4  Amount           = {}", amountS);
+        log.info("[DMAS-ISS] DE11 STAN             = {}", net.safeGet(request, 11));
+        log.info("[DMAS-ISS] DE48 sub15 AdviceDT   = {}", de48);
+        if (isCompletion) log.info("[DMAS-ISS] DE90 Original (preauth)= {}", de90);
+
+        String rc = isCompletion ? doCompletion(pan, amountS, de90) : doAdvice(pan, amountS, request);
+
+        // Réponse 0130 : échoe DE2,3,4,7,11,90 + DE48 sub15 + DE39
+        ISOMsg resp = new ISOMsg();
+        resp.setPackager(net.getPackager());
+        resp.setMTI("0130");
+        if (request.hasField(2))  resp.set(2,  request.getString(2));
+        if (request.hasField(3))  resp.set(3,  request.getString(3));
+        if (request.hasField(4))  resp.set(4,  request.getString(4));
+        if (request.hasField(7))  resp.set(7,  request.getString(7));
+        if (request.hasField(11)) resp.set(11, request.getString(11));
+        if (request.hasField(48)) resp.set(48, request.getString(48)); // écho DE48 sub15
+        if (request.hasField(90)) resp.set(90, request.getString(90));
+        resp.set(39, rc);
+
+        net.send(out, resp);
+        log.info("[DMAS-ISS] -> réponse 0130 DE39={} ({})", rc, rcLabel(rc));
+    }
+
+    /** Advice simple : enregistre + débite la transaction offline. */
+    private String doAdvice(String pan, String amountS, ISOMsg request) {
+        try {
+            DmasCard card = cardRepo.findByPan(pan).orElse(null);
+            if (card == null) { log.info("[DMAS-ISS] Advice : carte introuvable -> 14"); return "14"; }
+
+            long amount = (amountS != null && !amountS.isEmpty()) ? Long.parseLong(amountS) : 0L;
+            card.setBalance(card.getBalance() - amount);
+            cardRepo.save(card);
+
+            // Mémoriser comme transaction (advice = transaction effective)
+            String stan = net.safeGet(request, 11);
+            String dt   = net.safeGet(request, 7);
+            DmasTransaction tx = txRepo.findByStanAndTransmissionDt(stan, dt).orElseGet(DmasTransaction::new);
+            tx.setPan(pan); tx.setStan(stan); tx.setTransmissionDt(dt);
+            tx.setMti("0120"); tx.setProcessingCode(net.safeGet(request, 3));
+            tx.setAmount(amount); tx.setCurrency(net.safeGet(request, 49));
+            tx.setResponseCode("00"); tx.setStatus("APPROVED");
+            txRepo.save(tx);
+
+            log.info("[DMAS-ISS] Advice simple : enregistré + débité {} (nouveau solde={}) -> 00", amount, card.getBalance());
+            return "00";
+        } catch (Exception e) {
+            log.error("[DMAS-ISS] Erreur advice : {}", e.getMessage(), e);
+            return "96";
+        }
+    }
+
+    /** Completion : ajuste le solde par rapport à la preauth originale (rembourse ou débite la différence). */
+    private String doCompletion(String pan, String finalAmountS, String de90) {
+        try {
+            String origStan = de90.substring(4, 10);
+            String origDt   = de90.substring(10, 20);
+            log.info("[DMAS-ISS] Completion : recherche preauth STAN={} DT={}", origStan, origDt);
+
+            DmasTransaction preauth = txRepo.findByStanAndTransmissionDt(origStan, origDt).orElse(null);
+            if (preauth == null) { log.info("[DMAS-ISS] Preauth introuvable -> 25"); return "25"; }
+
+            DmasCard card = cardRepo.findByPan(pan).orElse(null);
+            if (card == null) { log.info("[DMAS-ISS] Carte introuvable -> 14"); return "14"; }
+
+            long estimated = preauth.getAmount() != null ? preauth.getAmount() : 0L;
+            long finalAmt  = (finalAmountS != null && !finalAmountS.isEmpty()) ? Long.parseLong(finalAmountS) : 0L;
+            long delta = finalAmt - estimated; // >0 = débiter plus ; <0 = rembourser
+
+            // La preauth a débité 'estimated'. On ajuste de 'delta'.
+            card.setBalance(card.getBalance() - delta);
+            cardRepo.save(card);
+
+            // Marquer la preauth comme complétée + maj montant final
+            preauth.setStatus("COMPLETED");
+            preauth.setAmount(finalAmt);
+            txRepo.save(preauth);
+
+            log.info("[DMAS-ISS] Completion : estimé={} final={} delta={} (nouveau solde={}) -> 00",
+                    estimated, finalAmt, delta, card.getBalance());
+            return "00";
+        } catch (Exception e) {
+            log.error("[DMAS-ISS] Erreur completion : {}", e.getMessage(), e);
             return "96";
         }
     }
