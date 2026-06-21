@@ -116,6 +116,7 @@ public class McDmasIssuer {
                 case "0100" -> handleAuthorization(request, out);
                 case "0400" -> handleReversal(request, out);
                 case "0120" -> handleAdvice(request, out);
+                case "0420" -> handleReversalAdvice(request, out);
                 default     -> log.warn("[DMAS-ISS] MTI non géré : {}", mti);
             }
         } catch (Exception e) {
@@ -553,6 +554,59 @@ public class McDmasIssuer {
             log.error("[DMAS-ISS] Erreur completion : {}", e.getMessage(), e);
             return "96";
         }
+    }
+
+    /**
+     * Traite un Reversal Advice/0420 (cote BANQUE).
+     * Le RESEAU (Stand-In) notifie un reversal traite en son nom (DE60 = raison, ex 402 timeout).
+     * La banque applique le reversal (recredite si pas deja reverse) et accuse via 0430.
+     */
+    private void handleReversalAdvice(ISOMsg request, DataOutputStream out) throws Exception {
+        String pan    = net.safeGet(request, 2);
+        String amountS = net.safeGet(request, 4);
+        String de60   = net.safeGet(request, 60);
+        String de90   = net.safeGet(request, 90);
+
+        log.info("[DMAS-ISS] === Recu 0420 Reversal Advice (Stand-In) ===");
+        log.info("[DMAS-ISS] DE2  PAN              = {}", maskPan(pan));
+        log.info("[DMAS-ISS] DE4  Amount           = {}", amountS);
+        log.info("[DMAS-ISS] DE11 STAN             = {}", net.safeGet(request, 11));
+        log.info("[DMAS-ISS] DE60 Advice Reason    = {} ({})", de60, adviceReasonLabel(de60));
+        log.info("[DMAS-ISS] DE90 Original Data    = {}", de90);
+
+        // Reutilise la logique de reversal (recredite si pas deja reverse)
+        String rc = doReverse(pan, amountS, de90);
+
+        // Reponse 0430 : echoe DE2,3,4,7,11,60,90 + DE39
+        ISOMsg resp = new ISOMsg();
+        resp.setPackager(net.getPackager());
+        resp.setMTI("0430");
+        if (request.hasField(2))  resp.set(2,  request.getString(2));
+        if (request.hasField(3))  resp.set(3,  request.getString(3));
+        if (request.hasField(4))  resp.set(4,  request.getString(4));
+        if (request.hasField(7))  resp.set(7,  request.getString(7));
+        if (request.hasField(11)) resp.set(11, request.getString(11));
+        if (request.hasField(60)) resp.set(60, request.getString(60));
+        if (request.hasField(90)) resp.set(90, request.getString(90));
+        resp.set(39, rc);
+
+        net.send(out, resp);
+        log.info("[DMAS-ISS] -> reponse 0430 DE39={} ({})", rc, rcLabel(rc));
+    }
+
+    private String adviceReasonLabel(String de60) {
+        if (de60 == null) return "?";
+        String code = de60.length() >= 3 ? de60.substring(0, 3) : de60;
+        return switch (code) {
+            case "400" -> "Acquirer error unable to deliver";
+            case "401" -> "Acquirer error no ack";
+            case "402" -> "Issuer Time-out";
+            case "403" -> "Issuer Sign-out";
+            case "409" -> "Issuer Response Error";
+            case "410" -> "Reversal by non-Banknet system";
+            case "413" -> "Issuer Undelivered";
+            default    -> "?";
+        };
     }
 
     private ISOMsg buildResponse(ISOMsg request, String rc) throws Exception {

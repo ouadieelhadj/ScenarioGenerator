@@ -32,6 +32,7 @@ public class ReversalController {
         public String processingCode;
         public String originalStan;
         public String originalDt;
+        public Boolean advice;   // true = Reversal Advice 0420 (Stand-In), sinon 0400
     }
 
     @PostMapping("/reversal")
@@ -41,8 +42,14 @@ public class ReversalController {
                 return ResponseEntity.badRequest().body(Map.of(
                         "error", "Champs requis : pan, amount, originalStan"));
             }
-            Map<String,Object> result = reversal.sendReversal(
-                    req.pan, req.amount, req.processingCode, req.originalStan, req.originalDt);
+            Map<String,Object> result;
+            if (Boolean.TRUE.equals(req.advice)) {
+                result = reversal.sendReversalAdvice(
+                        req.pan, req.amount, req.processingCode, req.originalStan, req.originalDt);
+            } else {
+                result = reversal.sendReversal(
+                        req.pan, req.amount, req.processingCode, req.originalStan, req.originalDt);
+            }
             return ResponseEntity.ok(result);
         } catch (Exception e) {
             log.error("[DMAS-REV] reversal failed : {}", e.getMessage(), e);

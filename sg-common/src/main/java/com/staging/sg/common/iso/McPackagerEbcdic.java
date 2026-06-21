@@ -70,6 +70,8 @@ public class McPackagerEbcdic extends ISOBasePackager {
         fields[52] = new IFB_BINARY  (8,  "PIN DATA");
         // DE61 : POS data — LLLVAR EBCDIC (subfields, dont sf7 POS Transaction Status)
         fields[61] = new IFE_LLLCHAR (26, "POS DATA");
+        // DE60 : advice reason code (0420 reversal advice) — LLLVAR ans...060
+        fields[60] = new IFE_LLLCHAR (60, "ADVICE REASON CODE");
         // DE63 : network data (Banknet ref) — LLLVAR EBCDIC
         fields[63] = new IFE_LLLCHAR (50, "NETWORK DATA");
         // DE70 : network management code (001 sign-on, 002 sign-off, 270 echo)

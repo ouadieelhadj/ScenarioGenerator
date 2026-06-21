@@ -97,6 +97,58 @@ public class McDmasReversal {
         return r;
     }
 
+    /**
+     * Reversal Advice/0420 : le RESEAU (Stand-In) notifie la banque d'un reversal
+     * traite en son nom (timeout emetteur). Porte le DE60 Advice Reason Code = 402 (Issuer Time-out).
+     */
+    public Map<String,Object> sendReversalAdvice(String pan, String amount, String processingCode,
+                                                 String originalStan, String originalDt) throws Exception {
+        String de90 = buildDe90("0100", originalStan, originalDt, acquirerId, "00000000000");
+        String stan = net.generateStan();
+        String dtUtc = new SimpleDateFormat("MMddHHmmss").format(new Date());
+        String de60 = "402"; // Issuer Time-out
+
+        ISOMsg msg = new ISOMsg();
+        msg.setPackager(net.getPackager());
+        msg.setMTI("0420");
+        msg.set(2,  pan);
+        msg.set(3,  processingCode != null ? processingCode : "000000");
+        msg.set(4,  amount);
+        msg.set(7,  dtUtc);
+        msg.set(11, stan);
+        msg.set(18, defaultMcc);
+        msg.set(32, acquirerId);
+        msg.set(49, defaultCurrency);
+        msg.set(60, de60);
+        msg.set(90, de90);
+
+        log.info("[DMAS-REV] === 0420 Reversal Advice (Stand-In) ===");
+        log.info("[DMAS-REV] DE2  PAN              = {}", maskPan(pan));
+        log.info("[DMAS-REV] DE4  Amount           = {}", amount);
+        log.info("[DMAS-REV] DE11 STAN             = {}", stan);
+        log.info("[DMAS-REV] DE60 Advice Reason    = {} (Issuer Time-out)", de60);
+        log.info("[DMAS-REV] DE90 Original Data    = {} (STAN orig={})", de90, originalStan);
+
+        String reqHex = ISOUtil.hexString(msg.pack());
+        ISOMsg resp = net.sendAndReceive(msg, issuerHost, issuerPort, timeoutSeconds);
+        String rc = net.safeGet(resp, 39);
+        boolean ok = "00".equals(rc);
+
+        log.info("[DMAS-REV] <- 0430 DE39={} ok={}", rc, ok);
+
+        Map<String,Object> r = new LinkedHashMap<>();
+        r.put("mode", "REVERSAL_ADVICE");
+        r.put("mti_response", resp.getMTI());
+        r.put("de060_advice_reason", de60);
+        r.put("de090_original", de90);
+        r.put("original_stan", originalStan);
+        r.put("de039_response_code", rc);
+        r.put("acknowledged", ok);
+        r.put("request_hex", reqHex);
+        r.put("response_hex", ISOUtil.hexString(resp.pack()));
+        return r;
+    }
+
     /** DE90 = [MTI 4][STAN 6][DT 10][DE32 11][DE33 11] = 42 chiffres, right-justified leading zeros. */
     private String buildDe90(String mti, String stan, String dt, String de32, String de33) {
         return pad(mti, 4) + pad(stan, 6) + pad(dt, 10) + padLeft(de32, 11) + padLeft(de33, 11);
