@@ -74,6 +74,8 @@ public class McPackagerEbcdic extends ISOBasePackager {
         fields[63] = new IFE_LLLCHAR (50, "NETWORK DATA");
         // DE70 : network management code (001 sign-on, 002 sign-off, 270 echo)
         fields[70] = new IFE_NUMERIC (3,  "NETWORK MANAGEMENT CODE");
+        // DE90 : original data elements (reversal) — n-42 : [MTI 4][STAN 6][DE7 10][DE32 11][DE33 11]
+        fields[90] = new IFE_NUMERIC (42, "ORIGINAL DATA ELEMENTS");
 
         return fields;
     }

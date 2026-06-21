@@ -10,6 +10,8 @@ import com.staging.sg.common.repository.KeyStoreRepository;
 import com.staging.sg.common.repository.DmasIssKeyRepository;
 import com.staging.sg.common.repository.DmasCardRepository;
 import com.staging.sg.common.entity.DmasCard;
+import com.staging.sg.common.repository.DmasTransactionRepository;
+import com.staging.sg.common.entity.DmasTransaction;
 import com.staging.sg.common.entity.DmasIssKey;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -43,6 +45,7 @@ public class McDmasIssuer {
     private final KeyStoreRepository keyStoreRepo;
     private final DmasIssKeyRepository issKeyRepo;
     private final DmasCardRepository cardRepo;
+    private final DmasTransactionRepository txRepo;
 
     @Value("${dmas.iso-port:8500}")
     private int isoPort;
@@ -57,13 +60,15 @@ public class McDmasIssuer {
     public McDmasIssuer(DmasNetworkUtil net, HsmService hsm,
                         DmasKekRepository kekRepo, KeyStoreRepository keyStoreRepo,
                         DmasIssKeyRepository issKeyRepo,
-                        DmasCardRepository cardRepo) {
+                        DmasCardRepository cardRepo,
+                        DmasTransactionRepository txRepo) {
         this.net = net;
         this.hsm = hsm;
         this.kekRepo = kekRepo;
         this.keyStoreRepo = keyStoreRepo;
         this.issKeyRepo = issKeyRepo;
         this.cardRepo = cardRepo;
+        this.txRepo = txRepo;
     }
 
     @PostConstruct
@@ -109,6 +114,7 @@ public class McDmasIssuer {
             switch (mti) {
                 case "0800" -> handleNetworkMessage(request, out);
                 case "0100" -> handleAuthorization(request, out);
+                case "0400" -> handleReversal(request, out);
                 default     -> log.warn("[DMAS-ISS] MTI non géré : {}", mti);
             }
         } catch (Exception e) {
@@ -295,7 +301,23 @@ public class McDmasIssuer {
             // 4. Approuvé : débiter
             card.setBalance(card.getBalance() - amount);
             cardRepo.save(card);
-            log.info("[DMAS-ISS] Décision : APPROUVÉ -> 00 (nouveau solde={})", card.getBalance());
+
+            // Mémoriser la transaction approuvée (pour reversal éventuel)
+            String stan = net.safeGet(request, 11);
+            String dt   = net.safeGet(request, 7);
+            DmasTransaction tx = txRepo.findByStanAndTransmissionDt(stan, dt).orElseGet(DmasTransaction::new);
+            tx.setPan(pan);
+            tx.setStan(stan);
+            tx.setTransmissionDt(dt);
+            tx.setMti("0100");
+            tx.setProcessingCode(net.safeGet(request, 3));
+            tx.setAmount(amount);
+            tx.setCurrency(net.safeGet(request, 49));
+            tx.setResponseCode("00");
+            tx.setStatus("APPROVED");
+            txRepo.save(tx);
+
+            log.info("[DMAS-ISS] Décision : APPROUVÉ -> 00 (nouveau solde={}, tx STAN={} mémorisée)", card.getBalance(), stan);
             return "00"; // approved
 
         } catch (Exception e) {
@@ -319,6 +341,88 @@ public class McDmasIssuer {
     private String maskPan(String pan) {
         if (pan == null || pan.length() < 10) return pan;
         return pan.substring(0, 6) + "****" + pan.substring(pan.length() - 4);
+    }
+
+    /**
+     * Traite un Reversal Request/0400 (côté BANQUE).
+     * Retrouve la transaction originale via DE90, recrédite le solde,
+     * marque REVERSED (anti double-reversal), répond 0410.
+     */
+    private void handleReversal(ISOMsg request, DataOutputStream out) throws Exception {
+        String pan    = net.safeGet(request, 2);
+        String amountS = net.safeGet(request, 4);
+        String de90   = net.safeGet(request, 90);
+
+        log.info("[DMAS-ISS] === Reçu 0400 Reversal ===");
+        log.info("[DMAS-ISS] DE2  PAN              = {}", maskPan(pan));
+        log.info("[DMAS-ISS] DE4  Amount           = {}", amountS);
+        log.info("[DMAS-ISS] DE11 STAN (nouveau)   = {}", net.safeGet(request, 11));
+        log.info("[DMAS-ISS] DE90 Original Data    = {}", de90);
+
+        String rc = doReverse(pan, amountS, de90);
+
+        // Réponse 0410 : échoe DE2,3,4,7,11,90 + DE39
+        ISOMsg resp = new ISOMsg();
+        resp.setPackager(net.getPackager());
+        resp.setMTI("0410");
+        if (request.hasField(2))  resp.set(2,  request.getString(2));
+        if (request.hasField(3))  resp.set(3,  request.getString(3));
+        if (request.hasField(4))  resp.set(4,  request.getString(4));
+        if (request.hasField(7))  resp.set(7,  request.getString(7));
+        if (request.hasField(11)) resp.set(11, request.getString(11));
+        if (request.hasField(90)) resp.set(90, request.getString(90));
+        resp.set(39, rc);
+
+        net.send(out, resp);
+        log.info("[DMAS-ISS] -> réponse 0410 DE39={} ({})", rc, rcLabel(rc));
+    }
+
+    /** Recrédite le solde en retrouvant la transaction via DE90. */
+    private String doReverse(String pan, String amountS, String de90) {
+        try {
+            // Parser le DE90 : [MTI 4][STAN 6][DT 10][DE32 11][DE33 11]
+            if (de90 == null || de90.length() < 20) {
+                log.warn("[DMAS-ISS] DE90 absent ou invalide -> 30");
+                return "30"; // format error
+            }
+            String origStan = de90.substring(4, 10);
+            String origDt   = de90.substring(10, 20);
+            log.info("[DMAS-ISS] Reversal : recherche tx originale STAN={} DT={}", origStan, origDt);
+
+            // Retrouver la transaction originale
+            DmasTransaction tx = txRepo.findByStanAndTransmissionDt(origStan, origDt).orElse(null);
+            if (tx == null) {
+                log.info("[DMAS-ISS] Transaction originale introuvable -> 25");
+                return "25"; // unable to locate record
+            }
+            if ("REVERSED".equals(tx.getStatus())) {
+                log.info("[DMAS-ISS] Transaction déjà annulée (anti double-reversal) -> 00 (idempotent)");
+                return "00"; // déjà reversée : on acquitte sans recréditer
+            }
+
+            // Recréditer le solde de la carte
+            DmasCard card = cardRepo.findByPan(pan).orElse(null);
+            if (card == null) {
+                log.info("[DMAS-ISS] Carte introuvable pour reversal -> 14");
+                return "14";
+            }
+            long amount = tx.getAmount() != null ? tx.getAmount() : 0L;
+            card.setBalance(card.getBalance() + amount);
+            cardRepo.save(card);
+
+            // Marquer la transaction REVERSED
+            tx.setStatus("REVERSED");
+            tx.setReversedAt(java.time.LocalDateTime.now());
+            txRepo.save(tx);
+
+            log.info("[DMAS-ISS] Reversal APPROUVÉ -> 00 (recrédité {} centimes, nouveau solde={})",
+                    amount, card.getBalance());
+            return "00";
+
+        } catch (Exception e) {
+            log.error("[DMAS-ISS] Erreur reversal : {}", e.getMessage(), e);
+            return "96";
+        }
     }
 
     private ISOMsg buildResponse(ISOMsg request, String rc) throws Exception {
