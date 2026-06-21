@@ -1,0 +1,174 @@
+package com.staging.sg.dmas.acquirer.network;
+
+import com.staging.sg.common.entity.DmasAcqKey;
+import com.staging.sg.common.iso.DmasNetworkUtil;
+import com.staging.sg.common.iso.crypto.HsmService;
+import com.staging.sg.common.repository.DmasAcqKeyRepository;
+import org.jpos.iso.ISOMsg;
+import org.jpos.iso.ISOUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
+/**
+ * Construction et envoi des transactions Authorization Request/0100
+ * côté RESEAU (acquéreur) vers la BANQUE (issuer).
+ *
+ * Le "type" métier est mappé vers DE3 (Processing Code) + DE61 sf7 (POS Transaction Status).
+ * Le PIN (DE52) est chiffré sous PEK (FORMAT00) quand le type le requiert.
+ */
+@Service
+public class McDmasAuthorization {
+
+    private static final Logger log = LoggerFactory.getLogger(McDmasAuthorization.class);
+
+    private final DmasNetworkUtil net;
+    private final HsmService hsm;
+    private final DmasAcqKeyRepository acqKeyRepo;
+
+    @Value("${dmas.issuer-host:localhost}") private String issuerHost;
+    @Value("${dmas.issuer-port:8500}")      private int    issuerPort;
+    @Value("${dmas.timeout-seconds:30}")    private int    timeoutSeconds;
+    @Value("${dmas.member-group-id:TESTGRP01}") private String memberGroup;
+    @Value("${dmas.acquirer-id:111111}")    private String acquirerId;
+    @Value("${dmas.default-currency:840}")  private String defaultCurrency;
+    @Value("${dmas.default-mcc:5999}")      private String defaultMcc;
+
+    public McDmasAuthorization(DmasNetworkUtil net, HsmService hsm, DmasAcqKeyRepository acqKeyRepo) {
+        this.net = net;
+        this.hsm = hsm;
+        this.acqKeyRepo = acqKeyRepo;
+    }
+
+    /** Type métier -> (DE3 sf1, DE61 sf7, PIN requis). */
+    public enum TxType {
+        PURCHASE        ("00", "0", false),
+        WITHDRAWAL      ("01", "0", true),
+        PURCHASE_CASHBACK("09", "0", true),
+        CASH_DISBURSEMENT("17", "0", true),
+        REFUND          ("20", "0", false),
+        PAYMENT         ("28", "0", false),
+        BALANCE_INQUIRY ("30", "0", true),
+        TRANSFER        ("40", "0", true),
+        PREAUTH         ("00", "4", false),
+        PIN_CHANGE      ("92", "0", true),
+        PIN_UNBLOCK     ("91", "0", true);
+
+        public final String de3sf1;   // Cardholder Transaction Type Code
+        public final String de61sf7;  // POS Transaction Status
+        public final boolean pinRequired;
+
+        TxType(String de3sf1, String de61sf7, boolean pinRequired) {
+            this.de3sf1 = de3sf1; this.de61sf7 = de61sf7; this.pinRequired = pinRequired;
+        }
+
+        public static TxType from(String s) {
+            return TxType.valueOf(s.trim().toUpperCase());
+        }
+    }
+
+    /**
+     * Construit et envoie un 0100 selon le type.
+     * @param typeStr  type métier (purchase, withdrawal, preauth, refund, balance_inquiry...)
+     * @param pan      PAN du porteur
+     * @param amount   montant n-12 (ex "000000010000")
+     * @param pin      PIN clair (peut être null si type sans PIN)
+     */
+    public Map<String,Object> sendAuthorization(String typeStr, String pan, String amount,
+                                                String pin, String terminalId, String acceptorId) throws Exception {
+        TxType type = TxType.from(typeStr);
+
+        // Processing code DE3 = [sf1][00][00] (from/to account par défaut)
+        String processingCode = type.de3sf1 + "0000";
+        // POS data DE61 : on place le sf7 en position 7 d'une chaîne de subfields simplifiée
+        // Format simplifié : positions 1-12 (sf1..sf12), on remplit sf7 et le reste à 0
+        String de61 = buildPosData(type.de61sf7);
+
+        String stan = net.generateStan();
+        String dtUtc = new SimpleDateFormat("MMddHHmmss").format(new Date());
+
+        ISOMsg msg = new ISOMsg();
+        msg.setPackager(net.getPackager());
+        msg.setMTI("0100");
+        msg.set(2,  pan);
+        msg.set(3,  processingCode);
+        msg.set(4,  amount);
+        msg.set(7,  dtUtc);
+        msg.set(11, stan);
+        msg.set(18, defaultMcc);
+        msg.set(22, "051");                 // POS entry mode : 051 = chip
+        msg.set(32, acquirerId);
+        if (terminalId != null) msg.set(41, terminalId);
+        if (acceptorId != null) msg.set(42, acceptorId);
+        msg.set(49, defaultCurrency);
+        msg.set(61, de61);
+
+        // PIN (DE52) chiffré sous PEK si fourni
+        String pinKcv = null;
+        if (pin != null && !pin.isEmpty()) {
+            DmasAcqKey pek = acqKeyRepo
+                    .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup, "PEK", "ACTIVE")
+                    .orElseThrow(() -> new IllegalStateException("PEK introuvable — faire un key exchange d'abord"));
+            byte[] pinBlock = hsm.encryptPinBlock(pin, pan, pek.getKeyUnderLmk(), pek.getKcv(), pek.getKeyLength());
+            msg.set(52, pinBlock);
+            pinKcv = pek.getKcv();
+        } else if (type.pinRequired) {
+            log.warn("[DMAS-AUTH] Type {} requiert un PIN mais aucun fourni", type);
+        }
+
+        // LOG détaillé de tous les DE
+        log.info("[DMAS-AUTH] === 0100 {} (DE3={} DE61sf7={}) ===", type, processingCode, type.de61sf7);
+        log.info("[DMAS-AUTH] DE2  PAN                = {}", maskPan(pan));
+        log.info("[DMAS-AUTH] DE3  Processing Code    = {}", processingCode);
+        log.info("[DMAS-AUTH] DE4  Amount             = {}", amount);
+        log.info("[DMAS-AUTH] DE7  Transmission DT     = {}", dtUtc);
+        log.info("[DMAS-AUTH] DE11 STAN               = {}", stan);
+        log.info("[DMAS-AUTH] DE18 Merchant Type      = {}", defaultMcc);
+        log.info("[DMAS-AUTH] DE22 POS Entry Mode     = 051");
+        log.info("[DMAS-AUTH] DE32 Acquiring Inst ID  = {}", acquirerId);
+        log.info("[DMAS-AUTH] DE41 Terminal ID        = {}", terminalId);
+        log.info("[DMAS-AUTH] DE42 Acceptor ID        = {}", acceptorId);
+        log.info("[DMAS-AUTH] DE49 Currency           = {}", defaultCurrency);
+        log.info("[DMAS-AUTH] DE52 PIN block          = {}", msg.hasField(52) ? "présent (8o, sous PEK kcv="+pinKcv+")" : "absent");
+        log.info("[DMAS-AUTH] DE61 POS Data           = {}", de61);
+
+        String reqHex = ISOUtil.hexString(msg.pack());
+        ISOMsg resp = net.sendAndReceive(msg, issuerHost, issuerPort, timeoutSeconds);
+        String rc = net.safeGet(resp, 39);
+        boolean approved = "00".equals(rc);
+
+        log.info("[DMAS-AUTH] <- 0110 DE39={} approved={}", rc, approved);
+
+        Map<String,Object> r = new LinkedHashMap<>();
+        r.put("type", type.name());
+        r.put("mti_response", resp.getMTI());
+        r.put("de003_processing_code", processingCode);
+        r.put("de004_amount", amount);
+        r.put("de011_stan", stan);
+        r.put("de039_response_code", rc);
+        r.put("approved", approved);
+        r.put("pin_included", msg.hasField(52));
+        r.put("request_hex", reqHex);
+        r.put("response_hex", ISOUtil.hexString(resp.pack()));
+        return r;
+    }
+
+    /** Construit le DE61 POS Data avec le sf7 (POS Transaction Status) à la bonne position. */
+    private String buildPosData(String sf7) {
+        // Format simplifié : 12 positions, sf7 en position 7, reste à 0
+        StringBuilder sb = new StringBuilder("000000000000");
+        sb.setCharAt(6, sf7.charAt(0)); // position 7 (index 6)
+        return sb.toString();
+    }
+
+    private String maskPan(String pan) {
+        if (pan == null || pan.length() < 10) return pan;
+        return pan.substring(0, 6) + "****" + pan.substring(pan.length() - 4);
+    }
+}

@@ -8,6 +8,8 @@ import com.staging.sg.common.iso.crypto.KeyExchangeBlock;
 import com.staging.sg.common.repository.DmasKekRepository;
 import com.staging.sg.common.repository.KeyStoreRepository;
 import com.staging.sg.common.repository.DmasIssKeyRepository;
+import com.staging.sg.common.repository.DmasCardRepository;
+import com.staging.sg.common.entity.DmasCard;
 import com.staging.sg.common.entity.DmasIssKey;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -40,6 +42,7 @@ public class McDmasIssuer {
     private final DmasKekRepository kekRepo;
     private final KeyStoreRepository keyStoreRepo;
     private final DmasIssKeyRepository issKeyRepo;
+    private final DmasCardRepository cardRepo;
 
     @Value("${dmas.iso-port:8500}")
     private int isoPort;
@@ -53,12 +56,14 @@ public class McDmasIssuer {
 
     public McDmasIssuer(DmasNetworkUtil net, HsmService hsm,
                         DmasKekRepository kekRepo, KeyStoreRepository keyStoreRepo,
-                        DmasIssKeyRepository issKeyRepo) {
+                        DmasIssKeyRepository issKeyRepo,
+                        DmasCardRepository cardRepo) {
         this.net = net;
         this.hsm = hsm;
         this.kekRepo = kekRepo;
         this.keyStoreRepo = keyStoreRepo;
         this.issKeyRepo = issKeyRepo;
+        this.cardRepo = cardRepo;
     }
 
     @PostConstruct
@@ -103,6 +108,7 @@ public class McDmasIssuer {
             String mti = request.getMTI();
             switch (mti) {
                 case "0800" -> handleNetworkMessage(request, out);
+                case "0100" -> handleAuthorization(request, out);
                 default     -> log.warn("[DMAS-ISS] MTI non géré : {}", mti);
             }
         } catch (Exception e) {
@@ -198,6 +204,121 @@ public class McDmasIssuer {
         ISOMsg response = buildResponse(request, rc);
         net.send(out, response);
         log.info("[DMAS-ISS] -> reponse 0810 PEK exchange DE39={}", rc);
+    }
+
+    /**
+     * Traite une Authorization Request/0100 (côté BANQUE).
+     * Moteur de décision : carte existe ? PIN correct ? solde suffisant ?
+     * Échoe DE2,3,4,7,11 + DE39 (response code) et renvoie 0110.
+     */
+    private void handleAuthorization(ISOMsg request, DataOutputStream out) throws Exception {
+        String pan    = net.safeGet(request, 2);
+        String procCode = net.safeGet(request, 3);
+        String amountS  = net.safeGet(request, 4);
+        String stan   = net.safeGet(request, 11);
+
+        // LOG détaillé de tous les DE reçus
+        log.info("[DMAS-ISS] === Reçu 0100 Authorization ===");
+        log.info("[DMAS-ISS] DE2  PAN              = {}", maskPan(pan));
+        log.info("[DMAS-ISS] DE3  Processing Code  = {}", procCode);
+        log.info("[DMAS-ISS] DE4  Amount           = {}", amountS);
+        log.info("[DMAS-ISS] DE7  Transmission DT   = {}", net.safeGet(request, 7));
+        log.info("[DMAS-ISS] DE11 STAN             = {}", stan);
+        log.info("[DMAS-ISS] DE18 Merchant Type    = {}", net.safeGet(request, 18));
+        log.info("[DMAS-ISS] DE22 POS Entry Mode   = {}", net.safeGet(request, 22));
+        log.info("[DMAS-ISS] DE32 Acquiring Inst   = {}", net.safeGet(request, 32));
+        log.info("[DMAS-ISS] DE41 Terminal ID      = {}", net.safeGet(request, 41));
+        log.info("[DMAS-ISS] DE42 Acceptor ID      = {}", net.safeGet(request, 42));
+        log.info("[DMAS-ISS] DE49 Currency         = {}", net.safeGet(request, 49));
+        log.info("[DMAS-ISS] DE52 PIN block        = {}", request.hasField(52) ? "présent (8o)" : "absent");
+        log.info("[DMAS-ISS] DE61 POS Data         = {}", net.safeGet(request, 61));
+
+        String rc = decide(request, pan, amountS);
+
+        // Construire la réponse 0110 : échoe DE2,3,4,7,11 + DE39
+        ISOMsg resp = new ISOMsg();
+        resp.setPackager(net.getPackager());
+        resp.setMTI("0110");
+        if (request.hasField(2))  resp.set(2,  request.getString(2));
+        if (request.hasField(3))  resp.set(3,  request.getString(3));
+        if (request.hasField(4))  resp.set(4,  request.getString(4));
+        if (request.hasField(7))  resp.set(7,  request.getString(7));
+        if (request.hasField(11)) resp.set(11, request.getString(11));
+        resp.set(39, rc);
+
+        net.send(out, resp);
+        log.info("[DMAS-ISS] -> réponse 0110 DE39={} ({})", rc, rcLabel(rc));
+    }
+
+    /** Moteur de décision : retourne le response code DE39. */
+    private String decide(ISOMsg request, String pan, String amountS) {
+        try {
+            // 1. Carte existe ?
+            DmasCard card = cardRepo.findByPan(pan).orElse(null);
+            if (card == null) {
+                log.info("[DMAS-ISS] Décision : carte introuvable -> 14");
+                return "14"; // invalid card number
+            }
+            if (!"ACTIVE".equals(card.getStatus())) {
+                log.info("[DMAS-ISS] Décision : carte non active -> 62");
+                return "62"; // restricted card
+            }
+
+            // 2. PIN correct ? (déchiffrer DE52 sous PEK puis comparer)
+            if (request.hasField(52)) {
+                byte[] pinBlock = request.getBytes(52);
+                DmasIssKey pek = issKeyRepo
+                        .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup, "PEK", "ACTIVE")
+                        .orElse(null);
+                if (pek == null) {
+                    log.warn("[DMAS-ISS] PEK introuvable pour déchiffrer le PIN -> 96");
+                    return "96"; // system malfunction
+                }
+                String pinClair = hsm.decryptPinBlock(pinBlock, pan,
+                        pek.getKeyUnderLmk(), pek.getKcv(), pek.getKeyLength());
+                log.info("[DMAS-ISS] PIN déchiffré (len={}) — comparaison avec PIN carte", pinClair.length());
+                if (!pinClair.equals(card.getPin())) {
+                    log.info("[DMAS-ISS] Décision : PIN incorrect -> 55");
+                    return "55"; // incorrect PIN
+                }
+                log.info("[DMAS-ISS] PIN correct ✓");
+            }
+
+            // 3. Solde suffisant ? (montant DE4 en centimes)
+            long amount = (amountS != null && !amountS.isEmpty()) ? Long.parseLong(amountS) : 0L;
+            if (card.getBalance() < amount) {
+                log.info("[DMAS-ISS] Décision : solde insuffisant ({} < {}) -> 51",
+                        card.getBalance(), amount);
+                return "51"; // insufficient funds
+            }
+
+            // 4. Approuvé : débiter
+            card.setBalance(card.getBalance() - amount);
+            cardRepo.save(card);
+            log.info("[DMAS-ISS] Décision : APPROUVÉ -> 00 (nouveau solde={})", card.getBalance());
+            return "00"; // approved
+
+        } catch (Exception e) {
+            log.error("[DMAS-ISS] Erreur moteur décision : {}", e.getMessage(), e);
+            return "96"; // system malfunction
+        }
+    }
+
+    private String rcLabel(String rc) {
+        return switch (rc) {
+            case "00" -> "approuvé";
+            case "14" -> "carte invalide";
+            case "51" -> "fonds insuffisants";
+            case "55" -> "PIN incorrect";
+            case "62" -> "carte restreinte";
+            case "96" -> "erreur système";
+            default   -> "?";
+        };
+    }
+
+    private String maskPan(String pan) {
+        if (pan == null || pan.length() < 10) return pan;
+        return pan.substring(0, 6) + "****" + pan.substring(pan.length() - 4);
     }
 
     private ISOMsg buildResponse(ISOMsg request, String rc) throws Exception {
