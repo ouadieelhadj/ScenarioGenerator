@@ -11,9 +11,9 @@
         <version>1.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>sg-acquirer</artifactId>
+    <artifactId>sg-generator-orchestrator</artifactId>
     <packaging>jar</packaging>
-    <name>SG Acquirer</name>
+    <name>SG Generator Orchestrator</name>
     <description>Acquiring module — sends 0100, 0820, 0800</description>
 
     <dependencies>

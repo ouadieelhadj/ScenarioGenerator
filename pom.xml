@@ -20,7 +20,7 @@
 
     <modules>
         <module>sg-common</module>
-        <module>sg-acquirer</module>
+        <module>sg-generator-orchestrator</module>
         <module>sg-issuer</module>
         <module>sg-dmcs-issuer</module>
         <module>sg-dmcs-acquirer</module>
