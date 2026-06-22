@@ -5,6 +5,8 @@ import com.staging.sg.acquirer.acquirer.McAcquirer;
 import com.staging.sg.acquirer.acquirer.McAuthRequest;
 import com.staging.sg.acquirer.acquirer.McAuthResult;
 import com.staging.sg.acquirer.report.ReportService;
+import com.staging.sg.acquirer.orchestration.DmasClient;
+import com.staging.sg.acquirer.orchestration.DmasMapper;
 import com.staging.sg.common.dto.TpsStepDto;
 import com.staging.sg.common.entity.*;
 import com.staging.sg.common.repository.ExecutionRepository;
@@ -31,6 +33,12 @@ public class TpsEngine {
     private final ResultRepository    resultRepository;
     private final ReportService       reportService;
     private final ObjectMapper        objectMapper;
+    private final DmasClient          dmasClient;
+
+    @Value("${tps.engine.mode:internal}")            private String  engineMode;      // internal | dmas
+    @Value("${dmas.acquirer.base-url:http://localhost:8084}") private String dmasAcquirerUrl;
+    @Value("${dmas.login:admin}")                    private String  dmasLogin;
+    @Value("${dmas.password:Admin123!}")             private String  dmasPassword;
 
     @Value("${tps.max:100}")
     private int maxTps;
@@ -44,12 +52,52 @@ public class TpsEngine {
                      ExecutionRepository executionRepository,
                      ResultRepository resultRepository,
                      ReportService reportService,
-                     ObjectMapper objectMapper) {
+                     ObjectMapper objectMapper,
+                     DmasClient dmasClient) {
         this.acquirer            = acquirer;
         this.executionRepository = executionRepository;
         this.resultRepository    = resultRepository;
         this.reportService       = reportService;
         this.objectMapper        = objectMapper;
+        this.dmasClient          = dmasClient;
+    }
+
+    /** Aiguille vers le moteur interne (McAcquirer) ou DMAS HTTP selon le flag. */
+    private McAuthResult authorize(McAuthRequest req) throws Exception {
+        if ("dmas".equalsIgnoreCase(engineMode)) {
+            return authorizeViaDmas(req);
+        }
+        return acquirer.authorize(req);
+    }
+
+    /** Appel HTTP vers l'acquereur DMAS (8084), resultat mappe en McAuthResult. */
+    private McAuthResult authorizeViaDmas(McAuthRequest req) {
+        McAuthResult result = new McAuthResult();
+        try {
+            String token = dmasClient.ensureToken(dmasAcquirerUrl, dmasLogin, dmasPassword);
+            java.util.Map<String,Object> body = new java.util.LinkedHashMap<>();
+            String pc = req.getDE003_PROCESSING_CODE();
+            String type = (pc != null && pc.startsWith("01")) ? "withdrawal"
+                        : (pc != null && pc.startsWith("20")) ? "refund" : "purchase";
+            body.put("type", type);
+            body.put("pan", req.getDE002_PAN());
+            body.put("amount", String.format("%012d", req.getDE004_AMOUNT()));
+            if (req.getDE052_PIN() != null) body.put("pin", req.getDE052_PIN());
+            String resp = dmasClient.postJson(dmasAcquirerUrl, "/api/admin/dmas/auth", token, body);
+            java.util.Map<?,?> json = dmasClient.parse(resp);
+            String de39 = String.valueOf(json.get("de039_response_code"));
+            boolean ok = Boolean.TRUE.equals(json.get("approved")) || "00".equals(de39);
+            result.setApproved(ok);
+            result.setDE039_RESPONSE_CODE(de39);
+            result.setDE002_PAN(req.getDE002_PAN());
+            Object auth = json.get("de038_auth_code");
+            if (auth != null) result.setDE038_AUTH_CODE(String.valueOf(auth));
+        } catch (Exception e) {
+            result.setApproved(false);
+            result.setDE039_RESPONSE_CODE("96");
+            log.warn("[TPS-DMAS] Erreur authorize : {}", e.getMessage());
+        }
+        return result;
     }
 
     // ── Start ────────────────────────────────────────────────
@@ -118,7 +166,7 @@ public class TpsEngine {
                 // Mode SIMPLE
                 log.info("[TPS] Mode SIMPLE");
                 long start = System.currentTimeMillis();
-                McAuthResult result = acquirer.authorize(baseRequest);
+                McAuthResult result = authorize(baseRequest);
                 long duration = System.currentTimeMillis() - start;
                 metrics.record(
                     result.getDE002_PAN(), result.getDE039_RESPONSE_CODE(),
@@ -162,7 +210,7 @@ public class TpsEngine {
                     executor.submit(() -> {
                         long start = System.currentTimeMillis();
                         try {
-                            McAuthResult result = acquirer.authorize(req);
+                            McAuthResult result = authorize(req);
                             long duration = System.currentTimeMillis() - start;
                             metrics.record(
                                 result.getDE002_PAN(),

@@ -65,6 +65,8 @@ reports:
   base-dir: ${REPORTS_DIR:D:/MoneyCore/ScenarioGenerator/reports}
 
 tps:
+  engine:
+    mode: dmas      # internal (McAcquirer) | dmas (HTTP vers acquereur 8084)
   default: 10
   max: 100
   thread-pool-size: 20
