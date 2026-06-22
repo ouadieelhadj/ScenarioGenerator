@@ -1,6 +1,5 @@
 package com.staging.sg.common;
 
-import com.staging.sg.common.entity.Role;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,11 +42,16 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String login = jwtService.extractLogin(token);
         String role  = jwtService.extractRole(token);
+        java.util.List<String> permissions = jwtService.extractPermissions(token);
+
+        java.util.List<SimpleGrantedAuthority> authorities = new java.util.ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+        for (String p : permissions) {
+            authorities.add(new SimpleGrantedAuthority(p));
+        }
 
         UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(
-                        login, null,
-                        List.of(new SimpleGrantedAuthority("ROLE_" + role)));
+                new UsernamePasswordAuthenticationToken(login, null, authorities);
 
         SecurityContextHolder.getContext().setAuthentication(auth);
         chain.doFilter(request, response);

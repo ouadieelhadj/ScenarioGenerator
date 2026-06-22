@@ -22,9 +22,8 @@ public class User {
     @Column(length = 100)
     private String email;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private Role role;
+    @Column(name = "role", nullable = false, length = 30)
+    private String role;
 
     @Column(nullable = false)
     private boolean active = true;
@@ -53,7 +52,7 @@ public class User {
     public String        getLogin()        { return login; }
     public String        getPassword()     { return password; }
     public String        getEmail()        { return email; }
-    public Role          getRole()         { return role; }
+    public String        getRole()         { return role; }
     public boolean       isActive()        { return active; }
     public LocalDateTime getCreatedAt()    { return createdAt; }
     public String        getCreatedBy()    { return createdBy; }
@@ -65,7 +64,7 @@ public class User {
     public void setLogin(String v)             { this.login = v; }
     public void setPassword(String v)          { this.password = v; }
     public void setEmail(String v)             { this.email = v; }
-    public void setRole(Role v)                { this.role = v; }
+    public void setRole(String v)              { this.role = v; }
     public void setActive(boolean v)           { this.active = v; }
     public void setCreatedAt(LocalDateTime v)  { this.createdAt = v; }
     public void setCreatedBy(String v)         { this.createdBy = v; }

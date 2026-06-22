@@ -1,6 +1,5 @@
 package com.staging.sg.acquirer.config;
 
-import com.staging.sg.common.entity.Role;
 import com.staging.sg.common.entity.User;
 import com.staging.sg.common.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
@@ -40,7 +39,7 @@ public class DataInitializer {
             admin.setLogin(adminLogin);
             admin.setPassword(passwordEncoder.encode(adminPassword));
             admin.setEmail(adminEmail);
-            admin.setRole(Role.ADMIN);
+            admin.setRole("ADMIN");
             admin.setActive(true);
             admin.setCreatedBy("system");
             userRepository.save(admin);

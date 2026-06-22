@@ -1,20 +1,19 @@
 package com.staging.sg.common.dto;
 
-import com.staging.sg.common.entity.Role;
 
 public class CreateUserRequest {
     private String login;
     private String password;
     private String email;
-    private Role   role;
+    private String role;
 
     public String getLogin()    { return login; }
     public String getPassword() { return password; }
     public String getEmail()    { return email; }
-    public Role   getRole()     { return role; }
+    public String getRole()   { return role; }
 
     public void setLogin(String v)    { this.login = v; }
     public void setPassword(String v) { this.password = v; }
     public void setEmail(String v)    { this.email = v; }
-    public void setRole(Role v)       { this.role = v; }
+    public void setRole(String v) { this.role = v; }
 }

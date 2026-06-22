@@ -31,12 +31,30 @@ public class JwtService {
                 .compact();
     }
 
+    public String generateToken(String login, String role, java.util.List<String> permissions) {
+        return Jwts.builder()
+                .setSubject(login)
+                .claim("role", role)
+                .claim("permissions", permissions)
+                .setIssuedAt(new Date())
+                .setExpiration(new Date(System.currentTimeMillis() + expirationMs))
+                .signWith(getKey(), SignatureAlgorithm.HS256)
+                .compact();
+    }
+
     public String extractLogin(String token) {
         return parseClaims(token).getSubject();
     }
 
     public String extractRole(String token) {
         return (String) parseClaims(token).get("role");
+    }
+
+    @SuppressWarnings("unchecked")
+    public java.util.List<String> extractPermissions(String token) {
+        Object p = parseClaims(token).get("permissions");
+        if (p instanceof java.util.List) return (java.util.List<String>) p;
+        return java.util.Collections.emptyList();
     }
 
     public boolean isValid(String token) {

@@ -2,7 +2,6 @@ package com.staging.sg.acquirer;
 
 import com.staging.sg.common.dto.CreateUserRequest;
 import com.staging.sg.common.dto.UserDto;
-import com.staging.sg.common.entity.Role;
 import com.staging.sg.common.entity.Test;
 import com.staging.sg.common.entity.User;
 import com.staging.sg.common.repository.TestRepository;
@@ -52,7 +51,7 @@ public class UserService {
         user.setLogin(req.getLogin());
         user.setPassword(passwordEncoder.encode(req.getPassword()));
         user.setEmail(req.getEmail());
-        user.setRole(req.getRole() != null ? req.getRole() : Role.EXPLOITATION);
+        user.setRole(req.getRole() != null ? req.getRole() : "EXPLOITATION");
         user.setActive(true);
         user.setCreatedBy(createdBy);
         User saved = userRepository.save(user);

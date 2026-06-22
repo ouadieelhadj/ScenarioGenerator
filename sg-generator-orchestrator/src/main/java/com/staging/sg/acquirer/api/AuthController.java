@@ -5,6 +5,10 @@ import com.staging.sg.common.dto.LoginRequest;
 import com.staging.sg.common.dto.LoginResponse;
 import com.staging.sg.common.entity.User;
 import com.staging.sg.common.repository.UserRepository;
+import com.staging.sg.common.repository.RoleRepository;
+import com.staging.sg.common.entity.Role;
+import java.util.List;
+import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -23,13 +27,16 @@ public class AuthController {
     private final UserRepository  userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService      jwtService;
+    private final RoleRepository  roleRepository;
 
     public AuthController(UserRepository userRepository,
+                          RoleRepository roleRepository,
                           PasswordEncoder passwordEncoder,
                           JwtService jwtService) {
         this.userRepository  = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService      = jwtService;
+        this.roleRepository  = roleRepository;
     }
 
     // POST /auth/login
@@ -54,10 +61,13 @@ public class AuthController {
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
-        String token = jwtService.generateToken(user.getLogin(), user.getRole().name());
+        List<String> permissions = roleRepository.findByCode(user.getRole())
+                .map(r -> r.getPermissions().stream().map(p -> p.getCode()).collect(Collectors.toList()))
+                .orElse(List.of());
+        String token = jwtService.generateToken(user.getLogin(), user.getRole(), permissions);
         log.info("[AUTH] Login success — login={} role={}", user.getLogin(), user.getRole());
 
         return ResponseEntity.ok(new LoginResponse(
-                token, user.getLogin(), user.getRole().name(), 86400000L));
+                token, user.getLogin(), user.getRole(), 86400000L));
     }
 }
