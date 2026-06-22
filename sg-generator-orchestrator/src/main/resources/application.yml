@@ -45,7 +45,7 @@ mc:
   kek: ${KEK:0123456789ABCDEF0123456789ABCDEF}
 
   network:
-    auto-signon: true
+    auto-signon: false  # generateur : pas de connexion DMAS au boot (remettre true en Phase 2)
     echo-interval-seconds: 60
 
   hsm:
