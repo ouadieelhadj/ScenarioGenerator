@@ -57,6 +57,10 @@ mc:
     mac-field: 64
     pin-enabled: true
 
+orchestration:
+  persist:
+    dashboard: true     # tableau de bord (agregat + repartition DE39) - leger
+    details: false      # detail transaction par transaction - volumineux
 reports:
   base-dir: ${REPORTS_DIR:D:/MoneyCore/ScenarioGenerator/reports}
 
