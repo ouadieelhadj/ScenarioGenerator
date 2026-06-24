@@ -8,6 +8,12 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import com.staging.sg.common.iso.crypto.JposHsmService;
+import com.staging.sg.common.iso.crypto.KeyExchangeBlock;
+import com.staging.sg.common.entity.DmasKek;
+import com.staging.sg.common.entity.DmasIssKey;
+import com.staging.sg.common.repository.DmasKekRepository;
+import com.staging.sg.common.repository.DmasIssKeyRepository;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -46,6 +52,16 @@ public class DmasJposClient {
     private String forwardingId;
 
     private final AtomicInteger stanSeq = new AtomicInteger(1);
+
+    private final JposHsmService hsm;
+    private final DmasKekRepository kekRepo;
+    private final DmasIssKeyRepository issKeyRepo;
+
+    public DmasJposClient(JposHsmService hsm, DmasKekRepository kekRepo, DmasIssKeyRepository issKeyRepo) {
+        this.hsm = hsm;
+        this.kekRepo = kekRepo;
+        this.issKeyRepo = issKeyRepo;
+    }
 
     private DmasLengthChannel channel;
     private McPackagerEbcdic  packager;
@@ -159,10 +175,53 @@ public class DmasJposClient {
             log.info("[JPOS-CLI] Repondu 0810 DE39=00 au message pousse (DE70={})", de70);
 
             if ("161".equals(de70) && m.hasField(48)) {
-                log.info("[JPOS-CLI] PEK exchange recu (DE48 present) -> a traiter (HSM/KEK) [PAS ENCORE IMPLEMENTE]");
+                processReceivedPek(m);
             }
         } catch (Exception e) {
             log.error("[JPOS-CLI] Erreur reponse au message pousse : {}", e.getMessage(), e);
+        }
+    }
+
+    /** Dechiffre la PEK recue (DE48), verifie le KCV, et la stocke sous LMK issuer. */
+    private void processReceivedPek(ISOMsg m) {
+        try {
+            String de48 = m.getString(48);
+            KeyExchangeBlock keb = KeyExchangeBlock.parseDe48(de48);
+            log.info("[JPOS-CLI] DE48 parse : keyClass={} index={} cycle={} kcv_recu={}",
+                    keb.keyClassId, keb.keyIndex, keb.keyCycle, keb.kcv);
+
+            DmasKek kek = kekRepo.findByMemberGroupId(groupSignonId)
+                    .orElseThrow(() -> new IllegalStateException("KEK introuvable pour " + groupSignonId));
+            if (kek.getKekClear() == null)
+                throw new IllegalStateException("kek_clear absent pour " + groupSignonId);
+
+            int keyLen = (kek.getKeyLength() != null) ? kek.getKeyLength() : 24;
+
+            // Dechiffre sous KEK, reforme sous LMK issuer
+            JposHsmService.KeyResult result = hsm.importWorkingKey("PEK", keb.encryptedKeyHex, kek.getKekClear(), keyLen);
+
+            boolean kcvMatch = result.kcv != null && keb.kcv != null
+                    && result.kcv.equalsIgnoreCase(keb.kcv.substring(0, Math.min(6, keb.kcv.length())));
+            log.info("[JPOS-CLI] PEK dechiffree : KCV calcule={} KCV recu={} match={}", result.kcv, keb.kcv, kcvMatch);
+
+            if (!kcvMatch) {
+                log.error("[JPOS-CLI] KCV mismatch - PEK NON stockee (integrite non verifiee)");
+                return;
+            }
+
+            DmasIssKey ik = issKeyRepo.findByMemberGroupIdAndKeyTypeAndStatus(groupSignonId, "PEK", "ACTIVE")
+                    .orElseGet(DmasIssKey::new);
+            ik.setMemberGroupId(groupSignonId);
+            ik.setKeyType("PEK");
+            ik.setKeyLength(keyLen);
+            ik.setKeyUnderLmk(result.keyUnderLmkHex);
+            ik.setKeyUnderKek(result.keyUnderKekHex.length() > 64 ? result.keyUnderKekHex.substring(0,64) : result.keyUnderKekHex);
+            ik.setKcv(result.kcv);
+            ik.setStatus("ACTIVE");
+            issKeyRepo.save(ik);
+            log.info("[JPOS-CLI] Nouvelle PEK persistee dans dmas_iss_keys (KCV={})", result.kcv);
+        } catch (Exception e) {
+            log.error("[JPOS-CLI] Echec traitement PEK recue : {}", e.getMessage(), e);
         }
     }
 
