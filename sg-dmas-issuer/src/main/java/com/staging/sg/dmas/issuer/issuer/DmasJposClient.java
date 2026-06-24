@@ -122,6 +122,9 @@ public class DmasJposClient {
             log.info("[JPOS-CLI] Message POUSSE recu (non sollicite) : MTI={} DE70={} STAN={}", mti, de70, stan);
             if ("0800".equals(mti)) {
                 handlePushedNetworkMessage(m, de70);
+            } else if ("0820".equals(mti)) {
+                String result = "164".equals(de70) ? "SUCCES" : "ECHEC";
+                log.info("[JPOS-CLI] 0820 PEK exchange advice recu : DE70={} ({})", de70, result);
             } else {
                 log.warn("[JPOS-CLI] MTI pousse non gere : {}", mti);
             }

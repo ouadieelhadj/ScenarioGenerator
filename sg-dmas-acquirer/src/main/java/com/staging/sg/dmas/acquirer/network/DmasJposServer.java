@@ -12,14 +12,16 @@ import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Serveur jPOS cote ACQUEREUR (= reseau Mastercard).
- * Ecoute sur un port dedie (8600) avec DmasLengthChannel + McPackagerEbcdic.
- * Connexion PERMANENTE : garde une reference a la session active (ISOSource)
- * pour pouvoir y ECRIRE a tout moment (push du key exchange system-generated),
- * independamment du cycle requete/reponse.
- * En PARALLELE de l'existant : ne touche pas au transport socket actuel (8500).
+ * Connexion PERMANENTE avec l'issuer : garde la session active (ISOSource)
+ * pour pouvoir y ECRIRE a tout moment (push du key exchange system-generated)
+ * et correle les reponses a nos propres push par STAN (CompletableFuture),
+ * en plus de repondre aux requetes entrantes (sign-on/echo de l'issuer).
  */
 @Component
 public class DmasJposServer {
@@ -34,6 +36,9 @@ public class DmasJposServer {
 
     private volatile ISOSource activeIssuerSession;
     private volatile String    activeMemberGroupId;
+
+    /** Correlation : STAN de NOS push -> future en attente de la reponse (0810/0820). */
+    private final Map<String, CompletableFuture<ISOMsg>> pending = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void start() {
@@ -69,7 +74,24 @@ public class DmasJposServer {
         return activeMemberGroupId;
     }
 
-    /** Ecrit sur la connexion permanente de l'issuer, hors cycle requete/reponse (push). */
+    /** Pousse un message sur la connexion permanente et attend SA reponse (correlee par STAN). */
+    public ISOMsg pushAndWait(ISOMsg msg, int timeoutSeconds) throws Exception {
+        if (activeIssuerSession == null)
+            throw new IllegalStateException("Pas de session issuer active (sign-on non recu)");
+        String stan = msg.hasField(11) ? msg.getString(11) : null;
+        if (stan == null) throw new IllegalStateException("DE11 (STAN) requis pour correler la reponse");
+
+        CompletableFuture<ISOMsg> fut = new CompletableFuture<>();
+        pending.put(stan, fut);
+        try {
+            activeIssuerSession.send(msg);
+            return fut.get(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS);
+        } finally {
+            pending.remove(stan);
+        }
+    }
+
+    /** Pousse un message SANS attendre de reponse (ex: 0820 advice). */
     public void pushOnActiveSession(ISOMsg msg) throws Exception {
         if (activeIssuerSession == null)
             throw new IllegalStateException("Pas de session issuer active (sign-on non recu)");
@@ -81,9 +103,19 @@ public class DmasJposServer {
         public boolean process(ISOSource source, ISOMsg m) {
             try {
                 String mti  = m.getMTI();
+                String stan = m.hasField(11) ? m.getString(11) : null;
+
+                // 1. Est-ce la reponse a un de NOS push (ex: 0810 suite a notre 0800 PEK) ?
+                CompletableFuture<ISOMsg> fut = (stan != null) ? pending.remove(stan) : null;
+                if (fut != null) {
+                    log.info("[JPOS-SRV] Reponse correlee recue : MTI={} STAN={}", mti, stan);
+                    fut.complete(m);
+                    return true; // deja traite, pas de reponse a renvoyer
+                }
+
+                // 2. Sinon, c'est une requete entrante normale (sign-on/echo de l'issuer)
                 String de70 = m.hasField(70) ? m.getString(70) : "?";
-                log.info("[JPOS-SRV] Recu MTI={} DE70={} STAN={}",
-                        mti, de70, m.hasField(11) ? m.getString(11) : "?");
+                log.info("[JPOS-SRV] Recu MTI={} DE70={} STAN={}", mti, de70, stan);
 
                 if (!"0800".equals(mti)) {
                     log.warn("[JPOS-SRV] MTI non gere par ce listener : {}", mti);

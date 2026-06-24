@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.staging.sg.dmas.acquirer.network.DmasJposServer;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -38,17 +39,19 @@ public class McDmasKeyExchange {
     private final HsmService hsm;
     private final DmasKekRepository kekRepo;
     private final DmasAcqKeyRepository acqKeyRepo;
+    private final DmasJposServer dmasJposServer;
 
     @Value("${dmas.issuer-host:localhost}") private String issuerHost;
     @Value("${dmas.issuer-port:8500}")      private int    issuerPort;
     @Value("${dmas.timeout-seconds:30}")    private int    timeoutSeconds;
     private static final String FORWARDING_ID = "002202";
 
-    public McDmasKeyExchange(DmasNetworkUtil net, HsmService hsm, DmasKekRepository kekRepo, DmasAcqKeyRepository acqKeyRepo) {
+    public McDmasKeyExchange(DmasNetworkUtil net, HsmService hsm, DmasKekRepository kekRepo, DmasAcqKeyRepository acqKeyRepo, DmasJposServer dmasJposServer) {
         this.net = net;
         this.hsm = hsm;
         this.kekRepo = kekRepo;
         this.acqKeyRepo = acqKeyRepo;
+        this.dmasJposServer = dmasJposServer;
     }
 
     public Map<String,Object> exchangePek(String memberGroupId) throws Exception {
@@ -104,7 +107,7 @@ public class McDmasKeyExchange {
         keb.logDetail("0800 envoye (DE48)");
 
         String reqHex = ISOUtil.hexString(req.pack());
-        ISOMsg resp = net.sendAndReceive(req, issuerHost, issuerPort, timeoutSeconds);
+        ISOMsg resp = dmasJposServer.pushAndWait(req, timeoutSeconds);
         String rc = net.safeGet(resp, 39);
         boolean ok = "00".equals(rc);
 
@@ -139,6 +142,32 @@ public class McDmasKeyExchange {
             acqKeyRepo.save(ak);
             log.info("[DMAS-ACQ] {} persiste dans dmas_acq_keys (KCV={})", keyType, gen.kcv);
         }
+
+        // 0820 PEK exchange advice : confirme succes (164) ou echec (165) au customer
+        try {
+            String adviceDe70 = ok ? "164" : "165";
+            String adviceStan = net.generateStan();
+            String adviceDt   = new SimpleDateFormat("MMddHHmmss").format(new Date());
+
+            ISOMsg advice = new ISOMsg();
+            advice.setPackager(net.getPackager());
+            advice.setMTI("0820");
+            advice.set(2,  mgid);
+            advice.set(7,  adviceDt);
+            advice.set(11, adviceStan);
+            advice.set(33, FORWARDING_ID);
+            advice.set(63, banknetRef);
+            advice.set(70, adviceDe70);
+
+            dmasJposServer.pushOnActiveSession(advice);
+            log.info("[DMAS-ACQ] 0820 advice envoye : DE70={} (ok={})", adviceDe70, ok);
+            r.put("de070_advice", adviceDe70);
+            r.put("advice_sent", true);
+        } catch (Exception e) {
+            log.error("[DMAS-ACQ] Echec envoi 0820 advice : {}", e.getMessage(), e);
+            r.put("advice_sent", false);
+        }
+
         return r;
     }
 }
