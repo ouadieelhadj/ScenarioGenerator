@@ -15,9 +15,11 @@ import java.util.Date;
 
 /**
  * Serveur jPOS cote ACQUEREUR (= reseau Mastercard).
- * Ecoute sur un port dedie (8600) avec NACChannel + McPackagerEbcdic.
- * Recoit le 0800 sign-on de l'issuer (client) et repond 0810.
- * En PARALLELE de l'existant : ne touche pas au transport socket actuel.
+ * Ecoute sur un port dedie (8600) avec DmasLengthChannel + McPackagerEbcdic.
+ * Connexion PERMANENTE : garde une reference a la session active (ISOSource)
+ * pour pouvoir y ECRIRE a tout moment (push du key exchange system-generated),
+ * independamment du cycle requete/reponse.
+ * En PARALLELE de l'existant : ne touche pas au transport socket actuel (8500).
  */
 @Component
 public class DmasJposServer {
@@ -29,6 +31,9 @@ public class DmasJposServer {
 
     private ISOServer isoServer;
     private Thread    serverThread;
+
+    private volatile ISOSource activeIssuerSession;
+    private volatile String    activeMemberGroupId;
 
     @PostConstruct
     public void start() {
@@ -56,8 +61,22 @@ public class DmasJposServer {
         log.info("[JPOS-SRV] ISOServer arrete");
     }
 
-    /** Repond aux 0800 (sign-on / echo / key exchange) par un 0810. */
-    private static class SignOnListener implements ISORequestListener {
+    public boolean hasActiveSession() {
+        return activeIssuerSession != null;
+    }
+
+    public String getActiveMemberGroupId() {
+        return activeMemberGroupId;
+    }
+
+    /** Ecrit sur la connexion permanente de l'issuer, hors cycle requete/reponse (push). */
+    public void pushOnActiveSession(ISOMsg msg) throws Exception {
+        if (activeIssuerSession == null)
+            throw new IllegalStateException("Pas de session issuer active (sign-on non recu)");
+        activeIssuerSession.send(msg);
+    }
+
+    private class SignOnListener implements ISORequestListener {
         @Override
         public boolean process(ISOSource source, ISOMsg m) {
             try {
@@ -71,7 +90,12 @@ public class DmasJposServer {
                     return false;
                 }
 
-                // Construire la reponse 0810 : echo DE2/7/11/33/70 + DE39=00 + DE63
+                if ("061".equals(de70) && m.hasField(2)) {
+                    activeIssuerSession = source;
+                    activeMemberGroupId = m.getString(2);
+                    log.info("[JPOS-SRV] Session issuer enregistree (memberGroupId={})", activeMemberGroupId);
+                }
+
                 ISOMsg r = new ISOMsg();
                 r.setPackager(m.getPackager());
                 r.setMTI("0810");

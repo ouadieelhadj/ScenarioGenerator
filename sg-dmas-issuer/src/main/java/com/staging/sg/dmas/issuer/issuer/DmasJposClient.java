@@ -1,23 +1,29 @@
 package com.staging.sg.dmas.issuer.issuer;
 
 import com.staging.sg.common.iso.McPackagerEbcdic;
-import org.jpos.iso.ISOMsg;
 import com.staging.sg.common.iso.DmasLengthChannel;
+import org.jpos.iso.ISOMsg;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Client jPOS cote ISSUER (= customer/membre).
- * Ouvre un NACChannel vers l'acquereur (reseau) et ENVOIE le 0800 sign-on conforme.
- * Etape A : sign-on uniquement, en parallele de l'existant.
+ * Connexion PERMANENTE vers l'acquereur : connecte une seule fois (sign-on),
+ * ne se deconnecte jamais. Un thread d'ecoute continu lit tout ce qui arrive
+ * (reponses attendues + messages pousses par l'acquereur comme le PEK exchange).
+ * Corrélation requete/reponse par STAN via CompletableFuture.
  */
 @Component
 public class DmasJposClient {
@@ -41,43 +47,141 @@ public class DmasJposClient {
 
     private final AtomicInteger stanSeq = new AtomicInteger(1);
 
-    /** Construit et envoie un 0800 sign-on conforme, retourne le resultat. */
-    public Map<String,Object> signOn() throws Exception {
-        return sendNetwork("061", "SIGN-ON");   // DE070=061 group sign-on
+    private DmasLengthChannel channel;
+    private McPackagerEbcdic  packager;
+    private Thread            listenerThread;
+    private volatile boolean  running = false;
+
+    /** Correlation requete/reponse : STAN -> future en attente de la reponse. */
+    private final Map<String, CompletableFuture<ISOMsg>> pending = new ConcurrentHashMap<>();
+
+    /** Construit et envoie un 0800 sign-on conforme, retourne le resultat. Connecte si besoin. */
+    public synchronized Map<String,Object> signOn() throws Exception {
+        ensureConnected();
+        return sendAndWait("061", "SIGN-ON");
     }
 
     public Map<String,Object> echoTest() throws Exception {
-        return sendNetwork("270", "ECHO-TEST"); // DE070=270 echo test
+        ensureConnected();
+        return sendAndWait("270", "ECHO-TEST");
     }
 
-    private Map<String,Object> sendNetwork(String de070, String label) throws Exception {
-        McPackagerEbcdic packager = new McPackagerEbcdic();
-        DmasLengthChannel channel = new DmasLengthChannel();
+    /** Echo automatique toutes les 60s pour garder la connexion vivante (keep-alive). */
+    @Scheduled(fixedRate = 60000)
+    public void scheduledEcho() {
+        if (!running) return; // pas encore connecte (pas de sign-on fait)
+        try {
+            Map<String,Object> r = echoTest();
+            log.info("[JPOS-CLI] Keep-alive echo OK : {}", r.get("success"));
+        } catch (Exception e) {
+            log.warn("[JPOS-CLI] Keep-alive echo echoue : {}", e.getMessage());
+        }
+    }
+
+    private void ensureConnected() throws Exception {
+        if (channel != null && channel.isConnected()) return;
+        packager = new McPackagerEbcdic();
+        channel = new DmasLengthChannel();
         channel.setPackager(packager);
         channel.setHost(acquirerHost, acquirerPort);
+        log.info("[JPOS-CLI] Connexion permanente -> {}:{}", acquirerHost, acquirerPort);
+        channel.connect();
+        startListener();
+    }
 
-        String stan = String.format("%06d", stanSeq.getAndIncrement());
+    /** Thread d'ecoute continu : lit tout ce qui arrive sur la connexion permanente. */
+    private void startListener() {
+        running = true;
+        listenerThread = new Thread(() -> {
+            while (running) {
+                try {
+                    ISOMsg m = channel.receive();
+                    handleIncoming(m);
+                } catch (Exception e) {
+                    if (running) log.error("[JPOS-CLI] Erreur ecoute : {}", e.getMessage());
+                    running = false;
+                }
+            }
+        }, "dmas-jpos-client-listener");
+        listenerThread.setDaemon(true);
+        listenerThread.start();
+    }
+
+    /** Route un message recu : soit une reponse attendue (STAN connu), soit un message pousse. */
+    private void handleIncoming(ISOMsg m) {
+        try {
+            String stan = m.hasField(11) ? m.getString(11) : null;
+            CompletableFuture<ISOMsg> fut = (stan != null) ? pending.remove(stan) : null;
+            if (fut != null) {
+                fut.complete(m);
+                return;
+            }
+            // Message non sollicite (push de l'acquereur, ex: PEK exchange system-generated)
+            String mti = m.getMTI();
+            String de70 = m.hasField(70) ? m.getString(70) : "?";
+            log.info("[JPOS-CLI] Message POUSSE recu (non sollicite) : MTI={} DE70={} STAN={}", mti, de70, stan);
+            if ("0800".equals(mti)) {
+                handlePushedNetworkMessage(m, de70);
+            } else {
+                log.warn("[JPOS-CLI] MTI pousse non gere : {}", mti);
+            }
+        } catch (Exception e) {
+            log.error("[JPOS-CLI] Erreur routage message recu : {}", e.getMessage(), e);
+        }
+    }
+
+    /** Traite un 0800 pousse par l'acquereur (ex: PEK exchange DE70=161) et repond 0810. */
+    private void handlePushedNetworkMessage(ISOMsg m, String de70) {
+        try {
+            ISOMsg r = new ISOMsg();
+            r.setPackager(m.getPackager());
+            r.setMTI("0810");
+            if (m.hasField(2))  r.set(2,  m.getString(2));
+            r.set(7,  new SimpleDateFormat("MMddHHmmss").format(new Date()));
+            if (m.hasField(11)) r.set(11, m.getString(11));
+            if (m.hasField(33)) r.set(33, m.getString(33));
+            r.set(39, "00");
+            if (m.hasField(70)) r.set(70, m.getString(70));
+
+            channel.send(r);
+            log.info("[JPOS-CLI] Repondu 0810 DE39=00 au message pousse (DE70={})", de70);
+
+            if ("161".equals(de70) && m.hasField(48)) {
+                log.info("[JPOS-CLI] PEK exchange recu (DE48 present) -> a traiter (HSM/KEK) [PAS ENCORE IMPLEMENTE]");
+            }
+        } catch (Exception e) {
+            log.error("[JPOS-CLI] Erreur reponse au message pousse : {}", e.getMessage(), e);
+        }
+    }
+
+    /** Envoie un 0800 et attend SA reponse (correlee par STAN), avec timeout. */
+    private Map<String,Object> sendAndWait(String de070, String label) throws Exception {
+        String stan = String.format("%07d", stanSeq.getAndIncrement());  // n-7 conforme DE011 (pas de padding implicite)
         String dt   = new SimpleDateFormat("MMddHHmmss").format(new Date());
 
         ISOMsg m = new ISOMsg();
         m.setPackager(packager);
         m.setMTI("0800");
-        m.set(2,  groupSignonId);    // DE002 = Group Sign-on ID numerique (pas un PAN)
-        m.set(7,  dt);               // DE007
-        m.set(11, stan);             // DE011
-        m.set(33, forwardingId);     // DE033 forwarding institution (6 chiffres)
-        m.set(70, de070);         // DE070
-        m.set(94, "0I0    ");     // DE094 service indicator (7 car, padde comme la trace)
-        m.set(96, "000000");      // DE096 message security code (n-6 conforme spec)
+        m.set(2,  groupSignonId);
+        m.set(7,  dt);
+        m.set(11, stan);
+        m.set(33, forwardingId);
+        m.set(70, de070);
+        m.set(94, "0I0    ");
+        m.set(96, "000000");
 
-        log.info("[JPOS-CLI] {} -> connexion {}:{}", label, acquirerHost, acquirerPort);
-        channel.connect();
-        log.info("[JPOS-CLI] {} -> envoi 0800 DE70={} STAN={} memberGroup={}",
-                label, de070, stan, memberGroup);
+        CompletableFuture<ISOMsg> fut = new CompletableFuture<>();
+        pending.put(stan, fut);
+
+        log.info("[JPOS-CLI] {} -> envoi 0800 DE70={} STAN={} memberGroup={}", label, de070, stan, memberGroup);
         channel.send(m);
 
-        ISOMsg resp = channel.receive();
-        channel.disconnect();
+        ISOMsg resp;
+        try {
+            resp = fut.get(15, TimeUnit.SECONDS);
+        } finally {
+            pending.remove(stan);
+        }
 
         String rc = resp.hasField(39) ? resp.getString(39) : "??";
         boolean ok = "00".equals(rc);
