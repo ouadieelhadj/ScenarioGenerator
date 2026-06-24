@@ -190,10 +190,10 @@ public class DmasJposClient {
             log.info("[JPOS-CLI] DE48 parse : keyClass={} index={} cycle={} kcv_recu={}",
                     keb.keyClassId, keb.keyIndex, keb.keyCycle, keb.kcv);
 
-            DmasKek kek = kekRepo.findByMemberGroupId(groupSignonId)
-                    .orElseThrow(() -> new IllegalStateException("KEK introuvable pour " + groupSignonId));
+            DmasKek kek = kekRepo.findByMemberGroupId(memberGroup)
+                    .orElseThrow(() -> new IllegalStateException("KEK introuvable pour " + memberGroup));
             if (kek.getKekClear() == null)
-                throw new IllegalStateException("kek_clear absent pour " + groupSignonId);
+                throw new IllegalStateException("kek_clear absent pour " + memberGroup);
 
             int keyLen = (kek.getKeyLength() != null) ? kek.getKeyLength() : 24;
 
@@ -209,9 +209,9 @@ public class DmasJposClient {
                 return;
             }
 
-            DmasIssKey ik = issKeyRepo.findByMemberGroupIdAndKeyTypeAndStatus(groupSignonId, "PEK", "ACTIVE")
+            DmasIssKey ik = issKeyRepo.findByMemberGroupIdAndKeyTypeAndStatus(memberGroup, "PEK", "ACTIVE")
                     .orElseGet(DmasIssKey::new);
-            ik.setMemberGroupId(groupSignonId);
+            ik.setMemberGroupId(memberGroup);
             ik.setKeyType("PEK");
             ik.setKeyLength(keyLen);
             ik.setKeyUnderLmk(result.keyUnderLmkHex);
