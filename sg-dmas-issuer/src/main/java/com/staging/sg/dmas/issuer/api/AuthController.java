@@ -52,10 +52,10 @@ public class AuthController {
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
-        String token = jwtService.generateToken(user.getLogin(), user.getRole().name());
+        String token = jwtService.generateToken(user.getLogin(), user.getRole());
         log.info("[AUTH] Login success — login={} role={}", user.getLogin(), user.getRole());
 
         return ResponseEntity.ok(new LoginResponse(
-                token, user.getLogin(), user.getRole().name(), 86400000L));
+                token, user.getLogin(), user.getRole(), 86400000L));
     }
 }
