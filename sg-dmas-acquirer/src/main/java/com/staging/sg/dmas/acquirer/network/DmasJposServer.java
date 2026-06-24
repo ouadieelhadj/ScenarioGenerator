@@ -77,7 +77,8 @@ public class DmasJposServer {
     /** Pousse un message sur la connexion permanente et attend SA reponse (correlee par STAN). */
     public ISOMsg pushAndWait(ISOMsg msg, int timeoutSeconds) throws Exception {
         if (activeIssuerSession == null)
-            throw new IllegalStateException("Pas de session issuer active (sign-on non recu)");
+            throw new IllegalStateException(
+                "Pas de session issuer active - l'issuer doit faire un sign-on avant tout key exchange");
         String stan = msg.hasField(11) ? msg.getString(11) : null;
         if (stan == null) throw new IllegalStateException("DE11 (STAN) requis pour correler la reponse");
 
@@ -86,6 +87,13 @@ public class DmasJposServer {
         try {
             activeIssuerSession.send(msg);
             return fut.get(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (java.io.IOException e) {
+            // Session perimee (ex: issuer redemarre sans nouveau sign-on detecte)
+            activeIssuerSession = null;
+            activeMemberGroupId = null;
+            log.error("[JPOS-SRV] Session issuer perimee/invalide : {} - l'issuer doit refaire un sign-on", e.getMessage());
+            throw new IllegalStateException(
+                "Session issuer perimee (l'issuer a probablement redemarre) - refaire un sign-on", e);
         } finally {
             pending.remove(stan);
         }

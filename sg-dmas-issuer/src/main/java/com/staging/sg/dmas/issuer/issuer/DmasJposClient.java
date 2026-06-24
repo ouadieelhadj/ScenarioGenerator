@@ -67,7 +67,7 @@ public class DmasJposClient {
     }
 
     /** Echo automatique toutes les 60s pour garder la connexion vivante (keep-alive). */
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedRateString = "${dmas.jpos.echo-interval-ms:60000}")
     public void scheduledEcho() {
         if (!running) return; // pas encore connecte (pas de sign-on fait)
         try {
@@ -80,13 +80,22 @@ public class DmasJposClient {
 
     private void ensureConnected() throws Exception {
         if (channel != null && channel.isConnected()) return;
-        packager = new McPackagerEbcdic();
-        channel = new DmasLengthChannel();
-        channel.setPackager(packager);
-        channel.setHost(acquirerHost, acquirerPort);
-        log.info("[JPOS-CLI] Connexion permanente -> {}:{}", acquirerHost, acquirerPort);
-        channel.connect();
-        startListener();
+        try {
+            packager = new McPackagerEbcdic();
+            channel = new DmasLengthChannel();
+            channel.setPackager(packager);
+            channel.setHost(acquirerHost, acquirerPort);
+            log.info("[JPOS-CLI] Connexion permanente -> {}:{}", acquirerHost, acquirerPort);
+            channel.connect();
+            startListener();
+        } catch (Exception e) {
+            channel = null;
+            log.error("[JPOS-CLI] Acquereur non joignable sur {}:{} - {} (verifier que le module acquereur est demarre)",
+                    acquirerHost, acquirerPort, e.getMessage());
+            throw new IllegalStateException(
+                "Acquereur indisponible sur " + acquirerHost + ":" + acquirerPort
+                + " - demarrer le module acquereur puis reessayer", e);
+        }
     }
 
     /** Thread d'ecoute continu : lit tout ce qui arrive sur la connexion permanente. */

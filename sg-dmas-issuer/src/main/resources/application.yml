@@ -18,6 +18,8 @@ server:
   port: 8501
 
 dmas:
+  jpos:
+    echo-interval-ms: 5000
   member-group-id: TESTGRP01
   iso-port: 8500
   lmk:
