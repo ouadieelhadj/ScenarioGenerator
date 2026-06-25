@@ -1,6 +1,7 @@
 package com.staging.sg.dmas.acquirer.network;
 
 import com.staging.sg.dmas.acquirer.api.LoadTestRequest;
+import com.staging.sg.common.iso.DmasNetworkUtil;
 import org.jpos.iso.ISOMsg;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,17 +25,17 @@ public class LoadTestService {
 
     private final McDmasAuthorization auth;
     private final DmasJposServer jposServer;
+    private final DmasNetworkUtil net;
     private final java.util.concurrent.Semaphore slots;
 
     // STAN unique en charge (cycle 6 chiffres, base aleatoire pour limiter collisions inter-flux)
-    private final AtomicInteger stanSeq = new AtomicInteger(new Random().nextInt(900000));
-
     private final Map<String, LoadTestRun> runs = new ConcurrentHashMap<>();
 
-    public LoadTestService(McDmasAuthorization auth, DmasJposServer jposServer,
+    public LoadTestService(McDmasAuthorization auth, DmasJposServer jposServer, DmasNetworkUtil net,
                            @Value("${dmas.loadtest.max-concurrent-tests:1}") int maxConcurrent) {
         this.auth = auth;
         this.jposServer = jposServer;
+        this.net = net;
         this.slots = new java.util.concurrent.Semaphore(Math.max(1, maxConcurrent));
     }
 
@@ -63,8 +64,7 @@ public class LoadTestService {
     }
 
     private String nextStan() {
-        int v = Math.floorMod(stanSeq.getAndIncrement(), 1_000_000);
-        return String.format("%06d", v);
+        return net.generateStan();  // compteur atomique partage (unicite globale)
     }
 
     /** Lance un load test asynchrone. Retourne le loadTestId. */

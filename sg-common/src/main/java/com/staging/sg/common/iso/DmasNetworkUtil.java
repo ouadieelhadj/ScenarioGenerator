@@ -16,6 +16,7 @@ import java.util.Random;
  */
 @Component
 public class DmasNetworkUtil {
+    private final java.util.concurrent.atomic.AtomicInteger stanSeq = new java.util.concurrent.atomic.AtomicInteger(new java.util.Random().nextInt(900000));
 
     private static final Logger log = LoggerFactory.getLogger(DmasNetworkUtil.class);
 
@@ -26,9 +27,11 @@ public class DmasNetworkUtil {
     }
 
     public String generateStan() {
-        // n-7 conforme spec DMAS (DE011) - genere directement en 7 chiffres
-        // pour eviter le mismatch de correlation cause par le padding EBCDIC implicite
-        return String.format("%06d", Math.abs(new Random().nextInt()) % 1_000_000);
+        // n-6 conforme spec DMAS (DE011 p.297). Compteur atomique PARTAGE (singleton)
+        // -> STAN globalement unique entre tous les flux (auth, advice, reversal, loadtest)
+        // -> evite les collisions de correlation dans la map pending de DmasJposServer.
+        int v = Math.floorMod(stanSeq.getAndIncrement(), 1_000_000);
+        return String.format("%06d", v);
     }
 
     public String generateRrn() {
