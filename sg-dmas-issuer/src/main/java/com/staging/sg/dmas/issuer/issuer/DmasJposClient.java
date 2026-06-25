@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * (reponses attendues + messages pousses par l'acquereur comme le PEK exchange).
  * Corrélation requete/reponse par STAN via CompletableFuture.
  */
+import org.springframework.context.annotation.Lazy;
 @Component
 public class DmasJposClient {
 
@@ -57,10 +58,14 @@ public class DmasJposClient {
     private final DmasKekRepository kekRepo;
     private final DmasIssKeyRepository issKeyRepo;
 
-    public DmasJposClient(JposHsmService hsm, DmasKekRepository kekRepo, DmasIssKeyRepository issKeyRepo) {
+    private final McDmasIssuer mcDmasIssuer;
+
+    public DmasJposClient(JposHsmService hsm, DmasKekRepository kekRepo, DmasIssKeyRepository issKeyRepo,
+                          @Lazy McDmasIssuer mcDmasIssuer) {
         this.hsm = hsm;
         this.kekRepo = kekRepo;
         this.issKeyRepo = issKeyRepo;
+        this.mcDmasIssuer = mcDmasIssuer;
     }
 
     private DmasLengthChannel channel;
@@ -147,6 +152,8 @@ public class DmasJposClient {
             log.info("[JPOS-CLI] Message POUSSE recu (non sollicite) : MTI={} DE70={} STAN={}", mti, de70, stan);
             if ("0800".equals(mti)) {
                 handlePushedNetworkMessage(m, de70);
+            } else if ("0100".equals(mti)) {
+                handlePushedAuthorization(m);
             } else if ("0820".equals(mti)) {
                 String result = "164".equals(de70) ? "SUCCES" : "ECHEC";
                 log.info("[JPOS-CLI] 0820 PEK exchange advice recu : DE70={} ({})", de70, result);
@@ -155,6 +162,19 @@ public class DmasJposClient {
             }
         } catch (Exception e) {
             log.error("[JPOS-CLI] Erreur routage message recu : {}", e.getMessage(), e);
+        }
+    }
+
+    /** Traite un 0100 pousse par l'acquereur (autorisation) : decide + repond 0110 sur le canal permanent. */
+    private void handlePushedAuthorization(ISOMsg m) {
+        try {
+            String stan = m.hasField(11) ? m.getString(11) : "?";
+            log.info("[JPOS-CLI] 0100 AUTORISATION recue (STAN={}) -> decision metier", stan);
+            ISOMsg resp = mcDmasIssuer.buildAuthResponse(m);
+            channel.send(resp);
+            log.info("[JPOS-CLI] 0110 renvoye DE39={} STAN={}", resp.hasField(39) ? resp.getString(39) : "?", stan);
+        } catch (Exception e) {
+            log.error("[JPOS-CLI] Erreur traitement 0100 pousse : {}", e.getMessage(), e);
         }
     }
 
@@ -227,7 +247,7 @@ public class DmasJposClient {
 
     /** Envoie un 0800 et attend SA reponse (correlee par STAN), avec timeout. */
     private Map<String,Object> sendAndWait(String de070, String label) throws Exception {
-        String stan = String.format("%07d", stanSeq.getAndIncrement());  // n-7 conforme DE011 (pas de padding implicite)
+        String stan = String.format("%06d", stanSeq.getAndIncrement());  // n-6 conforme DE011 (spec p.297)
         String dt   = new SimpleDateFormat("MMddHHmmss").format(new Date());
 
         ISOMsg m = new ISOMsg();

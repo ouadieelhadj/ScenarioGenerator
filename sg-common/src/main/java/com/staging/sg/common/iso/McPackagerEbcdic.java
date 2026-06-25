@@ -34,7 +34,7 @@ public class McPackagerEbcdic extends ISOBasePackager {
         // DE7 : MMDDhhmmss (transmission date & time)
         fields[7]  = new IFE_NUMERIC (10, "TRANSMISSION DATE AND TIME");
         // DE11 : STAN
-        fields[11] = new IFE_NUMERIC (7,  "SYSTEM TRACE AUDIT NUMBER");
+        fields[11] = new IFE_NUMERIC (6,  "SYSTEM TRACE AUDIT NUMBER");
         // === DE de transaction 0100/0110 ===
         // DE3 : processing code — n-6
         fields[3]  = new IFE_NUMERIC (6,  "PROCESSING CODE");

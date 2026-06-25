@@ -31,6 +31,7 @@ public class McDmasAuthorization {
     private final DmasNetworkUtil net;
     private final HsmService hsm;
     private final DmasAcqKeyRepository acqKeyRepo;
+    private final DmasJposServer jposServer;
 
     @Value("${dmas.issuer-host:localhost}") private String issuerHost;
     @Value("${dmas.issuer-port:8500}")      private int    issuerPort;
@@ -40,10 +41,12 @@ public class McDmasAuthorization {
     @Value("${dmas.default-currency:840}")  private String defaultCurrency;
     @Value("${dmas.default-mcc:5999}")      private String defaultMcc;
 
-    public McDmasAuthorization(DmasNetworkUtil net, HsmService hsm, DmasAcqKeyRepository acqKeyRepo) {
+    public McDmasAuthorization(DmasNetworkUtil net, HsmService hsm, DmasAcqKeyRepository acqKeyRepo,
+                               DmasJposServer jposServer) {
         this.net = net;
         this.hsm = hsm;
         this.acqKeyRepo = acqKeyRepo;
+        this.jposServer = jposServer;
     }
 
     /** Type métier -> (DE3 sf1, DE61 sf7, PIN requis). */
@@ -81,7 +84,8 @@ public class McDmasAuthorization {
      * @param pin      PIN clair (peut être null si type sans PIN)
      */
     public Map<String,Object> sendAuthorization(String typeStr, String pan, String amount,
-                                                String pin, String terminalId, String acceptorId) throws Exception {
+                                                String pin, String terminalId, String acceptorId, String entryMode,
+                                                String transport) throws Exception {
         TxType type = TxType.from(typeStr);
 
         // Processing code DE3 = [sf1][00][00] (from/to account par défaut)
@@ -108,6 +112,8 @@ public class McDmasAuthorization {
         if (acceptorId != null) msg.set(42, acceptorId);
         msg.set(49, defaultCurrency);
         msg.set(61, de61);
+        msg.set(48, buildDe48(entryMode));
+        log.info("[DMAS-AUTH] DE48 Additional Data    = {} (entryMode={})", msg.getString(48), entryMode);
 
         // PIN (DE52) chiffré sous PEK si fourni
         String pinKcv = null;
@@ -139,13 +145,22 @@ public class McDmasAuthorization {
         log.info("[DMAS-AUTH] DE61 POS Data           = {}", de61);
 
         String reqHex = ISOUtil.hexString(msg.pack());
-        ISOMsg resp = net.sendAndReceive(msg, issuerHost, issuerPort, timeoutSeconds);
+        boolean jpos = "jpos".equalsIgnoreCase(transport == null ? "" : transport.trim());
+        ISOMsg resp;
+        if (jpos) {
+            log.info("[DMAS-AUTH] Transport = JPOS (connexion permanente, pushAndWait STAN={})", stan);
+            resp = jposServer.pushAndWait(msg, timeoutSeconds);
+        } else {
+            log.info("[DMAS-AUTH] Transport = SOCKET ephemere ({}:{})", issuerHost, issuerPort);
+            resp = net.sendAndReceive(msg, issuerHost, issuerPort, timeoutSeconds);
+        }
         String rc = net.safeGet(resp, 39);
         boolean approved = "00".equals(rc);
 
         log.info("[DMAS-AUTH] <- 0110 DE39={} approved={}", rc, approved);
 
         Map<String,Object> r = new LinkedHashMap<>();
+        r.put("transport", jpos ? "jpos" : "socket");
         r.put("type", type.name());
         r.put("mti_response", resp.getMTI());
         r.put("de003_processing_code", processingCode);
@@ -170,5 +185,23 @@ public class McDmasAuthorization {
     private String maskPan(String pan) {
         if (pan == null || pan.length() < 10) return pan;
         return pan.substring(0, 6) + "****" + pan.substring(pan.length() - 4);
+    }
+
+    /**
+     * Construit DE48 (Additional Data: Private Use) selon le mode d'entree.
+     * Structure subelement : SE-ID(2) + SE-len(2) + data.
+     *  - CARD_PRESENT : SE61 (POS Data Extended) n-5 = "00001"
+     *  - ECOM         : SE42 (E-Commerce Indicators) n-7 = "0103210" (obligatoire e-commerce)
+     *                   + SE61 n-5 = "00001"
+     * Conforme trace CIS (Tag42=[0103210], Tag61=[00001]).
+     */
+    private String buildDe48(String entryMode) {
+        boolean ecom = "ECOM".equalsIgnoreCase(entryMode == null ? "" : entryMode.trim());
+        StringBuilder sb = new StringBuilder();
+        if (ecom) {
+            sb.append("42").append("07").append("0103210"); // SE42 e-commerce
+        }
+        sb.append("61").append("05").append("00001");        // SE61 POS data extended
+        return sb.toString();
     }
 }

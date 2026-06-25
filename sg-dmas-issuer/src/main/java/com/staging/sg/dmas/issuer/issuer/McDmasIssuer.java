@@ -16,6 +16,8 @@ import com.staging.sg.common.entity.DmasIssKey;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.jpos.iso.ISOMsg;
+import org.jpos.iso.ISOException;
+import org.jpos.iso.ISOException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -243,7 +245,20 @@ public class McDmasIssuer {
 
         String rc = decide(request, pan, amountS);
 
-        // Construire la réponse 0110 : échoe DE2,3,4,7,11 + DE39
+        // Construire la reponse 0110 via methode reutilisable, puis envoyer sur le socket
+        ISOMsg resp = buildAuthResponse(request);
+        net.send(out, resp);
+        log.info("[DMAS-ISS] -> reponse 0110 (transport socket) envoyee");
+    }
+
+    /**
+     * Construit la reponse 0110 a partir d'un 0100 (decision metier + echo DE) SANS l'envoyer.
+     * Reutilisable par le transport jPOS permanent (DmasJposClient) comme par le socket.
+     */
+    public ISOMsg buildAuthResponse(ISOMsg request) throws ISOException {
+        String pan     = net.safeGet(request, 2);
+        String amountS = net.safeGet(request, 4);
+        String rc = decide(request, pan, amountS);
         ISOMsg resp = new ISOMsg();
         resp.setPackager(net.getPackager());
         resp.setMTI("0110");
@@ -253,9 +268,8 @@ public class McDmasIssuer {
         if (request.hasField(7))  resp.set(7,  request.getString(7));
         if (request.hasField(11)) resp.set(11, request.getString(11));
         resp.set(39, rc);
-
-        net.send(out, resp);
-        log.info("[DMAS-ISS] -> réponse 0110 DE39={} ({})", rc, rcLabel(rc));
+        log.info("[DMAS-ISS] 0110 construit DE39={} ({})", rc, rcLabel(rc));
+        return resp;
     }
 
     /** Moteur de décision : retourne le response code DE39. */

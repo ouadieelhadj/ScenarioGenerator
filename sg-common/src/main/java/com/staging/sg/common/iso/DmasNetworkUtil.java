@@ -28,7 +28,7 @@ public class DmasNetworkUtil {
     public String generateStan() {
         // n-7 conforme spec DMAS (DE011) - genere directement en 7 chiffres
         // pour eviter le mismatch de correlation cause par le padding EBCDIC implicite
-        return String.format("%07d", Math.abs(new Random().nextInt()) % 10_000_000);
+        return String.format("%06d", Math.abs(new Random().nextInt()) % 1_000_000);
     }
 
     public String generateRrn() {

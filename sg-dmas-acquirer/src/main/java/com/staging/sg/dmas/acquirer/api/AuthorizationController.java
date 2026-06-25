@@ -35,6 +35,8 @@ public class AuthorizationController {
         public String pin;         // optionnel
         public String terminalId;  // optionnel
         public String acceptorId;  // optionnel
+        public String entryMode;   // ECOM ou CARD_PRESENT (defaut CARD_PRESENT)
+        public String transport;   // jpos (connexion permanente) ou socket (ephemere, defaut)
     }
 
     @PostMapping("/auth")
@@ -45,7 +47,8 @@ public class AuthorizationController {
                         "error", "Champs requis manquants : type, pan, amount"));
             }
             Map<String,Object> result = auth.sendAuthorization(
-                    req.type, req.pan, req.amount, req.pin, req.terminalId, req.acceptorId);
+                    req.type, req.pan, req.amount, req.pin, req.terminalId, req.acceptorId, req.entryMode,
+                    req.transport);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             log.warn("[DMAS-AUTH] type invalide : {}", e.getMessage());

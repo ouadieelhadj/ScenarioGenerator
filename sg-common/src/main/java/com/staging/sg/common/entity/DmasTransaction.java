@@ -12,7 +12,7 @@ public class DmasTransaction {
     private Long id;
 
     @Column(name = "pan",             length = 19) private String pan;
-    @Column(name = "stan",            length = 6)  private String stan;
+    @Column(name = "stan",            length = 12) private String stan;
     @Column(name = "transmission_dt", length = 10) private String transmissionDt;
     @Column(name = "mti",             length = 4)  private String mti;
     @Column(name = "processing_code", length = 6)  private String processingCode;
