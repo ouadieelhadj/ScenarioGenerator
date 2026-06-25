@@ -62,6 +62,20 @@ public class DmasClient {
         }
     }
 
+    /** GET JSON authentifie. Renvoie le corps de reponse brut (String). */
+    public String getJson(String baseUrl, String path, String token) {
+        try {
+            org.springframework.http.HttpHeaders h = new org.springframework.http.HttpHeaders();
+            h.setBearerAuth(token);
+            org.springframework.http.HttpEntity<Void> req = new org.springframework.http.HttpEntity<>(h);
+            org.springframework.http.ResponseEntity<String> resp =
+                http.exchange(baseUrl + path, org.springframework.http.HttpMethod.GET, req, String.class);
+            return resp.getBody();
+        } catch (Exception e) {
+            return "{\"error\":\"getJson failed: " + e.getMessage() + "\"}";
+        }
+    }
+
     public Map<?,?> parse(String json) {
         try {
             return mapper.readValue(json, Map.class);

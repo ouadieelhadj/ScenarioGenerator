@@ -1,5 +1,6 @@
 package com.staging.sg.acquirer.api;
 
+import com.staging.sg.acquirer.service.LoadTestOrchestrationService;
 import com.staging.sg.acquirer.service.ExecutionService;
 import com.staging.sg.common.entity.Execution;
 import org.slf4j.Logger;
@@ -19,9 +20,12 @@ public class ExecutionController {
     private static final Logger log = LoggerFactory.getLogger(ExecutionController.class);
 
     private final ExecutionService executionService;
+    private final LoadTestOrchestrationService loadTestOrch;
 
-    public ExecutionController(ExecutionService executionService) {
+    public ExecutionController(ExecutionService executionService,
+                               LoadTestOrchestrationService loadTestOrch) {
         this.executionService = executionService;
+        this.loadTestOrch = loadTestOrch;
     }
 
     // POST /api/executions/start/{testId}?mode=CHARGE&persist=true
@@ -44,6 +48,17 @@ public class ExecutionController {
     }
 
     // POST /api/executions/stop/{executionId}
+    @PostMapping("/loadtest/{testId}")
+    public ResponseEntity<?> loadtest(@PathVariable Long testId, Authentication auth) {
+        try {
+            Map<String, Object> result = loadTestOrch.start(testId, auth.getName());
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            log.error("[API] loadtest error : {}", e.getMessage());
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PostMapping("/stop/{executionId}")
     public ResponseEntity<?> stop(@PathVariable Long executionId) {
         try {
@@ -77,7 +92,7 @@ public class ExecutionController {
 
     // GET /api/executions/admin/history
     @GetMapping("/admin/history")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('EXECUTION_VIEW')")
     public ResponseEntity<List<Execution>> adminHistory() {
         try {
             return ResponseEntity.ok(executionService.getAllHistory());
