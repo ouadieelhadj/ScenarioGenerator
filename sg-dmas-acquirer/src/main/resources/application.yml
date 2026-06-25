@@ -18,6 +18,8 @@ server:
 
 dmas:
   member-group-id: TESTGRP01
+  loadtest:
+    max-concurrent-tests: 1
   issuer-host: localhost
   issuer-port: 8500
   lmk:

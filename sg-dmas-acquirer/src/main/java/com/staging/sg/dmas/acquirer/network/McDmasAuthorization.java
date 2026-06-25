@@ -175,6 +175,31 @@ public class McDmasAuthorization {
     }
 
     /** Construit le DE61 POS Data avec le sf7 (POS Transaction Status) à la bonne position. */
+    /**
+     * Construit un 0100 minimal pour le LOAD TEST (pas de PIN, STAN fourni par l'appelant
+     * pour garantir l'unicite en charge concurrente). Reutilise buildDe48/buildPosData.
+     */
+    public org.jpos.iso.ISOMsg buildAuth0100(String pan, String amount, String entryMode, String stan) throws Exception {
+        String processingCode = "000000";
+        String de61 = buildPosData("0");
+        String dtUtc = new java.text.SimpleDateFormat("MMddHHmmss").format(new java.util.Date());
+        org.jpos.iso.ISOMsg msg = new org.jpos.iso.ISOMsg();
+        msg.setPackager(net.getPackager());
+        msg.setMTI("0100");
+        msg.set(2,  pan);
+        msg.set(3,  processingCode);
+        msg.set(4,  amount);
+        msg.set(7,  dtUtc);
+        msg.set(11, stan);
+        msg.set(18, defaultMcc);
+        msg.set(22, "051");
+        msg.set(32, acquirerId);
+        msg.set(49, defaultCurrency);
+        msg.set(61, de61);
+        msg.set(48, buildDe48(entryMode));
+        return msg;
+    }
+
     private String buildPosData(String sf7) {
         // Format simplifié : 12 positions, sf7 en position 7, reste à 0
         StringBuilder sb = new StringBuilder("000000000000");

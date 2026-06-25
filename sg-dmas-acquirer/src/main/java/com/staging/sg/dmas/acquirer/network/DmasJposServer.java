@@ -35,6 +35,7 @@ public class DmasJposServer {
     private Thread    serverThread;
 
     private volatile ISOSource activeIssuerSession;
+    private final Object sendLock = new Object();
     private volatile String    activeMemberGroupId;
 
     /** Correlation : STAN de NOS push -> future en attente de la reponse (0810/0820). */
@@ -85,7 +86,9 @@ public class DmasJposServer {
         CompletableFuture<ISOMsg> fut = new CompletableFuture<>();
         pending.put(stan, fut);
         try {
-            activeIssuerSession.send(msg);
+            synchronized (sendLock) {
+                activeIssuerSession.send(msg);
+            }
             return fut.get(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS);
         } catch (java.io.IOException e) {
             // Session perimee (ex: issuer redemarre sans nouveau sign-on detecte)
