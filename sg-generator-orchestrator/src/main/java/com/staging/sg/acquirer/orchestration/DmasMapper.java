@@ -20,6 +20,7 @@ public class DmasMapper {
         body.put("amount", formatAmount(t.getDe4Amount()));   // n-12 "000000030000"
         if (t.getDe41TerminalId() != null) body.put("terminalId", t.getDe41TerminalId());
         if (t.getDe42MerchantId() != null) body.put("acceptorId", t.getDe42MerchantId());
+        body.put("transport", "jpos");  // forcer la connexion permanente jPOS
         // pas de PIN : nos transactions n'en génèrent pas (purchase sans PIN)
         return body;
     }

@@ -83,6 +83,7 @@ public class TpsEngine {
             body.put("pan", req.getDE002_PAN());
             body.put("amount", String.format("%012d", req.getDE004_AMOUNT()));
             if (req.getDE052_PIN() != null) body.put("pin", req.getDE052_PIN());
+            body.put("transport", "jpos");  // forcer la connexion permanente jPOS
             String resp = dmasClient.postJson(dmasAcquirerUrl, "/api/admin/dmas/auth", token, body);
             java.util.Map<?,?> json = dmasClient.parse(resp);
             String de39 = String.valueOf(json.get("de039_response_code"));
