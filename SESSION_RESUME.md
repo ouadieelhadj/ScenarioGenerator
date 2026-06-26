@@ -51,13 +51,36 @@ tirer au hasard parmi les cartes reelles de `dmas_cards`, et chiffrer le PIN par
 - [FAIT] Etape 2 : LoadTestRequest enrichi (withPin + List<CardEntry> cards) ;
   LoadTestService.submitOne tire une carte au hasard par transaction (ThreadLocalRandom)
   et appelle buildAuth0100WithPin ou buildAuth0100 selon withPin. Compile ACQ:0.
-- [EN COURS] Etape 3 : CampaignRunService — injection DmasCardRepository [FAIT],
-  lecture DE002_PAN_MODE + WITH_PIN du config, chargement du pool de cartes,
-  ajout de cards + withPin dans le body POST /loadtest. PATCH APPLIQUE,
-  COMPILE A CONFIRMER (ORCH:?).
-- [A FAIRE] Etape 4 : test bout-en-bout d'une campagne RANDOM + WITH_PIN
-  (prerequis : sign-on + key exchange pour avoir une PEK ACTIVE).
-- [A FAIRE] Etape 5 : versioning v1.1.0 (VERSION=1.1.0, CHANGELOG, guide, tag v1.1.0).
+- [FAIT] Etape 3 : CampaignRunService — injection DmasCardRepository, lecture
+  DE002_PAN_MODE + WITH_PIN du config, chargement du pool de cartes (ACTIVE, solde>0),
+  ajout de cards + withPin dans le body POST /loadtest. Compile ORCH:0.
+  => TOUT LE CODE v1.1.0 EST ECRIT ET COMPILE (acquereur + orchestrateur).
+
+- [A FAIRE — REPRENDRE ICI DEMAIN] Etape 4 : test bout-en-bout.
+  1. Redemarrer l'orchestrateur dans IntelliJ (nouveau code).
+  2. Verifier qu'une PEK ACTIVE existe (requise pour WITH_PIN) :
+     sgsql -c "SELECT member_group_id, key_type, status, kcv FROM dmas_acq_keys WHERE key_type='PEK' AND status='ACTIVE';"
+     - si AUCUNE PEK -> faire un key exchange d'abord, OU tester d'abord en RANDOM sans PIN.
+  3. Sign-on : POST 8501/api/admin/dmas/jpos/signon
+  4. Creer une campagne RANDOM + WITH_PIN (SQL) :
+     INSERT INTO campaigns (name, description, category, config, active, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min)
+     VALUES ('CAMP-RANDOM-PIN', 'tirage cartes reelles + PIN', 'DMAS',
+             '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":true,"DE004_AMOUNT":1000}', TRUE,
+             (SELECT id FROM users WHERE login='admin'), 600, 10.00, 80.00) RETURNING id;
+     + ajouter des paliers dans campaign_load_steps (ex: 5 TPS/3s, 15 TPS/3s, 5 TPS/3s)
+  5. Lancer : POST 8080/api/campaigns/{id}/run
+  6. Verifier en base : repartition par carte (PANs varies dans campaign_execution_results),
+     verdict, et cote logs/dmas-acquirer : DE52 PIN block present.
+  Resultat attendu : transactions sur plusieurs cartes differentes, PIN chiffre, approuvees.
+
+- [A FAIRE] Etape 5 : versioning v1.1.0 (VERSION=1.1.0, CHANGELOG, guide v1.1.0 + entree
+  historique des revisions, commit, tag v1.1.0). Committer AUSSI le code v1.1.0 (4 fichiers).
+
+**Fichiers modifies pour v1.1.0 (a committer demain) :**
+- sg-dmas-acquirer/.../network/McDmasAuthorization.java (buildAuth0100WithPin)
+- sg-dmas-acquirer/.../api/LoadTestRequest.java (withPin + List<CardEntry> cards)
+- sg-dmas-acquirer/.../network/LoadTestService.java (tirage carte + choix PIN dans submitOne)
+- sg-generator-orchestrator/.../service/CampaignRunService.java (injection cardRepo + logique RANDOM/withPin)
 
 **Point d'attention :** WITH_PIN exige une PEK ACTIVE (key exchange prealable).
 Prevoir une verification au lancement (refus clair si pas de PEK).
