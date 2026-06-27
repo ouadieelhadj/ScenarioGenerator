@@ -39,6 +39,7 @@ public class CampaignRunService {
     private final CampaignExecutionResultRepository resultRepo;
     private final UserRepository userRepo;
     private final DmasClient dmasClient;
+    private final DmasCardRepository cardRepo;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${dmas.acquirer.base-url:http://localhost:8084}") private String acquirerUrl;
@@ -53,13 +54,15 @@ public class CampaignRunService {
                               CampaignExecutionRepository execRepo,
                               CampaignExecutionResultRepository resultRepo,
                               UserRepository userRepo,
-                              DmasClient dmasClient) {
+                              DmasClient dmasClient,
+                              DmasCardRepository cardRepo) {
         this.campaignRepo = campaignRepo;
         this.stepRepo = stepRepo;
         this.execRepo = execRepo;
         this.resultRepo = resultRepo;
         this.userRepo = userRepo;
         this.dmasClient = dmasClient;
+        this.cardRepo = cardRepo;
     }
 
     public Map<String,Object> run(Long campaignId, String userLogin) {
@@ -131,6 +134,27 @@ public class CampaignRunService {
             List<CampaignExecutionResult> allResults = new ArrayList<>();
             CampaignExecution exec = execRepo.findById(execId).orElseThrow();
 
+            // v1.1.0 : mode carte (RANDOM) + PIN depuis le config
+            boolean randomCards = false, withPin = false;
+            try {
+                if (campaign.getConfig() != null && !campaign.getConfig().isBlank()) {
+                    Map<?,?> cfg = objectMapper.readValue(campaign.getConfig(), Map.class);
+                    randomCards = "RANDOM".equalsIgnoreCase(String.valueOf(cfg.get("DE002_PAN_MODE")));
+                    withPin = Boolean.TRUE.equals(cfg.get("WITH_PIN"));
+                }
+            } catch (Exception ce) { log.warn("[CAMPAIGN] parse config (cartes) : {}", ce.getMessage()); }
+            List<Map<String,String>> cardPool = new ArrayList<>();
+            if (randomCards) {
+                cardPool = cardRepo.findAll().stream()
+                    .filter(c -> "ACTIVE".equals(c.getStatus()) && c.getBalance() != null && c.getBalance() > 0)
+                    .map(c -> { Map<String,String> m = new LinkedHashMap<>(); m.put("pan", c.getPan()); m.put("pin", c.getPin()); return m; })
+                    .collect(java.util.stream.Collectors.toList());
+                log.info("[CAMPAIGN] exec={} mode RANDOM : {} cartes dans le pool, withPin={}", execId, cardPool.size(), withPin);
+                if (cardPool.isEmpty()) throw new RuntimeException("Mode RANDOM mais aucune carte ACTIVE avec solde dans dmas_cards");
+            }
+            final boolean fWithPin = withPin;
+            final List<Map<String,String>> fCardPool = cardPool;
+
             // ===== Jouer CHAQUE palier sequentiellement =====
             for (CampaignLoadStep step : steps) {
                 int tps = step.getTpsValue() != null ? step.getTpsValue() : 1;
@@ -148,6 +172,8 @@ public class CampaignRunService {
                 body.put("durationSeconds", dur);
                 body.put("targetTps", tps);
                 body.put("concurrency", conc);
+                body.put("withPin", fWithPin);
+                if (!fCardPool.isEmpty()) body.put("cards", fCardPool);
                 String resp = dmasClient.postJson(acquirerUrl, "/api/admin/dmas/loadtest", token, body);
                 Map<?,?> startJson = dmasClient.parse(resp);
                 String loadTestId = String.valueOf(startJson.get("loadTestId"));
@@ -176,7 +202,8 @@ public class CampaignRunService {
                         CampaignExecutionResult cr = new CampaignExecutionResult();
                         cr.setExecution(exec);
                         cr.setStepOrder(step.getStepOrder());
-                        cr.setPanMasked(maskPan(pan));
+                        String txPan = d.get("pan") != null ? String.valueOf(d.get("pan")) : pan;
+                        cr.setPanMasked(maskPan(txPan));
                         String de39 = String.valueOf(d.get("de39"));
                         cr.setDe039(de39 != null && de39.length() > 2 ? de39.substring(0,2) : de39);
                         cr.setApproved(Boolean.TRUE.equals(d.get("approved")));

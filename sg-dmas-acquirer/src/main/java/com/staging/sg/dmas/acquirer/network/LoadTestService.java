@@ -41,6 +41,7 @@ public class LoadTestService {
 
     /** Detail d'une transaction (pour reporting cote orchestrator). */
     public static class TxDetail {
+        public String  pan;
         public String  de39;
         public boolean approved;
         public long    durationMs;
@@ -135,11 +136,26 @@ public class LoadTestService {
 
     private void submitOne(ExecutorService pool, LoadTestRequest req, LoadTestRun run, int timeout) {
         final String stan = nextStan();
+        // v1.1.0 : tirage d'une carte au hasard dans le pool si fourni, sinon PAN fixe
+        final String txPan;
+        final String txPin;
+        if (req.cards != null && !req.cards.isEmpty()) {
+            LoadTestRequest.CardEntry c = req.cards.get(
+                    java.util.concurrent.ThreadLocalRandom.current().nextInt(req.cards.size()));
+            txPan = c.pan;
+            txPin = c.pin;
+        } else {
+            txPan = req.pan;
+            txPin = null;
+        }
         pool.submit(() -> {
             TxDetail d = new TxDetail();
+            d.pan = txPan;
             long t0 = System.currentTimeMillis();
             try {
-                ISOMsg msg = auth.buildAuth0100(req.pan, req.amount, req.entryMode, stan);
+                ISOMsg msg = req.withPin
+                        ? auth.buildAuth0100WithPin(txPan, txPin, req.amount, req.entryMode, stan)
+                        : auth.buildAuth0100(txPan, req.amount, req.entryMode, stan);
                 d.requestHex = org.jpos.iso.ISOUtil.hexString(msg.pack());
                 ISOMsg resp = jposServer.pushAndWait(msg, timeout);
                 d.durationMs = System.currentTimeMillis() - t0;

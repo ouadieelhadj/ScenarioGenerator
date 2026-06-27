@@ -200,6 +200,23 @@ public class McDmasAuthorization {
         return msg;
     }
 
+    /**
+     * Variante du 0100 LOAD TEST AVEC PIN : chiffre le PIN block sous PEK (comme le flux normal).
+     * Reutilise hsm.encryptPinBlock + la PEK ACTIVE. Necessite un key exchange prealable.
+     */
+    public org.jpos.iso.ISOMsg buildAuth0100WithPin(String pan, String pin, String amount,
+                                                    String entryMode, String stan) throws Exception {
+        org.jpos.iso.ISOMsg msg = buildAuth0100(pan, amount, entryMode, stan);
+        if (pin != null && !pin.isEmpty()) {
+            com.staging.sg.common.entity.DmasAcqKey pek = acqKeyRepo
+                    .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup, "PEK", "ACTIVE")
+                    .orElseThrow(() -> new IllegalStateException("PEK introuvable - faire un key exchange d'abord"));
+            byte[] pinBlock = hsm.encryptPinBlock(pin, pan, pek.getKeyUnderLmk(), pek.getKcv(), pek.getKeyLength());
+            msg.set(52, pinBlock);
+        }
+        return msg;
+    }
+
     private String buildPosData(String sf7) {
         // Format simplifié : 12 positions, sf7 en position 7, reste à 0
         StringBuilder sb = new StringBuilder("000000000000");
