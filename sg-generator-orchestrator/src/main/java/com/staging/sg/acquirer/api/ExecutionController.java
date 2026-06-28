@@ -29,6 +29,7 @@ public class ExecutionController {
     }
 
     // POST /api/executions/start/{testId}?mode=CHARGE&persist=true
+    @PreAuthorize("hasAuthority('TPS_RUN')")
     @PostMapping("/start/{testId}")
     public ResponseEntity<?> start(@PathVariable Long testId,
                                     @RequestParam(defaultValue = "SIMPLE") String mode,
@@ -48,6 +49,7 @@ public class ExecutionController {
     }
 
     // POST /api/executions/stop/{executionId}
+    @PreAuthorize("hasAuthority('TPS_RUN')")
     @PostMapping("/loadtest/{testId}")
     public ResponseEntity<?> loadtest(@PathVariable Long testId, Authentication auth) {
         try {
@@ -59,6 +61,7 @@ public class ExecutionController {
         }
     }
 
+    @PreAuthorize("hasAuthority('TPS_RUN')")
     @PostMapping("/stop/{executionId}")
     public ResponseEntity<?> stop(@PathVariable Long executionId) {
         try {
