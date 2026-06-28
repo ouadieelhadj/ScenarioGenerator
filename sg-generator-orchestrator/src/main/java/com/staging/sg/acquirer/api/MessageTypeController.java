@@ -27,14 +27,14 @@ public class MessageTypeController {
 
     // POST /api/admin/message-types
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('CATALOG_MANAGE')")
     public ResponseEntity<MessageType> create(@RequestBody MessageType mt) {
         return ResponseEntity.ok(messageTypeRepository.save(mt));
     }
 
     // PUT /api/admin/message-types/{id}
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('CATALOG_MANAGE')")
     public ResponseEntity<MessageType> update(@PathVariable Long id,
                                                @RequestBody MessageType mt) {
         mt.setId(id);
@@ -43,7 +43,7 @@ public class MessageTypeController {
 
     // DELETE /api/admin/message-types/{id}
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('CATALOG_MANAGE')")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         messageTypeRepository.findById(id).ifPresent(m -> {
             m.setActive(false);

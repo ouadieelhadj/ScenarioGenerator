@@ -13,7 +13,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/users")
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAuthority('USER_MANAGE')")
 public class UserController {
 
     private final UserService userService;

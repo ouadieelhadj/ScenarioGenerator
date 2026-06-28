@@ -22,7 +22,7 @@ public class TestController {
 
     // GET /api/admin/tests — tous les tests (admin)
     @GetMapping("/admin/tests")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('EXECUTION_VIEW')")
     public ResponseEntity<List<TestDto>> findAll() {
         return ResponseEntity.ok(testService.findAll());
     }
@@ -36,14 +36,14 @@ public class TestController {
 
     // GET /api/admin/tests/{id}
     @GetMapping("/admin/tests/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('EXECUTION_VIEW')")
     public ResponseEntity<TestDto> findById(@PathVariable Long id) {
         return ResponseEntity.ok(testService.findById(id));
     }
 
     // POST /api/admin/tests
     @PostMapping("/admin/tests")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('TPS_CREATE')")
     public ResponseEntity<TestDto> create(@RequestBody TestDto dto,
                                            Authentication auth) {
         return ResponseEntity.ok(testService.create(dto, auth.getName()));
@@ -51,7 +51,7 @@ public class TestController {
 
     // PUT /api/admin/tests/{id}
     @PutMapping("/admin/tests/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('TPS_CREATE')")
     public ResponseEntity<TestDto> update(@PathVariable Long id,
                                            @RequestBody TestDto dto) {
         return ResponseEntity.ok(testService.update(id, dto));
@@ -59,7 +59,7 @@ public class TestController {
 
     // DELETE /api/admin/tests/{id}
     @DeleteMapping("/admin/tests/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAuthority('TPS_CREATE')")
     public ResponseEntity<?> delete(@PathVariable Long id) {
         testService.delete(id);
         return ResponseEntity.ok(Map.of("message", "Test deleted"));

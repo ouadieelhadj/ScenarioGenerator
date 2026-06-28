@@ -16,6 +16,7 @@ import com.staging.sg.acquirer.network.McNetworkStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
@@ -63,6 +64,7 @@ public class McController {
     }
 
     // POST /api/mc/authorize
+    @PreAuthorize("hasAuthority('TPS_RUN')")
     @PostMapping("/mc/authorize")
     public ResponseEntity<?> authorize(
             @RequestBody(required = false) McAuthRequest request) {
@@ -78,6 +80,7 @@ public class McController {
     }
 
     // POST /api/mc/reversal
+    @PreAuthorize("hasAuthority('TPS_RUN')")
     @PostMapping("/mc/reversal")
     public ResponseEntity<?> reversal(
             @RequestBody(required = false) McReversalRequest request) {
@@ -93,6 +96,7 @@ public class McController {
     }
 
     // POST /api/mc/advice
+    @PreAuthorize("hasAuthority('TPS_RUN')")
     @PostMapping("/mc/advice")
     public ResponseEntity<?> advice(
             @RequestBody(required = false) McAdviceRequest request) {
@@ -108,6 +112,7 @@ public class McController {
     }
 
     // POST /api/mc/network/key-exchange
+    @PreAuthorize("hasAuthority('TPS_RUN')")
     @PostMapping("/mc/network/key-exchange")
     public ResponseEntity<?> keyExchange() {
         try {
@@ -121,6 +126,7 @@ public class McController {
     }
 
     // POST /api/mc/network/signon
+    @PreAuthorize("hasAuthority('TPS_RUN')")
     @PostMapping("/mc/network/signon")
     public ResponseEntity<?> signOn() {
         try {
@@ -134,6 +140,7 @@ public class McController {
     }
 
     // POST /api/mc/network/echo
+    @PreAuthorize("hasAuthority('TPS_RUN')")
     @PostMapping("/mc/network/echo")
     public ResponseEntity<?> echo() {
         try {
