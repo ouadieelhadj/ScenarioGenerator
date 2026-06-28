@@ -156,6 +156,8 @@ public class CampaignRunService {
             final List<Map<String,String>> fCardPool = cardPool;
 
             // ===== Jouer CHAQUE palier sequentiellement =====
+            boolean breakerTripped = false;
+            String breakerDetail = null;
             for (CampaignLoadStep step : steps) {
                 int tps = step.getTpsValue() != null ? step.getTpsValue() : 1;
                 int dur = Math.max(1, step.getEndSeconds() - step.getStartSeconds());
@@ -215,6 +217,18 @@ public class CampaignRunService {
                         allResults.add(cr);
                     }
                 }
+                // Circuit breaker : seuil defini + taux d erreur cumule depasse -> on arrete
+                if (campaign.getStopOnErrorRate() != null && !allResults.isEmpty()) {
+                    long dec = allResults.stream().filter(r -> !Boolean.TRUE.equals(r.getApproved())).count();
+                    double curErr = dec * 100.0 / allResults.size();
+                    if (curErr > campaign.getStopOnErrorRate().doubleValue()) {
+                        breakerDetail = String.format("Circuit breaker: taux err %.1f%% > seuil %s%% apres palier %d",
+                                curErr, campaign.getStopOnErrorRate(), step.getStepOrder());
+                        log.warn("[CAMPAIGN] exec={} {} — arret", execId, breakerDetail);
+                        breakerTripped = true;
+                        break;
+                    }
+                }
             }
 
             // ===== Agreger sur TOUS les paliers =====
@@ -246,10 +260,11 @@ public class CampaignRunService {
             exec.setTpsActualAvg(BigDecimal.valueOf(totalDur > 0 ? total / (double) totalDur : 0)
                     .setScale(2, RoundingMode.HALF_UP));
             exec.setEndedAt(LocalDateTime.now());
-            exec.setStatus("COMPLETED");
+            exec.setStatus(breakerTripped ? "STOPPED_ERROR_RATE" : "COMPLETED");
 
             // ===== VERDICT SLA =====
             computeVerdict(exec, campaign, total, approved, declined);
+            if (breakerTripped && breakerDetail != null) exec.setVerdictDetail(breakerDetail);
 
             execRepo.save(exec);
             if (!allResults.isEmpty()) resultRepo.saveAll(allResults);
