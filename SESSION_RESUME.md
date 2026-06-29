@@ -136,3 +136,37 @@ RBAC verifie : OBSERVATEUR GET=200, POST=403.
 
 ATTENTION : le PUT fait un remplacement COMPLET (pas un merge partiel). Un client doit renvoyer TOUS les champs,
 sinon ils repassent a null. Evolution possible : ajouter un PATCH partiel.
+
+## 7. Session 5 - Champs variables au-dela du PAN (montant)
+
+Commit feat(campagne): champs variables - montant (a push).
+
+OBJECTIF : faire varier des champs du 0100 par transaction, via un sous-champ JSON du config campagne
+(VARIABLE_FIELDS), SANS nouvelle colonne. Premier champ livre : le MONTANT.
+
+ARCHITECTURE (validee) :
+- L'acquereur a deja un moteur a threads (LoadTestService.submitOne, 1 thread/tx sur la ligne permanente),
+  declenche par l'orchestrateur via POST /api/admin/dmas/loadtest. CampaignRunService l'utilise DEJA.
+- Nouvelle PHASE DE PREPARATION cote acquereur : classe TpsCampagnePreparation, construite 1 fois AVANT
+  les threads. Porte les regles de variation, produit les donnees de chaque tx via nextTx() -> PreparedTx
+  (pan, pin, amount, entryMode). Les threads ne decident plus rien : ils envoient ce qui est prepare.
+  -> POINT D'EXTENSION UNIQUE : ajouter un futur champ variable = l'ajouter dans cette classe.
+- Le tirage du PAN (mode cards) a ete deplace de submitOne vers TpsCampagnePreparation (meme logique).
+
+FORMAT config (extensible) :
+  "VARIABLE_FIELDS": { "AMOUNT": { "mode":"RANGE", "min":1000, "max":50000 } }
+  Modes prevus : RANGE (min/max numerique) et LIST (tirage dans une liste). Seul RANGE/AMOUNT implemente.
+
+CHAINE : config campagne -> CampaignRunService lit VARIABLE_FIELDS.AMOUNT -> amountMin/amountMax dans le body
+  -> LoadTestRequest (acquereur) -> TpsCampagnePreparation tire %012d par tx -> buildAuth0100 (DE4).
+Retrocompatible : sans VARIABLE_FIELDS, montant fixe DE004_AMOUNT inchange.
+
+DECISION : PAN reste en mode RANDOM (pool lu en base au lancement cote ORCHESTRATEUR, tire en memoire cote
+  acquereur - l'acquereur n'accede JAMAIS la base par tx). On NE met PAS les PANs/PINs dans le JSON (PCI +
+  soldes obsoletes). VARIABLE_FIELDS sert aux champs SANS source base.
+
+TESTE E2E : campagne creee via API CRUD, config AMOUNT RANGE [1000,50000], 40 tx -> 12 montants distincts
+  tous dans la plage (decodes du DE4 dans request_hex). Test acquereur isole aussi OK avant branchement campagne.
+
+A SUIVRE : etendre VARIABLE_FIELDS a ENTRY_MODE (DE22, deja param de buildAuth0100, quasi gratuit), puis
+  PROC_CODE (DE3) et DE43 (necessitent d'etendre buildAuth0100, champs en dur aujourd'hui : DE3=000000, DE22=051).
