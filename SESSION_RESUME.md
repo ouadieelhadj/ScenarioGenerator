@@ -116,3 +116,23 @@ Derniers commits feature/multi-module :
 - ff27d78  chore renommage log GeneratorOrchestrator.log
 - 4b74e9b  docs SESSION_RESUME audit RBAC  [= origin]
 - 0cb7e17  feat circuit breaker (stop_on_error_rate)  [local, pas encore push]
+
+## 6. Session 4 - CRUD campagnes via API
+
+Commit feat(campagne): CRUD via API (a push).
+Endpoints CampaignController (sous /api/campaigns, autorisation fine par @PreAuthorize) :
+- POST   /api/campaigns        -> CAMPAIGN_CREATE  (cree campagne + paliers en 1 transaction)
+- GET    /api/campaigns        -> CAMPAIGN_VIEW    (liste)
+- GET    /api/campaigns/{id}   -> CAMPAIGN_VIEW    (detail + paliers)
+- PUT    /api/campaigns/{id}   -> CAMPAIGN_CREATE  (remplacement COMPLET : champs absents -> null, paliers remplaces)
+- DELETE /api/campaigns/{id}   -> CAMPAIGN_CREATE  (supprime campagne + paliers)
+- POST   /api/campaigns/{id}/run -> CAMPAIGN_GENERATE (existant)
+
+Fichiers : sg-common/dto/CampaignRequest.java, CampaignDto.java ; acquirer/service/CampaignCrudService.java ;
+CampaignController.java (enrichi). Sortie = CampaignDto (evite soucis serialisation LAZY User/loadSteps).
+
+Teste E2E : create (campagne 4 + 2 paliers), get liste/detail, put (remplace par 1 palier), delete (404 + base vide).
+RBAC verifie : OBSERVATEUR GET=200, POST=403.
+
+ATTENTION : le PUT fait un remplacement COMPLET (pas un merge partiel). Un client doit renvoyer TOUS les champs,
+sinon ils repassent a null. Evolution possible : ajouter un PATCH partiel.
