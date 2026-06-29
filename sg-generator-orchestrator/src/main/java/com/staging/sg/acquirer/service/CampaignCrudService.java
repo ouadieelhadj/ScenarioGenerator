@@ -1,11 +1,14 @@
 package com.staging.sg.acquirer.service;
 
 import com.staging.sg.common.dto.CampaignDto;
+import com.staging.sg.common.dto.CampaignExecutionDto;
 import com.staging.sg.common.dto.CampaignRequest;
 import com.staging.sg.common.entity.Campaign;
+import com.staging.sg.common.entity.CampaignExecution;
 import com.staging.sg.common.entity.CampaignLoadStep;
 import com.staging.sg.common.entity.User;
 import com.staging.sg.common.repository.CampaignLoadStepRepository;
+import com.staging.sg.common.repository.CampaignExecutionRepository;
 import com.staging.sg.common.repository.CampaignRepository;
 import com.staging.sg.common.repository.UserRepository;
 import org.slf4j.Logger;
@@ -24,13 +27,58 @@ public class CampaignCrudService {
     private final CampaignRepository campaignRepo;
     private final CampaignLoadStepRepository stepRepo;
     private final UserRepository userRepo;
+    private final CampaignExecutionRepository execRepo;
 
     public CampaignCrudService(CampaignRepository campaignRepo,
                                CampaignLoadStepRepository stepRepo,
-                               UserRepository userRepo) {
+                               UserRepository userRepo,
+                               CampaignExecutionRepository execRepo) {
         this.campaignRepo = campaignRepo;
         this.stepRepo = stepRepo;
         this.userRepo = userRepo;
+        this.execRepo = execRepo;
+    }
+
+    /** Lit une execution de campagne par son id (suivi / resultat). */
+    @Transactional(readOnly = true)
+    public CampaignExecutionDto findExecution(Long executionId) {
+        CampaignExecution e = execRepo.findById(executionId)
+                .orElseThrow(() -> new RuntimeException("Execution introuvable : " + executionId));
+        return toExecDto(e);
+    }
+
+    /** Liste les executions d une campagne (plus recentes d abord). */
+    @Transactional(readOnly = true)
+    public List<CampaignExecutionDto> findExecutionsByCampaign(Long campaignId) {
+        if (!campaignRepo.existsById(campaignId))
+            throw new RuntimeException("Campagne introuvable : " + campaignId);
+        return execRepo.findByCampaignIdOrderByIdDesc(campaignId)
+                .stream().map(this::toExecDto).collect(Collectors.toList());
+    }
+
+    private CampaignExecutionDto toExecDto(CampaignExecution e) {
+        CampaignExecutionDto d = new CampaignExecutionDto();
+        d.setId(e.getId());
+        d.setCampaignId(e.getCampaign() != null ? e.getCampaign().getId() : null);
+        d.setCampaignName(e.getCampaign() != null ? e.getCampaign().getName() : null);
+        d.setStatus(e.getStatus());
+        d.setVerdict(e.getVerdict());
+        d.setVerdictDetail(e.getVerdictDetail());
+        d.setTpsTarget(e.getTpsTarget());
+        d.setDurationSeconds(e.getDurationSeconds());
+        d.setTxTotal(e.getTxTotal());
+        d.setTxSent(e.getTxSent());
+        d.setTxApproved(e.getTxApproved());
+        d.setTxDeclined(e.getTxDeclined());
+        d.setTpsActualAvg(e.getTpsActualAvg());
+        d.setResponseTimeAvg(e.getResponseTimeAvg());
+        d.setResponseTimeMin(e.getResponseTimeMin());
+        d.setResponseTimeMax(e.getResponseTimeMax());
+        d.setResponseTimeP95(e.getResponseTimeP95());
+        d.setResponseTimeP99(e.getResponseTimeP99());
+        d.setStartedAt(e.getStartedAt());
+        d.setEndedAt(e.getEndedAt());
+        return d;
     }
 
     @Transactional(readOnly = true)

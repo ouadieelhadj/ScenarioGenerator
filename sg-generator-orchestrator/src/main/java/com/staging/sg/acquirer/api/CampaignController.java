@@ -3,6 +3,7 @@ package com.staging.sg.acquirer.api;
 import com.staging.sg.acquirer.service.CampaignCrudService;
 import com.staging.sg.acquirer.service.CampaignRunService;
 import com.staging.sg.common.dto.CampaignDto;
+import com.staging.sg.common.dto.CampaignExecutionDto;
 import com.staging.sg.common.dto.CampaignRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +41,28 @@ public class CampaignController {
         } catch (Exception e) {
             log.error("[API] campaign run error : {}", e.getMessage());
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // ===== Suivi des executions =====
+
+    @PreAuthorize("hasAuthority('EXECUTION_VIEW')")
+    @GetMapping("/executions/{executionId}")
+    public ResponseEntity<?> getExecution(@PathVariable Long executionId) {
+        try {
+            return ResponseEntity.ok(crudService.findExecution(executionId));
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PreAuthorize("hasAuthority('EXECUTION_VIEW')")
+    @GetMapping("/{id}/executions")
+    public ResponseEntity<?> getExecutionsByCampaign(@PathVariable Long id) {
+        try {
+            return ResponseEntity.ok(crudService.findExecutionsByCampaign(id));
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body(Map.of("error", e.getMessage()));
         }
     }
 
