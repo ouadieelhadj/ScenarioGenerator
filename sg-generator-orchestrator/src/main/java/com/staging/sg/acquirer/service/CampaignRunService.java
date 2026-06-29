@@ -136,11 +136,21 @@ public class CampaignRunService {
 
             // v1.1.0 : mode carte (RANDOM) + PIN depuis le config
             boolean randomCards = false, withPin = false;
+            Long amountMin = null, amountMax = null;
             try {
                 if (campaign.getConfig() != null && !campaign.getConfig().isBlank()) {
                     Map<?,?> cfg = objectMapper.readValue(campaign.getConfig(), Map.class);
                     randomCards = "RANDOM".equalsIgnoreCase(String.valueOf(cfg.get("DE002_PAN_MODE")));
                     withPin = Boolean.TRUE.equals(cfg.get("WITH_PIN"));
+                    // VARIABLE_FIELDS.AMOUNT { mode: RANGE, min, max } -> montant variable par transaction
+                    Object vf = cfg.get("VARIABLE_FIELDS");
+                    if (vf instanceof Map<?,?> vfm) {
+                        Object am = vfm.get("AMOUNT");
+                        if (am instanceof Map<?,?> amm && "RANGE".equalsIgnoreCase(String.valueOf(amm.get("mode")))) {
+                            if (amm.get("min") != null) amountMin = ((Number) amm.get("min")).longValue();
+                            if (amm.get("max") != null) amountMax = ((Number) amm.get("max")).longValue();
+                        }
+                    }
                 }
             } catch (Exception ce) { log.warn("[CAMPAIGN] parse config (cartes) : {}", ce.getMessage()); }
             List<Map<String,String>> cardPool = new ArrayList<>();
@@ -154,6 +164,7 @@ public class CampaignRunService {
             }
             final boolean fWithPin = withPin;
             final List<Map<String,String>> fCardPool = cardPool;
+            final Long fAmountMin = amountMin, fAmountMax = amountMax;
 
             // ===== Jouer CHAQUE palier sequentiellement =====
             boolean breakerTripped = false;
@@ -176,6 +187,10 @@ public class CampaignRunService {
                 body.put("concurrency", conc);
                 body.put("withPin", fWithPin);
                 if (!fCardPool.isEmpty()) body.put("cards", fCardPool);
+                if (fAmountMin != null && fAmountMax != null) {
+                    body.put("amountMin", fAmountMin);
+                    body.put("amountMax", fAmountMax);
+                }
                 String resp = dmasClient.postJson(acquirerUrl, "/api/admin/dmas/loadtest", token, body);
                 Map<?,?> startJson = dmasClient.parse(resp);
                 String loadTestId = String.valueOf(startJson.get("loadTestId"));

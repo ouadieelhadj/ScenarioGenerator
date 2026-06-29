@@ -93,13 +93,15 @@ public class LoadTestService {
         int concurrency = req.concurrency != null ? req.concurrency : 50;
         int timeout     = req.timeoutSeconds != null ? req.timeoutSeconds : 10;
         ExecutorService pool = Executors.newFixedThreadPool(concurrency);
+        // Phase de PREPARATION : construite UNE fois, avant tout thread. Porte les regles de variation.
+        TpsCampagnePreparation prep = new TpsCampagnePreparation(req);
         try {
             if (req.count != null && req.count > 0) {
                 // ---- Mode A : nombre fixe ----
                 run.plannedCount = req.count;
                 long intervalMs = (req.targetTps != null && req.targetTps > 0) ? 1000L / req.targetTps : 0L;
                 for (int i = 0; i < req.count; i++) {
-                    submitOne(pool, req, run, timeout);
+                    submitOne(pool, req, run, timeout, prep.nextTx());
                     if (intervalMs > 0) Thread.sleep(intervalMs);
                 }
             } else if (req.durationSeconds != null && req.durationSeconds > 0) {
@@ -107,7 +109,7 @@ public class LoadTestService {
                 long intervalMs = (req.targetTps != null && req.targetTps > 0) ? 1000L / req.targetTps : 0L;
                 long end = System.currentTimeMillis() + req.durationSeconds * 1000L;
                 while (System.currentTimeMillis() < end) {
-                    submitOne(pool, req, run, timeout);
+                    submitOne(pool, req, run, timeout, prep.nextTx());
                     if (intervalMs > 0) Thread.sleep(intervalMs);
                 }
             } else {
@@ -134,28 +136,19 @@ public class LoadTestService {
         }
     }
 
-    private void submitOne(ExecutorService pool, LoadTestRequest req, LoadTestRun run, int timeout) {
+    private void submitOne(ExecutorService pool, LoadTestRequest req, LoadTestRun run, int timeout,
+                           TpsCampagnePreparation.PreparedTx tx) {
         final String stan = nextStan();
-        // v1.1.0 : tirage d'une carte au hasard dans le pool si fourni, sinon PAN fixe
-        final String txPan;
-        final String txPin;
-        if (req.cards != null && !req.cards.isEmpty()) {
-            LoadTestRequest.CardEntry c = req.cards.get(
-                    java.util.concurrent.ThreadLocalRandom.current().nextInt(req.cards.size()));
-            txPan = c.pan;
-            txPin = c.pin;
-        } else {
-            txPan = req.pan;
-            txPin = null;
-        }
+        final String txPan = tx.pan;
+        final String txPin = tx.pin;
         pool.submit(() -> {
             TxDetail d = new TxDetail();
             d.pan = txPan;
             long t0 = System.currentTimeMillis();
             try {
                 ISOMsg msg = req.withPin
-                        ? auth.buildAuth0100WithPin(txPan, txPin, req.amount, req.entryMode, stan)
-                        : auth.buildAuth0100(txPan, req.amount, req.entryMode, stan);
+                        ? auth.buildAuth0100WithPin(txPan, txPin, tx.amount, tx.entryMode, stan)
+                        : auth.buildAuth0100(txPan, tx.amount, tx.entryMode, stan);
                 d.requestHex = org.jpos.iso.ISOUtil.hexString(msg.pack());
                 ISOMsg resp = jposServer.pushAndWait(msg, timeout);
                 d.durationMs = System.currentTimeMillis() - t0;

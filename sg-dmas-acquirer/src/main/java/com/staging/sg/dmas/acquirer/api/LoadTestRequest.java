@@ -13,6 +13,10 @@ public class LoadTestRequest {
     public Integer concurrency     = 50;
     public Integer timeoutSeconds  = 10;
 
+    // Montant variable par transaction : si amountMin/amountMax non null, tire dans [min, max]
+    public Long amountMin;
+    public Long amountMax;
+
     // ----- v1.1.0 : tirage de cartes + PIN -----
     public boolean withPin = false;       // si true, chiffre le PIN block (DE52) sous PEK
     public List<CardEntry> cards;         // si non vide, tire une carte au hasard PAR transaction
