@@ -1,172 +1,292 @@
 # SESSION RESUME — ScenarioGenerator
 
 > Fichier de reprise de session : etat d'avancement, ce qui est en cours, ce qui reste.
+> Couvre DEUX depots : le BACK `ScenarioGenerator` (Java/Spring, repo GitHub) et le
+> FRONT `sg-frontend` (Angular 18, dossier separe non encore versionne).
 
-**Derniere mise a jour :** 2026-06-28 (session 3 - circuit breaker)
-**Branche :** feature/multi-module
-**Version courante :** v1.1.0 (taguee, publiee)
+**Derniere mise a jour :** 2026-07-03 (sessions 6-7-8 : base propre + IHM Angular + changement de port a chaud)
+**Branche back :** chore/cleanup-modules
+**Version courante back :** v1.1.0 (taguee, publiee) + travaux post-v1.1.0
 
-## 1. Etat de la plateforme
+---
+
+## 0. METHODE DE COLLABORATION (IMPORTANT a lire en debut de session)
+
+- L'assistant (Claude) travaille dans un **conteneur Linux isole**. Il n'a **AUCUN acces** au disque D:,
+  a IntelliJ, a la base PostgreSQL, ni a GitHub de l'utilisateur.
+- **L'utilisateur execute** toutes les commandes shell/bat sous Windows (Git Bash) et colle les resultats.
+- L'assistant **genere des livrables** dans son conteneur (`/home/claude`), les copie dans
+  `/mnt/user-data/outputs/`, et les partage via `present_files`. Ce sont typiquement des **scripts .sh**
+  que l'utilisateur telecharge, place dans `/d/MoneyCore/`, et lance : `bash /d/MoneyCore/xxx.sh`.
+- L'assistant **ne peut pas pousser** sur GitHub lui-meme : il prepare les commandes git, l'utilisateur les execute.
+
+### Pieges recurrents (a garder en tete)
+- **[Git Bash] TOUJOURS `set +H`** avant un script contenant `!` (expansion d'historique).
+- **[Windows .bat] ne JAMAIS utiliser la variable `TMP`** (reservee = java.io.tmpdir, casse Tomcat) -> utiliser `SGTMP`.
+- **[Assemblage scripts .sh]** ne PAS echapper les variables (`\$ORCH`) dans les heredoc -> utiliser des
+  **chemins en dur**. Methode robuste = fonction `add_file` avec `printf` + `cat >> "$OUT"`.
+
+---
+
+## 1. ETAT DE LA PLATEFORME (BACK)
 
 Plateforme de simulation et test de charge monetique Mastercard DMAS.
+Racine : `/d/MoneyCore/ScenarioGenerator`. Java 21 (`/d/MoneyCore/jdk-21.0.11/bin/java.exe`). PostgreSQL 18.
 
 Modules :
-- sg-generator-orchestrator (8080) : orchestrateur (tests, executions, campagnes, users, rapports)
-- sg-dmas-acquirer (8084 REST / 8600 jPOS) : acquereur (autorisations + moteur de charge)
-- sg-dmas-issuer (8501) : emetteur (cartes, sign-on, reponses)
-- sg-common : entites / repositories / DTOs partages
+- **sg-generator-orchestrator** (REST 8080, package `com.staging.sg.acquirer`, main `SgAcquirerApplication`,
+  user PG `scenario_user`) : orchestrateur (campagnes, executions, users, rapports, autorisations 0100)
+- **sg-dmas-acquirer** (REST 8084 / jPOS 8600, user `dmas_acquirer_user`) : acquereur (KEK, PEK, reseau, moteur de charge)
+- **sg-dmas-issuer** (REST 8501 / jPOS 8500, user `dmas_issuer_user`) : emetteur (cartes, sign-on, reponses)
+- **sg-common** : 33 entites JPA + 33 repositories + DTOs partages
 
-Acquis jusqu'a v1.1.0 :
-- Moteur de test de charge jPOS (concurrence, STAN unique, DE39)
-- Load test orchestre E2E (Execution + Result + rapports Excel/PDF)
-- Modele Campagne (multi-paliers, SLA, verdict PASSED/FAILED, POST /api/campaigns/{id}/run)
-- v1.1.0 : tirage cartes reelles (DE002_PAN_MODE=RANDOM) + PIN (WITH_PIN, DE52 sous PEK)
+Compilation orchestrateur (depuis la racine) :
+`mvn -q -pl sg-generator-orchestrator -am clean package -DskipTests`
+JAR : `sg-generator-orchestrator/target/sg-generator-orchestrator-1.0.0-SNAPSHOT.jar`
+Les WARNING Maven/Java sont inoffensifs.
 
-## 2. TRAVAIL REALISE (3 sessions, tout sur origin sauf push final a faire)
+Cles crypto de test : KEK memberGroupId=`TESTGRP01`, kekClear=`0123456789ABCDEF` x3 (triple length).
+Carte test PAN `5321962145453348`, PIN `1234`, devise 840 (USD), balance = bigint centimes.
+LMK : `D:/MoneyCore/ScenarioGenerator/keys/dmas-lmk.lmk`.
 
-Session 1 (commits sur origin) :
-- Recharge cartes : UPDATE dmas_cards balance vers 100000000 (cartes ACTIVE sous cible)
-- CAMPAIGN_GENERATE sur CampaignController.run ; TPS_RUN sur ExecutionController start/loadtest/stop
-- Role TESTEUR supprime ; roles restants ADMIN, OBSERVATEUR, EXPLOITATION
-- Mots de passe test = Test123! : obs1 (OBSERVATEUR id4), mohamed (EXPLOITATION id3)
+---
 
-Session 2 - audit RBAC complet (sur origin) :
-- McController : 6 POST proteges par TPS_RUN (authorize/reversal/advice/network key-exchange/signon/echo)
-- SecurityConfig : exception /api/admin/tests/** authenticated AVANT /api/admin/** (EXPLOITATION cree des tests)
-- MessageType=CATALOG_MANAGE, Test=EXECUTION_VIEW/TPS_CREATE, User=USER_MANAGE
-- Log orchestrateur renomme GeneratorOrchestrator.log
+## 2. RBAC (verifie en base) — commun back + front
 
-Session 3 - CIRCUIT BREAKER (commit 0cb7e17, PAS encore push) :
-- CampaignRunService : a la fin de chaque palier, calcule taux d'erreur cumule (declined/total).
-  Si campaign.stopOnErrorRate non-NULL ET taux > seuil -> break la boucle des paliers.
-  Statut = STOPPED_ERROR_RATE ; verdict_detail = "Circuit breaker: taux err X% > seuil Y% apres palier N"
-  (le detail breaker ecrit APRES computeVerdict pour primer sur le detail SLA).
-- Retrocompatible : si stop_on_error_rate = NULL, comportement inchange (les 2 campagnes existantes sont a NULL).
-- Granularite : arret ENTRE paliers (pas en cours de palier - le detail des tx n'arrive qu'en fin de palier).
-- TESTE E2E : campagne 3 paliers, PAN fixe carte solde bas, montant > solde, seuil 5%
-  -> arret apres palier 1 (50 tx, 100% declined), paliers 2-3 NON joues, status STOPPED_ERROR_RATE, verdict FAILED. OK.
+- **Roles** (table roles) : ADMIN, OBSERVATEUR, EXPLOITATION. **Pas d'endpoint de gestion des roles**
+  (`/api/admin/roles` n'existe pas). Les 3 roles sont donc en dur cote front.
+- **12 Permissions** : USER_MANAGE, ROLE_MANAGE, CATALOG_MANAGE, CAMPAIGN_VIEW, CAMPAIGN_CREATE,
+  CAMPAIGN_GENERATE, CAMPAIGN_EXPORT, CARD_PROVISION, CAMPAIGN_REPLAY, TPS_CREATE, TPS_RUN, EXECUTION_VIEW.
+- **JWT** (JwtFilter de com.staging.sg.common) : claims `sub`(login), `role`, `permissions[]`.
+  authorities = ROLE_<role> + permissions nominatives.
+- **SecurityConfig orchestrateur** (ordre IMPORTANT) : `/auth/**` + `/api/status` permitAll ;
+  `/api/admin/tests/**` authenticated ; `/api/admin/**` hasRole("ADMIN") ; `/api/**` authenticated.
+  `@EnableMethodSecurity` actif. CORS configure pour `http://localhost:4200` (GET/POST/PUT/DELETE/OPTIONS).
 
-## 3. INFOS PRATIQUES
+Login : admin / Admin123! (POST /auth/login, champ `login`, reponse champ `token`).
+Comptes test : obs1 / Test123! (OBSERVATEUR) ; mohamed / Test123! (EXPLOITATION).
 
-Canal SQL (Git Bash) :
-  alias sgsql='PGPASSWORD=postgres123 "/d/MoneyCore/PostgreSQL/18/bin/psql.exe" -U postgres -h localhost -d scenariogenerator'
+---
 
-Login : admin / Admin123! (endpoint /auth/login, champ login, reponse champ token)
-Comptes test : obs1 / Test123! (OBSERVATEUR) ; mohamed / Test123! (EXPLOITATION)
+## 3. CONTRATS API BACK (confirmes, utilises par le front)
 
-Modele RBAC (verifie en base) :
-- Roles (table roles, colonne code) : ADMIN, OBSERVATEUR, EXPLOITATION
-- Permissions (table permissions, colonne code) : USER_MANAGE, ROLE_MANAGE, CATALOG_MANAGE,
-  CAMPAIGN_VIEW, CAMPAIGN_CREATE, CAMPAIGN_GENERATE, CAMPAIGN_EXPORT, CARD_PROVISION,
-  CAMPAIGN_REPLAY, TPS_CREATE, TPS_RUN, EXECUTION_VIEW
-- JWT (JwtFilter de com.staging.sg.common) : authorities = ROLE_<role> + permissions nominatives
-- SecurityConfig chaine URL (ordre IMPORTANT) : /auth/** et /api/status permitAll ;
-  /api/admin/tests/** authenticated ; /api/admin/** hasRole(ADMIN) ; /api/** authenticated.
+**CampaignController** (`/api/campaigns`) :
+- GET -> CAMPAIGN_VIEW (liste) ; GET/{id} -> CAMPAIGN_VIEW (detail+paliers)
+- POST -> CAMPAIGN_CREATE ; PUT/{id} -> CAMPAIGN_CREATE (remplacement COMPLET) ; DELETE/{id} -> CAMPAIGN_CREATE
+- POST/{id}/run -> CAMPAIGN_GENERATE (renvoie campaignExecutionId)
+- GET/executions/{execId} -> suivi d'une execution ; GET/{id}/executions -> executions d'une campagne
+- Pas d'endpoint "toutes les executions" (uniquement par campagne).
+- CampaignRequest : name, description?, category, config(JSON), expectedDe039?, active, slaP95MaxMs?,
+  slaErrorRateMax?, slaApprovalMin?, stopOnErrorRate?, loadSteps[]{stepOrder,startSeconds,endSeconds,tpsValue,concurrency?}
 
-Compile : cd MODULE && mvn install -q -DskipTests 2>&1 | grep -viE "^WARNING" ; echo EXIT ${PIPESTATUS[0]}
-  Ordre : sg-common AVANT issuer/acquirer/orchestrator.
-  IMPORTANT : orchestrateur lance depuis IntelliJ -> apres edition hors IDE, Build>Rebuild Project PUIS Stop+Run.
+**UserController** (`/api/admin/users`, ADMIN) :
+- GET (liste UserDto) ; GET/{id} ; POST create ; PUT/{id} update ; PUT/{id}/toggle (activer/desactiver)
+- CreateUserRequest{login,password,email,role} ; UserDto{id,login,email,role,active}
 
-Logs (fichiers, lisibles via git bash) :
-  logs/GeneratorOrchestrator.log, logs/dmas-acquirer.log, logs/dmas-issuer.log
-  Diagnostic securite : logging.level.org.springframework.security: DEBUG (retirer apres usage).
+**DMAS** :
+- Cartes (issuer 8501) : POST /api/admin/dmas/cards CardRequest{pan,pin,balance,currency,expiry} ;
+  GET/{pan} ; POST/{pan}/balance BalanceRequest{balance}. pan+pin obligatoires.
+- KEK (acquereur 8084) : POST /api/admin/dmas/kek/bootstrap {memberGroupId, kekClear}
+- PEK (acquereur 8084) : POST /api/admin/dmas/keyexchange/pek?memberGroupId=TESTGRP01
+- Reseau (acquereur 8084) : POST /api/admin/dmas/network/signon, /signoff, /echo, GET /status
+- Test 0100 (ORCHESTRATEUR 8080) : POST /api/mc/authorize McAuthRequest{DE002_PAN, DE004_AMOUNT(long),
+  DE003_PROCESSING_CODE, DE018_MCC, DE022_POS_ENTRY_MODE, DE049_CURRENCY_CODE, DE052_PIN, ...}
 
-ASTUCE git bash : le caractere ! declenche l'expansion d'historique meme dans python -c.
-  Faire 'set +H' avant tout script contenant des ! (ex: !allResults.isEmpty()).
+**PortConfigController** (`/api/admin/config`, ADMIN) — AJOUTE SESSION 8 (voir section 7) :
+- GET /port -> {service:"orchestrator", currentPort}
+- POST /port {port} -> valide (1024-65535), renvoie {oldPort,newPort,restarting:true} PUIS redemarre
 
-Prerequis jPOS : sign-on issuer (POST 8501/api/admin/dmas/jpos/signon, avec token admin) AVANT toute transaction.
-  Pour WITH_PIN : PEK ACTIVE (TESTGRP01). Verifier : sgsql -c "SELECT * FROM dmas_acq_keys WHERE key_type='PEK';"
+---
 
-Cartes test (dmas_cards) : 7 ACTIVE. PAN principal 5321962145453348, PIN 1234.
-balance = bigint centimes, devise 840 (USD), plein 100000000.
-Recharge : sgsql -c "UPDATE dmas_cards SET balance=100000000, updated_at=now() WHERE status='ACTIVE' AND balance<100000000;"
+## 4. HISTORIQUE BACK (sessions 1-5, deja documentees ci-dessous en detail)
 
-Config campagne (champ config JSON) :
-  DE002_PAN (PAN fixe), DE002_PAN_MODE=RANDOM (tire dmas_cards), DE004_AMOUNT (centimes), WITH_PIN, ENTRY_MODE
-  Colonnes campagne : sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate (circuit breaker)
+- **Session 1** : recharge cartes, RBAC run/start, role TESTEUR supprime.
+- **Session 2** : audit RBAC complet (McController TPS_RUN, SecurityConfig, permissions par controleur).
+- **Session 3** : CIRCUIT BREAKER (stop_on_error_rate ; statut STOPPED_ERROR_RATE ; commit 0cb7e17).
+- **Session 4** : CRUD campagnes via API (CampaignController enrichi, CampaignDto ; PUT = remplacement complet).
+- **Session 5** : champs variables au-dela du PAN (VARIABLE_FIELDS.AMOUNT mode RANGE ; TpsCampagnePreparation).
+  (Details complets conserves en section 10 "ARCHIVE sessions 1-5".)
 
-Endpoints proteges (orchestrateur) :
-- POST /api/campaigns/{id}/run -> CAMPAIGN_GENERATE
-- POST /api/executions/start|loadtest|stop -> TPS_RUN
-- POST /api/mc/** -> TPS_RUN
-- /api/admin/tests GET=EXECUTION_VIEW POST/PUT/DELETE=TPS_CREATE ; message-types=CATALOG_MANAGE ; users=USER_MANAGE
+---
 
-## 4. RESTE A FAIRE
+## 5. SESSION 6 — PROCEDURE BASE PROPRE (COMPLETED, versionnee)
 
-A finir pour clore la session 3 :
-- git push (commit 0cb7e17 circuit breaker, local, en avance sur origin)
-- committer ce SESSION_RESUME.md
+**[DECISION]** Base creee 100% par SQL (abandon du create Hibernate), puis services en `ddl-auto=validate`.
 
-Pistes suivantes :
-- Champs variables au-dela du PAN (docs/generation-variee-TODO.md ; montants min/max, DE43, processing codes...)
-- CRUD campagnes via API (POST /api/campaigns, actuellement creation en SQL)
-- Circuit breaker : evolution possible -> arret EN COURS de palier si l'acquereur exposait un compteur
-  d'erreurs courant dans le status du loadtest (aujourd'hui le detail des tx n'arrive qu'en fin de palier)
-- Dette : LoadTestOrchestrationService redondant avec CampaignRunService (ne joue que le 1er step) ;
-  persistance acq/iss_authorizations ; sql/recharge_cards.sql versionne
+Repartition propriete des tables : scenario_user=29, dmas_acquirer_user=2 (dmas_acq_keys, dmas_kek),
+dmas_issuer_user=4 (dmas_cards, dmas_iss_keys, dmas_transactions, key_store).
+Grants croises decouverts empiriquement : `users` aux 3 users ; `dmas_kek` a issuer ;
+**`dmas_cards` a scenario_user** (l'orchestrateur lit les cartes pour les campagnes = dependance runtime).
 
-Non committe laisse de cote : sg-dmas-issuer/application.yml (CRLF), .idea/*, dmcs/*.ipm+.txt (untracked)
+Dossier **`deploiement/`** versionne (commit e3d908e, push OK sur chore/cleanup-modules) :
+`1_create-data_base.bat`, `2_start-services.bat`, `3_scenario-e2e.bat`, `structure_tables.sql`,
+`donnees_reference.sql`, `README.md`. Test E2E valide PASSED (39 tx approuvees).
+[Piege resolu] variable TMP -> SGTMP dans les .bat.
 
-## 5. HISTORIQUE / COMMITS
+**PENDING** : externaliser chemins/mots de passe des scripts ; nettoyer fichiers parasites du repo ; decider merge branche.
 
-Tags : v1.0.0 (moteur+Campagne), v1.1.0 (cartes reelles+PIN)
+---
 
-Derniers commits feature/multi-module :
-- f7df1f7  RBAC audit (McController, SecurityConfig tests, MessageType/Test/User)
-- ff27d78  chore renommage log GeneratorOrchestrator.log
-- 4b74e9b  docs SESSION_RESUME audit RBAC  [= origin]
-- 0cb7e17  feat circuit breaker (stop_on_error_rate)  [local, pas encore push]
+## 6. SESSION 7 — IHM ANGULAR (FRONT `sg-frontend`)
 
-## 6. Session 4 - CRUD campagnes via API
+**[DECISION]** Projet Angular **SEPARE** (microservices, pas Maven) dans `D:\MoneyCore\sg-frontend`.
+Node v24.16.0, npm 11.13.0. **Angular 18 standalone** + PrimeNG (theme Aura) + **ngx-translate v18**.
+Developpe dans IntelliJ (File>Open le DOSSIER). Lancement : `cd /d/MoneyCore/sg-frontend && npm start`
+-> http://localhost:4200 (laisser la fenetre ouverte).
 
-Commit feat(campagne): CRUD via API (a push).
-Endpoints CampaignController (sous /api/campaigns, autorisation fine par @PreAuthorize) :
-- POST   /api/campaigns        -> CAMPAIGN_CREATE  (cree campagne + paliers en 1 transaction)
-- GET    /api/campaigns        -> CAMPAIGN_VIEW    (liste)
-- GET    /api/campaigns/{id}   -> CAMPAIGN_VIEW    (detail + paliers)
-- PUT    /api/campaigns/{id}   -> CAMPAIGN_CREATE  (remplacement COMPLET : champs absents -> null, paliers remplaces)
-- DELETE /api/campaigns/{id}   -> CAMPAIGN_CREATE  (supprime campagne + paliers)
-- POST   /api/campaigns/{id}/run -> CAMPAIGN_GENERATE (existant)
+### Architecture front
+- `core/` : auth (AuthService decode le JWT cote client, PAS de /whoami ; signals) ; guards (authGuard +
+  permissionGuard) ; interceptors (auth Bearer + error 401->logout) ; models ; theme (ThemeService +
+  _tokens.scss + themes.ts) ; i18n (LanguageService) ; **config (api.config.ts CENTRALISE)** ; services.
+- `shared/directives/hasPermission` ; `layout/` (main-layout sidebar filtree par permission + topbar
+  theme/langue/user + menu.ts) ; `features/` (login, dashboard, campaign-generation, campaign-orchestration,
+  execution-view, dmas, admin, config, profile, help).
 
-Fichiers : sg-common/dto/CampaignRequest.java, CampaignDto.java ; acquirer/service/CampaignCrudService.java ;
-CampaignController.java (enrichi). Sortie = CampaignDto (evite soucis serialisation LAZY User/loadSteps).
+### Ecrans construits et VALIDES
+1. **Socle** : auth JWT, RBAC par permission (guard+directive+menu filtre), theme clair/sombre a chaud +
+   couleur primaire (tokens CSS, persistant localStorage).
+2. **Login** (decodage token client, menu RBAC filtre).
+3. **i18n fr/en/es** (ngx-translate **v18**). Correctifs v18 : `TranslatePipe`/`TranslateDirective`
+   (plus de TranslateModule), `setFallbackLang` (plus setDefaultLang), `provideTranslateService` +
+   `provideTranslateHttpLoader({prefix,suffix})`, `fallbackLang:'fr'`. Fichiers `src/assets/i18n/{fr,en,es}.json`
+   (cles hierarchiques, coherence verifiee par python). Selecteur drapeaux topbar.
+4. **Generation de campagne** : tableau + dialog CRUD + paliers de charge + 14 infobulles CSS (data-tip). Traduit.
+5. **Orchestration de campagne** : liste campagnes ACTIVES + suivi temps reel (polling 2s, interval+switchMap
+   jusqu'a etat terminal COMPLETED/ERROR/STOPPED_ERROR_RATE/FAILED, bouton stopper le suivi + rafraichir). Traduit.
+6. **Consultation des executions** : selecteur de campagne (pas d'endpoint global) -> tableau executions ->
+   clic = dialog detail. Traduit.
+7. **Monetique DMAS** : 4 onglets (Reseau signon/signoff/status ; Cles KEK bootstrap + PEK ; Cartes provisionner/
+   consulter/solde ; Test 0100 champs ISO + avances) + zone de log resultats. Valeurs pre-remplies (TEST_DEFAULTS). Traduit.
+8. **Administration** : tableau users (id/login/email/role/actif) + dialog create/edit (login non modifiable en
+   edition, password optionnel en edition = vide inchange) + toggle actif. Protege USER_MANAGE. Traduit. VALIDE.
+9. **Configuration** : voir section 8 (ports des services). Extensible pour d'autres params.
+10. **Help** : ecran dedie, 5 sections depliables. **PENDING : pas encore traduit (francais en dur).**
 
-Teste E2E : create (campagne 4 + 2 paliers), get liste/detail, put (remplace par 1 palier), delete (404 + base vide).
-RBAC verifie : OBSERVATEUR GET=200, POST=403.
+### Config API centralisee (`src/app/core/config/api.config.ts`)
+Tous les endpoints (auth, campaigns, config, users, dmas) + TEST_DEFAULTS (KEK, carte, auth 0100).
+URL de base derivees de `environment.ts` (apiOrchestrator 8080, apiAcquirer 8084, apiIssuer 8501).
+Helpers `url.orchestrator/acquirer/issuer(path)`. AuthService/CampaignService/DmasService/UserService refactores dessus.
 
-ATTENTION : le PUT fait un remplacement COMPLET (pas un merge partiel). Un client doit renvoyer TOUS les champs,
-sinon ils repassent a null. Evolution possible : ajouter un PATCH partiel.
+---
 
-## 7. Session 5 - Champs variables au-dela du PAN (montant)
+## 7. SESSION 8 — CHANGEMENT DE PORT A CHAUD (back + front, VALIDE)
 
-Commit feat(campagne): champs variables - montant (a push).
+**[IDEE utilisateur]** Ajouter aux services un endpoint pour modifier leur port + se redemarrer ;
+si le front recoit OK, il met a jour sa config. **[DECISION]** Restart du **contexte Spring** (pas relance JVM),
+port persiste dans `application.yml`. Teste UNIQUEMENT sur l'orchestrateur (pas de jPOS = moins risque).
 
-OBJECTIF : faire varier des champs du 0100 par transaction, via un sous-champ JSON du config campagne
-(VARIABLE_FIELDS), SANS nouvelle colonne. Premier champ livre : le MONTANT.
+### Back orchestrateur (COMPLETED, compile, teste) — 2 classes + 1 modif
+- `sg-generator-orchestrator/.../config/RestartService.java` : ecrit le port dans
+  `src/main/resources/application.yml` (preserve le reste du fichier), puis dans un thread avec delai 1.5s
+  ferme le contexte (`ctx.close()`) et relance `SpringApplication.run(SgAcquirerApplication.class, args)`.
+  **[BUG RESOLU : accumulation des `--server.port`]** au 2e restart Spring recevait "8090,8080" ->
+  NumberFormatException. Fix = retirer tout `--server.port=` existant des args avant d'ajouter le nouveau.
+- `sg-generator-orchestrator/.../api/PortConfigController.java` (`/api/admin/config`, protege ADMIN
+  par SecurityConfig) : GET /port -> {service,currentPort} ; POST /port {port} -> valide, renvoie OK
+  immediatement {oldPort,newPort,restarting:true}, puis restart.
+- `SgAcquirerApplication.java` : correctif du log de demarrage pour afficher le PORT REEL via
+  `env.getProperty("local.server.port")` (le @Value affichait l'ancien port apres restart — cosmetique).
 
-ARCHITECTURE (validee) :
-- L'acquereur a deja un moteur a threads (LoadTestService.submitOne, 1 thread/tx sur la ligne permanente),
-  declenche par l'orchestrateur via POST /api/admin/dmas/loadtest. CampaignRunService l'utilise DEJA.
-- Nouvelle PHASE DE PREPARATION cote acquereur : classe TpsCampagnePreparation, construite 1 fois AVANT
-  les threads. Porte les regles de variation, produit les donnees de chaque tx via nextTx() -> PreparedTx
-  (pan, pin, amount, entryMode). Les threads ne decident plus rien : ils envoient ce qui est prepare.
-  -> POINT D'EXTENSION UNIQUE : ajouter un futur champ variable = l'ajouter dans cette classe.
-- Le tirage du PAN (mode cards) a ete deplace de submitOne vers TpsCampagnePreparation (meme logique).
+Scripts back livres : `apply-port-config-back.sh` (chemins en dur), `fix-restart-accumulation.sh`,
+`fix-main-realport.sh` / `fix-main-port-log.sh`.
+TESTE : cycles 8080->8090->8080->8070 OK (restart contexte propre : Hikari/JPA/network fermes puis rouverts).
 
-FORMAT config (extensible) :
-  "VARIABLE_FIELDS": { "AMOUNT": { "mode":"RANGE", "min":1000, "max":50000 } }
-  Modes prevus : RANGE (min/max numerique) et LIST (tirage dans une liste). Seul RANGE/AMOUNT implemente.
+### Front (COMPLETED) — ecran "Configuration"
+- Menu Configuration (ADMIN via permission USER_MANAGE). Extensible pour d'autres parametres.
+- `port-config.service.ts` (GET port reel, POST changement, updateFrontPort localStorage).
+- Tableau 3 services : orchestrateur VALIDE ; acquereur 8084 / emetteur 8501 affichent "injoignable"
+  (leur back n'a PAS encore l'endpoint config/port).
+- Change port -> back redemarre -> front reconnecte auto apres 8s (verifyReconnect).
 
-CHAINE : config campagne -> CampaignRunService lit VARIABLE_FIELDS.AMOUNT -> amountMin/amountMax dans le body
-  -> LoadTestRequest (acquereur) -> TpsCampagnePreparation tire %012d par tx -> buildAuth0100 (DE4).
-Retrocompatible : sans VARIABLE_FIELDS, montant fixe DE004_AMOUNT inchange.
+### [POINT CLE] Synchro front/back via localStorage — PIEGE IMPORTANT
+- Le front lit le port dans `localStorage['sg-ports'].orchestrator` s'il existe, sinon `environment.ts` (8080).
+- Une valeur de test restee dans le localStorage (ex 8070) provoque "Service injoignable" (le front tape le
+  mauvais port). **Le localStorage est INTERNE au navigateur, INACCESSIBLE depuis Git Bash**
+  (se vide via F12 > Application > Local Storage > Clear, ou console `localStorage.removeItem('sg-ports')`).
+- **[DECISION]** Flag `USE_LOCALSTORAGE_PORTS = false` dans api.config.ts (`fix-ignore-localstorage-ports.sh`
+  applique) -> le front IGNORE le localStorage et utilise les ports des fichiers. Comportement previsible.
+  Compromis : le suivi dynamique apres changement de port ne marche plus (il faut ajuster environment.ts).
+- **REGLE : garder l'orchestrateur sur 8080** (port de reference du front). Si on change son port pour tester,
+  le remettre sur 8080 ensuite, sinon le front ne le trouve plus.
 
-DECISION : PAN reste en mode RANDOM (pool lu en base au lancement cote ORCHESTRATEUR, tire en memoire cote
-  acquereur - l'acquereur n'accede JAMAIS la base par tx). On NE met PAS les PANs/PINs dans le JSON (PCI +
-  soldes obsoletes). VARIABLE_FIELDS sert aux champs SANS source base.
+---
 
-TESTE E2E : campagne creee via API CRUD, config AMOUNT RANGE [1000,50000], 40 tx -> 12 montants distincts
-  tous dans la plage (decodes du DE4 dans request_hex). Test acquereur isole aussi OK avant branchement campagne.
+## 8. SCRIPTS .sh LIVRES (a placer dans /d/MoneyCore puis `bash /d/MoneyCore/xxx.sh`)
 
-A SUIVRE : etendre VARIABLE_FIELDS a ENTRY_MODE (DE22, deja param de buildAuth0100, quasi gratuit), puis
-  PROC_CODE (DE3) et DE43 (necessitent d'etendre buildAuth0100, champs en dur aujourd'hui : DE3=000000, DE22=051).
+FRONT : apply-campaign-generation.sh, apply-tooltips.sh, apply-help.sh, apply-i18n-1.sh, fix-i18n-v18.sh,
+apply-i18n-campaign.sh, apply-orchestration.sh, apply-execution-view.sh, apply-api-config.sh, apply-dmas.sh,
+apply-config-screen.sh, apply-admin.sh, fix-ignore-localstorage-ports.sh.
+
+BACK : apply-port-config-back.sh, fix-restart-accumulation.sh, fix-main-realport.sh, fix-main-port-log.sh.
+
+---
+
+## 9. RESTE A FAIRE (PENDING GLOBAUX)
+
+### Front
+- **Dashboard** (vue d'accueil, placeholder actuel).
+- **Traduire l'ecran Help** (francais en dur) + placeholders restants (profile).
+- **Frontendiser les roles** : aujourd'hui les 3 roles sont en dur (pas d'endpoint back roles). A decider :
+  ecran de VISUALISATION du mapping role->permissions (lecture) OU gestion (necessite endpoints back).
+  -> PROCHAIN SUJET EN COURS quand la session s'est terminee (cartographie back a faire : chercher
+  RoleController/PermissionController, entites Role/Permission, mapping des permissions par role).
+- **Versionner le front** `sg-frontend` (pas encore de repo git initialise).
+
+### Back
+- **Etendre l'endpoint port a l'acquereur (8084) et l'emetteur (8501)**. ATTENTION : ces services ont des
+  serveurs **jPOS** (8600/8500) qui devront se rouvrir au restart du contexte (risque, a tester prudemment).
+- **Bouton "Reinitialiser localStorage"** dans l'ecran Config si on repasse USE_LOCALSTORAGE_PORTS a true.
+- Push des commits back en avance sur origin (voir section commits).
+
+### Sujet SUSPENDU : suppression du monde Test
+**[DECISION utilisateur]** Veut le mode Campagne uniquement et supprimer les tables du monde Test
+(`tests`, `executions`, `results`, `user_tests`, `tps_steps`), APRES avoir fini les ecrans front.
+**[CARTOGRAPHIE FAITE — CAS A : code TRES actif, NE PAS supprimer sans refactoring lourd]** :
+- Entites : Test, Execution, Result, TpsStep existent dans sg-common (user_tests n'a PAS d'entite).
+- Repositories UTILISES par le coeur : **ExecutionRepository et ResultRepository sont utilises par
+  McAcquirer, McAdviceManager, McReversalManager, TpsEngine** (= coeur monetique + moteur TPS !).
+- Controleurs ExecutionController + TestController encore exposes.
+**CONCLUSION : couplage fort au coeur monetique. Supprimer les tables casserait McAcquirer/TpsEngine/validate.
+SUSPENDU** — necessiterait de supprimer d'abord le code (controleurs->services->repos->entites), recompiler,
+PUIS retirer les tables, dans cet ordre et prudemment.
+
+---
+
+## 10. ARCHIVE — DETAILS SESSIONS 1-5 (BACK, conserves)
+
+### Session 3 - CIRCUIT BREAKER (commit 0cb7e17)
+CampaignRunService : a la fin de chaque palier, taux d'erreur cumule (declined/total). Si stopOnErrorRate
+non-NULL ET taux > seuil -> break la boucle des paliers. Statut STOPPED_ERROR_RATE ; verdict_detail
+"Circuit breaker: taux err X% > seuil Y% apres palier N" (ecrit APRES computeVerdict pour primer sur SLA).
+Retrocompatible (stop_on_error_rate NULL = inchange). Arret ENTRE paliers. Teste E2E OK.
+
+### Session 4 - CRUD campagnes via API
+Endpoints CampaignController sous /api/campaigns, @PreAuthorize fin. PUT = remplacement COMPLET
+(champs absents -> null). Fichiers : CampaignRequest.java, CampaignDto.java, CampaignCrudService.java.
+Sortie = CampaignDto (evite serialisation LAZY). Teste E2E + RBAC (OBSERVATEUR GET=200 POST=403).
+
+### Session 5 - Champs variables (montant)
+VARIABLE_FIELDS dans le config JSON, sans nouvelle colonne. Premier champ : AMOUNT mode RANGE {min,max}.
+Classe TpsCampagnePreparation cote acquereur (construite 1x avant les threads, nextTx()->PreparedTx) =
+POINT D'EXTENSION UNIQUE pour futurs champs variables. PAN reste RANDOM (pool lu en base au lancement
+orchestrateur, tire en memoire acquereur ; l'acquereur n'accede JAMAIS la base par tx ; PANs/PINs PAS dans
+le JSON pour PCI). Chaine : config -> CampaignRunService -> LoadTestRequest -> TpsCampagnePreparation ->
+buildAuth0100 (DE4). Teste E2E (40 tx, 12 montants distincts dans la plage).
+A SUIVRE : etendre VARIABLE_FIELDS a ENTRY_MODE (DE22), puis PROC_CODE (DE3) et DE43.
+
+### Infos pratiques back (rappel)
+- Canal SQL : `PGPASSWORD=postgres123 "/d/MoneyCore/PostgreSQL/18/bin/psql.exe" -U postgres -h localhost -d scenariogenerator`
+- Prerequis jPOS : sign-on issuer AVANT toute transaction. Pour WITH_PIN : PEK ACTIVE (TESTGRP01).
+- Config campagne (JSON) : DE002_PAN, DE002_PAN_MODE=RANDOM, DE004_AMOUNT, WITH_PIN, ENTRY_MODE,
+  VARIABLE_FIELDS. Colonnes : sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate.
+
+---
+
+## 11. COMMITS / TAGS
+
+Tags : v1.0.0 (moteur+Campagne), v1.1.0 (cartes reelles+PIN).
+Branche courante : **chore/cleanup-modules**.
+- Dossier `deploiement/` : commit e3d908e (push OK).
+- A PUSH : commits back du changement de port (RestartService, PortConfigController, SgAcquirerApplication),
+  + circuit breaker/CRUD/champs variables si pas encore pousses sur cette branche.
+- Front `sg-frontend` : PAS ENCORE versionne (a initialiser si souhaite).
