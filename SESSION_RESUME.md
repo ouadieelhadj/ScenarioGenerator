@@ -4,7 +4,7 @@
 > Couvre DEUX depots : le BACK `ScenarioGenerator` (Java/Spring, repo GitHub) et le
 > FRONT `sg-frontend` (Angular 18, dossier separe non encore versionne).
 
-**Derniere mise a jour :** 2026-07-03 (sessions 6-7-8 : base propre + IHM Angular + changement de port a chaud)
+**Derniere mise a jour :** 2026-07-04 (session 9 : demarrage projet SWAM multi-reseau)
 **Branche back :** chore/cleanup-modules
 **Version courante back :** v1.1.0 (taguee, publiee) + travaux post-v1.1.0
 
@@ -290,3 +290,74 @@ Branche courante : **chore/cleanup-modules**.
 - A PUSH : commits back du changement de port (RestartService, PortConfigController, SgAcquirerApplication),
   + circuit breaker/CRUD/champs variables si pas encore pousses sur cette branche.
 - Front `sg-frontend` : PAS ENCORE versionne (a initialiser si souhaite).
+
+---
+
+## 12. PROJET SWAM — nouveaux modules multi-reseau (DEMARRAGE, session 9)
+
+> Nouveau chantier : simuler le switch national marocain **SWAM (Switch Al Maghrib)**, sur le modele
+> de ce qui a ete fait pour DMAS (Mastercard). SWAM relie les banques marocaines pour les operations
+> monetiques nationales. Format : **ISO 8583 avec personnalisation SWAM des champs**.
+
+### Objectif
+Developper DEUX modules dans le MEME projet ScenarioGenerator (comme sg-dmas-*) :
+- **sg-swam-issuer** : simule **le switch SWAM lui-meme** (le point central qui recoit/route)
+- **sg-swam-acquirer** : simule **une banque connectee** au switch (emet des transactions vers SWAM)
+- Operations dans les DEUX SENS (la banque envoie vers le switch ; le switch peut solliciter la banque).
+
+### [DECISION] Architecture multi-reseau : OPTION A retenue
+Contexte : la plateforme va accumuler plusieurs reseaux (DMAS/Mastercard aujourd'hui, puis SWAM,
+puis VISA SMS/BASE I, puis Mastercard MDS...). Trois options avaient ete posees :
+- A) Dupliquer par reseau (rapide, mais duplication) ← **CHOISIE**
+- B) Coeur commun + adaptateurs enfichables (NetworkAdapter) — pereine mais gros refactoring
+- C) Module unique pilote par config
+
+**Choix utilisateur : OPTION A** (dupliquer pour SWAM maintenant), **AVEC adaptations de sg-common**
+au fur et a mesure (ce qui est partageable va dans sg-common a cote de l'existant Mastercard).
+Refactorisation vers l'option B envisageable plus tard quand VISA/MDS arriveront.
+
+### PREREQUIS BLOQUANT : la specification technique SWAM
+Le `SwamPackager` depend ENTIEREMENT de la spec. A recuperer/partager en debut de session :
+- tableau des champs DE (2,3,4,7,11,32,37,39,41,49...) : format (num/alphanum/binaire), longueur, type (fixe/LLVAR/LLLVAR)
+- encodage (ASCII / EBCDIC / BCD)
+- couche transport (longueur d'en-tete, header ISO, framing)
+- MTI supportes (0100/0110, 0200/0210, 0800/0810...)
+- codes specifiques (processing codes, response codes) + partie crypto (MAC, PIN block, cles)
+
+### Gabarit DMAS a repliquer (structure existante confirmee)
+**sg-dmas-acquirer** (package com.staging.sg.dmas.acquirer) :
+- network/ : DmasJposServer, McDmasAuthorization, McDmasReversal, McDmasAdvice, McDmasNetworkManager,
+  McDmasKeyExchange, LoadTestService, TpsCampagnePreparation, SessionOrchestrator
+- api/ : ~15 controllers (Auth, Authorization, Advice, Reversal, DmasNetwork, KekBootstrap, KeyExchange,
+  LoadTest, MacTest, PackagerTest, PinTest, Session, WhoAmI, CryptoTest)
+- config/SecurityConfig
+
+**sg-dmas-issuer** (package com.staging.sg.dmas.issuer) :
+- issuer/ : DmasJposClient, McDmasIssuer
+- api/ : Auth, Card, JposNetwork, KekBootstrap ; config/SecurityConfig
+
+**Packager** : `sg-common/src/main/java/com/staging/sg/common/iso/McPackager.java` (+ McPackagerEbcdic).
+Etend `org.jpos.iso.ISOBasePackager`, definit les 128 champs via ISOFieldPackager[] (ex :
+`fields[2] = new IFA_LLNUM(19, "PAN")`, `fields[4] = new IFA_NUMERIC(12, "AMOUNT TRANSACTION")`).
+-> `SwamPackager` sera construit sur ce meme modele, avec les champs de la spec SWAM.
+
+**HSM/crypto partage** (dans sg-common, reutilisable) : `hsm/ThalesHsmService.java`, `iso/crypto/HsmService.java`.
+
+**pom.xml racine** — modules actuels : sg-common, sg-generator-orchestrator, sg-dmcs-issuer,
+sg-dmcs-acquirer, sg-dmas-acquirer, sg-dmas-issuer. (Note : des modules sg-dmcs-* existent deja =
+precedent de duplication pour un autre reseau.) jpos.version=2.1.9.
+-> AJOUTER sg-swam-issuer + sg-swam-acquirer dans <modules>.
+
+### PLAN DE CONSTRUCTION (ordre propose, a demarrer en nouvelle session)
+1. Recuperer + analyser la spec SWAM -> recap de comprehension a valider AVANT de coder.
+2. `SwamPackager` dans sg-common (le dialecte ISO SWAM).
+3. `sg-swam-issuer` (le switch) : serveur jPOS + logique de routage/reponse.
+4. `sg-swam-acquirer` (la banque) : client jPOS + transactions (autorisation, etc.) dans les 2 sens.
+5. Declaration dans le pom parent + compilation.
+6. Endpoints REST + integration IHM (onglet/ecran SWAM cote front, plus tard).
+
+### Point d'attention
+- En monetique, ne RIEN deviner : chaque champ/format vient de la spec. Un recap de comprehension
+  est valide avec l'utilisateur avant de coder.
+- Reutiliser au maximum l'infra existante (HSM, pattern jPOS, securite JWT, moteur de charge).
+
