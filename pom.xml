@@ -25,6 +25,8 @@
         <module>sg-dmcs-acquirer</module>
         <module>sg-dmas-acquirer</module>
         <module>sg-dmas-issuer</module>
+        <module>sg-swam-issuer</module>
+        <module>sg-swam-acquirer</module>
     </modules>
 
     <properties>
