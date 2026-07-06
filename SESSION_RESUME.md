@@ -416,3 +416,55 @@ precedent de duplication pour un autre reseau.) jpos.version=2.1.9.
 - **PROCHAIN CHANTIER : SWAM back** — SwamPackager (tout-ASCII, header PowerCARD, HSM simule),
   modules sg-swam-issuer + sg-swam-acquirer (gabarit DMAS), automate 1804/1814, autorisation 1100.
   Le socle est pret : ajouter SWAM = INSERT deja faits + packager/transport/2 modules en code.
+
+---
+
+## 14. SWAM — CONSTRUCTION EN COURS (branche feature/multi-network)
+
+> On BATIT SWAM au niveau de DMAS : crypto reelle + persistance des 2 cotes.
+> Ce n'est PAS un POC. Modele : miroir exact de DMAS.
+
+### FAIT (commits 138b645, 4af5be1)
+**Dialecte ISO (sg-common)** — VALIDE round-trip 16/16 :
+- `SwamPackager` : ISO8583:1993 HPS, TOUT-ASCII (IFA_*), 128 champs.
+  Autorisation 1100, gestion reseau 1804/1814. DE43 LLVAR ans..40, DE52/DE128 binaires.
+- `SwamLengthChannel` : prefixe longueur 4 octets ASCII, parametrable (lengthDigits).
+  Header PowerCARD gere plus tard au niveau applicatif.
+
+**Modules (compiles)** :
+- `sg-swam-issuer` = switch/CENTRE. Serveur jPOS qui ECOUTE (port ISO lu depuis
+  networks, fallback 8510). SwamJposServer repond 1804->1814 DE39=800 et
+  1100->1110 DE39=000. REST 8511. HSM SIMULE pour l'instant.
+- `sg-swam-acquirer` = Membre/banque. Client jPOS, connexion PERMANENTE vers le
+  switch (host/port depuis networks), sign-on par REST. SwamJposClient =
+  pushAndWait correle par STAN. Endpoints /api/admin/swam/network/{signon,echo,
+  signoff} + /purchase. REST 8094.
+- Topologie HPS sec.4 : le Membre se connecte, le CENTRE ecoute (inverse de DMAS).
+
+**Base (migrations v1.3.0)** — 6 tables miroir DMAS, ownership dedie :
+- swam_cards, swam_iss_transactions, swam_iss_keys -> swam_issuer_user
+- swam_acq_transactions (l'acquereur persiste AUSSI), swam_acq_keys -> swam_acquirer_user
+- swam_kek -> postgres (partagee)
+- users swam_issuer_user / swam_acquirer_user (mdp postgres123) + grants miroir DMAS
+- ports en networks : ISO 8510, REST issuer 8511, REST acq 8094
+- yml SWAM : users dedies + liquibase OFF (les modules LISENT le schema)
+
+### RESTE A FAIRE (prochaine session)
+**Incr.1 (suite) — entites JPA + persistance + logique autorisation :**
+- 6 entites JPA dans sg-common (SwamCard, SwamIssTransaction, SwamAcqTransaction,
+  SwamIssKey, SwamAcqKey, SwamKek) + repositories.
+- Persistance : switch -> swam_iss_transactions ; acquereur -> swam_acq_transactions.
+- LOGIQUE AUTORISATION du switch : DECISION A FIGER
+  (a) debit REEL du solde : carte existe+active+solde>=montant -> approuve 000 +
+      debite ; sinon decline (carte inconnue / solde insuffisant). [RECO]
+  (b) carte active -> approuve, sans gestion solde.
+- Puis TEST connexion reelle complet : sign-on -> 1100 -> persistance verifiee.
+
+**Incr.2-3 — crypto reelle HPS** (quand la persistance tourne) :
+- key exchange SWAM (DE24=811/899, DE48 tags P10/P16, KEK/session keys)
+- MAC FIPS PUB 113 sur DE128, PIN block format HPS (DE53), via ThalesHsmService.
+
+### NOTES
+- SwamJposClient utilise BaseChannel jPOS (setHost/setPort/connect/receive/send).
+- SecurityConfig SWAM = permissif (POC) ; aligner sur DMAS (JWT+CORS) si pilotage IHM.
+- Scripts test : 06c-test-swam.sh (arret+ports+demarrage+sign-on+1100+sign-off).
