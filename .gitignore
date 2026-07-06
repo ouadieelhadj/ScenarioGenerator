@@ -25,3 +25,6 @@ Thumbs.db
 dmas_context_dump.txt
 keys/
 dmas_net_dump.txt
+
+# Artefacts IPM generes
+dmcs/
