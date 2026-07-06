@@ -28,3 +28,6 @@ dmas_net_dump.txt
 
 # Artefacts IPM generes
 dmcs/
+
+# Logs runtime des services
+run-logs/
