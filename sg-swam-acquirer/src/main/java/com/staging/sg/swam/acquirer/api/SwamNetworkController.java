@@ -2,6 +2,9 @@ package com.staging.sg.swam.acquirer.api;
 
 import com.staging.sg.swam.acquirer.network.SwamAuthorization;
 import com.staging.sg.swam.acquirer.network.SwamJposClient;
+import com.staging.sg.common.entity.SwamAcqTransaction;
+import com.staging.sg.common.repository.SwamAcqTransactionRepository;
+import java.time.LocalDateTime;
 import org.jpos.iso.ISOMsg;
 import org.springframework.web.bind.annotation.*;
 
@@ -18,10 +21,13 @@ public class SwamNetworkController {
 
     private final SwamJposClient client;
     private final SwamAuthorization auth;
+    private final SwamAcqTransactionRepository txRepo;
 
-    public SwamNetworkController(SwamJposClient client, SwamAuthorization auth) {
+    public SwamNetworkController(SwamJposClient client, SwamAuthorization auth,
+                                SwamAcqTransactionRepository txRepo) {
         this.client = client;
         this.auth = auth;
+        this.txRepo = txRepo;
     }
 
     @PostMapping("/network/signon")
@@ -61,6 +67,26 @@ public class SwamNetworkController {
         String stan = auth.nextStan_();
         ISOMsg req = auth.buildAuth1100(pan, amount, stan, client.getPackager());
         ISOMsg resp = client.sendAndWait(req, 10);
+        String rc = resp.hasField(39) ? resp.getString(39) : null;
+
+        // Persister la transaction emise cote acquereur
+        try {
+            SwamAcqTransaction tx = new SwamAcqTransaction();
+            tx.setPan(pan);
+            tx.setStan(stan);
+            tx.setTransmissionDt(req.hasField(7) ? req.getString(7) : "");
+            tx.setMti("1100");
+            tx.setProcessingCode(req.hasField(3) ? req.getString(3) : null);
+            tx.setAmount(Long.parseLong(amount));
+            tx.setCurrency(req.hasField(49) ? req.getString(49) : null);
+            tx.setResponseCode(rc);
+            tx.setStatus("000".equals(rc) ? "APPROVED" : "DECLINED");
+            txRepo.save(tx);
+        } catch (Exception e) {
+            // log seulement, ne bloque pas la reponse
+            System.err.println("[SWAM-ACQ] Persistance tx KO : " + e.getMessage());
+        }
+
         Map<String,Object> r = new LinkedHashMap<>();
         r.put("type", "PURCHASE");
         r.put("mti_sent", "1100");

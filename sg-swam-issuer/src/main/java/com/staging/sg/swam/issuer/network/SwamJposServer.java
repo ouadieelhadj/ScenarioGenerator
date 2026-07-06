@@ -1,9 +1,13 @@
 package com.staging.sg.swam.issuer.network;
 
 import com.staging.sg.common.entity.NetworkRef;
+import com.staging.sg.common.entity.SwamCard;
+import com.staging.sg.common.entity.SwamIssTransaction;
 import com.staging.sg.common.iso.SwamPackager;
 import com.staging.sg.common.iso.SwamLengthChannel;
 import com.staging.sg.common.repository.NetworkRepository;
+import com.staging.sg.common.repository.SwamCardRepository;
+import com.staging.sg.common.repository.SwamIssTransactionRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.jpos.iso.*;
@@ -17,8 +21,14 @@ import java.util.Optional;
 
 /**
  * Serveur jPOS cote CENTRE/SWITCH (SWAM issuer).
- * Le port ISO est lu depuis la table networks (source de verite), fallback 8510.
- * Repond : 1804 (801/803/802) -> 1814 DE39=800 ; 1100 -> 1110 DE39=000 (HSM simule).
+ * Logique d'autorisation REELLE (option a) : verifie la carte dans swam_cards,
+ * debite le solde si suffisant, persiste dans swam_iss_transactions.
+ *
+ * Codes DE39 (spec HPS annexe A) :
+ *   000 = approuve
+ *   116 = solde insuffisant
+ *   114 = compte inexistant (carte inconnue)
+ *   062 = carte restreinte / inactive
  */
 @Component
 public class SwamJposServer {
@@ -27,11 +37,18 @@ public class SwamJposServer {
     private static final int DEFAULT_ISO_PORT = 8510;
 
     private final NetworkRepository networkRepository;
+    private final SwamCardRepository cardRepository;
+    private final SwamIssTransactionRepository txRepository;
+
     private ISOServer isoServer;
     private Thread serverThread;
 
-    public SwamJposServer(NetworkRepository networkRepository) {
+    public SwamJposServer(NetworkRepository networkRepository,
+                          SwamCardRepository cardRepository,
+                          SwamIssTransactionRepository txRepository) {
         this.networkRepository = networkRepository;
+        this.cardRepository = cardRepository;
+        this.txRepository = txRepository;
     }
 
     private int resolvePort() {
@@ -44,7 +61,7 @@ public class SwamJposServer {
             }
             log.warn("[SWAM-SRV] Port ISO absent en base, fallback {}", DEFAULT_ISO_PORT);
         } catch (Exception e) {
-            log.warn("[SWAM-SRV] Lecture port en base impossible ({}), fallback {}", e.getMessage(), DEFAULT_ISO_PORT);
+            log.warn("[SWAM-SRV] Lecture port base KO ({}), fallback {}", e.getMessage(), DEFAULT_ISO_PORT);
         }
         return DEFAULT_ISO_PORT;
     }
@@ -109,10 +126,63 @@ public class SwamJposServer {
             return true;
         }
 
+        /**
+         * Logique d'autorisation (a) : debit reel.
+         * Cherche la carte, verifie statut + solde, debite si OK, persiste.
+         */
         private boolean handleAuthorization(ISOSource source, ISOMsg m) throws Exception {
-            log.info("[SWAM-SRV] Autorisation 1100 PAN={} montant={}",
-                    maskPan(m.hasField(2) ? m.getString(2) : "?"),
-                    m.hasField(4) ? m.getString(4) : "?");
+            String pan = m.hasField(2) ? m.getString(2) : null;
+            long amount = m.hasField(4) ? Long.parseLong(m.getString(4)) : 0L;
+            String stan = m.hasField(11) ? m.getString(11) : "";
+            log.info("[SWAM-SRV] Autorisation 1100 PAN={} montant={}", maskPan(pan), amount);
+
+            String responseCode;
+            String status;
+
+            Optional<SwamCard> opt = (pan != null) ? cardRepository.findByPan(pan) : Optional.empty();
+            if (opt.isEmpty()) {
+                responseCode = "114";                 // compte inexistant
+                status = "DECLINED";
+                log.info("[SWAM-SRV] Carte inconnue -> DE39=114");
+            } else {
+                SwamCard card = opt.get();
+                if (!"ACTIVE".equals(card.getStatus())) {
+                    responseCode = "062";             // carte restreinte/inactive
+                    status = "DECLINED";
+                    log.info("[SWAM-SRV] Carte inactive ({}) -> DE39=062", card.getStatus());
+                } else if (card.getBalance() < amount) {
+                    responseCode = "116";             // solde insuffisant
+                    status = "DECLINED";
+                    log.info("[SWAM-SRV] Solde insuffisant ({} < {}) -> DE39=116", card.getBalance(), amount);
+                } else {
+                    // Debit reel
+                    card.setBalance(card.getBalance() - amount);
+                    card.setUpdatedAt(java.time.LocalDateTime.now());
+                    cardRepository.save(card);
+                    responseCode = "000";             // approuve
+                    status = "APPROVED";
+                    log.info("[SWAM-SRV] APPROUVE, nouveau solde={} -> DE39=000", card.getBalance());
+                }
+            }
+
+            // Persister la transaction cote issuer
+            try {
+                SwamIssTransaction tx = new SwamIssTransaction();
+                tx.setPan(pan != null ? pan : "");
+                tx.setStan(stan);
+                tx.setTransmissionDt(m.hasField(7) ? m.getString(7) : "");
+                tx.setMti("1100");
+                tx.setProcessingCode(m.hasField(3) ? m.getString(3) : null);
+                tx.setAmount(amount);
+                tx.setCurrency(m.hasField(49) ? m.getString(49) : null);
+                tx.setResponseCode(responseCode);
+                tx.setStatus(status);
+                txRepository.save(tx);
+            } catch (Exception e) {
+                log.error("[SWAM-SRV] Persistance tx KO : {}", e.getMessage());
+            }
+
+            // Reponse 1110
             ISOMsg r = new ISOMsg();
             r.setPackager(m.getPackager());
             r.setMTI("1110");
@@ -124,12 +194,12 @@ public class SwamJposServer {
             if (m.hasField(12)) r.set(12, m.getString(12));
             if (m.hasField(32)) r.set(32, m.getString(32));
             if (m.hasField(37)) r.set(37, m.getString(37));
-            r.set(38, "123456");
-            r.set(39, "000");
+            if ("000".equals(responseCode)) r.set(38, "123456");
+            r.set(39, responseCode);
             if (m.hasField(41)) r.set(41, m.getString(41));
             if (m.hasField(49)) r.set(49, m.getString(49));
             source.send(r);
-            log.info("[SWAM-SRV] Repondu 1110 DE39=000 (approuve)");
+            log.info("[SWAM-SRV] Repondu 1110 DE39={}", responseCode);
             return true;
         }
 
