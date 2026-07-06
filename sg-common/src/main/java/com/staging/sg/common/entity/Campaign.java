@@ -15,6 +15,8 @@ public class Campaign {
     @Column(nullable = false, length = 100) private String name;
     @Column(length = 255)                   private String description;
     @Column(length = 50)                    private String category;
+    @Column(nullable = false, length = 20)  private String network = "DMAS";
+    @Column(nullable = false, length = 20)  private String initiator = "ACQUIRER";
     @Column(columnDefinition = "TEXT")      private String config;
     @Column(name = "expected_de039", length = 2) private String expectedDe039;
     @Column(nullable = false)               private boolean active = true;
@@ -41,6 +43,10 @@ public class Campaign {
     public void setDescription(String v) { this.description = v; }
     public String getCategory() { return category; }
     public void setCategory(String v) { this.category = v; }
+    public String getNetwork() { return network; }
+    public void setNetwork(String v) { this.network = v; }
+    public String getInitiator() { return initiator; }
+    public void setInitiator(String v) { this.initiator = v; }
     public String getConfig() { return config; }
     public void setConfig(String v) { this.config = v; }
     public String getExpectedDe039() { return expectedDe039; }

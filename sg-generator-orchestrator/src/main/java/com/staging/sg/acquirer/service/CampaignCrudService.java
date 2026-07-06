@@ -10,6 +10,9 @@ import com.staging.sg.common.entity.User;
 import com.staging.sg.common.repository.CampaignLoadStepRepository;
 import com.staging.sg.common.repository.CampaignExecutionRepository;
 import com.staging.sg.common.repository.CampaignRepository;
+import com.staging.sg.common.repository.MessageTypeRepository;
+import com.staging.sg.common.repository.NetworkRepository;
+import com.staging.sg.common.entity.MessageType;
 import com.staging.sg.common.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,15 +31,21 @@ public class CampaignCrudService {
     private final CampaignLoadStepRepository stepRepo;
     private final UserRepository userRepo;
     private final CampaignExecutionRepository execRepo;
+    private final MessageTypeRepository messageTypeRepo;
+    private final NetworkRepository networkRepo;
 
     public CampaignCrudService(CampaignRepository campaignRepo,
                                CampaignLoadStepRepository stepRepo,
                                UserRepository userRepo,
-                               CampaignExecutionRepository execRepo) {
+                               CampaignExecutionRepository execRepo,
+                               MessageTypeRepository messageTypeRepo,
+                               NetworkRepository networkRepo) {
         this.campaignRepo = campaignRepo;
         this.stepRepo = stepRepo;
         this.userRepo = userRepo;
         this.execRepo = execRepo;
+        this.messageTypeRepo = messageTypeRepo;
+        this.networkRepo = networkRepo;
     }
 
     /** Lit une execution de campagne par son id (suivi / resultat). */
@@ -134,7 +143,39 @@ public class CampaignCrudService {
 
     // ----- helpers -----
 
+    private void validateNetworkConsistency(String network, String category, String initiator) {
+        if (!networkRepo.existsByCode(network))
+            throw new RuntimeException("Reseau inconnu : '" + network + "'. Voir table networks.");
+        if (!"ACQUIRER".equals(initiator) && !"ISSUER".equals(initiator))
+            throw new RuntimeException("Initiateur invalide : '" + initiator + "'. Valeurs : ACQUIRER | ISSUER.");
+        if (category == null || category.isBlank()) {
+            log.warn("[CAMPAIGN-VALIDATION] category vide (network={}) : direction ignoree", network);
+            return;
+        }
+        java.util.List<MessageType> types = messageTypeRepo.findByNetworkAndCategory(network, category);
+        if (types.isEmpty()) {
+            log.warn("[CAMPAIGN-VALIDATION] aucun type pour (network={}, category={}) : coherence non verifiee", network, category);
+            return;
+        }
+        for (MessageType mt : types) {
+            String dir = mt.getDirection();
+            boolean ok = "ACQUIRER".equals(initiator)
+                    ? ("ACQ_TO_ISS".equals(dir) || "BOTH".equals(dir))
+                    : ("ISS_TO_ACQ".equals(dir) || "BOTH".equals(dir));
+            if (!ok)
+                throw new RuntimeException("Incoherence sens : initiateur=" + initiator
+                        + " mais type " + mt.getCode() + " (" + category + ") direction=" + dir
+                        + ". ACQUIRER exige ACQ_TO_ISS/BOTH ; ISSUER exige ISS_TO_ACQ/BOTH.");
+        }
+        log.info("[CAMPAIGN-VALIDATION] OK network={} category={} initiator={}", network, category, initiator);
+    }
+
     private void applyRequest(Campaign c, CampaignRequest req) {
+        String network   = (req.getNetwork()   != null && !req.getNetwork().isBlank())   ? req.getNetwork()   : "DMAS";
+        String initiator = (req.getInitiator() != null && !req.getInitiator().isBlank()) ? req.getInitiator() : "ACQUIRER";
+        validateNetworkConsistency(network, req.getCategory(), initiator);
+        c.setNetwork(network);
+        c.setInitiator(initiator);
         c.setName(req.getName());
         c.setDescription(req.getDescription());
         c.setCategory(req.getCategory());
@@ -167,6 +208,8 @@ public class CampaignCrudService {
         d.setName(c.getName());
         d.setDescription(c.getDescription());
         d.setCategory(c.getCategory());
+        d.setNetwork(c.getNetwork());
+        d.setInitiator(c.getInitiator());
         d.setConfig(c.getConfig());
         d.setExpectedDe039(c.getExpectedDe039());
         d.setActive(c.isActive());
