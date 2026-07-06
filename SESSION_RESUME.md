@@ -468,3 +468,66 @@ precedent de duplication pour un autre reseau.) jpos.version=2.1.9.
 - SwamJposClient utilise BaseChannel jPOS (setHost/setPort/connect/receive/send).
 - SecurityConfig SWAM = permissif (POC) ; aligner sur DMAS (JWT+CORS) si pilotage IHM.
 - Scripts test : 06c-test-swam.sh (arret+ports+demarrage+sign-on+1100+sign-off).
+
+---
+
+## 15. SWAM incr.1 TERMINE + incr.2 CRYPTO a faire (branche feature/multi-network)
+
+### INCR.1 TERMINE ET VALIDE (commit eb1e4ee)
+Le switch SWAM est un VRAI emetteur (plus un repondeur en dur) :
+- 6 entites JPA (SwamCard, SwamIss/AcqTransaction, SwamIss/AcqKey, SwamKek) + repos
+  dans sg-common. Validees contre le schema (ddl-auto=validate au demarrage : OK).
+- SwamJposServer : logique autorisation REELLE (option a = debit reel) :
+  * carte inconnue -> DE39=114 ; inactive -> 062 ; solde insuffisant -> 116
+  * carte OK -> DEBITE le solde, DE39=000 APPROVED
+  * persiste chaque autorisation dans swam_iss_transactions
+- SwamNetworkController : persiste tx emises dans swam_acq_transactions
+- VALIDE bout-en-bout sur socket reel (script 08c-cartes-et-test.sh) :
+  3 achats 000/116/114, solde debite 100000->90000, persistance OK des 2 cotes.
+- Cartes de test : deploiement/swam_cartes_test.sql
+  (5321962145453348 solde 100000 ACTIVE ; 5321000000000011 solde 500 ;
+   5321000000000029 BLOCKED)
+
+### INFRA CRYPTO EXISTANTE (reutilisable pour SWAM)
+- Interface HsmService (sg-common/iso/crypto/) : RESEAU-AGNOSTIQUE, expose
+  generateWorkingKey, importWorkingKey, encryptPinBlock, decryptPinBlock,
+  generateMac, verifyMac, computeKcv. IMPL = JposHsmService (jPOS 3DES sous LMK).
+- ThalesHsmService (sg-common/hsm/) : generateZmk/Zpk/Zak, PIN block, MAC.
+- Convention DMAS : KEK=ZMK, PEK=ZPK, MAK=ZAK.
+- Flux DMAS a repliquer : KekBootstrapController, KeyExchangeController,
+  SessionOrchestrator (sg-dmas-acquirer).
+- Les tables swam_iss_keys/swam_acq_keys/swam_kek ont deja key_type,
+  key_under_kek, key_under_lmk, kcv -> pretes.
+
+### INCR.2 CRYPTO REELLE HPS — A FAIRE (PREREQUIS : LIRE LE PDF)
+>>> PREREQUIS ABSOLU : ouvrir Description_Interface_Switch-SID_V3-20.pdf
+>>> et VERIFIER CES 5 POINTS avant tout code (crypto = on ne devine RIEN) :
+
+1. DE48 (transport cles de session) : FORMAT EXACT des tags P10 (cle MAC) et
+   P16 (cle PIN) - structure interne (longueur, KCV inclus ?, ordre, encodage).
+   -> section gestion de reseau (§3.13/§4) ou annexe description des DE.
+
+2. Flux echange de cles 1804 DE24=811/899 : SEQUENCE exacte - qui initie,
+   quel message porte quelle cle, quelle reponse. 811=cle transport ? 899=cle MAC ?
+   echange separe pour cle PIN ? -> §4 (automate SIGN-ON, diagramme p.95).
+
+3. DE53 (controle securite) : description POSITION PAR POSITION (methode
+   encryption PIN 00/02, format PIN block 01/25/99, index cle PIN, index cle MAC).
+
+4. DE52 (PIN block) : FORMAT exact (ANSI X9.8 / ISO Format 0 ?) + lien avec DE53.
+
+5. DE128 ou DE64 (MAC) : sur QUELS CHAMPS le MAC est calcule (tout le message
+   depuis MTI ? jusqu'ou ?), ALGO precis (FIPS PUB 113 = quel mode), DE64 ou DE128.
+
+### PLAN INCR.2 (une fois le PDF lu + recap valide)
+- 2.1 Bootstrap KEK SWAM (repliquer KekBootstrapController, forme KEK sous LMK
+  -> swam_kek). PEU dependant de la spec, faisable en premier.
+- 2.2 Key exchange SWAM (1804 DE24=811/899, ZPK/ZAK sous KEK, DE48 P10/P16). SPEC.
+- 2.3 MAC reel (FIPS sur DE128 via generateMac/verifyMac). SPEC.
+- 2.4 PIN block reel (DE52+DE53 via encrypt/decryptPinBlock). SPEC.
+Chaque etape committee + testee avant la suivante.
+
+### METHODE DE REPRISE
+1. Ouvrir nouvelle session, re-uploader le PDF SWAM.
+2. Claude relit les 5 points ci-dessus -> propose un RECAP crypto a valider.
+3. Apres validation -> coder 2.1, 2.2, 2.3, 2.4 dans l'ordre.
