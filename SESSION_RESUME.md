@@ -361,3 +361,58 @@ precedent de duplication pour un autre reseau.) jpos.version=2.1.9.
   est valide avec l'utilisateur avant de coder.
 - Reutiliser au maximum l'infra existante (HSM, pattern jPOS, securite JWT, moteur de charge).
 
+
+---
+
+## 13. v1.2.0 — SOCLE MULTI-RESEAU (COMPLETED, branche feature/multi-network)
+
+> Refactoring de l'existant (DMAS + orchestrateur + front) pour rendre la
+> plateforme reseau-consciente et MTI-parametrique, AVANT de construire SWAM.
+> Principe : SELECTION en base, PROTOCOLE en code (Option A conservee).
+
+### Base (4 migrations SQL dans deploiement/)
+- **table `networks`** (referentiel gouverne) : metadonnees protocole
+  (iso_version, length_prefix_size/encoding, header_type, default_field_encoding,
+  mac_present, pin_block_format, packager_class) + infra (hosts/ports).
+  * DMAS (verifie code) : 2 octets big-endian BINARY, McPackagerEbcdic, header NONE,
+    ports 8084/8600/8501/8500/8080.
+  * SWAM (spec HPS) : 4 octets ASCII, header POWERCARD, champs ASCII, ports acq/iss NULL.
+- **message_types** : + `network` (defaut DMAS) + `direction` (ACQ_TO_ISS/ISS_TO_ACQ/BOTH).
+  4 types SWAM ajoutes (1100/1200/1420/1804), category reseau-agnostique.
+- **campaigns** : + `network` (defaut DMAS) + `initiator` (ACQUIRER/ISSUER, defaut ACQUIRER).
+  data : ancienne category 'DMAS' -> 'AUTHORIZATION'.
+- **FK** message_types.network + campaigns.network -> networks.code.
+- **grants** networks -> scenario_user.
+
+### Java (sg-common + orchestrateur)
+- Entite `NetworkRef` (table networks, nommee ainsi pour ne pas heurter NetworkUtil)
+  + `NetworkRepository`. `MessageTypeRepository.findByNetworkAndCategory/findByNetwork`.
+- Campaign/CampaignDto/CampaignRequest + network/initiator ; MessageType + network/direction.
+- **CampaignCrudService** : validation coherence initiator<->direction
+  (STRICT si type existe ; TOLERANT sinon = warning ; defauts DMAS/ACQUIRER retrocompatibles).
+- **CampaignRunService** : resout le MTI depuis message_types (network,category)
+  et le transmet au moteur. Fallback 0100.
+- **McDmasAuthorization** : buildAuth0100/WithPin surchargees MTI-parametriques
+  (anciennes signatures conservees par delegation ; sendAuthorization manuel inchange).
+- **LoadTestRequest** + champ mti ; LoadTestService passe req.mti.
+- Endpoints : `NetworkController` (GET /api/networks) ; MessageTypeController
+  etendu (GET ?network=X&category=Y).
+
+### Front (sg-frontend, DESORMAIS VERSIONNE en local, commit 7e03b2f)
+- Ecran generation de campagne : le champ texte 'category' remplace par 3 selecteurs
+  Reseau / Type(categorie filtree par reseau) / Initiateur. Colonne Reseau au tableau.
+- Services network + message-type ; modeles NetworkRef/MessageTypeRef.
+- i18n fr/en/es (network, initiator). Dialog elargi (860px, grille adaptative).
+
+### VALIDATION
+- E2E DMAS : COMPLETED / PASSED / 37/37 approuvees / 0 declinee.
+  Log 'MTI resolu=0100 (network=DMAS category=AUTHORIZATION)' -> resolution base OK,
+  comportement DMAS strictement identique (refactoring a comportement constant).
+
+### DETTE / A SUIVRE
+- **networks.*_port** peuples mais NON lus au runtime (source de verite = application.yml
+  + PortConfigController session 8). A brancher plus tard si networks devient source unique.
+- **Front** : remote GitHub a creer (versionne en local seulement).
+- **PROCHAIN CHANTIER : SWAM back** — SwamPackager (tout-ASCII, header PowerCARD, HSM simule),
+  modules sg-swam-issuer + sg-swam-acquirer (gabarit DMAS), automate 1804/1814, autorisation 1100.
+  Le socle est pret : ajouter SWAM = INSERT deja faits + packager/transport/2 modules en code.
