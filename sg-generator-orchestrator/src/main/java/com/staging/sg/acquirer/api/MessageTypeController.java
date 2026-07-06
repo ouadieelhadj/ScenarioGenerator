@@ -19,6 +19,17 @@ public class MessageTypeController {
         this.messageTypeRepository = messageTypeRepository;
     }
 
+    // GET /api/admin/message-types?network=DMAS&category=AUTHORIZATION (filtres optionnels)
+    @GetMapping(params = {"network"})
+    public ResponseEntity<List<MessageType>> findByNetwork(
+            @RequestParam String network,
+            @RequestParam(required = false) String category) {
+        List<MessageType> result = (category != null && !category.isBlank())
+                ? messageTypeRepository.findByNetworkAndCategory(network, category)
+                : messageTypeRepository.findByNetwork(network);
+        return ResponseEntity.ok(result);
+    }
+
     // GET /api/admin/message-types
     @GetMapping
     public ResponseEntity<List<MessageType>> findAll() {
