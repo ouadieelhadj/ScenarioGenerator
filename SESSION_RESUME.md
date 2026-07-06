@@ -531,3 +531,67 @@ Chaque etape committee + testee avant la suivante.
 1. Ouvrir nouvelle session, re-uploader le PDF SWAM.
 2. Claude relit les 5 points ci-dessus -> propose un RECAP crypto a valider.
 3. Apres validation -> coder 2.1, 2.2, 2.3, 2.4 dans l'ordre.
+
+---
+
+## 16. SWAM incr.2 — RECAP CRYPTO FIGE (lecture PDF HSID v3.20 faite, NE PAS refaire)
+
+> Source : Description_Interface_Switch-SID_V3-20_05012024.pdf. Recap verifie
+> ligne par ligne. 3 niveaux : [SPEC]=litteral, [INF]=inference sure non ecrite,
+> [DECISION]=trou spec tranche par nous (on maitrise switch + banque).
+
+### Transport des cles (DE48, tags TLV Tag3+Long3+Valeur)
+- [SPEC] P16 long=032 = "cle d'encryption du PIN / cle de transport du code
+  confidentiel entre CENTRE et membre". P10 long=016 = "cle MAC".
+- [INF] P16 = 32 hex = 16 octets = 2-key 3DES = ZPK (appuye par histo v3.12
+  "T-DES pour PIN"). P10 = 16 hex = 8 octets = DES simple = ZAK.
+- [INF] pas de KCV embarque dans P10/P16 (longueur = cle seule, pas de +6).
+- [DECISION] cles transportees CHIFFREES sous ZMK/KEK (spec muette la-dessus ; = DMAS).
+- Mapping DMAS : P16=ZPK=PEK, P10=ZAK=MAK, sous KEK=ZMK (bootstrap hors bande).
+
+### Handshake key exchange (1804/1814)
+- [SPEC] DE24 : 811="changement cle de transport" (=> P16), 899="changement cle
+  MAC" (=> P10). Echange SEPARE, 1 message par cle. Pas de code pour changer ZMK.
+- [SPEC] DE48 conditionnel dans 1804/1814 (OK pour porter les cles).
+- [DECISION GAP-A] sens = (a) CENTRE-autorite : membre envoie 1804 DE24=811 ->
+  CENTRE genere ZPK sous ZMK -> repond 1814 DE24=811, DE39=800, DE48 P16=<ZPK/ZMK>.
+  Idem 899 -> P10. La spec (sect.4 + automate p.92-95) ne decrit QUE
+  801/802/803/804/805 ; le key-exchange n'y est pas => c'est notre convention.
+
+### PIN (DE52 + DE53)
+- [SPEC] DE52 = b 8 (bloc PIN 64 bits). Chiffre sous ZPK si DE53 pos1-2=02.
+- [SPEC] DE53 LLVAR n..99 : pos1-2 methode (00 aucune / 02 ZPK),
+  pos3-4 format block (01 ANSI / 25 pre-valide / 99 absent),
+  pos5-7 index cle PIN (000), pos8-10 index cle MAC (000).
+- [INF] "ANSI" (pos3-4=01) = ISO 9564 Format 0 (PIN XOR 12 chiffres droite du PAN
+  hors cle de controle).
+- Exemple achat WITH_PIN : DE53 = "0201000000".
+
+### MAC (DE128)
+- [SPEC] DE128 = b 8, algo FIPS PUB 113, present "Tous les messages".
+  DE64 NON utilise (DE128 = seul champ MAC dans toutes les tables de messages).
+- [INF] FIPS 113 = DES CBC-MAC (DAA), bloc chiffre final 8 octets, cle = ZAK (P10).
+- [DECISION GAP-B] plage MAC = message packe du MTI (inclus) -> dernier champ
+  avant DE128. Header PowerCARD EXCLU (a confirmer si vrai interop un jour).
+
+### Codes reponse utiles (ANNEXE A, DE39, n3)
+- 000 Approuve / 001 Approuve avec id / 085 Aucune raison de refuser (Account Verif)
+- 100 Ne pas honorer / 101 Carte perimee / 116 Fonds insuffisants / 117 PIN incorrect
+- 106 Nb essais PIN depasse / 902 Transaction invalide / 909 Defaillance systeme
+- 911 Emetteur pas repondu a temps / 912 Emetteur indisponible / 992 Verif PIN impossible
+- Sign-on/echo/signoff : reponse OK = 1814 DE39=800 (deja implemente incr.1).
+
+### CHECKS AVANT DE CODER
+- [BLOQUANT 2.2] SwamPackager doit packer DE48 en LLLVAR (3 digits), pas LLVAR :
+  une cle depasse 99 chars => sinon le key-exchange casse. A VERIFIER EN PREMIER.
+- Tables swam_iss_keys/swam_acq_keys/swam_kek ont deja key_type, key_under_kek,
+  key_under_lmk, kcv => pretes.
+- Infra reutilisable : HsmService (generateWorkingKey/importWorkingKey/
+  encryptPinBlock/decryptPinBlock/generateMac/verifyMac/computeKcv) + ThalesHsmService.
+  Flux DMAS a repliquer : KekBootstrapController, KeyExchangeController, SessionOrchestrator.
+
+### PLAN (chaque etape commit + test avant la suivante)
+- 2.1 Bootstrap KEK SWAM (ZMK sous LMK -> swam_kek). Peu dependant spec. EN PREMIER.
+- 2.2 Key exchange 1804 DE24=811/899, ZPK/ZAK sous KEK, DE48 P10/P16 (GAP-A=a).
+- 2.3 MAC reel DES CBC-MAC FIPS 113 sur DE128 (GAP-B), via generateMac/verifyMac.
+- 2.4 PIN block reel Format 0 DE52 + DE53, via encrypt/decryptPinBlock.
