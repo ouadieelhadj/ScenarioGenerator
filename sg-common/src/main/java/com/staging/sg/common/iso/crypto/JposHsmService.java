@@ -246,4 +246,39 @@ public class JposHsmService implements HsmService {
         log.info("[HSM] verifyMac — match={}", ok);
         return ok;
     }
+
+    // ── SWAM : cles de travail SIMPLE longueur (DES 8o) ─────────────
+    // La ZAK SWAM (tag P10=016) exige 8 octets = 16 hex sous KEK.
+    // FIPS PUB 113 (MAC DE128) = DES-CBC-MAC a cle simple -> coherent.
+    public KeyResult generateWorkingKeySingle(String keyType, String kekClearHex) throws Exception {
+        short len = (short) 64; // LENGTH_DES simple
+        SecureDESKey workUnderLmk = sm.generateKey(len, smType(keyType));
+        SecureDESKey kekUnderLmk = formClearKey("KEK", kekClearHex);
+        byte[] underKek = sm.exportKey(workUnderLmk, kekUnderLmk);
+        byte[] kcvBytes = sm.generateKeyCheckValue(workUnderLmk);
+        String kcv = ISOUtil.hexString(kcvBytes).substring(0, 6).toUpperCase();
+        KeyResult r = new KeyResult();
+        r.keyUnderKek = underKek;
+        r.keyUnderKekHex = ISOUtil.hexString(underKek).toUpperCase();
+        r.keyUnderLmkHex = ISOUtil.hexString(workUnderLmk.getKeyBytes()).toUpperCase();
+        r.kcv = kcv;
+        log.info("[HSM] generateWorkingKeySingle {} — KCV={} underKEK={} ({}hex)",
+                keyType, kcv, r.keyUnderKekHex, r.keyUnderKekHex.length());
+        return r;
+    }
+
+    public KeyResult importWorkingKeySingle(String keyType, String keyUnderKekHex, String kekClearHex) throws Exception {
+        short len = (short) 64; // LENGTH_DES simple
+        byte[] underKek = ISOUtil.hex2byte(keyUnderKekHex);
+        SecureDESKey kekUnderLmk = formClearKey("KEK", kekClearHex);
+        SecureDESKey workUnderLmk = sm.importKey(len, smType(keyType), underKek, kekUnderLmk, false);
+        byte[] kcvBytes = sm.generateKeyCheckValue(workUnderLmk);
+        String kcv = ISOUtil.hexString(kcvBytes).substring(0, 6).toUpperCase();
+        KeyResult r = new KeyResult();
+        r.keyUnderKekHex = keyUnderKekHex.toUpperCase();
+        r.keyUnderLmkHex = ISOUtil.hexString(workUnderLmk.getKeyBytes()).toUpperCase();
+        r.kcv = kcv;
+        log.info("[HSM] importWorkingKeySingle {} — KCV={}", keyType, kcv);
+        return r;
+    }
 }
