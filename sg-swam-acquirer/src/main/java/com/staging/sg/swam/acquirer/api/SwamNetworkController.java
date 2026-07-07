@@ -2,6 +2,7 @@ package com.staging.sg.swam.acquirer.api;
 
 import com.staging.sg.swam.acquirer.network.SwamAuthorization;
 import com.staging.sg.swam.acquirer.network.SwamJposClient;
+import com.staging.sg.swam.acquirer.network.SwamKeyExchange;
 import com.staging.sg.common.entity.SwamAcqTransaction;
 import com.staging.sg.common.repository.SwamAcqTransactionRepository;
 import java.time.LocalDateTime;
@@ -22,12 +23,14 @@ public class SwamNetworkController {
     private final SwamJposClient client;
     private final SwamAuthorization auth;
     private final SwamAcqTransactionRepository txRepo;
+    private final SwamKeyExchange keyExchange;
 
     public SwamNetworkController(SwamJposClient client, SwamAuthorization auth,
-                                SwamAcqTransactionRepository txRepo) {
+                                SwamAcqTransactionRepository txRepo, SwamKeyExchange keyExchange) {
         this.client = client;
         this.auth = auth;
         this.txRepo = txRepo;
+        this.keyExchange = keyExchange;
     }
 
     @PostMapping("/network/signon")
@@ -58,6 +61,16 @@ public class SwamNetworkController {
         r.put("de39_action", resp.hasField(39) ? resp.getString(39) : null);
         r.put("success", "800".equals(resp.hasField(39) ? resp.getString(39) : ""));
         return r;
+    }
+
+    @PostMapping("/keyexchange/zpk")
+    public Map<String,Object> keyExchangeZpk() throws Exception {
+        return keyExchange.exchangeZpk();
+    }
+
+    @PostMapping("/keyexchange/zak")
+    public Map<String,Object> keyExchangeZak() throws Exception {
+        return keyExchange.exchangeZak();
     }
 
     @PostMapping("/purchase")
