@@ -146,9 +146,10 @@ public class LoadTestService {
             d.pan = txPan;
             long t0 = System.currentTimeMillis();
             try {
+                String mti = (req.mti != null && !req.mti.isBlank()) ? req.mti : "0100";
                 ISOMsg msg = req.withPin
-                        ? auth.buildAuth0100WithPin(txPan, txPin, tx.amount, tx.entryMode, stan)
-                        : auth.buildAuth0100(txPan, tx.amount, tx.entryMode, stan);
+                        ? auth.buildAuth0100WithPin(mti, txPan, txPin, tx.amount, tx.entryMode, stan)
+                        : auth.buildAuth0100(mti, txPan, tx.amount, tx.entryMode, stan);
                 d.requestHex = org.jpos.iso.ISOUtil.hexString(msg.pack());
                 ISOMsg resp = jposServer.pushAndWait(msg, timeout);
                 d.durationMs = System.currentTimeMillis() - t0;

@@ -12,6 +12,7 @@ public class LoadTestRequest {
     public Integer targetTps;             // cadence cible (optionnel)
     public Integer concurrency     = 50;
     public Integer timeoutSeconds  = 10;
+    public String  mti             = "0100";   // MTI resolu par l'orchestrateur (defaut = comportement actuel)
 
     // Montant variable par transaction : si amountMin/amountMax non null, tire dans [min, max]
     public Long amountMin;

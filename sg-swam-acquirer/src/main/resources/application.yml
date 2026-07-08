@@ -1,0 +1,31 @@
+server:
+  port: 8094   # REST du module acquereur SWAM
+
+spring:
+  liquibase:
+    enabled: false
+  application:
+    name: sg-swam-acquirer
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scenariogenerator
+    username: swam_acquirer_user
+    password: postgres123
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+# NB : host + port du switch cible sont lus depuis networks (code=SWAM).
+
+jwt:
+  secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
+  expiration-ms: 86400000
+
+# MAC DE128 (parametrable, meme mecanique que DMAS)
+swam:
+  mac:
+    fields: "4,11,37,41,42"
+    representation: "ascii"
+    reject-code: "916"
+    enforce: true

@@ -10,4 +10,6 @@ import java.util.List;
 public interface MessageTypeRepository extends JpaRepository<MessageType, Long> {
     List<MessageType> findByActiveTrue();
     List<MessageType> findByCategory(String category);
+    List<MessageType> findByNetworkAndCategory(String network, String category);
+    List<MessageType> findByNetwork(String network);
 }

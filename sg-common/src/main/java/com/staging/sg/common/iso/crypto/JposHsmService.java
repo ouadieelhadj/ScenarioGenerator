@@ -16,6 +16,8 @@ import org.springframework.stereotype.Service;
 import jakarta.annotation.PostConstruct;
 import java.io.File;
 import java.util.Properties;
+import javax.crypto.Cipher;
+import javax.crypto.spec.SecretKeySpec;
 
 /**
  * Implémentation HSM via jPOS JCESecurityModule (crypto 3DES réelle sous LMK).
@@ -244,6 +246,107 @@ public class JposHsmService implements HsmService {
         byte[] computed = generateMac(data, makUnderLmkHex, kcv, keyLenBytes);
         boolean ok = java.util.Arrays.equals(computed, expectedMac);
         log.info("[HSM] verifyMac — match={}", ok);
+        return ok;
+    }
+
+    // ── SWAM : cles de travail SIMPLE longueur (DES 8o) ─────────────
+    // La ZAK SWAM (tag P10=016) exige 8 octets = 16 hex sous KEK.
+    // FIPS PUB 113 (MAC DE128) = DES-CBC-MAC a cle simple -> coherent.
+    public KeyResult generateWorkingKeySingle(String keyType, String kekClearHex) throws Exception {
+        short len = (short) 64; // LENGTH_DES simple
+        SecureDESKey workUnderLmk = sm.generateKey(len, smType(keyType));
+        SecureDESKey kekUnderLmk = formClearKey("KEK", kekClearHex);
+        byte[] underKek = sm.exportKey(workUnderLmk, kekUnderLmk);
+        byte[] kcvBytes = sm.generateKeyCheckValue(workUnderLmk);
+        String kcv = ISOUtil.hexString(kcvBytes).substring(0, 6).toUpperCase();
+        KeyResult r = new KeyResult();
+        r.keyUnderKek = underKek;
+        r.keyUnderKekHex = ISOUtil.hexString(underKek).toUpperCase();
+        r.keyUnderLmkHex = ISOUtil.hexString(workUnderLmk.getKeyBytes()).toUpperCase();
+        r.kcv = kcv;
+        log.info("[HSM] generateWorkingKeySingle {} — KCV={} underKEK={} ({}hex)",
+                keyType, kcv, r.keyUnderKekHex, r.keyUnderKekHex.length());
+        return r;
+    }
+
+    public KeyResult importWorkingKeySingle(String keyType, String keyUnderKekHex, String kekClearHex) throws Exception {
+        short len = (short) 64; // LENGTH_DES simple
+        byte[] underKek = ISOUtil.hex2byte(keyUnderKekHex);
+        SecureDESKey kekUnderLmk = formClearKey("KEK", kekClearHex);
+        SecureDESKey workUnderLmk = sm.importKey(len, smType(keyType), underKek, kekUnderLmk, false);
+        byte[] kcvBytes = sm.generateKeyCheckValue(workUnderLmk);
+        String kcv = ISOUtil.hexString(kcvBytes).substring(0, 6).toUpperCase();
+        KeyResult r = new KeyResult();
+        r.keyUnderKekHex = keyUnderKekHex.toUpperCase();
+        r.keyUnderLmkHex = ISOUtil.hexString(workUnderLmk.getKeyBytes()).toUpperCase();
+        r.kcv = kcv;
+        log.info("[HSM] importWorkingKeySingle {} — KCV={}", keyType, kcv);
+        return r;
+    }
+
+    // ── SWAM : DES-CBC-MAC "maison" (FIPS PUB 113 / ISO 9797-1 Alg 1) ──
+    // jPOS generateCBC_MAC() utilise ISO9797ALG3 (Retail MAC) qui EXIGE une cle
+    // 16 octets ; notre ZAK SWAM fait 8 octets (tag P10=016). On calcule donc
+    // le MAC nous-memes : DES-CBC (IV=0, padding zero), MAC = dernier bloc (8o).
+    // Utilise UNIQUEMENT par SWAM. DMAS continue d'utiliser generateMac/verifyMac.
+
+    /** Dechiffre la cle de travail (sous KEK) pour obtenir sa valeur claire. */
+    private byte[] decryptKeyUnderKek(String keyUnderKekHex, String kekClearHex) throws Exception {
+        byte[] kek = ISOUtil.hex2byte(kekClearHex);
+        byte[] enc = ISOUtil.hex2byte(keyUnderKekHex);
+        byte[] kek24 = (kek.length == 16)
+                ? concat(kek, java.util.Arrays.copyOfRange(kek, 0, 8))  // 2-key -> K1K2K1
+                : kek;
+        Cipher c = Cipher.getInstance("DESede/ECB/NoPadding");
+        c.init(Cipher.DECRYPT_MODE, new SecretKeySpec(kek24, "DESede"));
+        return c.doFinal(enc);
+    }
+
+    private static byte[] concat(byte[] a, byte[] b) {
+        byte[] r = new byte[a.length + b.length];
+        System.arraycopy(a, 0, r, 0, a.length);
+        System.arraycopy(b, 0, r, a.length, b.length);
+        return r;
+    }
+
+    /** Padding zero jusqu'a un multiple de 8 octets. */
+    private static byte[] zeroPad(byte[] data) {
+        int rem = data.length % 8;
+        if (rem == 0 && data.length > 0) return data;
+        int newLen = data.length + (8 - rem);
+        byte[] out = new byte[newLen];
+        System.arraycopy(data, 0, out, 0, data.length);
+        return out;
+    }
+
+    /**
+     * DES-CBC-MAC (FIPS 113) avec ZAK simple longueur (8 octets).
+     * @param keyUnderKekHex ZAK chiffree sous KEK (16 hex)
+     * @param kekClearHex    KEK claire (32 hex si double longueur)
+     * @return MAC 8 octets (dernier bloc CBC)
+     */
+    public byte[] generateMacSingle(byte[] data, String keyUnderKekHex, String kekClearHex) throws Exception {
+        byte[] zak = decryptKeyUnderKek(keyUnderKekHex, kekClearHex);
+        if (zak.length != 8) {
+            throw new IllegalArgumentException("ZAK attendue 8 octets, recue " + zak.length);
+        }
+        byte[] padded = zeroPad(data);
+        Cipher c = Cipher.getInstance("DES/CBC/NoPadding");
+        c.init(Cipher.ENCRYPT_MODE,
+               new SecretKeySpec(zak, "DES"),
+               new javax.crypto.spec.IvParameterSpec(new byte[8]));
+        byte[] all = c.doFinal(padded);
+        byte[] mac = java.util.Arrays.copyOfRange(all, all.length - 8, all.length);
+        log.info("[HSM] generateMacSingle (DES-CBC-MAC FIPS113) dataLen={} padded={} mac={}",
+                data.length, padded.length, ISOUtil.hexString(mac));
+        return mac;
+    }
+
+    public boolean verifyMacSingle(byte[] data, String keyUnderKekHex, String kekClearHex, byte[] expectedMac) throws Exception {
+        byte[] computed = generateMacSingle(data, keyUnderKekHex, kekClearHex);
+        boolean ok = java.util.Arrays.equals(computed, expectedMac);
+        log.info("[HSM] verifyMacSingle — attendu={} calcule={} match={}",
+                ISOUtil.hexString(expectedMac), ISOUtil.hexString(computed), ok);
         return ok;
     }
 }

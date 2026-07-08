@@ -361,3 +361,237 @@ precedent de duplication pour un autre reseau.) jpos.version=2.1.9.
   est valide avec l'utilisateur avant de coder.
 - Reutiliser au maximum l'infra existante (HSM, pattern jPOS, securite JWT, moteur de charge).
 
+
+---
+
+## 13. v1.2.0 — SOCLE MULTI-RESEAU (COMPLETED, branche feature/multi-network)
+
+> Refactoring de l'existant (DMAS + orchestrateur + front) pour rendre la
+> plateforme reseau-consciente et MTI-parametrique, AVANT de construire SWAM.
+> Principe : SELECTION en base, PROTOCOLE en code (Option A conservee).
+
+### Base (4 migrations SQL dans deploiement/)
+- **table `networks`** (referentiel gouverne) : metadonnees protocole
+  (iso_version, length_prefix_size/encoding, header_type, default_field_encoding,
+  mac_present, pin_block_format, packager_class) + infra (hosts/ports).
+  * DMAS (verifie code) : 2 octets big-endian BINARY, McPackagerEbcdic, header NONE,
+    ports 8084/8600/8501/8500/8080.
+  * SWAM (spec HPS) : 4 octets ASCII, header POWERCARD, champs ASCII, ports acq/iss NULL.
+- **message_types** : + `network` (defaut DMAS) + `direction` (ACQ_TO_ISS/ISS_TO_ACQ/BOTH).
+  4 types SWAM ajoutes (1100/1200/1420/1804), category reseau-agnostique.
+- **campaigns** : + `network` (defaut DMAS) + `initiator` (ACQUIRER/ISSUER, defaut ACQUIRER).
+  data : ancienne category 'DMAS' -> 'AUTHORIZATION'.
+- **FK** message_types.network + campaigns.network -> networks.code.
+- **grants** networks -> scenario_user.
+
+### Java (sg-common + orchestrateur)
+- Entite `NetworkRef` (table networks, nommee ainsi pour ne pas heurter NetworkUtil)
+  + `NetworkRepository`. `MessageTypeRepository.findByNetworkAndCategory/findByNetwork`.
+- Campaign/CampaignDto/CampaignRequest + network/initiator ; MessageType + network/direction.
+- **CampaignCrudService** : validation coherence initiator<->direction
+  (STRICT si type existe ; TOLERANT sinon = warning ; defauts DMAS/ACQUIRER retrocompatibles).
+- **CampaignRunService** : resout le MTI depuis message_types (network,category)
+  et le transmet au moteur. Fallback 0100.
+- **McDmasAuthorization** : buildAuth0100/WithPin surchargees MTI-parametriques
+  (anciennes signatures conservees par delegation ; sendAuthorization manuel inchange).
+- **LoadTestRequest** + champ mti ; LoadTestService passe req.mti.
+- Endpoints : `NetworkController` (GET /api/networks) ; MessageTypeController
+  etendu (GET ?network=X&category=Y).
+
+### Front (sg-frontend, DESORMAIS VERSIONNE en local, commit 7e03b2f)
+- Ecran generation de campagne : le champ texte 'category' remplace par 3 selecteurs
+  Reseau / Type(categorie filtree par reseau) / Initiateur. Colonne Reseau au tableau.
+- Services network + message-type ; modeles NetworkRef/MessageTypeRef.
+- i18n fr/en/es (network, initiator). Dialog elargi (860px, grille adaptative).
+
+### VALIDATION
+- E2E DMAS : COMPLETED / PASSED / 37/37 approuvees / 0 declinee.
+  Log 'MTI resolu=0100 (network=DMAS category=AUTHORIZATION)' -> resolution base OK,
+  comportement DMAS strictement identique (refactoring a comportement constant).
+
+### DETTE / A SUIVRE
+- **networks.*_port** peuples mais NON lus au runtime (source de verite = application.yml
+  + PortConfigController session 8). A brancher plus tard si networks devient source unique.
+- **Front** : remote GitHub a creer (versionne en local seulement).
+- **PROCHAIN CHANTIER : SWAM back** — SwamPackager (tout-ASCII, header PowerCARD, HSM simule),
+  modules sg-swam-issuer + sg-swam-acquirer (gabarit DMAS), automate 1804/1814, autorisation 1100.
+  Le socle est pret : ajouter SWAM = INSERT deja faits + packager/transport/2 modules en code.
+
+---
+
+## 14. SWAM — CONSTRUCTION EN COURS (branche feature/multi-network)
+
+> On BATIT SWAM au niveau de DMAS : crypto reelle + persistance des 2 cotes.
+> Ce n'est PAS un POC. Modele : miroir exact de DMAS.
+
+### FAIT (commits 138b645, 4af5be1)
+**Dialecte ISO (sg-common)** — VALIDE round-trip 16/16 :
+- `SwamPackager` : ISO8583:1993 HPS, TOUT-ASCII (IFA_*), 128 champs.
+  Autorisation 1100, gestion reseau 1804/1814. DE43 LLVAR ans..40, DE52/DE128 binaires.
+- `SwamLengthChannel` : prefixe longueur 4 octets ASCII, parametrable (lengthDigits).
+  Header PowerCARD gere plus tard au niveau applicatif.
+
+**Modules (compiles)** :
+- `sg-swam-issuer` = switch/CENTRE. Serveur jPOS qui ECOUTE (port ISO lu depuis
+  networks, fallback 8510). SwamJposServer repond 1804->1814 DE39=800 et
+  1100->1110 DE39=000. REST 8511. HSM SIMULE pour l'instant.
+- `sg-swam-acquirer` = Membre/banque. Client jPOS, connexion PERMANENTE vers le
+  switch (host/port depuis networks), sign-on par REST. SwamJposClient =
+  pushAndWait correle par STAN. Endpoints /api/admin/swam/network/{signon,echo,
+  signoff} + /purchase. REST 8094.
+- Topologie HPS sec.4 : le Membre se connecte, le CENTRE ecoute (inverse de DMAS).
+
+**Base (migrations v1.3.0)** — 6 tables miroir DMAS, ownership dedie :
+- swam_cards, swam_iss_transactions, swam_iss_keys -> swam_issuer_user
+- swam_acq_transactions (l'acquereur persiste AUSSI), swam_acq_keys -> swam_acquirer_user
+- swam_kek -> postgres (partagee)
+- users swam_issuer_user / swam_acquirer_user (mdp postgres123) + grants miroir DMAS
+- ports en networks : ISO 8510, REST issuer 8511, REST acq 8094
+- yml SWAM : users dedies + liquibase OFF (les modules LISENT le schema)
+
+### RESTE A FAIRE (prochaine session)
+**Incr.1 (suite) — entites JPA + persistance + logique autorisation :**
+- 6 entites JPA dans sg-common (SwamCard, SwamIssTransaction, SwamAcqTransaction,
+  SwamIssKey, SwamAcqKey, SwamKek) + repositories.
+- Persistance : switch -> swam_iss_transactions ; acquereur -> swam_acq_transactions.
+- LOGIQUE AUTORISATION du switch : DECISION A FIGER
+  (a) debit REEL du solde : carte existe+active+solde>=montant -> approuve 000 +
+      debite ; sinon decline (carte inconnue / solde insuffisant). [RECO]
+  (b) carte active -> approuve, sans gestion solde.
+- Puis TEST connexion reelle complet : sign-on -> 1100 -> persistance verifiee.
+
+**Incr.2-3 — crypto reelle HPS** (quand la persistance tourne) :
+- key exchange SWAM (DE24=811/899, DE48 tags P10/P16, KEK/session keys)
+- MAC FIPS PUB 113 sur DE128, PIN block format HPS (DE53), via ThalesHsmService.
+
+### NOTES
+- SwamJposClient utilise BaseChannel jPOS (setHost/setPort/connect/receive/send).
+- SecurityConfig SWAM = permissif (POC) ; aligner sur DMAS (JWT+CORS) si pilotage IHM.
+- Scripts test : 06c-test-swam.sh (arret+ports+demarrage+sign-on+1100+sign-off).
+
+---
+
+## 15. SWAM incr.1 TERMINE + incr.2 CRYPTO a faire (branche feature/multi-network)
+
+### INCR.1 TERMINE ET VALIDE (commit eb1e4ee)
+Le switch SWAM est un VRAI emetteur (plus un repondeur en dur) :
+- 6 entites JPA (SwamCard, SwamIss/AcqTransaction, SwamIss/AcqKey, SwamKek) + repos
+  dans sg-common. Validees contre le schema (ddl-auto=validate au demarrage : OK).
+- SwamJposServer : logique autorisation REELLE (option a = debit reel) :
+  * carte inconnue -> DE39=114 ; inactive -> 062 ; solde insuffisant -> 116
+  * carte OK -> DEBITE le solde, DE39=000 APPROVED
+  * persiste chaque autorisation dans swam_iss_transactions
+- SwamNetworkController : persiste tx emises dans swam_acq_transactions
+- VALIDE bout-en-bout sur socket reel (script 08c-cartes-et-test.sh) :
+  3 achats 000/116/114, solde debite 100000->90000, persistance OK des 2 cotes.
+- Cartes de test : deploiement/swam_cartes_test.sql
+  (5321962145453348 solde 100000 ACTIVE ; 5321000000000011 solde 500 ;
+   5321000000000029 BLOCKED)
+
+### INFRA CRYPTO EXISTANTE (reutilisable pour SWAM)
+- Interface HsmService (sg-common/iso/crypto/) : RESEAU-AGNOSTIQUE, expose
+  generateWorkingKey, importWorkingKey, encryptPinBlock, decryptPinBlock,
+  generateMac, verifyMac, computeKcv. IMPL = JposHsmService (jPOS 3DES sous LMK).
+- ThalesHsmService (sg-common/hsm/) : generateZmk/Zpk/Zak, PIN block, MAC.
+- Convention DMAS : KEK=ZMK, PEK=ZPK, MAK=ZAK.
+- Flux DMAS a repliquer : KekBootstrapController, KeyExchangeController,
+  SessionOrchestrator (sg-dmas-acquirer).
+- Les tables swam_iss_keys/swam_acq_keys/swam_kek ont deja key_type,
+  key_under_kek, key_under_lmk, kcv -> pretes.
+
+### INCR.2 CRYPTO REELLE HPS — A FAIRE (PREREQUIS : LIRE LE PDF)
+>>> PREREQUIS ABSOLU : ouvrir Description_Interface_Switch-SID_V3-20.pdf
+>>> et VERIFIER CES 5 POINTS avant tout code (crypto = on ne devine RIEN) :
+
+1. DE48 (transport cles de session) : FORMAT EXACT des tags P10 (cle MAC) et
+   P16 (cle PIN) - structure interne (longueur, KCV inclus ?, ordre, encodage).
+   -> section gestion de reseau (§3.13/§4) ou annexe description des DE.
+
+2. Flux echange de cles 1804 DE24=811/899 : SEQUENCE exacte - qui initie,
+   quel message porte quelle cle, quelle reponse. 811=cle transport ? 899=cle MAC ?
+   echange separe pour cle PIN ? -> §4 (automate SIGN-ON, diagramme p.95).
+
+3. DE53 (controle securite) : description POSITION PAR POSITION (methode
+   encryption PIN 00/02, format PIN block 01/25/99, index cle PIN, index cle MAC).
+
+4. DE52 (PIN block) : FORMAT exact (ANSI X9.8 / ISO Format 0 ?) + lien avec DE53.
+
+5. DE128 ou DE64 (MAC) : sur QUELS CHAMPS le MAC est calcule (tout le message
+   depuis MTI ? jusqu'ou ?), ALGO precis (FIPS PUB 113 = quel mode), DE64 ou DE128.
+
+### PLAN INCR.2 (une fois le PDF lu + recap valide)
+- 2.1 Bootstrap KEK SWAM (repliquer KekBootstrapController, forme KEK sous LMK
+  -> swam_kek). PEU dependant de la spec, faisable en premier.
+- 2.2 Key exchange SWAM (1804 DE24=811/899, ZPK/ZAK sous KEK, DE48 P10/P16). SPEC.
+- 2.3 MAC reel (FIPS sur DE128 via generateMac/verifyMac). SPEC.
+- 2.4 PIN block reel (DE52+DE53 via encrypt/decryptPinBlock). SPEC.
+Chaque etape committee + testee avant la suivante.
+
+### METHODE DE REPRISE
+1. Ouvrir nouvelle session, re-uploader le PDF SWAM.
+2. Claude relit les 5 points ci-dessus -> propose un RECAP crypto a valider.
+3. Apres validation -> coder 2.1, 2.2, 2.3, 2.4 dans l'ordre.
+
+---
+
+## 16. SWAM incr.2 — RECAP CRYPTO FIGE (lecture PDF HSID v3.20 faite, NE PAS refaire)
+
+> Source : Description_Interface_Switch-SID_V3-20_05012024.pdf. Recap verifie
+> ligne par ligne. 3 niveaux : [SPEC]=litteral, [INF]=inference sure non ecrite,
+> [DECISION]=trou spec tranche par nous (on maitrise switch + banque).
+
+### Transport des cles (DE48, tags TLV Tag3+Long3+Valeur)
+- [SPEC] P16 long=032 = "cle d'encryption du PIN / cle de transport du code
+  confidentiel entre CENTRE et membre". P10 long=016 = "cle MAC".
+- [INF] P16 = 32 hex = 16 octets = 2-key 3DES = ZPK (appuye par histo v3.12
+  "T-DES pour PIN"). P10 = 16 hex = 8 octets = DES simple = ZAK.
+- [INF] pas de KCV embarque dans P10/P16 (longueur = cle seule, pas de +6).
+- [DECISION] cles transportees CHIFFREES sous ZMK/KEK (spec muette la-dessus ; = DMAS).
+- Mapping DMAS : P16=ZPK=PEK, P10=ZAK=MAK, sous KEK=ZMK (bootstrap hors bande).
+
+### Handshake key exchange (1804/1814)
+- [SPEC] DE24 : 811="changement cle de transport" (=> P16), 899="changement cle
+  MAC" (=> P10). Echange SEPARE, 1 message par cle. Pas de code pour changer ZMK.
+- [SPEC] DE48 conditionnel dans 1804/1814 (OK pour porter les cles).
+- [DECISION GAP-A] sens = (a) CENTRE-autorite : membre envoie 1804 DE24=811 ->
+  CENTRE genere ZPK sous ZMK -> repond 1814 DE24=811, DE39=800, DE48 P16=<ZPK/ZMK>.
+  Idem 899 -> P10. La spec (sect.4 + automate p.92-95) ne decrit QUE
+  801/802/803/804/805 ; le key-exchange n'y est pas => c'est notre convention.
+
+### PIN (DE52 + DE53)
+- [SPEC] DE52 = b 8 (bloc PIN 64 bits). Chiffre sous ZPK si DE53 pos1-2=02.
+- [SPEC] DE53 LLVAR n..99 : pos1-2 methode (00 aucune / 02 ZPK),
+  pos3-4 format block (01 ANSI / 25 pre-valide / 99 absent),
+  pos5-7 index cle PIN (000), pos8-10 index cle MAC (000).
+- [INF] "ANSI" (pos3-4=01) = ISO 9564 Format 0 (PIN XOR 12 chiffres droite du PAN
+  hors cle de controle).
+- Exemple achat WITH_PIN : DE53 = "0201000000".
+
+### MAC (DE128)
+- [SPEC] DE128 = b 8, algo FIPS PUB 113, present "Tous les messages".
+  DE64 NON utilise (DE128 = seul champ MAC dans toutes les tables de messages).
+- [INF] FIPS 113 = DES CBC-MAC (DAA), bloc chiffre final 8 octets, cle = ZAK (P10).
+- [DECISION GAP-B] plage MAC = message packe du MTI (inclus) -> dernier champ
+  avant DE128. Header PowerCARD EXCLU (a confirmer si vrai interop un jour).
+
+### Codes reponse utiles (ANNEXE A, DE39, n3)
+- 000 Approuve / 001 Approuve avec id / 085 Aucune raison de refuser (Account Verif)
+- 100 Ne pas honorer / 101 Carte perimee / 116 Fonds insuffisants / 117 PIN incorrect
+- 106 Nb essais PIN depasse / 902 Transaction invalide / 909 Defaillance systeme
+- 911 Emetteur pas repondu a temps / 912 Emetteur indisponible / 992 Verif PIN impossible
+- Sign-on/echo/signoff : reponse OK = 1814 DE39=800 (deja implemente incr.1).
+
+### CHECKS AVANT DE CODER
+- [BLOQUANT 2.2] SwamPackager doit packer DE48 en LLLVAR (3 digits), pas LLVAR :
+  une cle depasse 99 chars => sinon le key-exchange casse. A VERIFIER EN PREMIER.
+- Tables swam_iss_keys/swam_acq_keys/swam_kek ont deja key_type, key_under_kek,
+  key_under_lmk, kcv => pretes.
+- Infra reutilisable : HsmService (generateWorkingKey/importWorkingKey/
+  encryptPinBlock/decryptPinBlock/generateMac/verifyMac/computeKcv) + ThalesHsmService.
+  Flux DMAS a repliquer : KekBootstrapController, KeyExchangeController, SessionOrchestrator.
+
+### PLAN (chaque etape commit + test avant la suivante)
+- 2.1 Bootstrap KEK SWAM (ZMK sous LMK -> swam_kek). Peu dependant spec. EN PREMIER.
+- 2.2 Key exchange 1804 DE24=811/899, ZPK/ZAK sous KEK, DE48 P10/P16 (GAP-A=a).
+- 2.3 MAC reel DES CBC-MAC FIPS 113 sur DE128 (GAP-B), via generateMac/verifyMac.
+- 2.4 PIN block reel Format 0 DE52 + DE53, via encrypt/decryptPinBlock.

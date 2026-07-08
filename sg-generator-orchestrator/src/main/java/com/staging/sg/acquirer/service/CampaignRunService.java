@@ -6,6 +6,7 @@ import com.staging.sg.acquirer.report.ExcelReportGenerator;
 import com.staging.sg.acquirer.report.PdfReportGenerator;
 import com.staging.sg.common.entity.*;
 import com.staging.sg.common.repository.*;
+import com.staging.sg.common.entity.MessageType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,6 +41,7 @@ public class CampaignRunService {
     private final UserRepository userRepo;
     private final DmasClient dmasClient;
     private final DmasCardRepository cardRepo;
+    private final MessageTypeRepository messageTypeRepo;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${dmas.acquirer.base-url:http://localhost:8084}") private String acquirerUrl;
@@ -55,7 +57,8 @@ public class CampaignRunService {
                               CampaignExecutionResultRepository resultRepo,
                               UserRepository userRepo,
                               DmasClient dmasClient,
-                              DmasCardRepository cardRepo) {
+                              DmasCardRepository cardRepo,
+                              MessageTypeRepository messageTypeRepo) {
         this.campaignRepo = campaignRepo;
         this.stepRepo = stepRepo;
         this.execRepo = execRepo;
@@ -63,6 +66,7 @@ public class CampaignRunService {
         this.userRepo = userRepo;
         this.dmasClient = dmasClient;
         this.cardRepo = cardRepo;
+        this.messageTypeRepo = messageTypeRepo;
     }
 
     public Map<String,Object> run(Long campaignId, String userLogin) {
@@ -166,6 +170,21 @@ public class CampaignRunService {
             final List<Map<String,String>> fCardPool = cardPool;
             final Long fAmountMin = amountMin, fAmountMax = amountMax;
 
+            // ===== Resolution du MTI depuis message_types (network, category) =====
+            String resolvedMti = "0100"; // defaut : comportement DMAS actuel
+            try {
+                String net = campaign.getNetwork()  != null ? campaign.getNetwork()  : "DMAS";
+                String cat = campaign.getCategory() != null ? campaign.getCategory() : "AUTHORIZATION";
+                java.util.List<MessageType> mts = messageTypeRepo.findByNetworkAndCategory(net, cat);
+                if (!mts.isEmpty()) {
+                    resolvedMti = mts.get(0).getCode();
+                    log.info("[CAMPAIGN] exec={} MTI resolu={} (network={} category={})", execId, resolvedMti, net, cat);
+                } else {
+                    log.warn("[CAMPAIGN] exec={} aucun type pour (network={}, category={}) : MTI defaut {}", execId, net, cat, resolvedMti);
+                }
+            } catch (Exception me) { log.warn("[CAMPAIGN] resolution MTI : {}", me.getMessage()); }
+            final String fMti = resolvedMti;
+
             // ===== Jouer CHAQUE palier sequentiellement =====
             boolean breakerTripped = false;
             String breakerDetail = null;
@@ -186,6 +205,7 @@ public class CampaignRunService {
                 body.put("targetTps", tps);
                 body.put("concurrency", conc);
                 body.put("withPin", fWithPin);
+                body.put("mti", fMti);
                 if (!fCardPool.isEmpty()) body.put("cards", fCardPool);
                 if (fAmountMin != null && fAmountMax != null) {
                     body.put("amountMin", fAmountMin);

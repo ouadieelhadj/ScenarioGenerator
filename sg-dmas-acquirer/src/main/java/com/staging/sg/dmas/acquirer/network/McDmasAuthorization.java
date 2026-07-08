@@ -180,12 +180,17 @@ public class McDmasAuthorization {
      * pour garantir l'unicite en charge concurrente). Reutilise buildDe48/buildPosData.
      */
     public org.jpos.iso.ISOMsg buildAuth0100(String pan, String amount, String entryMode, String stan) throws Exception {
+        return buildAuth0100("0100", pan, amount, entryMode, stan);
+    }
+
+    /** Variante MTI-parametrique (etape 3 multi-reseau). Defaut 0100 conserve le comportement. */
+    public org.jpos.iso.ISOMsg buildAuth0100(String mti, String pan, String amount, String entryMode, String stan) throws Exception {
         String processingCode = "000000";
         String de61 = buildPosData("0");
         String dtUtc = new java.text.SimpleDateFormat("MMddHHmmss").format(new java.util.Date());
         org.jpos.iso.ISOMsg msg = new org.jpos.iso.ISOMsg();
         msg.setPackager(net.getPackager());
-        msg.setMTI("0100");
+        msg.setMTI(mti);
         msg.set(2,  pan);
         msg.set(3,  processingCode);
         msg.set(4,  amount);
@@ -206,7 +211,12 @@ public class McDmasAuthorization {
      */
     public org.jpos.iso.ISOMsg buildAuth0100WithPin(String pan, String pin, String amount,
                                                     String entryMode, String stan) throws Exception {
-        org.jpos.iso.ISOMsg msg = buildAuth0100(pan, amount, entryMode, stan);
+        return buildAuth0100WithPin("0100", pan, pin, amount, entryMode, stan);
+    }
+
+    public org.jpos.iso.ISOMsg buildAuth0100WithPin(String mti, String pan, String pin, String amount,
+                                                    String entryMode, String stan) throws Exception {
+        org.jpos.iso.ISOMsg msg = buildAuth0100(mti, pan, amount, entryMode, stan);
         if (pin != null && !pin.isEmpty()) {
             com.staging.sg.common.entity.DmasAcqKey pek = acqKeyRepo
                     .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup, "PEK", "ACTIVE")

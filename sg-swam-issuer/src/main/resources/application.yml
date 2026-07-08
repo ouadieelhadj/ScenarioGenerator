@@ -1,0 +1,32 @@
+server:
+  port: 8511   # REST du module (bootstrap Spring, ne peut pas venir de la base)
+
+spring:
+  liquibase:
+    enabled: false
+  application:
+    name: sg-swam-issuer
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scenariogenerator
+    username: swam_issuer_user
+    password: postgres123
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+# NB : le port ISO du serveur jPOS n'est PLUS ici.
+# Il est lu depuis la table networks (issuer_iso_port pour code=SWAM).
+
+jwt:
+  secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
+  expiration-ms: 86400000
+
+# MAC DE128 (parametrable, meme mecanique que DMAS)
+swam:
+  mac:
+    fields: "4,11,37,41,42"
+    representation: "ascii"
+    reject-code: "916"
+    enforce: true

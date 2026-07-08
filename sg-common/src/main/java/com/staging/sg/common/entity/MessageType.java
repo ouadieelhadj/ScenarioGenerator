@@ -20,6 +20,12 @@ public class MessageType {
     @Column(nullable = false, length = 50)
     private String category;
 
+    @Column(nullable = false, length = 20)
+    private String network = "DMAS";
+
+    @Column(nullable = false, length = 12)
+    private String direction = "ACQ_TO_ISS";
+
     @Column(length = 255)
     private String description;
 
@@ -49,6 +55,10 @@ public class MessageType {
     public void setCode(String v)              { this.code = v; }
     public void setName(String v)              { this.name = v; }
     public void setCategory(String v)          { this.category = v; }
+    public String       getNetwork()           { return network; }
+    public void         setNetwork(String v)   { this.network = v; }
+    public String       getDirection()         { return direction; }
+    public void         setDirection(String v) { this.direction = v; }
     public void setDescription(String v)       { this.description = v; }
     public void setProcessingCodes(String v)   { this.processingCodes = v; }
     public void setActive(boolean v)           { this.active = v; }

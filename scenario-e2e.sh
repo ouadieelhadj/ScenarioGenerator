@@ -76,7 +76,7 @@ fi
 # =====================================================================
 sep "6. Creer une campagne"
 RESP=$(curl -s -X POST "$ORC/api/campaigns" -H "$AUTH" -H "Content-Type: application/json" -d '{
-  "name":"CAMP-E2E","category":"DMAS",
+  "name":"CAMP-E2E","network":"DMAS","category":"AUTHORIZATION","initiator":"ACQUIRER",
   "config":"{\"DE002_PAN_MODE\":\"RANDOM\",\"WITH_PIN\":false,\"VARIABLE_FIELDS\":{\"AMOUNT\":{\"mode\":\"RANGE\",\"min\":1000,\"max\":50000}}}",
   "active":true,"slaErrorRateMax":10.00,"stopOnErrorRate":20.00,
   "loadSteps":[{"stepOrder":1,"startSeconds":0,"endSeconds":8,"tpsValue":5}]

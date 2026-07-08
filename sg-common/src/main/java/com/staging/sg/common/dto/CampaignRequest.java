@@ -10,6 +10,8 @@ public class CampaignRequest {
     private String name;
     private String description;
     private String category;
+    private String network;
+    private String initiator;
     private String config;
     private String expectedDe039;
     private Boolean active;
@@ -46,6 +48,10 @@ public class CampaignRequest {
     public void setDescription(String v) { this.description = v; }
     public String getCategory() { return category; }
     public void setCategory(String v) { this.category = v; }
+    public String getNetwork() { return network; }
+    public void setNetwork(String v) { this.network = v; }
+    public String getInitiator() { return initiator; }
+    public void setInitiator(String v) { this.initiator = v; }
     public String getConfig() { return config; }
     public void setConfig(String v) { this.config = v; }
     public String getExpectedDe039() { return expectedDe039; }
