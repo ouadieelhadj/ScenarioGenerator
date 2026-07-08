@@ -248,6 +248,10 @@ public class SwamJposServer {
                     responseCode = "062";             // carte restreinte/inactive
                     status = "DECLINED";
                     log.info("[SWAM-SRV] Carte inactive ({}) -> DE39=062", card.getStatus());
+                } else if (m.hasField(52) && !verifyPin(m, pan, card.getPin())) {
+                    responseCode = "117";             // PIN incorrect
+                    status = "DECLINED";
+                    log.info("[SWAM-SRV] PIN incorrect -> DE39=117");
                 } else if (card.getBalance() < amount) {
                     responseCode = "116";             // solde insuffisant
                     status = "DECLINED";
@@ -335,6 +339,36 @@ public class SwamJposServer {
                 r.set(128, mac);
             } catch (Exception e) {
                 log.error("[SWAM-SRV] poseMacOnResponse erreur : {}", e.getMessage());
+            }
+        }
+
+        /**
+         * Dechiffre le PIN block (DE52) sous ZPK, compare au PIN de la carte.
+         * Tolerant (retourne true) si DE53 invalide ou ZPK absente.
+         */
+        private boolean verifyPin(ISOMsg m, String pan, String cardPin) {
+            try {
+                String de53 = m.hasField(53) ? m.getString(53) : null;
+                if (de53 == null || de53.length() < 2 || !"02".equals(de53.substring(0, 2))) {
+                    log.warn("[SWAM-SRV] DE53 absent/methode non ZPK -> PIN non verifie (tolerant)");
+                    return true;
+                }
+                com.staging.sg.common.entity.SwamIssKey pek = issKeyRepository
+                        .findByMemberGroupIdAndKeyTypeAndStatus("TESTGRP01", "PEK", "ACTIVE").orElse(null);
+                if (pek == null) {
+                    log.warn("[SWAM-SRV] ZPK issuer absente -> PIN non verifie (tolerant)");
+                    return true;
+                }
+                byte[] pinBlock = m.getBytes(52);
+                String decrypted = hsm.decryptPinBlock(
+                        pinBlock, pan,
+                        pek.getKeyUnderLmk(), pek.getKcv(), pek.getKeyLength());
+                boolean ok = decrypted.equals(cardPin);
+                log.info("[SWAM-SRV] Verif PIN -> {}", ok ? "OK" : "FAIL");
+                return ok;
+            } catch (Exception e) {
+                log.error("[SWAM-SRV] verifyPin erreur : {}", e.getMessage());
+                return false;
             }
         }
 
