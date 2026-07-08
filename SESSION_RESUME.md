@@ -4,9 +4,9 @@
 > Couvre DEUX depots : le BACK `ScenarioGenerator` (Java/Spring, repo GitHub) et le
 > FRONT `sg-frontend` (Angular 18, dossier separe non encore versionne).
 
-**Derniere mise a jour :** 2026-07-04 (session 9 : demarrage projet SWAM multi-reseau)
-**Branche back :** chore/cleanup-modules
-**Version courante back :** v1.1.0 (taguee, publiee) + travaux post-v1.1.0
+**Derniere mise a jour :** 2026-07-08 (session 10 : incr.2 crypto SWAM complet + packaging)
+**Branche back :** chore/cleanup-modules (merge v1.3.0 fait) / feature/multi-network (dev)
+**Version courante back :** v1.3.0 (taguee, publiee) - SWAM incr.1+2 crypto complet
 
 ---
 
@@ -449,7 +449,7 @@ precedent de duplication pour un autre reseau.) jpos.version=2.1.9.
 - ports en networks : ISO 8510, REST issuer 8511, REST acq 8094
 - yml SWAM : users dedies + liquibase OFF (les modules LISENT le schema)
 
-### RESTE A FAIRE (prochaine session)
+### FAIT (commits eb1e4ee + incr.2 : d8fb1fd..5a90592) — voir section 17
 **Incr.1 (suite) — entites JPA + persistance + logique autorisation :**
 - 6 entites JPA dans sg-common (SwamCard, SwamIssTransaction, SwamAcqTransaction,
   SwamIssKey, SwamAcqKey, SwamKek) + repositories.
@@ -595,3 +595,64 @@ Chaque etape committee + testee avant la suivante.
 - 2.2 Key exchange 1804 DE24=811/899, ZPK/ZAK sous KEK, DE48 P10/P16 (GAP-A=a).
 - 2.3 MAC reel DES CBC-MAC FIPS 113 sur DE128 (GAP-B), via generateMac/verifyMac.
 - 2.4 PIN block reel Format 0 DE52 + DE53, via encrypt/decryptPinBlock.
+
+---
+
+## 17. SWAM incr.2 TERMINE + etat session 10 (2026-07-08)
+
+> Session 10 : finalisation crypto SWAM, vrai ZMK ceremonie de cles, packaging deploiement.
+> Branche : feature/multi-network (merge -> chore/cleanup-modules, tag v1.3.0).
+
+### INCR.2 CRYPTO COMPLET (commits d8fb1fd..5a90592, tous sur feature/multi-network)
+
+| Incr. | Contenu | Commit | Valide |
+|-------|---------|--------|--------|
+| 2.1 | Bootstrap KEK (ZMK sous LMK -> swam_kek) | d8fb1fd | E2E OK |
+| 2.2a | SwamDe48 TLV, HSM cle simple longueur ZAK, selftest | ec58d5a | round-trip OK |
+| 2.2b | Key exchange 811/899, ZPK/ZAK, KCV concordants iss/acq | cd335b1 | KCV match=t |
+| 2.3 | MAC reel DE128 DES-CBC-MAC FIPS113 ZAK 8o | 13500f4 | achat MAC valide/rejete |
+| 2.4 | PIN block DE52/DE53 ZPK ISO-0, DE39=117 PIN KO | 5a90592 | 3 cas valides |
+
+### DECISIONS CRYPTO FIGEES (complement section 16)
+- [DECISION] ZAK simple longueur (8o) MAIS jPOS generateCBC_MAC() = Retail MAC Alg3 (exige 16o).
+  Resolution : DES-CBC-MAC MAISON (FIPS 113 Alg1) via javax.crypto dans generateMacSingle/verifyMacSingle.
+  La ZAK est dechiffree depuis key_under_kek+kek_clear (3DES-ECB) puis DES/CBC/NoPadding, MAC=dernier bloc.
+  DMAS inchange (generateMac/verifyMac de l'interface HsmService non touchees).
+- [DECISION] Plage MAC = champs 4,11,37,41,42 en ASCII (comme DMAS, via McMacBuilder). Parametrable yml.
+- [DECISION] PIN block : encryptPinBlock/decryptPinBlock standard jPOS (ZPK 16o, jposLen=128, FORMAT00 ISO-0).
+  Pas de probleme de longueur car ZPK est double longueur. Methodes HsmService interface directement.
+- [DECISION] DE39=117 (PIN incorrect, annexe A HPS), tolerant si ZPK absente ou DE53 invalide.
+
+### VRAIE ZMK (ceremonie de cles, session 10)
+- ZMKC#1 KCV=5E5743 XOR ZMKC#2 KCV=DCCC90 -> ZMK=E95870465DD6CB8F041F5EBA4F7C62CB KCV=F6EE59
+- Double longueur (16 octets). Verifiee : KCV recalcule = F6EE59 des 2 cotes (issuer + acquereur).
+- Bootstrap : POST /api/admin/swam/kek/bootstrap {memberGroupId:"TESTGRP01", kekClear:"E958...62CB"}
+- Note : la KEK de test (0123...EF x3) reste dans les SQL de deploiement. A rer-bootstrapper avec ZMK reelle
+  apres demarrage sur cible.
+
+### GIT (etat apres session 10)
+- Tag v1.3.0 sur 5a90592 (poussee).
+- Merge feature/multi-network -> chore/cleanup-modules (commit 9f4b11e, 62 fichiers, push OK).
+- feature/multi-network reste ouverte pour la suite.
+
+### PACKAGING (dist-swam-issuer)
+- Cree par package-swam-issuer.sh : JAR + 3 LMK + 11 SQL ordonnes + config externe + 2 .bat + README.
+- Base ciblee : scenariogenerator (pas generatorscenario = vieux nom).
+- A REGENERER si nouveau code (les 2.3/2.4 post-packaging ne sont pas encore dans le dist).
+  Commande : bash /d/MoneyCore/package-swam-issuer.sh
+
+### LOGS ET CONFIG (swam-issuer)
+- Niveau de log : application.yml -> logging.level.com.staging.sg.swam.issuer: DEBUG/INFO.
+- Port jPOS : table networks.issuer_iso_port (lu par SwamJposServer.resolvePort(), fallback 8510).
+- Port REST : application.yml -> server.port (8511).
+- Champs MAC : application.yml -> swam.mac.fields / representation / enforce / reject-code.
+- LMK : application.yml -> dmas.lmk.file (chemin relatif si config externe).
+- PIN en clair dans les logs : patch debug temporaire (patch-swam-pin-log.sh). NE PAS COMMITTER.
+
+### PROCHAIN CHANTIER (ouvert)
+- **Connexion vrai membre** : le switch ecoute sur 0.0.0.0:8510 (accessible LAN). Pour accueillir un membre
+  avec un group id different de TESTGRP01 : patch member_group_id dynamique (DE32/DE33) dans SwamJposServer.
+- **Package dist-swam-issuer a regenerer** (post 2.3/2.4).
+- **SESSION_RESUME front** : traduire Help + Dashboard + visualisation roles (cf section 9 PENDING GLOBAUX).
+- **Versionner sg-frontend** (toujours pas de remote GitHub).
+- **Etendre port endpoint** a sg-swam-issuer/sg-swam-acquirer (jPOS risque au restart, a tester prudemment).
