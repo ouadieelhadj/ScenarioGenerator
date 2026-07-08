@@ -15,6 +15,8 @@ import com.staging.sg.common.repository.SwamIssKeyRepository;
 import com.staging.sg.common.iso.crypto.JposHsmService;
 import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.iso.SwamDe48;
+import com.staging.sg.common.iso.crypto.McMacBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.jpos.iso.*;
@@ -49,6 +51,10 @@ public class SwamJposServer {
     private final SwamKekRepository kekRepository;
     private final SwamIssKeyRepository issKeyRepository;
     private final JposHsmService hsm;
+    @Value("${swam.mac.fields:4,11,37,41,42}") private String macFields;
+    @Value("${swam.mac.representation:ascii}") private String macRepr;
+    @Value("${swam.mac.reject-code:916}") private String macRejectCode;
+    @Value("${swam.mac.enforce:true}") private boolean macEnforce;
 
     private ISOServer isoServer;
     private Thread serverThread;
@@ -212,6 +218,22 @@ public class SwamJposServer {
             String stan = m.hasField(11) ? m.getString(11) : "";
             log.info("[SWAM-SRV] Autorisation 1100 PAN={} montant={}", maskPan(pan), amount);
 
+            // Verification MAC (DE128) si presente et si MAK disponible
+            String macCheck = verifyIncomingMac(m);
+            if (macEnforce && "FAIL".equals(macCheck)) {
+                log.warn("[SWAM-SRV] MAC invalide -> rejet DE39={}", macRejectCode);
+                ISOMsg rr = new ISOMsg();
+                rr.setPackager(m.getPackager());
+                rr.setMTI("1110");
+                if (m.hasField(2))  rr.set(2,  m.getString(2));
+                if (m.hasField(11)) rr.set(11, m.getString(11));
+                if (m.hasField(37)) rr.set(37, m.getString(37));
+                rr.set(39, macRejectCode);
+                poseMacOnResponse(rr);
+                source.send(rr);
+                return true;
+            }
+
             String responseCode;
             String status;
 
@@ -274,9 +296,46 @@ public class SwamJposServer {
             r.set(39, responseCode);
             if (m.hasField(41)) r.set(41, m.getString(41));
             if (m.hasField(49)) r.set(49, m.getString(49));
+            poseMacOnResponse(r);
             source.send(r);
             log.info("[SWAM-SRV] Repondu 1110 DE39={}", responseCode);
             return true;
+        }
+
+        /** Verifie le DE128 recu. Renvoie OK / FAIL / SKIP (pas de MAC ou pas de MAK). */
+        private String verifyIncomingMac(ISOMsg m) {
+            try {
+                if (!m.hasField(128)) return "SKIP";
+                com.staging.sg.common.entity.SwamIssKey mak = issKeyRepository
+                        .findByMemberGroupIdAndKeyTypeAndStatus("TESTGRP01", "MAK", "ACTIVE").orElse(null);
+                if (mak == null) { log.warn("[SWAM-SRV] MAK absente -> MAC non verifie"); return "SKIP"; }
+                byte[] input = McMacBuilder.build(m, macFields, macRepr);
+                byte[] rxMac = m.getBytes(128);
+                com.staging.sg.common.entity.SwamKek kek = kekRepository.findByMemberGroupId("TESTGRP01").orElse(null);
+                if (kek == null || kek.getKekClear() == null) { log.warn("[SWAM-SRV] KEK claire absente -> MAC non verifie"); return "SKIP"; }
+                boolean ok = hsm.verifyMacSingle(input, mak.getKeyUnderKek(), kek.getKekClear(), rxMac);
+                log.info("[SWAM-SRV] Verif MAC DE128 -> {}", ok ? "OK" : "FAIL");
+                return ok ? "OK" : "FAIL";
+            } catch (Exception e) {
+                log.error("[SWAM-SRV] verifyIncomingMac erreur : {}", e.getMessage());
+                return "FAIL";
+            }
+        }
+
+        /** Pose le DE128 sur une reponse (1110) avec la MAK du switch. */
+        private void poseMacOnResponse(ISOMsg r) {
+            try {
+                com.staging.sg.common.entity.SwamIssKey mak = issKeyRepository
+                        .findByMemberGroupIdAndKeyTypeAndStatus("TESTGRP01", "MAK", "ACTIVE").orElse(null);
+                if (mak == null) return;
+                byte[] input = McMacBuilder.build(r, macFields, macRepr);
+                com.staging.sg.common.entity.SwamKek kek = kekRepository.findByMemberGroupId("TESTGRP01").orElse(null);
+                if (kek == null || kek.getKekClear() == null) return;
+                byte[] mac = hsm.generateMacSingle(input, mak.getKeyUnderKek(), kek.getKekClear());
+                r.set(128, mac);
+            } catch (Exception e) {
+                log.error("[SWAM-SRV] poseMacOnResponse erreur : {}", e.getMessage());
+            }
         }
 
         private String maskPan(String pan) {

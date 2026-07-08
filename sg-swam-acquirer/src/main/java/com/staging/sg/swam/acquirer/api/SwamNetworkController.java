@@ -3,6 +3,7 @@ package com.staging.sg.swam.acquirer.api;
 import com.staging.sg.swam.acquirer.network.SwamAuthorization;
 import com.staging.sg.swam.acquirer.network.SwamJposClient;
 import com.staging.sg.swam.acquirer.network.SwamKeyExchange;
+import com.staging.sg.swam.acquirer.network.SwamMac;
 import com.staging.sg.common.entity.SwamAcqTransaction;
 import com.staging.sg.common.repository.SwamAcqTransactionRepository;
 import java.time.LocalDateTime;
@@ -24,13 +25,16 @@ public class SwamNetworkController {
     private final SwamAuthorization auth;
     private final SwamAcqTransactionRepository txRepo;
     private final SwamKeyExchange keyExchange;
+    private final SwamMac swamMac;
 
     public SwamNetworkController(SwamJposClient client, SwamAuthorization auth,
-                                SwamAcqTransactionRepository txRepo, SwamKeyExchange keyExchange) {
+                                SwamAcqTransactionRepository txRepo, SwamKeyExchange keyExchange,
+                                SwamMac swamMac) {
         this.client = client;
         this.auth = auth;
         this.txRepo = txRepo;
         this.keyExchange = keyExchange;
+        this.swamMac = swamMac;
     }
 
     @PostMapping("/network/signon")
@@ -79,6 +83,7 @@ public class SwamNetworkController {
         client.connect();
         String stan = auth.nextStan_();
         ISOMsg req = auth.buildAuth1100(pan, amount, stan, client.getPackager());
+        String macSent = swamMac.apply(req);   // pose DE128 (MAC reel)
         ISOMsg resp = client.sendAndWait(req, 10);
         String rc = resp.hasField(39) ? resp.getString(39) : null;
 
@@ -108,6 +113,8 @@ public class SwamNetworkController {
         r.put("de39_action", resp.hasField(39) ? resp.getString(39) : null);
         r.put("de38_auth", resp.hasField(38) ? resp.getString(38) : null);
         r.put("approved", "000".equals(resp.hasField(39) ? resp.getString(39) : ""));
+        r.put("de128_mac_sent", macSent);
+        r.put("de128_mac_echo", resp.hasField(128) ? org.jpos.iso.ISOUtil.hexString(resp.getBytes(128)) : null);
         return r;
     }
 
