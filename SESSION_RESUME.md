@@ -759,6 +759,39 @@ export PGPASSWORD=postgres123
   "SELECT pan, balance, status FROM swam_cards;"
 ```
 
+### Installation sur un nouveau PC (sans dump, depuis le repo)
+
+```bash
+# Prerequis : Git Bash + JDK 21 dezippe + PostgreSQL 18 dezippe (portable)
+
+# 1. Cloner le projet
+git clone https://github.com/ouadieelhadj/ScenarioGenerator.git /d/MoneyCore/ScenarioGenerator
+cd /d/MoneyCore/ScenarioGenerator
+git checkout feature/multi-network
+
+# 2. Demarrer PostgreSQL portable (a faire une seule fois par session)
+PGDATA="/d/MoneyCore/PostgreSQL/18/data"
+# Si premiere fois (initdb pas encore fait) :
+"/d/MoneyCore/PostgreSQL/18/bin/initdb.exe" -D "$PGDATA" -U postgres --pwprompt
+# mot de passe : postgres123
+# Puis demarrer :
+"/d/MoneyCore/PostgreSQL/18/bin/pg_ctl.exe" -D "$PGDATA" -l "/d/MoneyCore/PostgreSQL/18/pgsql.log" start
+
+# 3. Creer la base complete (DMAS + multi-reseau + SWAM) — script du repo
+bash /d/MoneyCore/ScenarioGenerator/deploiement/install-full-db.sh
+# Attendu en fin : ~41 tables, swam_cards=3, networks SWAM iso_port=8510
+
+# 4. Valider avec le test E2E SWAM
+bash /d/MoneyCore/ScenarioGenerator/deploiement/swam-e2e.sh
+# Attendu : PASSED (12/12)
+```
+
+Notes :
+- Adapter les chemins si le projet n est pas sur D:\MoneyCore\ (ex : F:\ScenarioGenerator).
+- JDK 21 : dezipper dans D:\MoneyCore\jdk-21.0.11\ (le script swam-e2e.sh l attend la).
+- PostgreSQL portable : telecharger le zip binaire sur enterprisedb.com (pas le .exe installeur).
+- Apres le E2E, bootstrapper la vraie ZMK si necessaire (voir section 18 Bootstrap KEK manuel).
+
 ### Arret propre
 
 ```bash
