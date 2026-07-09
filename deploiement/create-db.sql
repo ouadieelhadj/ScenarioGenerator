@@ -1452,3 +1452,21 @@ GRANT SELECT                 ON swam_cards            TO swam_acquirer_user;
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO swam_issuer_user;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO swam_acquirer_user;
+
+-- ============================================================
+-- Grants SWAM complets (fix installation nouveau PC - session 11)
+-- ============================================================
+GRANT SELECT, INSERT, UPDATE ON swam_kek              TO swam_issuer_user;
+GRANT SELECT, INSERT, UPDATE ON swam_iss_keys         TO swam_issuer_user;
+GRANT SELECT, INSERT, UPDATE ON swam_iss_transactions TO swam_issuer_user;
+GRANT SELECT, INSERT, UPDATE ON swam_cards            TO swam_issuer_user;
+GRANT SELECT                 ON networks              TO swam_issuer_user;
+
+GRANT SELECT, INSERT, UPDATE ON swam_kek              TO swam_acquirer_user;
+GRANT SELECT, INSERT, UPDATE ON swam_acq_keys         TO swam_acquirer_user;
+GRANT SELECT, INSERT, UPDATE ON swam_acq_transactions TO swam_acquirer_user;
+GRANT SELECT                 ON networks              TO swam_acquirer_user;
+GRANT SELECT                 ON swam_cards            TO swam_acquirer_user;
+
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO swam_issuer_user;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO swam_acquirer_user;
