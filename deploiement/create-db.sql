@@ -1157,7 +1157,7 @@ ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_
 -- 5. Donnees de reference
 -- networks (2 lignes)
 INSERT INTO public.networks (id, code, name, description, iso_version, length_prefix_size, length_prefix_encoding, header_type, default_field_encoding, mac_present, pin_block_format, packager_class, acquirer_host, acquirer_rest_port, acquirer_jpos_port, issuer_host, issuer_rest_port, issuer_iso_port, orchestrator_port, active, created_at) VALUES ('1', 'DMAS', 'Mastercard DMAS', 'Reseau Mastercard DMAS (existant)', 'ISO8583:1987', '2', 'BINARY', 'NONE', 'EBCDIC', 't', 'ANSI_0', 'com.staging.sg.common.iso.McPackagerEbcdic', 'localhost', '8084', '8600', 'localhost', '8501', '8500', '8080', 't', '2026-07-06 10:15:29.758749');
-INSERT INTO public.networks (id, code, name, description, iso_version, length_prefix_size, length_prefix_encoding, header_type, default_field_encoding, mac_present, pin_block_format, packager_class, acquirer_host, acquirer_rest_port, acquirer_jpos_port, issuer_host, issuer_rest_port, issuer_iso_port, orchestrator_port, active, created_at) VALUES ('2', 'SWAM', 'Switch Al Maghrib', 'Switch national marocain (HPS HSID/PowerCARD)', 'ISO8583:1993', '4', 'ASCII', 'POWERCARD', 'ASCII', 't', 'ANSI_0', 'com.staging.sg.common.iso.SwamPackager', 'localhost', '8094', '\\N', 'localhost', '8511', '8510', '8080', 't', '2026-07-06 10:15:29.758749');
+INSERT INTO public.networks (id, code, name, description, iso_version, length_prefix_size, length_prefix_encoding, header_type, default_field_encoding, mac_present, pin_block_format, packager_class, acquirer_host, acquirer_rest_port, acquirer_jpos_port, issuer_host, issuer_rest_port, issuer_iso_port, orchestrator_port, active, created_at) VALUES ('2', 'SWAM', 'Switch Al Maghrib', 'Switch national marocain (HPS HSID/PowerCARD)', 'ISO8583:1993', '4', 'ASCII', 'POWERCARD', 'ASCII', 't', 'ANSI_0', 'com.staging.sg.common.iso.SwamPackager', 'localhost', '8094', NULL, 'localhost', '8511', '8510', '8080', 't', '2026-07-06 10:15:29.758749');
 
 -- roles (3 lignes)
 INSERT INTO public.roles (id, code, label, description, created_at) VALUES ('1', 'ADMIN', 'Administrateur', 'Acces complet a toutes les fonctions', '2026-06-22 15:20:56.688739');
@@ -1246,13 +1246,13 @@ INSERT INTO public.message_types (id, code, name, category, description, process
 INSERT INTO public.message_types (id, code, name, category, description, processing_codes, active, created_at, network, direction) VALUES ('17', '1804', 'Demande de gestion de reseau', 'NETWORK', 'Gestion reseau SWAM (DE24 : 801 sign-on, 803 echo, 802 sign-off)', '[{"code":"801","label":"Ouverture de session"},{"code":"803","label":"Echo test"},{"code":"802","label":"Fermeture de session"}]', 't', '2026-07-06 09:59:22.698105', 'SWAM', 'BOTH');
 
 -- campaigns (7 lignes)
-INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('1', 'CAMP-MULTIPALIERS', 'montee 5->15->5 TPS, SLA p95<100ms', 'AUTHORIZATION', '{"DE002_PAN":"5321962145453348","DE004_AMOUNT":0}', '\\N', 't', '2026-06-26 11:58:49.89555', '2', '600', '5.00', '95.00', '\\N', 'DMAS', 'ACQUIRER');
-INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('2', 'CAMP-RANDOM-PIN', 'tirage cartes reelles + PIN', 'AUTHORIZATION', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":true,"DE004_AMOUNT":1000}', '\\N', 't', '2026-06-27 20:15:32.666486', '2', '600', '10.00', '80.00', '\\N', 'DMAS', 'ACQUIRER');
-INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('11', 'CAMP-E2E', '\\N', 'AUTHORIZATION', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":false,"VARIABLE_FIELDS":{"AMOUNT":{"mode":"RANGE","min":1000,"max":50000}}}', '\\N', 't', '2026-06-30 15:44:47.489963', '2', '\\N', '10.00', '\\N', '20.00', 'DMAS', 'ACQUIRER');
-INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('12', 'CAMP-E2E', '\\N', 'AUTHORIZATION', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":false,"VARIABLE_FIELDS":{"AMOUNT":{"mode":"RANGE","min":1000,"max":50000}}}', '\\N', 't', '2026-06-30 15:47:19.347708', '2', '\\N', '10.00', '\\N', '20.00', 'DMAS', 'ACQUIRER');
-INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('13', 'CAMP-E2E', '\\N', 'AUTHORIZATION', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":false,"VARIABLE_FIELDS":{"AMOUNT":{"mode":"RANGE","min":1000,"max":50000}}}', '\\N', 't', '2026-06-30 15:48:53.807315', '2', '\\N', '10.00', '\\N', '20.00', 'DMAS', 'ACQUIRER');
-INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('14', 'CAMP-E2E', '\\N', 'DMAS', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":false,"VARIABLE_FIELDS":{"AMOUNT":{"mode":"RANGE","min":1000,"max":50000}}}', '\\N', 't', '2026-07-06 10:56:03.827311', '2', '\\N', '10.00', '\\N', '20.00', 'DMAS', 'ACQUIRER');
-INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('15', 'CAMP-E2E', '\\N', 'AUTHORIZATION', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":false,"VARIABLE_FIELDS":{"AMOUNT":{"mode":"RANGE","min":1000,"max":50000}}}', '\\N', 't', '2026-07-06 11:05:13.946284', '2', '\\N', '10.00', '\\N', '20.00', 'DMAS', 'ACQUIRER');
+INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('1', 'CAMP-MULTIPALIERS', 'montee 5->15->5 TPS, SLA p95<100ms', 'AUTHORIZATION', '{"DE002_PAN":"5321962145453348","DE004_AMOUNT":0}', NULL, 't', '2026-06-26 11:58:49.89555', '2', '600', '5.00', '95.00', NULL, 'DMAS', 'ACQUIRER');
+INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('2', 'CAMP-RANDOM-PIN', 'tirage cartes reelles + PIN', 'AUTHORIZATION', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":true,"DE004_AMOUNT":1000}', NULL, 't', '2026-06-27 20:15:32.666486', '2', '600', '10.00', '80.00', NULL, 'DMAS', 'ACQUIRER');
+INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('11', 'CAMP-E2E', NULL, 'AUTHORIZATION', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":false,"VARIABLE_FIELDS":{"AMOUNT":{"mode":"RANGE","min":1000,"max":50000}}}', NULL, 't', '2026-06-30 15:44:47.489963', '2', NULL, '10.00', NULL, '20.00', 'DMAS', 'ACQUIRER');
+INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('12', 'CAMP-E2E', NULL, 'AUTHORIZATION', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":false,"VARIABLE_FIELDS":{"AMOUNT":{"mode":"RANGE","min":1000,"max":50000}}}', NULL, 't', '2026-06-30 15:47:19.347708', '2', NULL, '10.00', NULL, '20.00', 'DMAS', 'ACQUIRER');
+INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('13', 'CAMP-E2E', NULL, 'AUTHORIZATION', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":false,"VARIABLE_FIELDS":{"AMOUNT":{"mode":"RANGE","min":1000,"max":50000}}}', NULL, 't', '2026-06-30 15:48:53.807315', '2', NULL, '10.00', NULL, '20.00', 'DMAS', 'ACQUIRER');
+INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('14', 'CAMP-E2E', NULL, 'DMAS', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":false,"VARIABLE_FIELDS":{"AMOUNT":{"mode":"RANGE","min":1000,"max":50000}}}', NULL, 't', '2026-07-06 10:56:03.827311', '2', NULL, '10.00', NULL, '20.00', 'DMAS', 'ACQUIRER');
+INSERT INTO public.campaigns (id, name, description, category, config, expected_de039, active, created_at, created_by, sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate, network, initiator) VALUES ('15', 'CAMP-E2E', NULL, 'AUTHORIZATION', '{"DE002_PAN_MODE":"RANDOM","WITH_PIN":false,"VARIABLE_FIELDS":{"AMOUNT":{"mode":"RANGE","min":1000,"max":50000}}}', NULL, 't', '2026-07-06 11:05:13.946284', '2', NULL, '10.00', NULL, '20.00', 'DMAS', 'ACQUIRER');
 
 -- tests (12 lignes)
 INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('4', 'Achat nominal CB', 'Test achat standard puce EMV', 'AUTHORIZATION', '1', '{"DE003_PROCESSING_CODE":"000000","DE004_AMOUNT":5000,"DE018_MCC":"5411","DE022_POS_ENTRY_MODE":"051","DE049_CURRENCY_CODE":"978","DE052_PIN":"1234"}', '00', 't', '2026-06-14 15:35:22.514351', '2');
@@ -1263,16 +1263,16 @@ INSERT INTO public.tests (id, name, description, category, message_type_id, conf
 INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('9', '5_TPS_10_Secondes', 'Test de charge 5 TPS pendant 10 secondes', 'AUTHORIZATION', '1', '{"DE003_PROCESSING_CODE":"000000","DE004_AMOUNT":5000,"DE018_MCC":"5411","DE052_PIN":"1234"}', '00', 't', '2026-06-17 12:03:08.760008', '2');
 INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('10', 'Charge DMAS Purchase', 'test charge DMAS', 'PERF', '1', '{"DE002_PAN":"5133309842723011","DE004_AMOUNT":5000,"DE003_PROCESSING_CODE":"000000","DE018_MCC":"5411","DE049_CURRENCY_CODE":"840"}', '00', 't', '2026-06-22 11:47:17.903212', '2');
 INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('11', 'Montee en charge DMAS', '3 paliers 10-50-100 TPS', 'PERF', '1', '{"DE002_PAN":"5133309842723011","DE004_AMOUNT":5000,"DE003_PROCESSING_CODE":"000000","DE018_MCC":"5411","DE049_CURRENCY_CODE":"840"}', '00', 't', '2026-06-22 14:29:17.897617', '2');
-INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('12', 'TEST-SIMPLE-JPOS', 'Autorisation simple via connexion permanente', 'DMAS', '\\N', '{"DE002_PAN":"5321962145453348","DE004_AMOUNT":49,"DE003_PROCESSING_CODE":"000000","DE018_MCC":"5999","DE022_POS_ENTRY_MODE":"051","DE049_CURRENCY_CODE":"840"}', '\\N', 't', '2026-06-25 10:29:48.375154', '2');
-INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('13', 'TEST-TPS-JPOS', 'Charge 5 TPS via connexion permanente', 'DMAS', '\\N', '{"DE002_PAN":"5321962145453348","DE004_AMOUNT":49,"DE003_PROCESSING_CODE":"000000","DE018_MCC":"5999","DE022_POS_ENTRY_MODE":"051","DE049_CURRENCY_CODE":"840"}', '\\N', 't', '2026-06-25 10:34:52.727325', '2');
-INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('14', 'TEST-TPS-LOADTEST', 'charge 10 TPS 5s', 'DMAS', '\\N', '{"DE002_PAN":"5321962145453348","DE004_AMOUNT":0,"DE003_PROCESSING_CODE":"000000"}', '\\N', 't', '2026-06-25 16:27:21.418562', '2');
-INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('15', 'POST-CLEANUP-TPS', '\\N', 'DMAS', '\\N', '{"DE002_PAN":"5321962145453348","DE004_AMOUNT":0}', '\\N', 't', '2026-06-26 09:40:39.706488', '2');
+INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('12', 'TEST-SIMPLE-JPOS', 'Autorisation simple via connexion permanente', 'DMAS', NULL, '{"DE002_PAN":"5321962145453348","DE004_AMOUNT":49,"DE003_PROCESSING_CODE":"000000","DE018_MCC":"5999","DE022_POS_ENTRY_MODE":"051","DE049_CURRENCY_CODE":"840"}', NULL, 't', '2026-06-25 10:29:48.375154', '2');
+INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('13', 'TEST-TPS-JPOS', 'Charge 5 TPS via connexion permanente', 'DMAS', NULL, '{"DE002_PAN":"5321962145453348","DE004_AMOUNT":49,"DE003_PROCESSING_CODE":"000000","DE018_MCC":"5999","DE022_POS_ENTRY_MODE":"051","DE049_CURRENCY_CODE":"840"}', NULL, 't', '2026-06-25 10:34:52.727325', '2');
+INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('14', 'TEST-TPS-LOADTEST', 'charge 10 TPS 5s', 'DMAS', NULL, '{"DE002_PAN":"5321962145453348","DE004_AMOUNT":0,"DE003_PROCESSING_CODE":"000000"}', NULL, 't', '2026-06-25 16:27:21.418562', '2');
+INSERT INTO public.tests (id, name, description, category, message_type_id, config, expected_de039, active, created_at, created_by) VALUES ('15', 'POST-CLEANUP-TPS', NULL, 'DMAS', NULL, '{"DE002_PAN":"5321962145453348","DE004_AMOUNT":0}', NULL, 't', '2026-06-26 09:40:39.706488', '2');
 
 -- dmas_cards (7 lignes)
 INSERT INTO public.dmas_cards (id, pan, pin, balance, currency, expiry, status, created_at, updated_at) VALUES ('1', '5413330089010444', '1234', '98721117', '840', '2812', 'ACTIVE', '2026-06-21 14:03:30.775137', '2026-06-28 18:41:54.199313');
 INSERT INTO public.dmas_cards (id, pan, pin, balance, currency, expiry, status, created_at, updated_at) VALUES ('4', '5133300209227621', '1234', '99177630', '840', '2806', 'ACTIVE', '2026-06-22 10:19:46.110313', '2026-06-28 12:48:54.941395');
 INSERT INTO public.dmas_cards (id, pan, pin, balance, currency, expiry, status, created_at, updated_at) VALUES ('5', '5133305622642819', '1234', '98776905', '840', '2706', 'ACTIVE', '2026-06-22 10:19:46.137241', '2026-06-28 12:48:54.941395');
-INSERT INTO public.dmas_cards (id, pan, pin, balance, currency, expiry, status, created_at, updated_at) VALUES ('7', '5321962145453348', '1234', '99163418', '840', '\\N', 'ACTIVE', '2026-06-24 15:55:34.916757', '2026-06-28 12:48:54.941395');
+INSERT INTO public.dmas_cards (id, pan, pin, balance, currency, expiry, status, created_at, updated_at) VALUES ('7', '5321962145453348', '1234', '99163418', '840', NULL, 'ACTIVE', '2026-06-24 15:55:34.916757', '2026-06-28 12:48:54.941395');
 INSERT INTO public.dmas_cards (id, pan, pin, balance, currency, expiry, status, created_at, updated_at) VALUES ('6', '5133306099184459', '1234', '99210907', '840', '2906', 'ACTIVE', '2026-06-22 10:19:46.478328', '2026-06-28 12:48:54.941395');
 INSERT INTO public.dmas_cards (id, pan, pin, balance, currency, expiry, status, created_at, updated_at) VALUES ('2', '5133309842723011', '1234', '99235222', '840', '2706', 'ACTIVE', '2026-06-22 10:19:45.957721', '2026-06-28 12:48:54.941395');
 INSERT INTO public.dmas_cards (id, pan, pin, balance, currency, expiry, status, created_at, updated_at) VALUES ('3', '5133300371816755', '1234', '99154372', '840', '2706', 'ACTIVE', '2026-06-22 10:19:46.080394', '2026-06-28 12:48:54.941395');
@@ -1342,71 +1342,71 @@ ALTER TABLE ONLY public.tps_steps ADD CONSTRAINT tps_steps_test_id_fkey FOREIGN 
 ALTER TABLE ONLY public.user_tests ADD CONSTRAINT user_tests_test_id_fkey FOREIGN KEY (test_id) REFERENCES public.tests(id) ON DELETE CASCADE;
 
 -- 8. Index
-CREATE INDEX idx_acq_adv_auth ON public.acq_advices USING btree (acq_auth_id);
-CREATE INDEX idx_acq_auth_approved ON public.acq_authorizations USING btree (approved);
-CREATE INDEX idx_acq_auth_de039 ON public.acq_authorizations USING btree (de039_response);
-CREATE INDEX idx_acq_auth_exec ON public.acq_authorizations USING btree (execution_id);
-CREATE INDEX idx_acq_auth_pan ON public.acq_authorizations USING btree (de002_pan);
-CREATE INDEX idx_acq_ipm_files_date ON public.acq_ipm_files USING btree (file_date);
-CREATE INDEX idx_acq_ipm_files_dir ON public.acq_ipm_files USING btree (direction);
-CREATE INDEX idx_acq_ipm_files_exec ON public.acq_ipm_files USING btree (execution_id);
-CREATE INDEX idx_acq_ipm_records_auth ON public.acq_ipm_records USING btree (acq_auth_id);
-CREATE INDEX idx_acq_ipm_records_file ON public.acq_ipm_records USING btree (ipm_file_id);
-CREATE INDEX idx_acq_rev_auth ON public.acq_reversals USING btree (acq_auth_id);
-CREATE INDEX idx_campexecres_de039 ON public.campaign_execution_results USING btree (de039);
-CREATE INDEX idx_campexecres_exec ON public.campaign_execution_results USING btree (execution_id);
-CREATE INDEX idx_campexec_campaign ON public.campaign_executions USING btree (campaign_id);
-CREATE INDEX idx_campexec_status ON public.campaign_executions USING btree (status);
-CREATE INDEX idx_campexec_user ON public.campaign_executions USING btree (user_id);
-CREATE INDEX idx_camploadsteps_campaign ON public.campaign_load_steps USING btree (campaign_id);
-CREATE UNIQUE INDEX uq_dmas_acq_keys ON public.dmas_acq_keys USING btree (member_group_id, key_type, status);
-CREATE UNIQUE INDEX dmas_cards_pan_key ON public.dmas_cards USING btree (pan);
-CREATE UNIQUE INDEX uq_dmas_iss_keys ON public.dmas_iss_keys USING btree (member_group_id, key_type, status);
-CREATE INDEX idx_dmas_kek_group ON public.dmas_kek USING btree (member_group_id);
-CREATE UNIQUE INDEX uq_dmas_kek_group ON public.dmas_kek USING btree (member_group_id);
-CREATE INDEX idx_dmas_tx_pan ON public.dmas_transactions USING btree (pan);
-CREATE UNIQUE INDEX uq_dmas_tx ON public.dmas_transactions USING btree (stan, transmission_dt);
-CREATE INDEX idx_executions_status ON public.executions USING btree (status);
-CREATE INDEX idx_executions_test ON public.executions USING btree (test_id);
-CREATE INDEX idx_executions_user ON public.executions USING btree (user_id);
-CREATE INDEX idx_ipm_files_date ON public.ipm_files USING btree (file_date);
-CREATE INDEX idx_ipm_files_exec ON public.ipm_files USING btree (execution_id);
-CREATE INDEX idx_ipm_log_checksum ON public.ipm_processing_log USING btree (checksum);
-CREATE INDEX idx_ipm_log_exec ON public.ipm_processing_log USING btree (execution_id);
-CREATE UNIQUE INDEX uq_ipm_log ON public.ipm_processing_log USING btree (file_name, role, direction);
-CREATE INDEX idx_ipm_records_auth ON public.ipm_records USING btree (acq_auth_id);
-CREATE INDEX idx_ipm_records_file ON public.ipm_records USING btree (ipm_file_id);
-CREATE UNIQUE INDEX iso_field_catalog_field_code_key ON public.iso_field_catalog USING btree (field_code);
-CREATE INDEX idx_iss_adv_auth ON public.iss_advices USING btree (iss_auth_id);
-CREATE INDEX idx_iss_auth_approved ON public.iss_authorizations USING btree (approved);
-CREATE INDEX idx_iss_auth_pan ON public.iss_authorizations USING btree (de002_pan);
-CREATE INDEX idx_iss_auth_rrn ON public.iss_authorizations USING btree (de037_rrn);
-CREATE INDEX idx_iss_auth_stan ON public.iss_authorizations USING btree (de011_stan);
-CREATE INDEX idx_iss_ipm_files_date ON public.iss_ipm_files USING btree (file_date);
-CREATE INDEX idx_iss_ipm_files_dir ON public.iss_ipm_files USING btree (direction);
-CREATE INDEX idx_iss_ipm_files_exec ON public.iss_ipm_files USING btree (execution_id);
-CREATE INDEX idx_iss_ipm_records_auth ON public.iss_ipm_records USING btree (iss_auth_id);
-CREATE INDEX idx_iss_ipm_records_file ON public.iss_ipm_records USING btree (ipm_file_id);
-CREATE INDEX idx_iss_rev_auth ON public.iss_reversals USING btree (iss_auth_id);
-CREATE INDEX idx_key_store_group ON public.key_store USING btree (member_group_id);
-CREATE INDEX idx_key_store_status ON public.key_store USING btree (status);
-CREATE INDEX idx_key_store_type ON public.key_store USING btree (key_type);
-CREATE UNIQUE INDEX networks_code_key ON public.networks USING btree (code);
-CREATE UNIQUE INDEX permissions_code_key ON public.permissions USING btree (code);
-CREATE INDEX idx_results_de039 ON public.results USING btree (de039);
-CREATE INDEX idx_results_execution ON public.results USING btree (execution_id);
-CREATE UNIQUE INDEX roles_code_key ON public.roles USING btree (code);
-CREATE UNIQUE INDEX uq_swam_acq_keys ON public.swam_acq_keys USING btree (member_group_id, key_type, status);
-CREATE INDEX idx_swam_acq_tx_pan ON public.swam_acq_transactions USING btree (pan);
-CREATE UNIQUE INDEX uq_swam_acq_tx ON public.swam_acq_transactions USING btree (stan, transmission_dt);
-CREATE UNIQUE INDEX swam_cards_pan_key ON public.swam_cards USING btree (pan);
-CREATE UNIQUE INDEX uq_swam_iss_keys ON public.swam_iss_keys USING btree (member_group_id, key_type, status);
-CREATE INDEX idx_swam_iss_tx_pan ON public.swam_iss_transactions USING btree (pan);
-CREATE UNIQUE INDEX uq_swam_iss_tx ON public.swam_iss_transactions USING btree (stan, transmission_dt);
-CREATE INDEX idx_swam_kek_group ON public.swam_kek USING btree (member_group_id);
-CREATE UNIQUE INDEX uq_swam_kek_group ON public.swam_kek USING btree (member_group_id);
-CREATE INDEX idx_user_tests_user ON public.user_tests USING btree (user_id);
-CREATE UNIQUE INDEX users_login_key ON public.users USING btree (login);
+CREATE INDEX IF NOT EXISTS idx_acq_adv_auth ON public.acq_advices USING btree (acq_auth_id);
+CREATE INDEX IF NOT EXISTS idx_acq_auth_approved ON public.acq_authorizations USING btree (approved);
+CREATE INDEX IF NOT EXISTS idx_acq_auth_de039 ON public.acq_authorizations USING btree (de039_response);
+CREATE INDEX IF NOT EXISTS idx_acq_auth_exec ON public.acq_authorizations USING btree (execution_id);
+CREATE INDEX IF NOT EXISTS idx_acq_auth_pan ON public.acq_authorizations USING btree (de002_pan);
+CREATE INDEX IF NOT EXISTS idx_acq_ipm_files_date ON public.acq_ipm_files USING btree (file_date);
+CREATE INDEX IF NOT EXISTS idx_acq_ipm_files_dir ON public.acq_ipm_files USING btree (direction);
+CREATE INDEX IF NOT EXISTS idx_acq_ipm_files_exec ON public.acq_ipm_files USING btree (execution_id);
+CREATE INDEX IF NOT EXISTS idx_acq_ipm_records_auth ON public.acq_ipm_records USING btree (acq_auth_id);
+CREATE INDEX IF NOT EXISTS idx_acq_ipm_records_file ON public.acq_ipm_records USING btree (ipm_file_id);
+CREATE INDEX IF NOT EXISTS idx_acq_rev_auth ON public.acq_reversals USING btree (acq_auth_id);
+CREATE INDEX IF NOT EXISTS idx_campexecres_de039 ON public.campaign_execution_results USING btree (de039);
+CREATE INDEX IF NOT EXISTS idx_campexecres_exec ON public.campaign_execution_results USING btree (execution_id);
+CREATE INDEX IF NOT EXISTS idx_campexec_campaign ON public.campaign_executions USING btree (campaign_id);
+CREATE INDEX IF NOT EXISTS idx_campexec_status ON public.campaign_executions USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_campexec_user ON public.campaign_executions USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_camploadsteps_campaign ON public.campaign_load_steps USING btree (campaign_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dmas_acq_keys ON public.dmas_acq_keys USING btree (member_group_id, key_type, status);
+CREATE UNIQUE INDEX IF NOT EXISTS dmas_cards_pan_key ON public.dmas_cards USING btree (pan);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dmas_iss_keys ON public.dmas_iss_keys USING btree (member_group_id, key_type, status);
+CREATE INDEX IF NOT EXISTS idx_dmas_kek_group ON public.dmas_kek USING btree (member_group_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dmas_kek_group ON public.dmas_kek USING btree (member_group_id);
+CREATE INDEX IF NOT EXISTS idx_dmas_tx_pan ON public.dmas_transactions USING btree (pan);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_dmas_tx ON public.dmas_transactions USING btree (stan, transmission_dt);
+CREATE INDEX IF NOT EXISTS idx_executions_status ON public.executions USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_executions_test ON public.executions USING btree (test_id);
+CREATE INDEX IF NOT EXISTS idx_executions_user ON public.executions USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_ipm_files_date ON public.ipm_files USING btree (file_date);
+CREATE INDEX IF NOT EXISTS idx_ipm_files_exec ON public.ipm_files USING btree (execution_id);
+CREATE INDEX IF NOT EXISTS idx_ipm_log_checksum ON public.ipm_processing_log USING btree (checksum);
+CREATE INDEX IF NOT EXISTS idx_ipm_log_exec ON public.ipm_processing_log USING btree (execution_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_ipm_log ON public.ipm_processing_log USING btree (file_name, role, direction);
+CREATE INDEX IF NOT EXISTS idx_ipm_records_auth ON public.ipm_records USING btree (acq_auth_id);
+CREATE INDEX IF NOT EXISTS idx_ipm_records_file ON public.ipm_records USING btree (ipm_file_id);
+CREATE UNIQUE INDEX IF NOT EXISTS iso_field_catalog_field_code_key ON public.iso_field_catalog USING btree (field_code);
+CREATE INDEX IF NOT EXISTS idx_iss_adv_auth ON public.iss_advices USING btree (iss_auth_id);
+CREATE INDEX IF NOT EXISTS idx_iss_auth_approved ON public.iss_authorizations USING btree (approved);
+CREATE INDEX IF NOT EXISTS idx_iss_auth_pan ON public.iss_authorizations USING btree (de002_pan);
+CREATE INDEX IF NOT EXISTS idx_iss_auth_rrn ON public.iss_authorizations USING btree (de037_rrn);
+CREATE INDEX IF NOT EXISTS idx_iss_auth_stan ON public.iss_authorizations USING btree (de011_stan);
+CREATE INDEX IF NOT EXISTS idx_iss_ipm_files_date ON public.iss_ipm_files USING btree (file_date);
+CREATE INDEX IF NOT EXISTS idx_iss_ipm_files_dir ON public.iss_ipm_files USING btree (direction);
+CREATE INDEX IF NOT EXISTS idx_iss_ipm_files_exec ON public.iss_ipm_files USING btree (execution_id);
+CREATE INDEX IF NOT EXISTS idx_iss_ipm_records_auth ON public.iss_ipm_records USING btree (iss_auth_id);
+CREATE INDEX IF NOT EXISTS idx_iss_ipm_records_file ON public.iss_ipm_records USING btree (ipm_file_id);
+CREATE INDEX IF NOT EXISTS idx_iss_rev_auth ON public.iss_reversals USING btree (iss_auth_id);
+CREATE INDEX IF NOT EXISTS idx_key_store_group ON public.key_store USING btree (member_group_id);
+CREATE INDEX IF NOT EXISTS idx_key_store_status ON public.key_store USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_key_store_type ON public.key_store USING btree (key_type);
+CREATE UNIQUE INDEX IF NOT EXISTS networks_code_key ON public.networks USING btree (code);
+CREATE UNIQUE INDEX IF NOT EXISTS permissions_code_key ON public.permissions USING btree (code);
+CREATE INDEX IF NOT EXISTS idx_results_de039 ON public.results USING btree (de039);
+CREATE INDEX IF NOT EXISTS idx_results_execution ON public.results USING btree (execution_id);
+CREATE UNIQUE INDEX IF NOT EXISTS roles_code_key ON public.roles USING btree (code);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_swam_acq_keys ON public.swam_acq_keys USING btree (member_group_id, key_type, status);
+CREATE INDEX IF NOT EXISTS idx_swam_acq_tx_pan ON public.swam_acq_transactions USING btree (pan);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_swam_acq_tx ON public.swam_acq_transactions USING btree (stan, transmission_dt);
+CREATE UNIQUE INDEX IF NOT EXISTS swam_cards_pan_key ON public.swam_cards USING btree (pan);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_swam_iss_keys ON public.swam_iss_keys USING btree (member_group_id, key_type, status);
+CREATE INDEX IF NOT EXISTS idx_swam_iss_tx_pan ON public.swam_iss_transactions USING btree (pan);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_swam_iss_tx ON public.swam_iss_transactions USING btree (stan, transmission_dt);
+CREATE INDEX IF NOT EXISTS idx_swam_kek_group ON public.swam_kek USING btree (member_group_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_swam_kek_group ON public.swam_kek USING btree (member_group_id);
+CREATE INDEX IF NOT EXISTS idx_user_tests_user ON public.user_tests USING btree (user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS users_login_key ON public.users USING btree (login);
 
 -- 9. Controle final
 SELECT 'tables total'   AS objet, count(*)::text AS n FROM pg_tables WHERE schemaname='public'
