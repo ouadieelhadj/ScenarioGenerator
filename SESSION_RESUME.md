@@ -656,3 +656,156 @@ Chaque etape committee + testee avant la suivante.
 - **SESSION_RESUME front** : traduire Help + Dashboard + visualisation roles (cf section 9 PENDING GLOBAUX).
 - **Versionner sg-frontend** (toujours pas de remote GitHub).
 - **Etendre port endpoint** a sg-swam-issuer/sg-swam-acquirer (jPOS risque au restart, a tester prudemment).
+
+---
+
+## 18. PROCEDURES OPERATIONNELLES (reference rapide)
+
+> Commandes a lancer dans Git Bash depuis la racine du projet.
+> Adapter les chemins si le projet n'est pas sur D:\MoneyCore\.
+
+### Demarrage rapide SWAM (sur la machine de dev)
+
+```bash
+# 1. Demarrer le switch (issuer) — logs en direct
+bash /d/MoneyCore/start-swam-issuer.sh
+
+# 2. Dans un autre terminal : demarrer le membre (acquereur)
+JAVA="/d/MoneyCore/jdk-21.0.11/bin/java.exe"
+JAR=$(find /d/MoneyCore/ScenarioGenerator/sg-swam-acquirer/target -name "*.jar" ! -name "*.original" | head -1)
+nohup "$JAVA" -jar "$JAR" > /tmp/swam-acquirer.log 2>&1 &
+```
+
+### Test E2E SWAM complet (valide tout le flux crypto)
+
+```bash
+bash /d/MoneyCore/ScenarioGenerator/deploiement/swam-e2e.sh
+```
+
+Couvre en automatique (12 tests, resultat PASSED/FAILED) :
+- Compilation des 2 modules
+- Arret/demarrage switch + membre
+- Bootstrap KEK (issuer + acquereur) + verification KCV concordants
+- Sign-on (1804 DE24=801)
+- Key exchange ZPK (811) + ZAK (899) + verification en base
+- Achat sans PIN -> approuve (DE39=000)
+- Achat PIN correct 1234 -> approuve, solde debite
+- Achat PIN incorrect 9999 -> refuse (DE39=117), solde inchange
+- Achat fonds insuffisants -> refuse (DE39=116)
+- Sign-off (1804 DE24=802)
+
+### Bootstrap KEK manuel (apres demarrage sur nouvelle machine)
+
+```bash
+# Issuer (switch) — port REST 8511
+curl -X POST http://localhost:8511/api/admin/swam/kek/bootstrap \
+  -H "Content-Type: application/json" \
+  -d '{"memberGroupId":"TESTGRP01","kekClear":"E95870465DD6CB8F041F5EBA4F7C62CB"}'
+# Verifier KCV=F6EE59 dans la reponse
+
+# Acquereur (membre) — port REST 8094
+curl -X POST http://localhost:8094/api/admin/swam/kek/bootstrap \
+  -H "Content-Type: application/json" \
+  -d '{"memberGroupId":"TESTGRP01","kekClear":"E95870465DD6CB8F041F5EBA4F7C62CB"}'
+```
+
+### Key exchange manuel (apres bootstrap KEK)
+
+```bash
+curl -X POST http://localhost:8094/api/admin/swam/network/signon
+curl -X POST http://localhost:8094/api/admin/swam/keyexchange/zpk
+curl -X POST http://localhost:8094/api/admin/swam/keyexchange/zak
+```
+
+### Tests d'achat manuels
+
+```bash
+PAN="5321962145453348"
+BASE="http://localhost:8094/api/admin/swam"
+
+# Achat sans PIN
+curl -s -X POST "$BASE/purchase?pan=$PAN&amount=000000010000"
+
+# Achat avec PIN correct
+curl -s -X POST "$BASE/purchase?pan=$PAN&amount=000000010000&pin=1234"
+
+# Achat avec PIN incorrect -> DE39=117
+curl -s -X POST "$BASE/purchase?pan=$PAN&amount=000000010000&pin=9999"
+```
+
+### Verifications en base
+
+```bash
+PSQL="/d/MoneyCore/PostgreSQL/18/bin/psql.exe"
+export PGPASSWORD=postgres123
+
+# KEK chargee (KCV doit etre F6EE59 si vraie ZMK)
+"$PSQL" -U postgres -d scenariogenerator -c \
+  "SELECT member_group_id, kcv, kek_under_iss_lmk IS NOT NULL AS iss, kek_under_acq_lmk IS NOT NULL AS acq FROM swam_kek;"
+
+# Cles de session (ZPK + ZAK, KCV concordants iss/acq)
+"$PSQL" -U postgres -d scenariogenerator -c \
+  "SELECT i.key_type, i.kcv AS iss_kcv, a.kcv AS acq_kcv, (i.kcv=a.kcv) AS match \
+   FROM swam_iss_keys i JOIN swam_acq_keys a \
+   ON i.member_group_id=a.member_group_id AND i.key_type=a.key_type \
+   WHERE i.status='ACTIVE' AND a.status='ACTIVE';"
+
+# Dernieres transactions
+"$PSQL" -U postgres -d scenariogenerator -c \
+  "SELECT pan, stan, amount, response_code, status FROM swam_iss_transactions ORDER BY id DESC LIMIT 5;"
+
+# Solde des cartes de test
+"$PSQL" -U postgres -d scenariogenerator -c \
+  "SELECT pan, balance, status FROM swam_cards;"
+```
+
+### Installation sur un nouveau PC (portable, sans droits admin)
+
+```bash
+# 1. Cloner le projet
+git clone https://github.com/ouadieelhadj/ScenarioGenerator.git /d/MoneyCore/ScenarioGenerator
+cd /d/MoneyCore/ScenarioGenerator
+git checkout feature/multi-network
+
+# 2. PostgreSQL portable (zip, sans installation)
+#    Telecharger : https://www.enterprisedb.com/download-postgresql-binaries
+#    Dezipper dans D:\MoneyCore\PostgreSQL\18\
+PGDATA="/d/MoneyCore/PostgreSQL/18/data"
+"/d/MoneyCore/PostgreSQL/18/bin/initdb.exe" -D "$PGDATA" -U postgres --pwprompt
+# mot de passe : postgres123
+"/d/MoneyCore/PostgreSQL/18/bin/pg_ctl.exe" -D "$PGDATA" -l "/d/MoneyCore/PostgreSQL/18/pgsql.log" start
+
+# 3. Creer la base complete (structure + donnees + SWAM)
+bash /d/MoneyCore/install-full-db.sh
+# OU depuis un dump : psql -U postgres -f scenariogenerator-full.sql
+
+# 4. JDK 21 : dezipper dans D:\MoneyCore\jdk-21.0.11\
+
+# 5. Lancer le test E2E pour valider
+bash /d/MoneyCore/ScenarioGenerator/deploiement/swam-e2e.sh
+```
+
+### Arret propre
+
+```bash
+# Arreter le switch et le membre
+for PORT in 8510 8511 8094; do
+  for p in $(netstat -ano 2>/dev/null | grep LISTENING | grep ":$PORT" | awk '{print $NF}' | sort -u); do
+    taskkill //PID "$p" //F 2>/dev/null || true
+  done
+done
+
+# Arreter PostgreSQL portable
+"/d/MoneyCore/PostgreSQL/18/bin/pg_ctl.exe" -D "/d/MoneyCore/PostgreSQL/18/data" stop
+```
+
+### Scripts utiles (dans /d/MoneyCore/)
+
+| Script | Role |
+|--------|------|
+| `start-swam-issuer.sh` | Compile + lance le switch en avant-plan (logs visibles) |
+| `swam-e2e.sh` (deploiement/) | Test E2E complet SWAM |
+| `install-full-db.sh` | Cree la base complete sur un nouveau PC |
+| `create-full-db.sh` | Genere un dump SQL complet (transfert vers autre PC) |
+| `db-restore.sh` | Restaure depuis un dump SQL |
+| `package-swam-issuer.sh` | Package le switch pour deploiement (JAR+SQL+bat) |
