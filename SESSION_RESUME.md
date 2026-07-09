@@ -833,3 +833,64 @@ done
 | `create-full-db.sh` | Genere un dump SQL complet (transfert vers autre PC) |
 | `db-restore.sh` | Restaure depuis un dump SQL |
 | `package-swam-issuer.sh` | Package le switch pour deploiement (JAR+SQL+bat) |
+
+---
+
+## 19. SESSION 11 — INSTALLATION NOUVEAU PC (2026-07-09, COMPLETED)
+
+> Installation et validation complete de la plateforme SWAM sur un PC secondaire
+> (Windows 10, F:\MoneyCore\, PostgreSQL 18 portable zip, JDK 26, IntelliJ).
+> E2E SWAM : PASSED 27/27.
+
+### Environnement PC secondaire valide
+- PostgreSQL 18 portable : F:\MoneyCore\pgsql\ (initdb UTF8 locale=C via cygpath)
+- JDK 26 : F:\MoneyCore\jdk-26_windows-x64_bin\jdk-26.0.1\bin\java.exe
+  (compatible source/target=21 du pom.xml — pas de --release donc pas de blocage)
+- Maven : F:\MoneyCore\idea-2026.1.3.win\plugins\maven\lib\maven3\bin\mvn
+- Projet : F:\ScenarioGenerator (git clone + checkout feature/multi-network)
+
+### Pieges rencontres et solutions
+
+**[PIEGE] initdb --pwfile sous Git Bash**
+- --pwfile=<(echo ...) -> convertit en /proc/PID/fd/N -> FileNotFoundException
+- Solution : cygpath -w pour convertir le chemin bash en chemin Windows natif.
+
+**[PIEGE] LMK chemin en dur dans JposHsmService.java**
+- @Value("${dmas.lmk.file:D:/MoneyCore/ScenarioGenerator/keys/dmas-lmk.lmk}")
+- Solution : ajouter dans application.yml des modules SWAM :
+  dmas.lmk.file: F:/ScenarioGenerator/keys/dmas-lmk.lmk
+- Le dossier keys/ est desormais versionne dans le repo (environnement test).
+
+**[PIEGE] Grants SWAM manquants dans create-db.sql**
+- swam_kek, swam_iss_keys, networks non accordes a swam_issuer_user / swam_acquirer_user.
+- Solution : grants complets ajoutes en fin de create-db.sql (commit session 11).
+- swam_issuer_user : swam_kek/iss_keys/iss_transactions/cards (SUG) + networks (S)
+- swam_acquirer_user : swam_kek/acq_keys/acq_transactions (SUG) + networks/cards (S)
+- Les deux : USAGE+SELECT sur ALL SEQUENCES
+
+**[PIEGE] PostgreSQL 18 : bool retourne "true"/"false" au lieu de "t"/"f"**
+- swam-e2e.sh comparait [ "$ZPK_MATCH" = "t" ] -> toujours FAIL sur PG18.
+- Solution : [ "$ZPK_MATCH" = "t" ] || [ "$ZPK_MATCH" = "true" ] (compatible PG16+PG18).
+- Corrige dans deploiement/swam-e2e.sh (commit session 11).
+
+**[PIEGE] JAR verrouille par le process lors de mvn clean**
+- Solution : toujours killer les ports 8510/8511/8094 avant de relancer le E2E.
+
+**[PIEGE] Ordre SQL des migrations**
+- Les migrations separees jouees dans le mauvais ordre cassent les FK.
+- Solution : utiliser uniquement create-db.sql (standalone, ordre correct garanti).
+
+### Procedure demarrage rapide PC secondaire (F:)
+
+    # 1. Demarrer PostgreSQL
+    "/f/MoneyCore/pgsql/bin/pg_ctl.exe" -D "/f/MoneyCore/pgsql/data" -l "/f/MoneyCore/pgsql/data/postgres.log" start
+
+    # 2. Killer les ports si services en cours
+    for PORT in 8510 8511 8094; do
+      for p in $(netstat -ano 2>/dev/null | grep LISTENING | grep ":$PORT " | awk '{print $NF}' | sort -u); do
+        taskkill //PID "$p" //F 2>/dev/null || true
+      done
+    done
+
+    # 3. Lancer le E2E
+    bash /f/MoneyCore/swam-e2e-f.sh
