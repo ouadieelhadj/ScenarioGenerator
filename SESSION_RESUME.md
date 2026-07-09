@@ -761,18 +761,20 @@ export PGPASSWORD=postgres123
 
 ### Installation sur un nouveau PC
 
-> Methode : un seul fichier SQL autonome genere depuis le PC source.
-> Aucune dependance aux fichiers deploiement/*, pas de probleme FK.
+> Methode definitive : `create-db.sql` — fichier SQL 100% autonome.
+> Genere par `build-create-db.sh` via `information_schema` + COPY CSV.
+> Aucun pg_dump, aucun fichier externe, zero probleme FK.
 
-**Etape 1 — Sur le PC SOURCE : generer le fichier SQL standalone**
+**Etape 1 — Sur le PC SOURCE (si create-db.sql doit etre regenere)**
 
 ```bash
-# Genere deploiement/create-standalone-db.sql (schema + donnees ref + FK dans le bon ordre)
-bash /d/MoneyCore/generate-standalone-sql.sh
-# Puis pusher dans le repo
+# Regenere deploiement/create-db.sql depuis la base live
+# (python doit etre accessible, pas python3 sous Windows)
+bash /d/MoneyCore/ScenarioGenerator/deploiement/build-create-db.sh
+# Puis pousser
 cd /d/MoneyCore/ScenarioGenerator
-git add deploiement/create-standalone-db.sql
-git commit -m "deploy: SQL standalone base complete (schema+donnees, sans FK issue)"
+git add deploiement/create-db.sql
+git commit -m "deploy: regeneration create-db.sql"
 git push origin feature/multi-network
 ```
 
@@ -789,9 +791,8 @@ PGDATA="/f/MoneyCore/pgsql/data"
 # mot de passe : postgres123
 "/f/MoneyCore/pgsql/bin/pg_ctl.exe" -D "$PGDATA" -l "/f/MoneyCore/pgsql/pgsql.log" start
 
-# 3. Creer la base depuis le fichier SQL standalone (tout en un, aucune dependance)
-PGPASSWORD=postgres123 "/f/MoneyCore/pgsql/bin/psql.exe" -U postgres -h localhost \
-  -f /f/ScenarioGenerator/deploiement/create-standalone-db.sql
+# 3. Creer la base (schema + donnees + FK — tout en un, autonome)
+PGPASSWORD=postgres123 "/f/MoneyCore/pgsql/bin/psql.exe"   -U postgres -h localhost -f /f/ScenarioGenerator/deploiement/create-db.sql
 
 # 4. Valider avec le test E2E SWAM
 bash /f/ScenarioGenerator/deploiement/swam-e2e.sh
@@ -801,9 +802,9 @@ bash /f/ScenarioGenerator/deploiement/swam-e2e.sh
 Notes :
 - Adapter les chemins si le projet est sur D:\ au lieu de F:\.
 - JDK 21 : dezipper dans /f/MoneyCore/jdk-21.0.11/ (swam-e2e.sh l attend la).
-- PostgreSQL portable : telecharger le zip binaire sur enterprisedb.com (pas le .exe installeur).
-- Le fichier create-standalone-db.sql inclut schema + donnees de reference (pas les transactions).
-- Apres le E2E, bootstrapper la vraie ZMK si necessaire (voir section Bootstrap KEK manuel).
+- PostgreSQL portable : zip binaire sur enterprisedb.com (pas le .exe installeur).
+- build-create-db.sh utilise python (pas python3) + psql.
+- Le create-db.sql contient : schema + sequences + donnees ref + reset sequences + FK + index.
 
 ### Arret propre
 
