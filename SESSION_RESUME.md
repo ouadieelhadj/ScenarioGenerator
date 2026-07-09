@@ -759,32 +759,6 @@ export PGPASSWORD=postgres123
   "SELECT pan, balance, status FROM swam_cards;"
 ```
 
-### Installation sur un nouveau PC (portable, sans droits admin)
-
-```bash
-# 1. Cloner le projet
-git clone https://github.com/ouadieelhadj/ScenarioGenerator.git /d/MoneyCore/ScenarioGenerator
-cd /d/MoneyCore/ScenarioGenerator
-git checkout feature/multi-network
-
-# 2. PostgreSQL portable (zip, sans installation)
-#    Telecharger : https://www.enterprisedb.com/download-postgresql-binaries
-#    Dezipper dans D:\MoneyCore\PostgreSQL\18\
-PGDATA="/d/MoneyCore/PostgreSQL/18/data"
-"/d/MoneyCore/PostgreSQL/18/bin/initdb.exe" -D "$PGDATA" -U postgres --pwprompt
-# mot de passe : postgres123
-"/d/MoneyCore/PostgreSQL/18/bin/pg_ctl.exe" -D "$PGDATA" -l "/d/MoneyCore/PostgreSQL/18/pgsql.log" start
-
-# 3. Creer la base complete (structure + donnees + SWAM)
-bash /d/MoneyCore/install-full-db.sh
-# OU depuis un dump : psql -U postgres -f scenariogenerator-full.sql
-
-# 4. JDK 21 : dezipper dans D:\MoneyCore\jdk-21.0.11\
-
-# 5. Lancer le test E2E pour valider
-bash /d/MoneyCore/ScenarioGenerator/deploiement/swam-e2e.sh
-```
-
 ### Arret propre
 
 ```bash
