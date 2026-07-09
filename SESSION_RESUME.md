@@ -761,6 +761,9 @@ export PGPASSWORD=postgres123
 
 ### Installation sur un nouveau PC (sans dump, depuis le repo)
 
+> **RESOLU** : `deploiement/install-full-db.sh` commite et pousse (chemins relatifs, auto-detection psql).
+
+
 ```bash
 # Prerequis : Git Bash + JDK 21 dezippe + PostgreSQL 18 dezippe (portable)
 
