@@ -7,7 +7,7 @@ import org.springframework.stereotype.Component;
  * SWAM (HPS Switch / PowerCARD HSID) ISO 8583:1993 Packager.
  *
  * Dialecte : TOUT-ASCII (IFA_*), longueurs LLVAR/LLLVAR en ASCII,
- * bitmaps ASCII-hex (IFA_BITMAP), DE52 (PIN) et DE128 (MAC) binaires.
+ * bitmaps BINAIRES (IFB_BITMAP) - Way4 envoie bitmap binaire, DE52 (PIN) et DE128 (MAC) binaires.
  *
  * Base sur le gabarit McPackager (ASCII) avec les specificites HPS SID v3.20 :
  *  - DE24 code fonction (n3) present (gestion reseau 1804 : 801/803/802)
@@ -33,7 +33,7 @@ public class SwamPackager extends ISOBasePackager {
         ISOFieldPackager[] fields = new ISOFieldPackager[129];
 
         fields[0]  = new IFA_NUMERIC  (4,    "MESSAGE TYPE INDICATOR");
-        fields[1]  = new IFA_BITMAP   (16,   "BIT MAP");
+        fields[1]  = new IFB_BITMAP   (16,   "BIT MAP");
         fields[2]  = new IFA_LLNUM    (19,   "PAN - PRIMARY ACCOUNT NUMBER");
         fields[3]  = new IFA_NUMERIC  (6,    "PROCESSING CODE");
         fields[4]  = new IFA_NUMERIC  (12,   "AMOUNT TRANSACTION");
