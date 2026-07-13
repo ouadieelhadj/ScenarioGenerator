@@ -30,3 +30,12 @@ swam:
     representation: "ascii"
     reject-code: "916"
     enforce: true
+
+dmas:
+  lmk:
+    file: F:/ScenarioGenerator/keys/dmas-lmk.lmk
+
+logging:
+  level:
+    org.jpos: DEBUG
+    com.staging.sg: DEBUG
