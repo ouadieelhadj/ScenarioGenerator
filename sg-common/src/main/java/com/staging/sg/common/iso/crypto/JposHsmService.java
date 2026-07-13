@@ -349,4 +349,63 @@ public class JposHsmService implements HsmService {
                 ISOUtil.hexString(expectedMac), ISOUtil.hexString(computed), ok);
         return ok;
     }
+    // ========================================================================
+    //  MAC SWAM REEL — ZMK utilisee comme TAK, 3DES-CBC-MAC (ISO 9797 Alg 1)
+    //  Ajoute pour l'interop membre reel Way4 (section 20.7 du SESSION_RESUME).
+    //  - cle : ZMK EN CLAIR, double longueur (16 octets)
+    //  - algo : DESede/CBC/NoPadding, IV=0, MAC = dernier bloc (8 octets)
+    //  - padding : ISO 9797 Method 1 = zeros (zeroPad)
+    //  - le champ DE128 reel = les 4 PREMIERS octets (troncature cote appelant)
+    // ========================================================================
+
+    /**
+     * @param data       octets a MACer (message packe sans MTI/bitmap/DE128, cf SwamMacBuilder)
+     * @param zmkClearHex ZMK EN CLAIR, 32 hex (double longueur) — sert de TAK
+     * @return MAC 8 octets (dernier bloc CBC). L'appelant tronque a 4 pour DE128.
+     */
+    public byte[] generateMacZmk(byte[] data, String zmkClearHex) throws Exception {
+        byte[] zmk = ISOUtil.hex2byte(zmkClearHex);
+        // 3DES a besoin d'une cle 24 octets : 2-key (16) -> K1K2K1 ; 3-key (24) inchange.
+        byte[] key24;
+        if (zmk.length == 16) {
+            key24 = concat(zmk, java.util.Arrays.copyOfRange(zmk, 0, 8));
+        } else if (zmk.length == 24) {
+            key24 = zmk;
+        } else if (zmk.length == 8) {
+            // ZMK simple longueur : on la triple (K1K1K1) = equivalent DES simple.
+            key24 = concat(concat(zmk, zmk), zmk);
+        } else {
+            throw new IllegalArgumentException("ZMK attendue 8/16/24 octets, recue " + zmk.length);
+        }
+
+        byte[] padded = zeroPad(data);
+        Cipher c = Cipher.getInstance("DESede/CBC/NoPadding");
+        c.init(Cipher.ENCRYPT_MODE,
+               new SecretKeySpec(key24, "DESede"),
+               new javax.crypto.spec.IvParameterSpec(new byte[8]));
+        byte[] all = c.doFinal(padded);
+        byte[] mac = java.util.Arrays.copyOfRange(all, all.length - 8, all.length);
+        log.info("[HSM] generateMacZmk (3DES-CBC-MAC ISO9797-1) dataLen={} padded={} mac8={} mac4={}",
+                data.length, padded.length,
+                ISOUtil.hexString(mac),
+                ISOUtil.hexString(java.util.Arrays.copyOfRange(mac, 0, 4)));
+        return mac;
+    }
+
+    /**
+     * Verifie un MAC SWAM. Compare sur la longueur du MAC recu :
+     *   - si expectedMac fait 4 octets -> on compare les 4 premiers du MAC calcule
+     *   - si 8 octets -> comparaison complete
+     */
+    public boolean verifyMacZmk(byte[] data, String zmkClearHex, byte[] expectedMac) throws Exception {
+        byte[] full = generateMacZmk(data, zmkClearHex);
+        int n = (expectedMac == null) ? 0 : expectedMac.length;
+        byte[] computed = (n > 0 && n < full.length)
+                ? java.util.Arrays.copyOfRange(full, 0, n)
+                : full;
+        boolean ok = java.util.Arrays.equals(computed, expectedMac);
+        log.info("[HSM] verifyMacZmk — attendu={} calcule={} match={}",
+                ISOUtil.hexString(expectedMac), ISOUtil.hexString(computed), ok);
+        return ok;
+    }
 }
