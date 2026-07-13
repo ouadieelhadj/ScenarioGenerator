@@ -88,7 +88,7 @@ public class SwamPackager extends ISOBasePackager {
         fields[103]= new IFA_LLCHAR   (28,   "ACCOUNT IDENTIFICATION 2");
         fields[123]= new IFA_LLLCHAR  (999,  "RESERVED (VbV/3DS)");
         fields[127]= new IFA_LLLCHAR  (999,  "RESERVED PRIVATE (TOKENS)");
-        fields[128]= new IFA_BINARY   (8,    "MESSAGE AUTHENTICATION CODE");
+        fields[128]= new IFA_BINARY   (4,    "MESSAGE AUTHENTICATION CODE");
 
         return fields;
     }
