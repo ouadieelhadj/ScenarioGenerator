@@ -169,10 +169,16 @@ public class SwamJposClient {
                 return;
             }
 
-            // Import sous LMK local
-            HsmService.KeyResult imp = "811".equals(func)
+            // Import sous LMK local.
+            // IMPORTANT : la longueur est decidee par la CLE RECUE, pas par le code
+            // fonction. Le switch REEL pousse une ZAK de 16 octets (double longueur)
+            // via le 899 — l'ancien code forcait importWorkingKeySingle (8 octets),
+            // d'ou "DES key too long - should be 8 bytes".
+            HsmService.KeyResult imp = (keyLen >= 16)
                     ? hsm.importWorkingKey(keyType, keyUnderKekHex, kek.getKekClear(), keyLen)
                     : hsm.importWorkingKeySingle(keyType, keyUnderKekHex, kek.getKekClear());
+            log.info("[SWAM-CLI] Import {} en {} longueur ({} octets)",
+                    keyType, (keyLen >= 16 ? "DOUBLE" : "SIMPLE"), keyLen);
 
             // Persister
             SwamAcqKey ak = acqKeyRepo
