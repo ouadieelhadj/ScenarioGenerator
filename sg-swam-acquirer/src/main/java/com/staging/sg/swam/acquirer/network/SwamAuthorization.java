@@ -11,23 +11,38 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class SwamAuthorization {
 
+    /** DE33 : identifiant institution (valeur observee cote Way4). */
+    private static final String FORWARDING_ID = "300853";
+
     private final AtomicInteger stanSeq = new AtomicInteger(1);
 
     private String nextStan() {
         int v = stanSeq.getAndIncrement() % 1000000;
         return String.format("%06d", v);
     }
-    private String now10() { return new SimpleDateFormat("MMddHHmmss").format(new Date()); }
+    /** DE7 : format reel Way4/HPS = aaMMjjHHmm (10 car). */
+    private String now10() { return new SimpleDateFormat("yyMMddHHmm").format(new Date()); }
     private String nowLocal12() { return new SimpleDateFormat("yyMMddHHmmss").format(new Date()); }
 
-    /** 1804 gestion reseau : func = 801 (sign-on) / 803 (echo) / 802 (sign-off). */
+    /**
+     * 1804 gestion reseau : func = 801 (sign-on) / 803 (echo) / 802 (sign-off).
+     *
+     * Structure alignee sur le VRAI membre Way4 (logs interop du 14/07/2026) :
+     *   DE7, DE11, DE12, DE24, DE25, DE33, DE37  (+ DE128 pose par SwamMac)
+     * Tous ces champs sont MANDATORY cote HPS et entrent dans le calcul du MAC.
+     */
     public ISOMsg buildNetwork(String func, org.jpos.iso.ISOPackager pkg) throws Exception {
+        String stan = nextStan();
         ISOMsg m = new ISOMsg();
         m.setPackager(pkg);
         m.setMTI("1804");
-        m.set(7, now10());
-        m.set(11, nextStan());
+        m.set(7,  now10());              // aaMMjjHHmm
+        m.set(11, stan);
+        m.set(12, nowLocal12());         // aaMMjjHHmmss
         m.set(24, func);
+        m.set(25, "1000");               // message reason code (comme Way4)
+        m.set(33, FORWARDING_ID);        // forwarding institution id
+        m.set(37, stan + "000000");      // retrieval reference number (12)
         return m;
     }
 

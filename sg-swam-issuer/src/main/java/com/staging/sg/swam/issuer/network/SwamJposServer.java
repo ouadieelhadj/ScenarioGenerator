@@ -169,9 +169,13 @@ public class SwamJposServer {
             ISOMsg r = new ISOMsg();
             r.setPackager(m.getPackager());
             r.setMTI("1814");
-            r.set(7, new SimpleDateFormat("MMddHHmmss").format(new Date()));
+            r.set(7, new SimpleDateFormat("yyMMddHHmm").format(new Date()));
             if (m.hasField(11)) r.set(11, m.getString(11));
+            if (m.hasField(12)) r.set(12, m.getString(12));
             if (m.hasField(24)) r.set(24, m.getString(24));
+            if (m.hasField(25)) r.set(25, m.getString(25));
+            r.set(33, forwardingId);
+            if (m.hasField(37)) r.set(37, m.getString(37));
             r.set(39, "800");
             poseMacOnResponse(r);
             source.send(r);
@@ -227,9 +231,13 @@ public class SwamJposServer {
             ISOMsg r = new ISOMsg();
             r.setPackager(m.getPackager());
             r.setMTI("1814");
-            r.set(7, new SimpleDateFormat("MMddHHmmss").format(new Date()));
+            r.set(7, new SimpleDateFormat("yyMMddHHmm").format(new Date()));
             if (m.hasField(11)) r.set(11, m.getString(11));
+            if (m.hasField(12)) r.set(12, m.getString(12));
             if (m.hasField(24)) r.set(24, m.getString(24));
+            if (m.hasField(25)) r.set(25, m.getString(25));
+            r.set(33, forwardingId);
+            if (m.hasField(37)) r.set(37, m.getString(37));
             r.set(39, "800");
             r.set(48, de48);
             poseMacOnResponse(r);
@@ -278,7 +286,7 @@ public class SwamJposServer {
                 ISOMsg push = new ISOMsg();
                 push.setPackager(packager);
                 push.setMTI("1804");
-                push.set(7,  new SimpleDateFormat("MMddHHmmss").format(now));
+                push.set(7,  new SimpleDateFormat("yyMMddHHmm").format(now));
                 push.set(11, stan);
                 push.set(12, new SimpleDateFormat("yyMMddHHmmss").format(now));
                 push.set(24, "811");
@@ -376,7 +384,7 @@ public class SwamJposServer {
             if (m.hasField(2))  r.set(2,  m.getString(2));
             if (m.hasField(3))  r.set(3,  m.getString(3));
             if (m.hasField(4))  r.set(4,  m.getString(4));
-            r.set(7, new SimpleDateFormat("MMddHHmmss").format(new Date()));
+            r.set(7, new SimpleDateFormat("yyMMddHHmm").format(new Date()));
             if (m.hasField(11)) r.set(11, m.getString(11));
             if (m.hasField(12)) r.set(12, m.getString(12));
             if (m.hasField(32)) r.set(32, m.getString(32));
