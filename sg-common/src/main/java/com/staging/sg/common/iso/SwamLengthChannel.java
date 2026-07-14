@@ -4,6 +4,7 @@ import org.jpos.iso.BaseChannel;
 import org.jpos.iso.ISOException;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOPackager;
+import org.jpos.iso.ISOUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,14 +24,24 @@ import java.io.IOException;
  * Cycle jPOS BaseChannel.receive() :
  *   1. getMessageLength() -> lit prefix 4o + header 11o, retourne msgLen
  *   2. streamReceive()    -> lit msgLen octets (NON override, jPOS gere)
- *   3. unpack(m, b)       -> parse le payload (override pour log hex avant parsing)
+ *   3. unpack(m, b)       -> parse le payload (override : log hex + dump ISO)
+ *
+ * Cycle emission :
+ *   send(ISOMsg)          -> override : dump ISO, puis pack + sendMessageLength
+ *
+ * DUMP ISO : chaque message recu/emis est logge champ par champ, avec le libelle
+ * de l'operation (SIGN-ON, KEY EXCHANGE ZPK, AUTORISATION, ...).
+ *   - DE2 (PAN) et DE35 (piste 2) sont MASQUES : jamais de PAN en clair en log.
+ *   - DE52 (PIN block), DE55 (EMV) et DE128 (MAC) sont affiches en HEX (binaires).
  */
 public class SwamLengthChannel extends BaseChannel {
 
     private static final Logger log = LoggerFactory.getLogger(SwamLengthChannel.class);
 
     private static final int HEADER_LEN = 11;
-    private static final byte[] HEADER_OUT = "ISO60100000".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+
+    /** Header emis. Produit '6' = interface membre emetteur (le centre repond). */
+    private String headerOut = "ISO60100000";
 
     private int lengthDigits = 4;
 
@@ -44,6 +55,21 @@ public class SwamLengthChannel extends BaseChannel {
     public void setLengthDigits(int n) { this.lengthDigits = n; }
     public int getLengthDigits() { return lengthDigits; }
 
+    /** Permet de changer le header emis (ex : "ISO70100000" en mode membre). */
+    public void setHeaderOut(String h) { this.headerOut = h; }
+    public String getHeaderOut() { return headerOut; }
+
+    // ========================================================================
+    //  EMISSION
+    // ========================================================================
+
+    /** Override send() pour dumper le message ISO complet AVANT le packing. */
+    @Override
+    public void send(ISOMsg m) throws IOException, ISOException {
+        dump(m, ">>> EMIS ");
+        super.send(m);
+    }
+
     /**
      * Emis : longueur (prefix 4o ASCII) + header PowerCARD fixe.
      * La longueur inclut les 11 octets du header.
@@ -56,10 +82,15 @@ public class SwamLengthChannel extends BaseChannel {
             s = s.substring(s.length() - lengthDigits);
         }
         byte[] lenBytes = s.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        byte[] hdrBytes = headerOut.getBytes(java.nio.charset.StandardCharsets.US_ASCII);
         serverOut.write(lenBytes);
-        serverOut.write(HEADER_OUT);
-        log.debug("[SWAM-CHANNEL] Emis prefix=[{}] header=[{}]", s, new String(HEADER_OUT));
+        serverOut.write(hdrBytes);
+        log.debug("[SWAM-CHANNEL] Emis prefix=[{}] header=[{}]", s, headerOut);
     }
+
+    // ========================================================================
+    //  RECEPTION
+    // ========================================================================
 
     /**
      * Recu : lit le prefix 4o ASCII + header PowerCARD 11o.
@@ -104,20 +135,17 @@ public class SwamLengthChannel extends BaseChannel {
                 headerStr.length() >= 11 ? headerStr.substring(8, 11) : "?");
 
         // 3. Retourner msgLen = totalLen - HEADER_LEN
-        // jPOS va lire exactement msgLen octets via streamReceive() (non override)
         int msgLen = totalLen - HEADER_LEN;
         log.info("[SWAM-CHANNEL] Longueur payload (hors header) = {}", msgLen);
         return msgLen;
     }
 
     /**
-     * Override unpack() pour logger le buffer brut AVANT parsing.
-     * C'est ici qu'on voit exactement ce que le packager recoit.
+     * Override unpack() : log du buffer brut AVANT parsing, puis dump ISO apres.
      * La liaison permanente est preservee car streamReceive() n'est pas touche.
      */
     @Override
     protected void unpack(ISOMsg m, byte[] b) throws ISOException {
-        // Log payload complet HEX + ASCII
         StringBuilder hexMsg = new StringBuilder();
         StringBuilder ascMsg = new StringBuilder();
         for (byte x : b) {
@@ -129,13 +157,110 @@ public class SwamLengthChannel extends BaseChannel {
         log.info("[SWAM-CHANNEL] ASC : {}", ascMsg.toString());
         log.info("[SWAM-CHANNEL] ================================================");
 
-        // Appel normal du packager
         try {
             super.unpack(m, b);
-            log.info("[SWAM-CHANNEL] Parsing OK - MTI={}", m.getMTI());
         } catch (Exception e) {
             log.error("[SWAM-CHANNEL] ERREUR PARSING : {} — {}", e.getClass().getSimpleName(), e.getMessage(), e);
             throw new ISOException("Parsing failed: " + e.getMessage(), e);
+        }
+        dump(m, "<<< RECU ");
+    }
+
+    // ========================================================================
+    //  DUMP ISO
+    // ========================================================================
+
+    /** Dump lisible du message : MTI, libelle de l'operation, puis chaque DE. */
+    private void dump(ISOMsg m, String sens) {
+        try {
+            String mti  = m.getMTI();
+            String de24 = m.hasField(24) ? m.getString(24) : null;
+            String de39 = m.hasField(39) ? m.getString(39) : null;
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("\n[SWAM-DUMP] ").append(sens).append(' ')
+              .append(mti);
+            if (de24 != null) sb.append('/').append(de24);
+            sb.append("  ").append(label(mti, de24));
+            if (de39 != null) sb.append("  DE39=").append(de39);
+            sb.append('\n');
+
+            int max = m.getMaxField();
+            for (int i = 1; i <= max; i++) {
+                if (!m.hasField(i)) continue;
+                String val = fieldValue(m, i);
+                if (val == null) continue;
+                sb.append(String.format("  DE%03d (%3d) = %s%n", i, rawLen(m, i), val));
+            }
+            log.info(sb.toString());
+        } catch (Exception e) {
+            log.warn("[SWAM-DUMP] dump impossible : {}", e.getMessage());
+        }
+    }
+
+    /** Valeur affichable d'un champ : hex pour les binaires, masquee pour les PAN. */
+    private String fieldValue(ISOMsg m, int i) {
+        try {
+            // Champs binaires -> hex
+            if (i == 52 || i == 55 || i == 64 || i == 128) {
+                byte[] b = m.getBytes(i);
+                return (b == null) ? null : ISOUtil.hexString(b) + "   [hex]";
+            }
+            String s = m.getString(i);
+            if (s == null) return null;
+            // Donnees porteur -> masquees
+            if (i == 2 || i == 35 || i == 45) return mask(s) + "   [masque]";
+            return s;
+        } catch (Exception e) {
+            return "<illisible>";
+        }
+    }
+
+    private int rawLen(ISOMsg m, int i) {
+        try {
+            if (i == 52 || i == 55 || i == 64 || i == 128) {
+                byte[] b = m.getBytes(i);
+                return (b == null) ? 0 : b.length;
+            }
+            String s = m.getString(i);
+            return (s == null) ? 0 : s.length();
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    /** Masque un PAN / une piste : 6 premiers + 4 derniers. */
+    private String mask(String s) {
+        if (s == null) return null;
+        if (s.length() < 11) return "****";
+        return s.substring(0, 6) + "*".repeat(s.length() - 10) + s.substring(s.length() - 4);
+    }
+
+    /** Libelle de l'operation deduit du MTI et du DE24. */
+    private String label(String mti, String de24) {
+        if (mti == null) return "?";
+        switch (mti) {
+            case "1100": return "AUTORISATION (achat)";
+            case "1110": return "REPONSE AUTORISATION";
+            case "1200": return "FINANCIER";
+            case "1210": return "REPONSE FINANCIER";
+            case "1420": return "ANNULATION";
+            case "1430": return "REPONSE ANNULATION";
+            case "1804": return "GESTION RESEAU — " + funcLabel(de24);
+            case "1814": return "REPONSE GESTION RESEAU — " + funcLabel(de24);
+            default:     return "MTI " + mti;
+        }
+    }
+
+    private String funcLabel(String de24) {
+        if (de24 == null) return "fonction inconnue";
+        switch (de24) {
+            case "801": return "SIGN-ON";
+            case "802": return "SIGN-OFF";
+            case "803": return "ECHO-TEST";
+            case "811": return "KEY EXCHANGE ZPK";
+            case "899": return "KEY EXCHANGE ZAK";
+            default:    return "FONCTION " + de24;
         }
     }
 }

@@ -280,7 +280,7 @@ public class SwamJposServer {
                 push.setMTI("1804");
                 push.set(7,  new SimpleDateFormat("MMddHHmmss").format(now));
                 push.set(11, stan);
-                push.set(12, new SimpleDateFormat("yyyyMMddHHmmss").format(now));
+                push.set(12, new SimpleDateFormat("yyMMddHHmmss").format(now));
                 push.set(24, "811");
                 push.set(25, "0000");
                 push.set(33, forwardingId);          // LLVAR : le packager pose la longueur
