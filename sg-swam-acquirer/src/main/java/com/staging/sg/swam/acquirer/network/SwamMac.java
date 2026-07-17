@@ -1,5 +1,6 @@
 package com.staging.sg.swam.acquirer.network;
 
+import com.staging.sg.common.entity.SwamAcqKey;
 import com.staging.sg.common.entity.SwamKek;
 import com.staging.sg.common.iso.crypto.JposHsmService;
 import com.staging.sg.common.iso.crypto.SwamMacBuilder;
@@ -44,17 +45,31 @@ public class SwamMac {
         this.hsm = hsm; this.acqKeyRepo = acqKeyRepo; this.kekRepo = kekRepo;
     }
 
-    /** Calcule et pose le DE128. Renvoie le MAC hex pose (ou null si ZMK absente). */
+    /** Calcule et pose le DE128. Renvoie le MAC hex pose (ou null si aucune cle). */
     public String apply(ISOMsg m) throws Exception {
-        SwamKek kek = kekRepo.findByMemberGroupId(MGID).orElse(null);
-        if (kek == null || kek.getKekClear() == null) {
-            log.warn("[SWAM-MAC] ZMK claire absente -> pas de DE128");
-            return null;
+        byte[] input = SwamMacBuilder.build(m);
+        byte[] full;
+
+        // Si la ZAK (MAK) a ete recue et importee, on MACe avec ELLE (cle dediee
+        // au MAC). Sinon (avant l'echange de cles), on retombe sur la ZMK.
+        SwamAcqKey mak = acqKeyRepo
+                .findByMemberGroupIdAndKeyTypeAndStatus(MGID, "MAK", "ACTIVE")
+                .orElse(null);
+
+        if (mak != null && mak.getKeyUnderLmk() != null) {
+            full = hsm.generateMac(input, mak.getKeyUnderLmk(), mak.getKcv(), mak.getKeyLength());
+            log.info("[SWAM-MAC] MAC avec ZAK (MAK, KCV={})", mak.getKcv());
+        } else {
+            SwamKek kek = kekRepo.findByMemberGroupId(MGID).orElse(null);
+            if (kek == null || kek.getKekClear() == null) {
+                log.warn("[SWAM-MAC] ni ZAK ni ZMK claire -> pas de DE128");
+                return null;
+            }
+            full = hsm.generateMacZmk(input, kek.getKekClear());
+            log.info("[SWAM-MAC] MAC avec ZMK (pas encore de ZAK)");
         }
 
-        byte[] input = SwamMacBuilder.build(m);
-        byte[] full  = hsm.generateMacZmk(input, kek.getKekClear());
-        byte[] mac   = (macLength > 0 && macLength < full.length)
+        byte[] mac = (macLength > 0 && macLength < full.length)
                 ? Arrays.copyOfRange(full, 0, macLength)
                 : full;
 
