@@ -3,7 +3,7 @@
 > Réf. : *Mastercard Network Processing — Single Message System Guide*, éd. 2 June 2026 (1909 p.)
 > Ce document est un **index de navigation** + résumé incrémental. Chaque affirmation
 > porte son **numéro de page** (p.XXX) pour approfondir sans tout relire.
-> Statut : **v0 — index seul**. Les chantiers seront détaillés step by step.
+> Statut : **v1 — Chantier 1 lu**, Chantier 2+ en attente. Dernière MAJ : 2026-07-17.
 
 ---
 
@@ -145,8 +145,8 @@ DE clés pour l'implémentation (page de définition) :
 
 ## 7. FEUILLE DE ROUTE PROPOSÉE (step by step)
 
-1. **CHANTIER 1 — Socle réseau** : MTI list (p.59) + layout 0800/0810 (p.293-298)
-   + DE70 (p.776). Construire le packager minimal + sign-on.
+1. **CHANTIER 1 — Socle réseau** ✅ LU (pages 59-69, 160-168, 293-300, 776-778)
+   MTI list + layout 0800/0810 + DE70. **EN ATTENTE** : attributs DE du Ch.5 pour coder le packager.
 2. **CHANTIER 2 — Financier** : layout 0200/0210 (p.169-197) + DE essentiels
    (DE2,3,4,7,11,12,14,22,24,25,32,33,35,37,38,39,41,42,43,49). Packager complet.
 3. **CHANTIER 3 — Sécurité** : DE52/DE64/DE128 + PEK exchange (DE48 SE11 / DE110).
@@ -155,9 +155,104 @@ DE clés pour l'implémentation (page de définition) :
 
 ---
 
+---
+
+## 9. CHANTIER 1 — LU ET EXTRAIT (pages 59-69, 160-168, 293-300, 776-778)
+
+### 9.1 MTI du Single Message System (p.59-61)
+| Famille | MTI | Description | Générateur |
+|---------|-----|-------------|------------|
+| 02xx | 0200 | Financial Transaction Request | Acquirer |
+| 02xx | 0210 | Financial Transaction Request Response | Issuer / MC Network |
+| 02xx | 0220 | Financial Transaction Advice | Acquirer / MC Network |
+| 02xx | 0230 | Financial Transaction Advice Response | Issuer / MC Network |
+| 03xx | 0302 | Issuer File Update Request | Issuer |
+| 03xx | 0312 | Issuer File Update Request Response | MC Network |
+| 04xx | 0420 | Acquirer Reversal Advice | Acquirer / MC Network |
+| 04xx | 0422 | Issuer Reversal Advice | Issuer / MC Network |
+| 04xx | 0430 | Acquirer Reversal Advice Response | Issuer / MC Network |
+| 04xx | 0432 | Issuer Reversal Advice Response | Acquirer / MC Network |
+| 06xx | 0620 | Administrative Advice | System / Processor |
+| 06xx | 0630 | Administrative Advice Response | — |
+| 06xx | 0644 | Administrative Advice | MC Network |
+| 08xx | 0800 | Network Management Request | Acquirer/Issuer/System |
+| 08xx | 0810 | Network Management Request Response | — |
+| 08xx | 0820 | Network Management Advice | MC Network |
+
+### 9.2 ENCODAGE — POINT CRITIQUE (p.163)
+- **Transmission en EBCDIC** ("display character representation"), PAS ASCII.
+  → différence majeure avec SWAM. Le packager jPOS doit utiliser des
+  interpréteurs EBCDIC (IFE_*) et non ASCII (IFA_*), OU être paramétrable.
+- Numériques (attribut n) : right-justified, leading zeros.
+- Autres : left-justified, trailing spaces.
+- Sous-champs de longueur (LL/LLL) : numériques EBCDIC, right-justified, leading zeros.
+- Alignement sur frontières d'octet.
+
+### 9.3 Notations de représentation (p.162-166)
+- a / an / ans / as / b / n / ns / s (Table 33, p.162)
+- b-8 = binaire fixe 8 octets. Bitmap = binaire.
+- Longueurs : `-digit(s)` fixe ; `...digit(s)` variable ; LLVAR (01-99) ; LLLVAR (001-999) ;
+  TAGLL/TAGLLL (PDS IPM).
+- Date/heure : MMDDYYhhmmss (Table 37, p.165-166).
+
+### 9.4 Notations de présence (p.167-168)
+- **Org/Dst** : M (Mandatory), C (Conditional), O (Optional),
+  ME (Mandatory Echo), CE (Conditional Echo), OE (Optional Echo), `·` (not required).
+- **Sys (MC Network)** : X (system interaction, insert/overwrite),
+  XE (system echo), `·`/P (pass-through).
+- Presence requirement = triplet (Org, Sys, Dst) — Table 41, p.168.
+
+### 9.5 DE 70 — Network Management Information Code (p.776-777) ⭐
+- Format : **n-3** (3 chiffres numériques), fixe. Obligatoire dans TOUS les 08xx.
+- **Valeurs (Table 726) :**
+  | Code | Sens |
+  |------|------|
+  | 060 | Processor-generated SAF session request |
+  | **061** | **General sign-on by the processor** |
+  | **062** | **General sign-off by the processor** |
+  | 065 | Issuer sign-off (begin Stand-In) |
+  | 066 | Issuer sign-on (cease Stand-In) |
+  | 161 | Encryption key exchange |
+  | 162 | Solicitation for encryption key exchange |
+  | 163 | Solicitation for key exchange: TR-31 keyblock |
+  | 164 | Key exchange confirmation of success |
+  | 165 | Key exchange advice of failure |
+  | 166 | Load Comm Key |
+  | 167 | Load previous Comm Key |
+  | **270** | **Echo test** |
+  | 363 | End-of-file (EOF) for SAF traffic |
+- ATTENTION : sign-on = **061** (pas 001 comme supposé). sign-off = **062**. echo = **270**.
+- Usage (Table 725) : 0800 acquirer/issuer-gen → Org=M ; 0810 response → ME.
+
+### 9.6 Layout 0800/0810/0820 (p.293-300)
+- Pages lues : la structure exacte des DE présents par message est dans ces pages
+  (à ré-extraire en détail au moment de coder le packager 0800).
+- 0800 : acquirer/issuer-generated (p.293), system-generated (p.294), PEK exchange (p.295).
+- 0810 : réponses (p.296-298). 0820 : advice (p.299-300).
+- Key exchange = **DE48 SE11** (double/triple length keys) ou **DE110 datasets** (TR-31),
+  PAS les tags HPS P16/P10 de SWAM.
+
+### 9.7 PLAN PACKAGER (à reprendre)
+- **Option A retenue** : packager MINIMAL 0800/0810 d'abord (socle réseau),
+  puis extension 0200/0210.
+- DE nécessaires pour 0800/0810 : DE7, DE11, DE33, DE39, DE70, DE96, DE128
+  (+ DE48/DE110 pour PEK exchange, phase 2).
+- **AVANT DE CODER, obtenir :**
+  1. Encodage réel du lien (EBCDIC confirmé ? ou ASCII ? → packager paramétrable sinon).
+  2. Framing / header MIP (préfixe longueur ?) — probablement Appendix D p.1825.
+  3. Attributs précis des DE du network mgmt (pages Ch.5) :
+     DE7 p.345, DE11 p.352, DE33 p.385, DE39 p.399, DE96 p.792, DE128 p.1096.
+- **Premier incrément visé** : sign-on pur 0800 (DE70=061) → 0810, sans clés ni MAC.
+
+---
+
 ## 8. POINTS OUVERTS / À CLARIFIER
-- Header / framing MIP (longueur, format) : non couvert par la TOC lue — à trouver
-  dans Appendix D (System access) p.1825 ou doc MIP séparée.
-- Rôle exact voulu (ATM ? POS débit ? les deux ?) — impacte les DE obligatoires.
-- Version character set / encodage (EBCDIC vs ASCII sur le lien MIP) — Appendix C p.1816.
-- Algo MAC exact (DE64/DE128) — à extraire p.775 / p.1096.
+- **Header / framing MIP** : non couvert par la TOC lue — Appendix D (System access) p.1825 ou doc MIP séparée.
+- **Rôle exact** (ATM ? POS débit ? les deux ?) — impacte les DE obligatoires.
+- **Encodage EBCDIC confirmé** (p.163) : le lien utilise EBCDIC (≠ ASCII de SWAM).
+  → le packager jPOS doit utiliser des interpréteurs EBCDIC (IFE_*) ou être paramétrable.
+- **Algo MAC exact** (DE64/DE128) — à extraire p.775 / p.1096.
+- **Attributs précis des DE** pour le packager 0800/0810 (à extraire Ch.5) :
+  DE7 p.345, DE11 p.352, DE33 p.385, DE39 p.399, DE96 p.792, DE128 p.1096.
+- **Prochain incrément** : envoyer les pages d'attributs DE (Ch.5) pour coder le
+  `MastercardPackager` minimal (0800/0810, sign-on DE70=061).
