@@ -27,6 +27,8 @@
         <module>sg-dmas-issuer</module>
         <module>sg-swam-issuer</module>
         <module>sg-swam-acquirer</module>
+        <module>sg-mc-sms-acquirer</module>
+        <module>sg-mc-sms-issuer</module>
     </modules>
 
     <properties>

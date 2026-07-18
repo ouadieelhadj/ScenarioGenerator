@@ -1344,3 +1344,172 @@ Plus aucun `1804/811` ou `1804/899` émis par nous. Plus aucun `DE39=880`.
 - Commit `b76559c` : SwamNetworkController + SwamMac + SwamMacEntrantTest
 - ZMK_VISA composantes : C1=`E38FD6D9...`, C2=`D0085DBF...`, C3=`20295EBC...`
 - ZMK_SWAM composantes : ZMKC#1=`3B752C98...`, ZMKC#2=`D22D5CDE...`
+
+---
+
+## 22. SESSION 18 — MAC SWAM PROUVE + MODULES MASTERCARD SMS (2026-07-18)
+
+### 22.1 RECETTE MAC SWAM — VALIDEE SUR 4 VECTEURS
+
+Spec Thales M6 obtenue en entier. Decomposition confirmee :
+
+    M6 | 0 | 0 | 01 | 1 | 003 | U<cle 32hex> | <len 4hex> | <buffer>
+         |   |   |    |   |     |
+         |   |   |    |   |     +-- Key Type 003 = TAK (LMK pair 16-17)
+         |   |   |    |   +-------- Padding Method 1 = zeros
+         |   |   |    +------------ MAC Algorithm 01 = ISO 9797 Alg 1
+         |   |   +----------------- Input Format 0 = Binary
+         |   +--------------------- Mode Flag 0 = single block
+         +------------------------- pas de delimiteur LMK
+
+Le 'U' de la cle = double longueur Thales -> Algorithm 1 en **3DES-CBC**
+(la spec dit "Alg 1 = ANSI X9.9 when used with a single-length key" ;
+avec cle double c'est du 3DES).
+
+| Message | MTI/DE24 | MAC | Buffer |
+|---|---|---|---|
+| Sign-on Nabil/CAM | 1804/801 | `9AA02ED9` | DEs bruts SANS prefixes (31 o) |
+| Accuse push ZPK | 1814/811 | `E847C263` | DEs bruts AVEC prefixes LLVAR (96 o) |
+| Echo test calcul#1 | 1804/803 | `954FC203` | DEs bruts AVEC prefixes (55 o) |
+| Echo test calcul#2 | 1804/803 | `D9AC008B` | buffer#1 + `954FC203` ASCII (63 o) |
+
+**DECOUVERTE MAJEURE — MAC EN DEUX PASSES** (echo test) :
+1. passe 1 : MAC sur les DEs bruts -> MAC intermediaire (`954FC203`)
+2. passe 2 : MAC sur (DEs bruts + les 8 chars ASCII du MAC#1) -> MAC final (`D9AC008B`)
+Le DE128 pose sur le fil est le MAC de la **passe 2**.
+
+### 22.2 CLES DE L'ENVIRONNEMENT VISA (Nabil / CAM)
+
+    ZMK_VISA     = 13AED5DA1F32347523C708C11F2608FD   (KCV 2D617C)
+    TAK sous ZMK = E3C8EF7C4EEF54D81CE43CE2BCF33E37
+    TAK_VISA     = 1FB3F48A6D51832CE91C1C734554086D   (KCV D75F09)
+
+La TAK est **commune a l'environnement** : meme TAK pour Nabil ET CAM.
+Deduction : dechiffrement 3DES-ECB de `TAK sous ZMK` avec `ZMK_VISA`.
+
+### 22.3 SwamMacEntrantTest — CLASSE GLOBALE DE RECETTE
+
+Emplacement : `sg-common/src/main/java/com/staging/sg/common/iso/crypto/`
+
+Teste 12 combinaisons par message :
+- cle : TAK vs ZMK
+- buffer : avec vs sans prefixes LLVAR/LLLVAR
+- calcul : simple / chaine-4o / chaine-8o
+
+Toutes les constructions partent de l'`ISOMsg` (jamais de buffer en dur).
+Methodes cles : `buildRaw(msg, withPrefixes)`, `macAlg1_3des(key16, data)`,
+`decryptTak(takHex, zmkHex)`.
+
+Scripts : `copy-mac-class.sh` + `run-mac-entrant.sh` (dans /f/MoneyCore/).
+
+### 22.4 POINT NON RESOLU
+
+Le MAC du **push ZPK entrant** (`C6029E72`, 1804/811 recu du switch) n'est
+reproductible avec aucune des 12 combinaisons. Raison probable : ce message
+est calcule par le HSM du switch, on n'a pas sa commande M6 dans nos logs
+(seuls les M6 emis par Nabil sont traces). Point laisse ouvert.
+
+### 22.5 SOLUTION PERENNE POUR LIRE LE GUIDE MASTERCARD
+
+Les PDF imprimes depuis le guide (Print to PDF) ne sont pas lisibles :
+images sans couche texte, resolution insuffisante, decalage entre numero de
+page affiche et numero de feuille.
+
+**SOLUTION ADOPTEE** : le guide complet exporte en `.txt` depuis Adobe Reader
+(Fichier -> Enregistrer sous -> Texte accessible), soit 148 157 lignes.
+Fichier : `MDS_m_SMS_Guide_en-us-2026-06-02.txt` (3.4 Mo).
+On y cherche n'importe quelle section par `grep -n` + `sed -n 'X,Yp'`.
+Plus besoin d'imprimer ni d'uploader des PDF page par page.
+
+### 22.6 ATTRIBUTS DES DE MASTERCARD SMS (extraits du guide)
+
+| DE | Representation | Format | Page |
+|---|---|---|---|
+| DE7 | n-10 | fixe | 345 |
+| DE11 | n-6 | fixe | 352 |
+| DE33 | n..10 | LLVAR (2 pos) | 385 |
+| DE39 | an-2 | fixe | 399 |
+| DE70 | n-3 | fixe | 776 |
+| DE96 | n-8 | fixe (binary 8o) | 792 |
+| **DE64** | — | **NON UTILISE en SMS** | 775 |
+| **DE128** | — | **NON UTILISE en SMS** | 1096 |
+
+DE65, DE66, DE67, DE68 egalement non utilises.
+=> **Il n'y a PAS de MAC dans le layout 0800/0810 Mastercard SMS.**
+
+### 22.7 LAYOUTS 0800 / 0810 (Tables 74 et 77 du guide)
+
+**0800 acquirer/issuer-generated** :
+MTI, bitmap primaire, DE1, DE7 (M), DE11 (M), DE33 (M), DE48 (C, key exchange
+si DE70=161), DE63 (O), DE70 (M), DE96 (C)
+
+**0810 acquirer/issuer-generated** :
+MTI, bitmap primaire, DE1, DE7 (M), DE11 (ME), DE33 (ME), DE39 (M),
+DE44 (C, si DE39=30), DE48 (C), DE63 (ME), DE70 (ME)
+
+### 22.8 MODULES MASTERCARD SMS CREES
+
+Deux modules, sur le modele SWAM :
+
+| Module | REST | ISO | User PG |
+|---|---|---|---|
+| `sg-mc-sms-acquirer` (le membre) | 8095 | 8096 | `mc_sms_acquirer_user` |
+| `sg-mc-sms-issuer` (simulateur MC) | 8097 | 8098 | `mc_sms_issuer_user` |
+
+Le membre se connecte au MIP Mastercard (Appendix D p.1826 : "Customers
+connect to the Mastercard Network through at least two MIP"). En test local,
+l'acquereur se connecte a notre issuer simule.
+
+Fichiers crees :
+- `sg-common/.../iso/MastercardSmsPackager.java` (tous les DE, DE64/DE128 = null)
+- `sg-mc-sms-acquirer/.../network/McJposClient.java` (sign-on/echo/sign-off, DE7 en UTC)
+- `sg-mc-sms-acquirer/.../api/McNetworkController.java`
+- entites + repositories des deux cotes
+- `pom.xml` des deux modules
+
+**PIEGE POM** : le parent est `com.staging:scenario-generator` (PAS
+`com.staging.sg:ScenarioGenerator`), sans `<relativePath>`. La dependance
+`sg-common` est aussi en `com.staging`. Toujours copier le bloc `<parent>`
+d'un module existant qui compile.
+
+Build OK :
+```
+mvn -pl sg-mc-sms-acquirer,sg-mc-sms-issuer -am clean package -DskipTests -q
+```
+
+### 22.9 TABLES MC SMS (script V1__create_mc_sms_tables.sql, execute)
+
+Sur le modele exact des tables SWAM (owner postgres, schema public) :
+
+    mc_sms_kek                (modele swam_kek)
+    mc_sms_acq_keys           (modele swam_acq_keys)
+    mc_sms_iss_keys           (modele swam_iss_keys)
+    mc_sms_acq_transactions   (+ auth_id_response, network_id, retrieval_ref ;
+                               response_code en VARCHAR(2) car an-2 chez MC)
+    mc_sms_iss_transactions   (idem)
+    mc_sms_cards              (+ cvv2, service_code)
+
+Users crees : `mc_sms_acquirer_user` / `mc_sms_issuer_user`, memes grants
+que leurs equivalents SWAM.
+
+Ligne `networks` :
+```sql
+INSERT INTO networks (code, name, iso_version, header_type, packager_class,
+                      issuer_host, issuer_iso_port, acquirer_jpos_port, active)
+VALUES ('MASTERCARD_SMS', 'Mastercard Single Message System', '1987', 'MC_SMS',
+        'com.staging.sg.common.iso.MastercardSmsPackager',
+        'localhost', 7001, 8095, true);
+```
+ATTENTION : la colonne s'appelle `active` (boolean), pas `status`.
+
+### 22.10 A FAIRE (reprise)
+
+1. **Serveur ISO cote issuer** : ecoute 8098, recoit 0800, repond 0810.
+2. **Test sign-on local** acquereur -> issuer.
+3. **Framing MIP** : 2 octets big-endian suppose dans McJposClient, a confirmer
+   (la doc est dans le *Secured Data Communications Guide*, non disponible).
+4. **Encodage EBCDIC** : le guide dit EBCDIC p.163. Packager en ASCII (IFA_*)
+   pour le dev ; prevoir `MastercardSmsPackagerEbcdic` (IFE_*) pour le MIP reel.
+5. **DE96 (Message Security Code)** : "password" en binaire packe pour le
+   sign-on. Valeur a obtenir de Mastercard.
+6. **Transaction 0200/0210** apres le socle reseau.

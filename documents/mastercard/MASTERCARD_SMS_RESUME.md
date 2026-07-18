@@ -256,3 +256,191 @@ DE clés pour l'implémentation (page de définition) :
   DE7 p.345, DE11 p.352, DE33 p.385, DE39 p.399, DE96 p.792, DE128 p.1096.
 - **Prochain incrément** : envoyer les pages d'attributs DE (Ch.5) pour coder le
   `MastercardPackager` minimal (0800/0810, sign-on DE70=061).
+
+---
+
+## SESSION 18 (2026-07-18) — SOCLE RESEAU : MODULES CREES ET COMPILES
+
+### 1. METHODE DE LECTURE DU GUIDE — RESOLUE DEFINITIVEMENT
+
+Le probleme des sessions precedentes (PDF imprimes illisibles, pages
+introuvables a cause du decalage numero affiche / numero de feuille) est
+regle : le guide entier a ete exporte en texte.
+
+    Fichier : MDS_m_SMS_Guide_en-us-2026-06-02.txt
+    Taille  : 3.4 Mo, 148 157 lignes
+    Source  : Adobe Reader -> Fichier -> Enregistrer sous -> Texte accessible
+
+Recherche d'une section :
+```bash
+grep -n "DE 64 (Message" guide.txt        # trouve la ligne
+sed -n '59798,59840p' guide.txt           # affiche le bloc
+```
+
+Ne plus imprimer de PDF page par page.
+
+### 2. ATTRIBUTS DES DE — CHANTIER 1 COMPLET
+
+| DE | Nom | Representation | Format | Page |
+|---|---|---|---|---|
+| 7 | Transmission Date and Time | n-10 | fixe | 345 |
+| 11 | System Trace Audit Number | n-6 | fixe | 352 |
+| 33 | Forwarding Institution ID | n..10 | LLVAR (2 pos) | 385 |
+| 39 | Response Code | **an-2** | fixe | 399 |
+| 70 | Network Mgmt Info Code | n-3 | fixe | 776 |
+| 96 | Message Security Code | n-8 (binary) | fixe | 792 |
+| 64 | MAC | — | **NON UTILISE** | 775 |
+| 128 | MAC | — | **NON UTILISE** | 1096 |
+
+Egalement non utilises en SMS : DE65, DE66, DE67, DE68.
+
+**Consequence majeure : PAS DE MAC dans le Single Message System.**
+Contrairement a SWAM (DE128) ou DMAS. L'authentification du sign-on passe
+par le **DE96 (Message Security Code)**, un "password" binaire 8 octets.
+
+Note : DE39 est `an-2` chez Mastercard (SWAM utilisait `n-3`). Les colonnes
+`response_code` des tables MC SMS sont donc en `VARCHAR(2)`.
+
+### 3. LAYOUTS 0800 / 0810
+
+**Table 74 — Network Management Request/0800 (acquirer- or issuer-generated)**
+
+| DE | Nom | Org |
+|---|---|---|
+| — | MTI (0800) | M |
+| — | Bit Map Primary | M |
+| 1 | Bit Map Secondary | M |
+| 7 | Transmission Date and Time | M |
+| 11 | System Trace Audit Number | M |
+| 33 | Forwarding Institution ID | M |
+| 48 | Additional Data | C (si DE70=161, key exchange) |
+| 63 | Network Data | O |
+| 70 | Network Management Info Code | M |
+| 96 | Message Security Code | C |
+
+**Table 77 — Network Management Request Response/0810**
+
+| DE | Nom | Org |
+|---|---|---|
+| — | MTI (0810) | M |
+| 1 | Bit Map Secondary | M |
+| 7 | Transmission Date and Time | M (meme valeur que la requete) |
+| 11 | STAN | ME |
+| 33 | Forwarding Institution ID | ME |
+| 39 | Response Code | M |
+| 44 | Additional Response Data | C (si DE39=30) |
+| 48 | Additional Data | C |
+| 63 | Network Data | ME |
+| 70 | Network Mgmt Info Code | ME |
+
+Codes DE70 retenus : `061` sign-on, `062` sign-off, `270` echo test,
+`161` PEK exchange.
+
+### 4. ARCHITECTURE DES MODULES
+
+D'apres Appendix D (p.1826) : *"Customers connect to the Mastercard Network
+through at least two MIP"* — c'est le **membre** qui initie la connexion TCP
+vers le MIP, jamais l'inverse.
+
+    sg-mc-sms-acquirer  = LE MEMBRE (nous)
+       REST 8095 / ISO 8096 / user PG mc_sms_acquirer_user
+       -> se connecte au MIP Mastercard, emet 0800 et 0200
+
+    sg-mc-sms-issuer    = SIMULATEUR MASTERCARD
+       REST 8097 / ISO 8098 / user PG mc_sms_issuer_user
+       -> ecoute, recoit les 0800/0200, repond 0810/0210
+
+En test local : acquereur (8095) -> issuer (8098).
+Vers le MIP reel : acquereur -> host/port Mastercard.
+
+Chaque module a **deux ports** : un REST (admin, envoi manuel de messages)
+et un ISO (liaison permanente), comme SWAM.
+
+### 5. FICHIERS CREES
+
+```
+sg-common/src/main/java/com/staging/sg/common/iso/
+    MastercardSmsPackager.java        (tous les DE ; DE64 et DE128 = null)
+
+sg-mc-sms-acquirer/
+    pom.xml
+    src/main/resources/application.properties
+    src/main/java/com/staging/sg/mc/sms/acquirer/
+        SgMcSmsAcquirerApplication.java
+        network/McJposClient.java     (sign-on / echo / sign-off, DE7 en UTC)
+        api/McNetworkController.java  (POST /api/admin/mc/network/signon|echo|signoff)
+        entity/     McSmsKek, McSmsAcqKey, McSmsAcqTransaction
+        repository/ les 3 repositories correspondants
+
+sg-mc-sms-issuer/
+    pom.xml
+    src/main/resources/application.properties
+    src/main/java/com/staging/sg/mc/sms/issuer/
+        SgMcSmsIssuerApplication.java
+        entity/     McSmsCard, McSmsIssTransaction
+        repository/ les 2 repositories correspondants
+```
+
+Note : le DE7 est en **UTC** dans McJposClient (`ZonedDateTime.now(ZoneOffset.UTC)`),
+conformement a la definition du guide. C'est le bug +1h qu'on avait cote SWAM.
+
+### 6. BASE DE DONNEES
+
+Script `V1__create_mc_sms_tables.sql` execute. Tables calquees sur SWAM :
+
+    mc_sms_kek                <- swam_kek
+    mc_sms_acq_keys           <- swam_acq_keys
+    mc_sms_iss_keys           <- swam_iss_keys
+    mc_sms_acq_transactions   <- swam_acq_transactions
+                                 + auth_id_response (DE38)
+                                 + network_id (DE24)
+                                 + retrieval_ref (DE37)
+                                 response_code en VARCHAR(2)
+    mc_sms_iss_transactions   <- swam_iss_transactions
+    mc_sms_cards              <- swam_cards + cvv2 + service_code
+
+Owner : `postgres`. Users applicatifs : `mc_sms_acquirer_user` (mdp
+`mc_acq_pass`) et `mc_sms_issuer_user` (mdp `mc_iss_pass`), avec les memes
+grants que leurs equivalents SWAM.
+
+Ligne networks inseree (attention : la colonne est `active` boolean, pas
+`status`) :
+```sql
+INSERT INTO networks (code, name, iso_version, header_type, packager_class,
+                      issuer_host, issuer_iso_port, acquirer_jpos_port, active)
+VALUES ('MASTERCARD_SMS', 'Mastercard Single Message System', '1987', 'MC_SMS',
+        'com.staging.sg.common.iso.MastercardSmsPackager',
+        'localhost', 7001, 8095, true);
+```
+
+### 7. BUILD — PIEGES RENCONTRES
+
+**Coordonnees du POM parent** : c'est `com.staging:scenario-generator`,
+**PAS** `com.staging.sg:ScenarioGenerator`. Et il n'y a **pas** de
+`<relativePath>`. La dependance `sg-common` est aussi en groupId
+`com.staging`. Regle : toujours copier le bloc `<parent>` d'un module
+existant qui compile plutot que de le deviner.
+
+Modules ajoutes au pom.xml parent (lignes 30-31) :
+```xml
+<module>sg-mc-sms-acquirer</module>
+<module>sg-mc-sms-issuer</module>
+```
+
+Commande de build validee :
+```bash
+export JAVA_HOME="/f/MoneyCore/jdk-26_windows-x64_bin/jdk-26.0.1"
+mvn -pl sg-mc-sms-acquirer,sg-mc-sms-issuer -am clean package -DskipTests -q
+```
+=> BUILD OK.
+
+### 8. RESTE A FAIRE
+
+| # | Sujet | Detail |
+|---|---|---|
+| 1 | Serveur ISO issuer | ecoute 8098, recoit 0800, repond 0810 |
+| 2 | Test sign-on local | acquereur 8095 -> issuer 8098 |
+| 3 | Framing MIP | 2 octets big-endian **suppose** ; la spec reelle est dans le *Secured Data Communications Guide* (non disponible) |
+| 4 | Encodage EBCDIC | guide p.163 ; packager actuel en ASCII (IFA_*) ; prevoir une variante IFE_* pour le MIP reel |
+| 5 | DE96 | valeur du Message Security Code a obtenir de Mastercard |
+| 6 | Transaction 0200/0210 | apres validation du socle reseau |
