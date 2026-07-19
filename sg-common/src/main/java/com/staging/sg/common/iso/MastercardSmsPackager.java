@@ -10,6 +10,7 @@ import org.jpos.iso.IFA_LLCHAR;
 import org.jpos.iso.IFA_LLLCHAR;
 import org.jpos.iso.IFA_LLLNUM;
 import org.jpos.iso.IFB_BITMAP;
+import org.springframework.stereotype.Component;
 
 /**
  * Mastercard Single Message System (SMS) Packager.
@@ -40,13 +41,14 @@ import org.jpos.iso.IFB_BITMAP;
  *   0800 : DE1,7,11,33,(48),(63),70,(96)   p.293
  *   0810 : DE1,7,11,33,39,(44),(48),(63),70 p.296
  */
+@Component
 public class MastercardSmsPackager extends ISOBasePackager {
 
-    private static final ISOFieldPackager[] fld = new ISOFieldPackager[129];
+    private ISOFieldPackager[] buildFields() {
+        ISOFieldPackager[] fld = new ISOFieldPackager[129];
 
-    static {
         // DE0  : pas de champ (MTI gere par le packager)
-        fld[0]  = null;
+        fld[0]  = new IFA_NUMERIC(4, "Message Type Indicator");
 
         // DE1  : Bit Map Secondary (b-8 = 8 octets binaires)
         fld[1]  = new IFB_BITMAP(16, "Bit Map, Secondary");
@@ -194,10 +196,12 @@ public class MastercardSmsPackager extends ISOBasePackager {
 
         // DE128 : NON UTILISE dans le SMS (p.1096)
         fld[128] = null;
+
+        return fld;
     }
 
     public MastercardSmsPackager() {
         super();
-        setFieldPackager(fld);
+        setFieldPackager(buildFields());
     }
 }

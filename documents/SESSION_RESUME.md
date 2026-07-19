@@ -1513,3 +1513,171 @@ ATTENTION : la colonne s'appelle `active` (boolean), pas `status`.
 5. **DE96 (Message Security Code)** : "password" en binaire packe pour le
    sign-on. Valeur a obtenir de Mastercard.
 6. **Transaction 0200/0210** apres le socle reseau.
+
+---
+
+## 23. SESSION 19 — SOCLE RESEAU MC SMS VALIDE + DECISION MULTI-BANQUES (2026-07-19)
+
+### 23.1 SIGN-ON / ECHO / SIGN-OFF VALIDES EN LOCAL
+
+Flux complet acquereur (8095) -> issuer simule (8098), **une seule socket** :
+
+| Appel | MTI | DE70 | STAN | DE39 |
+|---|---|---|---|---|
+| sign-on  | 0800 -> 0810 | 061 | 000001 | 00 |
+| echo     | 0800 -> 0810 | 270 | 000002 | 00 |
+| sign-off | 0800 -> 0810 | 062 | 000003 | 00 |
+
+`grep -c "Connecte au MIP"` = **1** : les trois echanges passent par la meme
+liaison. La liaison permanente est prouvee.
+
+Trame sign-on emise (51 octets, framing `0033`) :
+
+    30 38 30 30 | 82 20 00 00 80 00 00 00 04 00 00 00 00 00 00 00
+    0719171730  | 000001 | 10 9000000001 | 061
+
+Reponse 0810 (53 octets, framing `0035`) : memes champs + DE39=00.
+Les champs ME (DE7, DE11, DE33, DE70) sont bien recopies par l'issuer.
+
+### 23.2 BUGS CORRIGES CETTE SESSION
+
+| Symptome | Cause | Correction |
+|---|---|---|
+| `fld[0] is null` au packing | MTI absent du packager | `fld[0] = new IFA_NUMERIC(4, "MESSAGE TYPE INDICATOR")` — comme SwamPackager |
+| HTTP 401 sur tous les endpoints | pas de `SecurityConfig` dans les modules MC | classe copiee de `sg-swam-acquirer` |
+| `server.port` non injecte (Tomcat sur 8080) | `.imports` ne vaut que pour les auto-configurations | `META-INF/spring.factories` avec `org.springframework.boot.env.EnvironmentPostProcessor=` |
+| `Could not resolve placeholder 'jwt.expiration-ms'` | propriete absente | `jwt.expiration-ms=86400000` (valeur SWAM) |
+| Liquibase changelog introuvable | auto-config active | `spring.liquibase.enabled=false` |
+| `Field length 12 too long. Max: 10` sur DE33 | bouchon `000000000001` (12 chiffres) | `9000000001` — format impose par le guide |
+
+**LECON DE METHODE** : trois de ces bugs (`fld[0]`, `SecurityConfig`, format
+DE33) auraient ete evites en regardant l'equivalent SWAM AVANT d'ecrire la
+classe MC. Regle retenue : **avant d'ecrire une classe MC SMS, consulter son
+equivalent SWAM.**
+
+### 23.3 ALIGNEMENT MastercardSmsPackager SUR SwamPackager
+
+Comparaison structurelle (types et longueurs volontairement NON alignes :
+SWAM est ASCII, MC SMS sera EBCDIC sur le MIP reel) :
+
+| | SwamPackager | MastercardSmsPackager (avant) | (apres) |
+|---|---|---|---|
+| Annotation | `@Component` | absente | `@Component` |
+| Tableau | methode d'instance `buildFields()` | `static final` + bloc `static` | methode d'instance |
+| Constructeur | `setFieldPackager(buildFields())` | `setFieldPackager(fld)` | `setFieldPackager(buildFields())` |
+| Methodes surchargees | aucune | aucune | aucune |
+
+SWAM n'a **pas** ete modifie.
+
+### 23.4 IDENTIFIANTS MASTERCARD — CONFIRMES PAR LE GUIDE
+
+| Champ | Format | Contenu | Page | Messages |
+|---|---|---|---|---|
+| **DE33** | `n..10` LLVAR, **min 10 / max 10** | Processor ID, format impose `9000xxxxxx` | 385 | 0800, 0810, 0200 |
+| **DE32** | `n..9` LLVAR, **min 9 / max 9** | Acquiring Institution ID | 383 | 0200, 04xx |
+| **ICA** | 6 chiffres | Interbank Card Association, identifiant du membre | — | hors ISO (reporting, settlement) |
+| **DE96** | b-8 (8 octets) | Message Security Code, "password" du sign-on | 792 | 0800 DE70=061 |
+
+Citations du guide :
+- DE33 : *"The processor ID is a ten-digit number of the format: 9000xxxxxx,
+  where the Single Message System-assigned processor ID will be up to the last
+  six digits xxxxxx."* Exemples reels cites p.29448 : `9000000084`, `9000000752`.
+- ICA : *"The unique six digit number assigned by Mastercard that identifies a
+  customer or processing endpoint."* Decline en ACQUIRING ICA, ISSUING ICA,
+  SETTLEMENT ICA.
+
+**Valeurs actuelles = BOUCHONS DEV.** Le processor ID reel, l'ICA et le DE96
+sont a obtenir de Mastercard avant tout test contre un MIP.
+
+**Notre role sur MC SMS : ACQUEREUR uniquement.** Le module
+`sg-mc-sms-issuer` simule Mastercard et n'a aucune identite propre : dans le
+0810 il recopie le DE33 recu (champ ME).
+
+### 23.5 [DECISION] MODELE DE DONNEES BANQUE
+
+Retenu : **table mere `bank` + une table fille par reseau**.
+
+    bank                  identite de l'etablissement (nom, BIC, pays)
+      |
+      +-- bank_mc_sms     processor_id, acquiring_inst_id, ica,
+      |                   settlement_ica, message_security_code
+      +-- bank_swam       (a creer lors de la migration SWAM)
+      +-- bank_dmas       (a creer lors de la migration DMAS)
+
+Ecarte : une table unique avec toutes les colonnes par reseau (colonnes vides,
+`ALTER TABLE` sur la table centrale a chaque nouveau reseau).
+
+Chaque table fille porte les identifiants **aux formats de son reseau**, avec
+les contraintes CHECK correspondantes (ex. `processor_id ~ '^9000[0-9]{6}$'`).
+
+SQL prepare : `V2__create_bank_tables.sql` — **NON EXECUTE**, en attente.
+
+### 23.6 [DECISION] PLATEFORME MULTI-BANQUES
+
+**La plateforme doit gerer plusieurs banques. La banque est choisie a chaque
+appel REST, pas fixee au demarrage du module.**
+
+    POST /api/admin/mc/network/signon?bank=BANQUE_A
+
+#### Portee du chantier (NON COMMENCE)
+
+**Schema** — ajouter `bank_id` sur toutes les tables acquereur et issuer,
+tous reseaux confondus :
+
+    mc_sms_kek, mc_sms_acq_keys, mc_sms_acq_transactions,
+    mc_sms_iss_keys, mc_sms_iss_transactions, mc_sms_cards
+    + equivalents SWAM et DMAS
+
+Les cles uniques sont a revoir : une cle ACTIVE **par banque**, pas globale.
+Exemple : `swam_acq_keys` a aujourd'hui une unicite sur
+`(member_group_id, key_type, status)` — il faudra y integrer la banque.
+
+**Code** — `McSmsJposClient` :
+- champ `channel` unique -> map `bankCode -> channel`
+- un thread receiver **par banque** (une session par processor ID)
+- corrélation `bankCode:STAN` et non plus `STAN` seul
+  (deux banques peuvent emettre le meme STAN sur deux sockets differentes)
+- le DE33 vient de `bank_mc_sms.processor_id` de la banque choisie,
+  plus du fichier properties
+
+Meme travail a terme sur `SwamJposClient`.
+
+**API** :
+- banque en parametre de chaque endpoint reseau
+- `GET /api/admin/mc/banks`    — banques disponibles
+- `GET /api/admin/mc/sessions` — etat des liaisons ouvertes
+
+**Ordre d'execution** : Mastercard d'abord (pas encore en production), SWAM
+ensuite et **prudemment** (il tourne contre le switch reel).
+
+**Point ouvert** : en local, toutes les banques pointeront vers le meme issuer
+simule (localhost:8098), qui ne les distinguera pas. A decider : faire en
+sorte que le simulateur differencie les sessions par leur DE33.
+
+### 23.7 ETAT DES MODULES MC SMS
+
+| Module | REST | ISO | Source des ports |
+|---|---|---|---|
+| `sg-mc-sms-acquirer` | 8095 | — (client pur) | `networks.acquirer_rest_port` |
+| `sg-mc-sms-issuer` | 8097 | 8098 | `networks.issuer_rest_port` / `issuer_iso_port` |
+
+`acquirer_jpos_port` (8096) est **inutilise** pour MC SMS : l'acquereur ouvre
+une socket sortante et n'ecoute sur rien. Le MIP pousse ses messages spontanes
+sur cette meme socket (gere par le thread receiver).
+
+### 23.8 RESTE A FAIRE
+
+1. Chantier multi-banques (section 23.6)
+2. Tables `bank` / `bank_mc_sms` — SQL pret, non execute
+3. Obtenir de Mastercard : processor ID reel, ICA, DE96
+4. Framing MIP reel — 2 octets big-endian **suppose**, spec dans le
+   *Secured Data Communications Guide* (non disponible)
+5. Encodage EBCDIC (guide p.163) — packager actuel en ASCII pour le dev
+6. PEK exchange DE70=161 : parser DE48 subelement 11, importer la PEK,
+   persister (TODO dans `handleMipPush`)
+7. Transaction 0200/0210
+8. Basculer SWAM sur les ports pilotes par la base (config deja modifiee,
+   a retester prudemment — jPOS risque au restart)
+9. [SWAM] Transaction 1100/1200 contre le switch reel : necessite un PAN de
+   test et la config des comptes cote switch
+10. [SWAM] DE7 en UTC dans `SwamJposClient` (decalage +1h)
