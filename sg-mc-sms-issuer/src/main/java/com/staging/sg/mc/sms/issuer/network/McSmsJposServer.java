@@ -1,7 +1,7 @@
 package com.staging.sg.mc.sms.issuer.network;
 
 import com.staging.sg.common.entity.NetworkRef;
-import com.staging.sg.common.iso.MastercardSmsPackager;
+import com.staging.sg.common.iso.MastercardSmsPackagerEbcdic;
 import com.staging.sg.common.iso.McSmsLengthChannel;
 import com.staging.sg.common.repository.NetworkRepository;
 import jakarta.annotation.PostConstruct;
@@ -88,7 +88,7 @@ public class McSmsJposServer {
     public void start() {
         int port = resolvePort();
         try {
-            MastercardSmsPackager packager = new MastercardSmsPackager();
+            MastercardSmsPackagerEbcdic packager = new MastercardSmsPackagerEbcdic();
             McSmsLengthChannel channel = new McSmsLengthChannel();
             channel.setPackager(packager);
             isoServer = new ISOServer(port, channel, null);

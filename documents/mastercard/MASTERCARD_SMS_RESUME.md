@@ -741,3 +741,72 @@ lui-meme, sans passer par `SwamKeyExchange`.
 5. **Multi-banques** — `member_group_id` est fixe par propriete
    (`mc.sms.member-group-id`). A revoir dans le chantier multi-banques
    (section 23.6).
+
+---
+
+### 24.8 BASCULE EN EBCDIC  [FAIT]
+
+Le MIP Mastercard parle EBCDIC. Les deux modules ont ete bascules pour que
+le test local reproduise fidelement le format du fil.
+
+#### Preuve
+
+Trame 0810 sign-on emise par notre simulateur, relevee dans le dump du
+channel :
+
+    F0F8F1F0                    "0810"
+    8220000082000000            bitmap 1 : DE7, DE11, DE33, DE39
+    0400000000000000            bitmap 2 : DE70
+    F0F7F2F0F1F1F0F0F1F1        "0720111011"        DE7
+    F0F0F0F0F0F1                "000001"            DE11
+    F1F0 F9F0F0F0F0F0F0F0F0F1   "10" + "9000000001" DE33
+    F0F0                        "00"                DE39
+    F0F6F1                      "061"               DE70
+
+53 octets, coherent avec le prefixe de longueur `0035`.
+
+Comparaison avec la trace du simulateur Mastercard officiel : structure
+identique. Les seules differences sont fonctionnelles — leur bitmap
+`C220000082000002` porte DE2 et DE63 que nous n'emettons pas encore, et
+leur DE33 fait 6 chiffres (ecart guide/pratique, cf. 24.4).
+
+#### Classe
+
+`sg-common/.../iso/MastercardSmsPackagerEbcdic.java`
+
+Couvre TOUS les champs, contrairement a `McPackagerEbcdic` (DMAS) qui se
+limite au sign-on. Correspondance de types :
+
+| ASCII | EBCDIC |
+|---|---|
+| `IFA_NUMERIC` | `IFE_NUMERIC` |
+| `IFA_LLNUM` | `IFE_LLNUM` |
+| `IFA_LLCHAR` | `IFE_LLCHAR` |
+| `IFA_LLLCHAR` | `IFE_LLLCHAR` |
+| `IFA_LLLNUM` | `IFE_LLLCHAR` — jPOS 2.1.9 n'a pas d'`IFE_LLLNUM` |
+| `IF_CHAR` | `IFE_CHAR` |
+| `IFA_BINARY` | `IFB_BINARY` — vrai binaire, pas de l'hex ASCII |
+| `IFB_BITMAP` | inchange |
+
+**Les prefixes de longueur passent aussi en EBCDIC** : dans la trace,
+`F0F6` = "06" pour le DE33 et `F0F9F6` = "096" pour le DE110. Les `IFE_LL*`
+s'en chargent automatiquement.
+
+**Les champs binaires ne changent pas** : bitmaps, DE52 (PIN block) et
+DE96 (Message Security Code).
+
+#### Choix du packager
+
+En dur, comme DMAS (`new McPackagerEbcdic()` dans `DmasJposServer` et
+`DmasJposClient`). `MastercardSmsPackager` (ASCII) est conserve et coexiste
+— il n'est plus reference par les modules mais reste disponible.
+
+Une variante pilotee par `networks.default_field_encoding` serait possible
+(la colonne existe deja dans `NetworkRef`, inutilisee) mais n'a pas ete
+retenue : le MIP reel est en EBCDIC, autant tester dans ce format.
+
+#### Test de non-regression
+
+Le flux complet a ete rejoue en EBCDIC : sign-on, sollicitation 162,
+livraison 161, accuse, acquittement 0820. KCV `EFC3F0` identique des deux
+cotes, PEK ACTIVE.

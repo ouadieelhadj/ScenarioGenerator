@@ -1,7 +1,7 @@
 package com.staging.sg.mc.sms.acquirer.network;
 
 import com.staging.sg.common.entity.NetworkRef;
-import com.staging.sg.common.iso.MastercardSmsPackager;
+import com.staging.sg.common.iso.MastercardSmsPackagerEbcdic;
 import com.staging.sg.common.iso.McSmsLengthChannel;
 import com.staging.sg.common.repository.NetworkRepository;
 import jakarta.annotation.PreDestroy;
@@ -71,7 +71,7 @@ public class McSmsJposClient {
     public static final String DE70_SAF_EOF           = "363";
 
     private final NetworkRepository networkRepository;
-    private final MastercardSmsPackager packager = new MastercardSmsPackager();
+    private final MastercardSmsPackagerEbcdic packager = new MastercardSmsPackagerEbcdic();
     private McSmsLengthChannel channel;
 
     /** Injecte en @Autowired : evite la dependance circulaire au constructeur. */
@@ -306,7 +306,7 @@ public class McSmsJposClient {
     }
 
     public boolean isConnected() { return channel != null && channel.isConnected(); }
-    public MastercardSmsPackager getPackager() { return packager; }
+    public MastercardSmsPackagerEbcdic getPackager() { return packager; }
 
     @PreDestroy
     public void disconnect() {
