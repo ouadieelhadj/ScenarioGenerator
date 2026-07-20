@@ -9,33 +9,31 @@ import jakarta.annotation.PreDestroy;
 import org.jpos.iso.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Serveur jPOS cote MASTERCARD SIMULE (sg-mc-sms-issuer).
  * Liaison PERMANENTE : ISOServer garde les sessions ouvertes.
  *
- * Modele : SwamJposServer.
- *
  * Messages geres :
- *   0800 DE70=061 (sign-on)   -> 0810 DE39=00
- *   0800 DE70=062 (sign-off)  -> 0810 DE39=00
- *   0800 DE70=270 (echo test) -> 0810 DE39=00
- *   0800 DE70=161 (PEK exch)  -> 0810 DE39=00
- *   0810                      -> accuse d'un push, rien a faire
- *   0200                      -> autorisation (a implementer)
+ *   0800 DE70=061 sign-on    -> 0810 DE39=00
+ *   0800 DE70=062 sign-off   -> 0810 DE39=00
+ *   0800 DE70=270 echo test  -> 0810 DE39=00
+ *   0800 DE70=162 sollicitation de cle -> 0810 DE39=00, puis livraison
+ *                                          asynchrone (voir McSmsIssKeyExchange)
+ *   0810 DE70=161 accuse du membre apres livraison
+ *   0200 autorisation (a implementer)
  *
- * Layout 0810 (Table 77) : DE7 (M), DE11 (ME), DE33 (ME), DE39 (M),
- *                          DE44 (C si DE39=30), DE63 (ME), DE70 (ME).
- * Les champs ME (Match Echo) doivent reprendre EXACTEMENT la valeur de la requete.
+ * Layout 0810 (Table 77) : les champs ME (DE7, DE11, DE33, DE63, DE70)
+ * reprennent EXACTEMENT la valeur de la requete.
  *
- * Codes DE39 Mastercard (an-2) : 00 = approuve, 30 = format error, 96 = system error.
+ * Codes DE39 (an-2) : 00 approuve, 30 erreur de format, 96 erreur systeme.
  */
 @Component
 public class McSmsJposServer {
@@ -45,25 +43,27 @@ public class McSmsJposServer {
     private static final String NETWORK_CODE     = "MASTERCARD_SMS";
     private static final int    DEFAULT_ISO_PORT = 8098;
 
-    /** Codes DE70. */
-    private static final String DE70_SIGNON       = "061";
-    private static final String DE70_SIGNOFF      = "062";
-    private static final String DE70_PEK_EXCHANGE = "161";
-    private static final String DE70_ECHO         = "270";
-    private static final String DE70_CUTOVER      = "301";
+    // Codes DE70
+    private static final String DE70_SIGNON           = "061";
+    private static final String DE70_SIGNOFF          = "062";
+    private static final String DE70_KEY_EXCHANGE     = "161";
+    private static final String DE70_KEY_SOLICITATION = "162";
+    private static final String DE70_KEY_SOLIC_TR31   = "163";
+    private static final String DE70_KEY_SUCCESS      = "164";
+    private static final String DE70_KEY_FAILURE      = "165";
+    private static final String DE70_ECHO             = "270";
 
-    /** Codes DE39 (an-2). */
+    // Codes DE39
     private static final String RC_OK           = "00";
     private static final String RC_FORMAT_ERROR = "30";
     private static final String RC_SYSTEM_ERROR = "96";
 
     private final NetworkRepository networkRepository;
 
+    @Autowired private McSmsIssKeyExchange keyExchange;
+
     private ISOServer isoServer;
     private Thread serverThread;
-
-    /** Compteur STAN pour les messages spontanes emis par le MIP simule. */
-    private final AtomicInteger stanCounter = new AtomicInteger(900000);
 
     public McSmsJposServer(NetworkRepository networkRepository) {
         this.networkRepository = networkRepository;
@@ -134,40 +134,64 @@ public class McSmsJposServer {
             }
         }
 
-        /** 0800 -> 0810. */
+        /** 0800 -> 0810, plus livraison de cle si sollicitation. */
         private boolean handleNetwork(ISOSource source, ISOMsg m) throws Exception {
             String de70 = m.hasField(70) ? m.getString(70) : "?";
             String label = switch (de70) {
-                case DE70_SIGNON       -> "SIGN-ON";
-                case DE70_SIGNOFF      -> "SIGN-OFF";
-                case DE70_ECHO         -> "ECHO TEST";
-                case DE70_PEK_EXCHANGE -> "PEK EXCHANGE";
-                case DE70_CUTOVER      -> "CUTOVER";
-                default                -> "FONCTION " + de70;
+                case DE70_SIGNON           -> "SIGN-ON";
+                case DE70_SIGNOFF          -> "SIGN-OFF";
+                case DE70_ECHO             -> "ECHO TEST";
+                case DE70_KEY_EXCHANGE     -> "KEY EXCHANGE";
+                case DE70_KEY_SOLICITATION -> "SOLLICITATION DE CLE";
+                case DE70_KEY_SOLIC_TR31   -> "SOLLICITATION DE CLE (TR-31)";
+                case DE70_KEY_SUCCESS      -> "CONFIRMATION DE SUCCES";
+                case DE70_KEY_FAILURE      -> "AVIS D'ECHEC";
+                default                    -> "FONCTION " + de70;
             };
             log.info("[MC-SRV] Gestion reseau {} (DE70={})", label, de70);
 
-            // Controle minimal du layout Table 74 : DE7, DE11, DE33, DE70 obligatoires
+            // Controle du layout Table 74 : DE7, DE11, DE33, DE70 obligatoires
             String rc = RC_OK;
             if (!m.hasField(7) || !m.hasField(11) || !m.hasField(33) || !m.hasField(70)) {
                 log.warn("[MC-SRV] Champs obligatoires manquants -> DE39={}", RC_FORMAT_ERROR);
                 rc = RC_FORMAT_ERROR;
             }
 
+            // TR-31 non implemente : on refuse explicitement
+            if (DE70_KEY_SOLIC_TR31.equals(de70)) {
+                log.warn("[MC-SRV] TR-31 (DE70=163) non implemente -> DE39={}", RC_SYSTEM_ERROR);
+                rc = RC_SYSTEM_ERROR;
+            }
+
             ISOMsg r = buildResponse(m, rc);
             source.send(r);
             log.info("[MC-SRV] Repondu 0810 DE39={} ({})", rc, label);
+
+            // Sollicitation acceptee : livrer la cle de facon asynchrone
+            if (RC_OK.equals(rc) && DE70_KEY_SOLICITATION.equals(de70)) {
+                log.info("[MC-SRV] Declenchement de la livraison de cle");
+                keyExchange.deliverKeyAsync(source, m);
+            }
+
+            // Confirmation / echec envoyes par le membre : simple trace
+            if (DE70_KEY_SUCCESS.equals(de70)) {
+                log.info("[MC-SRV] Le membre confirme l'import de la cle");
+            } else if (DE70_KEY_FAILURE.equals(de70)) {
+                log.warn("[MC-SRV] Le membre signale un echec d'import");
+            }
+
             return true;
         }
 
         /**
-         * Construit le 0810. Les champs ME reprennent la valeur exacte de la requete.
+         * Construit le 0810. Champs ME repris a l'identique.
          * Table 77 : DE7 (M), DE11 (ME), DE33 (ME), DE39 (M), DE63 (ME), DE70 (ME).
          */
         private ISOMsg buildResponse(ISOMsg req, String de39) throws Exception {
             ISOMsg r = new ISOMsg();
             r.setPackager(req.getPackager());
             r.setMTI("0810");
+            if (req.hasField(2))  r.set(2,  req.getString(2));
             r.set(7, req.hasField(7) ? req.getString(7) : utcDateTime());
             if (req.hasField(11)) r.set(11, req.getString(11));
             if (req.hasField(33)) r.set(33, req.getString(33));
@@ -177,16 +201,27 @@ public class McSmsJposServer {
             return r;
         }
 
-        /** 0810 recu : c'est l'accuse d'un message qu'on a pousse. */
+        /** 0810 recu : accuse d'un message que le simulateur a pousse. */
         private boolean handleNetworkResponse(ISOMsg m) {
             String de70 = m.hasField(70) ? m.getString(70) : "?";
             String de39 = m.hasField(39) ? m.getString(39) : "?";
             String stan = m.hasField(11) ? m.getString(11) : "?";
-            log.info("[MC-SRV] Recu 0810 DE70={} DE39={} STAN={} (accuse)", de70, de39, stan);
+
+            if (DE70_KEY_EXCHANGE.equals(de70)) {
+                if (RC_OK.equals(de39)) {
+                    log.info("[MC-SRV] Le membre a accepte la cle (0810 DE39=00 STAN={})", stan);
+                } else {
+                    log.warn("[MC-SRV] Le membre a rejete la cle (0810 DE39={} STAN={}) — "
+                           + "le 0820 est envoye malgre tout, comme le fait le simulateur "
+                           + "Mastercard officiel", de39, stan);
+                }
+            } else {
+                log.info("[MC-SRV] Recu 0810 DE70={} DE39={} STAN={} (accuse)", de70, de39, stan);
+            }
             return true;
         }
 
-        /** 0200 -> 0210. A implementer (autorisation). */
+        /** 0200 -> 0210. A implementer. */
         private boolean handleAuthorization(ISOSource source, ISOMsg m) throws Exception {
             log.warn("[MC-SRV] 0200 recu — autorisation pas encore implementee");
             ISOMsg r = new ISOMsg();

@@ -1681,3 +1681,300 @@ sur cette meme socket (gere par le thread receiver).
 9. [SWAM] Transaction 1100/1200 contre le switch reel : necessite un PAN de
    test et la config des comptes cote switch
 10. [SWAM] DE7 en UTC dans `SwamJposClient` (decalage +1h)
+
+---
+
+## 24. SESSION 20 — ECHANGE DE CLES MASTERCARD SMS (2026-07-20)
+
+Cette section documente **les deux mecanismes** d'echange de cles du Single
+Message System. Le mecanisme **162 est implemente et valide** ; le **163
+(TR-31) ne l'est pas**, mais tout ce qu'il faut pour l'implementer est
+consigne ici — il ne sera pas necessaire de relire les specifications.
+
+Sources : guide Mastercard SMS du 2 juin 2026 + **traces reelles du
+simulateur officiel** (AcquirerSwitchSimulator, format Mastercard Credit
+26Q3). En cas de divergence, la trace fait foi.
+
+---
+
+### 24.1 LES SEPT CODES DE70 DE GESTION DE CLES
+
+Table 726 du guide (ligne 59962 du fichier texte) :
+
+| Code | Description |
+|---|---|
+| 161 | Encryption key exchange — **livraison** de la cle |
+| 162 | Solicitation for encryption key exchange — **demande**, mecanisme DE48 |
+| 163 | Solicitation for encryption key exchange: **TR-31 keyblock** — demande, mecanisme DE110 |
+| 164 | Encryption key exchange confirmation of success |
+| 165 | Encryption key exchange advice of failure |
+| 166 | Load Comm Key |
+| 167 | Load previous Comm Key |
+
+Le code 161 sert de livraison **dans les deux mecanismes** ; c'est le code de
+sollicitation (162 ou 163) qui determine le format de transport.
+
+---
+
+### 24.2 MECANISME 162 — DE48 SUBELEMENT 11  [IMPLEMENTE ET VALIDE]
+
+#### Flux
+
+    Membre -> MIP : 0800 DE70=162   sollicitation
+    MIP -> Membre : 0810 DE70=162   DE39=00, SANS cle
+    MIP -> Membre : 0800 DE70=161   la cle, DE48 SE11        [SPONTANE]
+    Membre -> MIP : 0810 DE70=161   accuse (00 ou 96)
+    MIP -> Membre : 0820 DE70=161   acquittement : cle utilisable
+
+**Le flux est ASYNCHRONE**, contrairement a SWAM ou la cle arrive dans la
+reponse au 1804 (un seul aller-retour). Ici la demande n'obtient qu'un
+accuse ; la cle arrive plus tard sur le thread receiver. D'ou la machine a
+etats : PENDING -> RECEIVED -> ACTIVE.
+
+Le guide (ligne 36090) : *"Upon receipt of a Network Management Advice/0820
+message, processors may begin to use the new working key delivered in the
+Network Management Request/0800 message."* Le 0820 est donc l'autorisation
+d'usage, pas une simple politesse.
+
+**Observation de la trace** : le MIP envoie le 0820 **meme si le membre a
+repondu DE39=96**. Notre simulateur reproduit ce comportement.
+
+#### Structure du DE48
+
+Suite de subelements `ID(2) + Longueur(2) + Valeur` — attention, la longueur
+est sur **2 positions**, alors que le DE48 SWAM utilise Tag(3)+Longueur(3).
+
+Subelement 11 (Key Exchange Data Block), deux formats selon la longueur :
+
+| SF | Contenu | an-54 (double) | an-70 (triple) |
+|---|---|---|---|
+| 1 | Key Class ID | 2 — `PK` (PIN Key) | 2 |
+| 2 | Key Index Number | 2 — `00` | 2 |
+| 3 | Key Cycle Number | 2 — `00`..`99` | 2 |
+| 4 | Cle chiffree sous ZMK | 32 hex | 48 hex |
+| 5 | Key Check Value | 16 (4 hex + 12 espaces) | 16 |
+
+Variante **an-38** observee dans le 0820 : SF1-SF3 renseignes, SF4 et SF5 a
+blanc (16 espaces chacun).
+
+Exemple reel (trace Mastercard) :
+
+    1154PK0000E02B0E8BD4644E6341182D71F4F3F5B543A1____________
+    ^^ ^^ ^^ ^^ ^^      SF4 cle chiffree (32)        SF5 KCV (16)
+    |  |  |  |  +-- SF3 cycle
+    |  |  |  +----- SF2 index
+    |  |  +-------- SF1 classe = PK
+    |  +----------- longueur 54
+    +-------------- subelement 11
+
+Notre emission, structurellement identique :
+
+    1154PK0000708F1964DBAE610781C6211436254A696E19____________
+
+#### Cryptographie — VERIFIEE CONTRE LA TRACE
+
+    cle chiffree = 3DES-ECB(cle claire) sous ZMK
+    KCV          = 3DES-ECB(8 octets nuls) avec la cle claire
+
+Verification faite sur les valeurs de la trace, 4 correspondances sur 4 :
+
+| Element | Valeur | Resultat |
+|---|---|---|
+| ZMK | `13AED5DA1F32347523C708C11F2608FD` | KCV `2D617C` — **meme ZMK que SWAM** |
+| Cle claire | `BC4AEA2F5BB3FD1504624F8623835D5B` | — |
+| Chiffree | `E02B0E8BD4644E6341182D71F4F3F5B5` | **MATCH** |
+| KCV | `43A1866D253E9365` | **MATCH**, tronque a `43A1` |
+
+**PIEGE** : la trace du simulateur annonce *"Key Check Value Encryption
+Algorithm: DES-CBC"*, mais c'est bien du **3DES avec la cle double
+longueur**. Le DES simple sur la moitie gauche donne autre chose.
+
+**PIEGE** : Mastercard tronque le KCV a **4 caracteres** dans SF5, la ou SWAM
+en conserve 6. La comparaison doit donc porter sur les 4 premiers caracteres.
+
+#### Classes implementees
+
+**sg-common**
+- `McSmsDe48.java` — parseur/generateur des subelements. `KeyExchangeBlock`
+  decode SF1-SF5, detecte double/triple/acquittement par la longueur.
+  Methodes `putKeyExchange()` et `putKeyExchangeAck()`.
+
+**sg-mc-sms-acquirer** (le membre)
+- `McSmsKeyExchange.java` — `solicitKeyExchange()` envoie le 162 ;
+  `handleKeyDelivery()` importe la cle sous LMK, verifie le KCV sur 4
+  caracteres, persiste en statut RECEIVED ; `handleKeyAcknowledgement()`
+  passe a ACTIVE et retire l'ancienne cle.
+- `McSmsJposClient.java` — route les 0800/161 et les 0820 vers le service.
+  **`@Lazy` obligatoire** sur l'injection de `McSmsKeyExchange` : sans lui,
+  Spring detecte un cycle (le service prend le client au constructeur).
+- `McKeyExchangeController.java` — bootstrap ZMK, sollicitation, consultation.
+
+**sg-mc-sms-issuer** (simulateur Mastercard)
+- `McSmsIssKeyExchange.java` — genere une PEK double longueur (parite impaire),
+  la chiffre sous ZMK, calcule le KCV, envoie le 0800/161 puis le 0820.
+  Crypto en JCE standard, pas de HSM : c'est un outil de test.
+- `McSmsJposServer.java` — sur 0800/162 repond 0810 puis declenche la
+  livraison asynchrone. Refuse explicitement le 163 avec DE39=96.
+- `McIssKeyController.java` — expose la derniere cle livree, pour comparaison.
+
+#### Endpoints
+
+    POST /api/admin/mc/keys/bootstrap-zmk?zmk=<32 ou 48 hex>
+    POST /api/admin/mc/keys/solicit
+    GET  /api/admin/mc/keys/current
+    GET  /api/admin/mc/sim/last-key          (issuer, port 8097)
+
+#### Resultat du test local
+
+    Simulateur : clair     A45449BF80BF1AF72F7AEAF7B03EEFF2
+                 chiffree  708F1964DBAE610781C6211436254A69
+                 KCV       6E197BAF48A47D84  -> envoie "6E19"
+
+    Membre     : KCV importe 6E197B  (calcule par le HSM apres import)
+                 statut ACTIVE, 16 octets
+
+Le HSM a dechiffre la cle et recalcule un KCV identique : les deux cotes
+detiennent bien la meme cle. Les 5 etapes se sont enchainees sans erreur.
+
+---
+
+### 24.3 MECANISME 163 — TR-31 KEYBLOCK VIA DE110  [NON IMPLEMENTE]
+
+Tout ce qui suit vient de traces reelles. Suffisant pour implementer sans
+relire les specifications.
+
+#### Flux
+
+    Membre -> MIP : 0800 DE70=163   solicitation TR-31 or AES
+    MIP -> Membre : 0810 DE70=163   DE39=00
+    MIP -> Membre : 0800 DE70=161   keyblock, DE110           [SPONTANE]
+    Membre -> MIP : 0810 DE70=161   accuse
+    MIP -> Membre : 0820 DE70=161   acquittement
+
+Meme sequence que le 162 ; seul le transport change.
+
+#### Structure du DE110
+
+**ATTENTION — LE GUIDE ET LA PRATIQUE DIVERGENT.**
+
+Le guide (p.921, ligne 70567) decrit un DE110 « Encryption Data » en
+**BER-TLV binaire** : Dataset ID (1 octet) + Dataset length (2 octets) +
+tags codes ISO 8825. Dataset 04 = Key Exchange, tags 80 (Control), 81
+(Key-set Identifier), 83 (Algorithm), 86 (Key Index), 87 (Encrypted Data),
+88 (Key Checksum Value).
+
+**La trace montre autre chose** : des subelements ASCII `ID(2)+len(3)+valeur`,
+etiquetes « Additional Data-2 » (l'autre usage du DE110, p.890) :
+
+    09 080 B0080P0TB00E000022D08F4891AD6042734A1E432242CE80D6B928DF5A496751D63E5EE08A5D7D90
+    10 006 B3F2DE
+
+    total 2+3+80 + 2+3+6 = 96, coherent avec le prefixe LLLVAR "096"
+
+| Subelement | Contenu | Longueur |
+|---|---|---|
+| 09 | ANSI X9 TR-31 Key Block | 80 |
+| 10 | Key Check Value | 6 |
+
+Noter que la longueur est ici sur **3 positions**, contre 2 dans le DE48.
+
+**Recommandation** : implementer le format de la trace (subelements ASCII).
+Le BER-TLV du guide est probablement la cible d'une migration future — le
+guide dit lui-meme (ligne 68439) *"when ready to migrate to DE 110
+Encryption data must first..."*.
+
+#### Le keyblock TR-31 (ANSI X9.143)
+
+    B0080P0TB00E0000 22D08F4891AD6042734A1E432242CE80D6B928DF5A496751D63E5EE08A5D7D90
+    ^^^^^^^^^^^^^^^^ header 16 caracteres        payload 64 caracteres
+
+| Position | Valeur | Signification |
+|---|---|---|
+| 0 | `B` | Version B — TDES key derivation binding |
+| 1-4 | `0080` | Longueur totale du keyblock |
+| 5-6 | `P0` | Key Usage — **PIN Encryption Key** |
+| 7 | `T` | Algorithm — TDES |
+| 8 | `B` | Mode of Use — chiffrement et dechiffrement |
+| 9-10 | `00` | Key Version Number |
+| 11 | `E` | Exportability — exportable |
+| 12-13 | `00` | Nombre de blocs optionnels |
+| 14-15 | `00` | Reserve |
+| 16-79 | 64 hex | 48 = cle chiffree (24 octets) + 16 = MAC (8 octets) |
+
+Le KCV est dans le subelement 10 : `B3F2DE`, soit **3 octets** — contre
+4 caracteres (2 octets) dans le DE48. Verifie contre la trace : la cle claire
+`F4EF91DF862564EF38B952DA312910D9` donne le KCV `B3F2DECD89772341`, tronque
+a `B3F2DE`.
+
+#### Ce qui reste a determiner pour l'implementation
+
+1. **La KBPK** (Key Block Protection Key) qui protege le keyblock. La trace ne
+   la montre pas. Le guide n'en parle pas — c'est probablement dans le
+   *Security Guide* ou le *Secured Data Communications Guide*, non disponibles.
+   Sera injectee hors bande comme la ZMK.
+2. **Le deverrouillage du keyblock** : derivation des cles de chiffrement et
+   de MAC depuis la KBPK selon X9.143, verification du MAC, dechiffrement.
+   **Le HSM jPOS ne sait probablement pas le faire nativement** — c'est le
+   point technique le plus lourd de ce chantier.
+3. **Le packager** : le DE110 est declare `IFA_LLLCHAR(999)` par la boucle
+   generique DE105-127 de `MastercardSmsPackager`. A verifier si le format
+   ASCII de la trace passe tel quel.
+
+---
+
+### 24.4 ECARTS ENTRE LE GUIDE ET LA PRATIQUE
+
+Trois divergences constatees. **La trace du simulateur officiel prime.**
+
+| Point | Guide | Trace reelle |
+|---|---|---|
+| **DE33** | *"ten-digit number of the format 9000xxxxxx"*, min 10 / max 10 (p.385) | `002202` et `022905` — **6 chiffres, un ICA** |
+| **DE110** | BER-TLV binaire, Dataset 04, tags 80-88 (p.921) | subelements ASCII `09`/`10`, « Additional Data-2 » |
+| **KCV DE48** | 4 caracteres hex + espaces (p.36330) | conforme : `43A1` + 12 espaces |
+
+Le DE33 est le plus genant : notre bouchon `9000000001` respecte le guide
+mais pas la pratique. **A verifier avec Mastercard** avant tout test reel.
+Notre packager `IFA_LLNUM(10)` accepte les deux longueurs en LLVAR, donc pas
+de blocage technique.
+
+---
+
+### 24.5 AUTRES OBSERVATIONS DES TRACES
+
+- **EBCDIC confirme sur le fil.** Toutes les trames du simulateur sont en
+  EBCDIC (`F0F8F0F0` = "0800"). Notre packager ASCII ne passera pas contre un
+  MIP reel — la variante `IFE_*` reste a faire.
+- **DE2 (PAN)** porte l'ID du client : `41232` dans les traces.
+- **DE63 (Network Data)** : `MCC0000J1` = Financial Network Code (`MCC`,
+  Mastercard mixed BIN Immediate Debit) + Banknet Reference Number (`0000J1`),
+  incremente a chaque message.
+- **Mastercard echange les PEK toutes les 24 heures** (guide, ligne 7751),
+  plus a la demande en cas de probleme.
+
+---
+
+### 24.6 CORRECTIONS DE CETTE SESSION
+
+| Symptome | Cause | Correction |
+|---|---|---|
+| Cycle de dependances au demarrage | `McSmsKeyExchange` prend le client au constructeur, le client reference le service | `@Lazy` sur l'injection dans `McSmsJposClient` |
+| `value too long for type character varying(6)` | KCV complet (16 car.) ecrit dans une colonne VARCHAR(6) | troncature a 6 dans le controller et le service |
+
+SWAM evite le premier probleme parce que `SwamJposClient` fait l'import
+lui-meme, sans passer par `SwamKeyExchange`.
+
+---
+
+### 24.7 RESTE A FAIRE SUR L'ECHANGE DE CLES
+
+1. **TR-31 (163)** — voir 24.3. Point dur : le deverrouillage du keyblock.
+2. **Codes 164 / 165** — confirmation de succes et avis d'echec ne sont pas
+   emis par le membre. A ajouter apres l'import.
+3. **Comm Key (166 / 167)** — jamais decrite dans ce guide. Les tags 83 et 87
+   du DE110 disent que la cle est chiffree *"under the current communications
+   key"*, ce qui suggere que la Comm Key remplace la ZMK dans le mecanisme
+   TR-31. A clarifier avec Mastercard.
+4. **Renouvellement automatique 24 h** — non gere.
+5. **Multi-banques** — `member_group_id` est fixe par propriete
+   (`mc.sms.member-group-id`). A revoir dans le chantier multi-banques
+   (section 23.6).
