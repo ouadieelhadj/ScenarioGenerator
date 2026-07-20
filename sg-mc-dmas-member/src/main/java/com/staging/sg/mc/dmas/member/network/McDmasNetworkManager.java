@@ -19,6 +19,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Même pattern que McNetworkManager (ASCII) mais via McDmasNetworkUtil (EBCDIC).
  * Pas d'auto-signon : tout est déclenché par endpoint REST.
  */
+/**
+ * OBSOLETE — mecanisme a CONNEXION EPHEMERE (une socket par message).
+ *
+ * Les endpoints REST passent desormais par McDmasMemberClient, qui
+ * maintient une liaison permanente. Cette classe n'est conservee que
+ * pour SessionOrchestrator, en attendant sa bascule.
+ *
+ * Dans les logs : [DMAS-ACQ] = ephemere, [JPOS-CLI] = permanent.
+ */
+@Deprecated
 @Service
 public class McDmasNetworkManager {
 

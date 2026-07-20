@@ -29,7 +29,7 @@ public class McDmasNetworkUtil {
     public String generateStan() {
         // n-6 conforme spec DMAS (DE011 p.297). Compteur atomique PARTAGE (singleton)
         // -> STAN globalement unique entre tous les flux (auth, advice, reversal, loadtest)
-        // -> evite les collisions de correlation dans la map pending de McDmasMemberServer.
+        // -> evite les collisions de correlation dans la map pending du client membre.
         int v = Math.floorMod(stanSeq.getAndIncrement(), 1_000_000);
         return String.format("%06d", v);
     }

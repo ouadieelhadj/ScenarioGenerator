@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Moteur de test de charge de la connexion permanente jPOS.
  * Asynchrone : run() lance en arriere-plan, le status est interrogeable.
- * La lecture des reponses reste sur le thread jPOS (correlation par STAN dans McDmasMemberServer).
+ * La lecture des reponses reste sur le thread jPOS (correlation par STAN dans McDmasMemberClient).
  */
 @Service
 public class LoadTestService {
@@ -24,14 +24,14 @@ public class LoadTestService {
     private static final Logger log = LoggerFactory.getLogger(LoadTestService.class);
 
     private final McDmasAuthorization auth;
-    private final McDmasMemberServer jposServer;
+    private final McDmasMemberClient jposServer;
     private final McDmasNetworkUtil net;
     private final java.util.concurrent.Semaphore slots;
 
     // STAN unique en charge (cycle 6 chiffres, base aleatoire pour limiter collisions inter-flux)
     private final Map<String, LoadTestRun> runs = new ConcurrentHashMap<>();
 
-    public LoadTestService(McDmasAuthorization auth, McDmasMemberServer jposServer, McDmasNetworkUtil net,
+    public LoadTestService(McDmasAuthorization auth, McDmasMemberClient jposServer, McDmasNetworkUtil net,
                            @Value("${dmas.loadtest.max-concurrent-tests:1}") int maxConcurrent) {
         this.auth = auth;
         this.jposServer = jposServer;

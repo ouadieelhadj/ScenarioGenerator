@@ -31,7 +31,7 @@ public class McDmasAuthorization {
     private final McDmasNetworkUtil net;
     private final HsmService hsm;
     private final McDmasMemberKeyRepository acqKeyRepo;
-    private final McDmasMemberServer jposServer;
+    private final McDmasMemberClient jposServer;
 
     @Value("${dmas.issuer-host:localhost}") private String issuerHost;
     @Value("${dmas.issuer-port:8500}")      private int    issuerPort;
@@ -42,7 +42,7 @@ public class McDmasAuthorization {
     @Value("${dmas.default-mcc:5999}")      private String defaultMcc;
 
     public McDmasAuthorization(McDmasNetworkUtil net, HsmService hsm, McDmasMemberKeyRepository acqKeyRepo,
-                               McDmasMemberServer jposServer) {
+                               McDmasMemberClient jposServer) {
         this.net = net;
         this.hsm = hsm;
         this.acqKeyRepo = acqKeyRepo;

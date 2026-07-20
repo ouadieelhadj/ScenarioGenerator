@@ -253,7 +253,7 @@ public class McDmasMastercardHandler {
 
     /**
      * Construit la reponse 0110 a partir d'un 0100 (decision metier + echo DE) SANS l'envoyer.
-     * Reutilisable par le transport jPOS permanent (McDmasMastercardClient) comme par le socket.
+     * Reutilisable par le transport jPOS permanent (McDmasMastercardServer) comme par le socket.
      */
     public ISOMsg buildAuthResponse(ISOMsg request) throws ISOException {
         String pan     = net.safeGet(request, 2);

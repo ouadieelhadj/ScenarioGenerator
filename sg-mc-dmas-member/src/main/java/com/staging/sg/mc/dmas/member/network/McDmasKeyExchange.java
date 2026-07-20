@@ -13,7 +13,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import com.staging.sg.mc.dmas.member.network.McDmasMemberServer;
+import com.staging.sg.mc.dmas.member.network.McDmasMemberClient;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -39,14 +39,14 @@ public class McDmasKeyExchange {
     private final HsmService hsm;
     private final McDmasKekRepository kekRepo;
     private final McDmasMemberKeyRepository acqKeyRepo;
-    private final McDmasMemberServer dmasJposServer;
+    private final McDmasMemberClient dmasJposServer;
 
     @Value("${dmas.issuer-host:localhost}") private String issuerHost;
     @Value("${dmas.issuer-port:8500}")      private int    issuerPort;
     @Value("${dmas.timeout-seconds:30}")    private int    timeoutSeconds;
     private static final String FORWARDING_ID = "002202";
 
-    public McDmasKeyExchange(McDmasNetworkUtil net, HsmService hsm, McDmasKekRepository kekRepo, McDmasMemberKeyRepository acqKeyRepo, McDmasMemberServer dmasJposServer) {
+    public McDmasKeyExchange(McDmasNetworkUtil net, HsmService hsm, McDmasKekRepository kekRepo, McDmasMemberKeyRepository acqKeyRepo, McDmasMemberClient dmasJposServer) {
         this.net = net;
         this.hsm = hsm;
         this.kekRepo = kekRepo;
