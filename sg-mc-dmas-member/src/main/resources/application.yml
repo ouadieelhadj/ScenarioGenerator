@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: sg-mc-dmas-member
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scenariogenerator
+    username: mc_dmas_member
+    password: postgres123
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  liquibase:
+    enabled: false
+
+
+dmas:
+  member-group-id: TESTGRP01
+  loadtest:
+    max-concurrent-tests: 1
+  issuer-host: localhost
+  lmk:
+    file: F:/ScenarioGenerator/keys/dmas-lmk-acq.lmk
+    rebuild: false
+  mac:
+    fields: "4,11,37,41,42"
+    representation: ebcdic
+  session:
+    auto-start: false
+    startup-delay-ms: 3000
+
+jwt:
+  secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
+  expiration-ms: 86400000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+
+logging:
+  file:
+    name: F:/ScenarioGenerator/logs/mc-dmas-member.log
+
+sg:
+  network:
+    code: DMAS
+    role: ACQUIRER
