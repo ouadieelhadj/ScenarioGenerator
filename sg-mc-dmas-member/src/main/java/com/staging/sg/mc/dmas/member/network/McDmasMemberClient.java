@@ -8,7 +8,9 @@ import jakarta.annotation.PreDestroy;
 import org.jpos.iso.ISOMsg;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -32,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Meme schema que SwamJposClient et McSmsJposClient.
  *
  * ------------------------------------------------------------------
- *  REMPLACE McDmasMemberClient
+ *  REMPLACE McDmasMemberServer
  * ------------------------------------------------------------------
  * Avant, le membre hebergeait un ISOServer et attendait que le module
  * mastercard vienne s'y connecter — l'inverse de la realite et des deux
@@ -66,6 +68,9 @@ public class McDmasMemberClient {
 
     @Value("${dmas.jpos.forwarding-id:011901}")
     private String forwardingId;
+
+    /** @Lazy : le service prend ce client au constructeur, cycle Spring sinon. */
+    @Autowired @Lazy private McDmasKeyExchange keyExchange;
 
     private McPackagerEbcdic    packager;
     private McDmasLengthChannel channel;
@@ -198,9 +203,17 @@ public class McDmasMemberClient {
                     mti, de70, stan);
 
             if ("0800".equals(mti)) {
-                sendAck(m);
+                // DE70=161 : le reseau nous livre une cle (mecanisme 162)
+                String rc = "161".equals(de70)
+                        ? keyExchange.handleKeyDelivery(m)
+                        : "00";
+                sendAck(m, rc);
             } else if ("0820".equals(mti)) {
                 log.info("[JPOS-CLI] Advice 0820 DE70={} recu", de70);
+                if ("161".equals(de70)) {
+                    // Acquittement : la cle livree devient utilisable
+                    keyExchange.handleKeyAcknowledgement(m);
+                }
             } else {
                 log.warn("[JPOS-CLI] MTI pousse non gere : {}", mti);
             }
@@ -209,8 +222,8 @@ public class McDmasMemberClient {
         }
     }
 
-    /** Accuse un 0800 pousse par le reseau : 0810 DE39=00, champs ME recopies. */
-    private void sendAck(ISOMsg req) throws Exception {
+    /** Accuse un 0800 pousse par le reseau, champs ME recopies. */
+    private void sendAck(ISOMsg req, String de39) throws Exception {
         ISOMsg r = new ISOMsg();
         r.setPackager(req.getPackager());
         r.setMTI("0810");
@@ -218,11 +231,11 @@ public class McDmasMemberClient {
         r.set(7, new SimpleDateFormat("MMddHHmmss").format(new Date()));
         if (req.hasField(11)) r.set(11, req.getString(11));
         if (req.hasField(33)) r.set(33, req.getString(33));
-        r.set(39, "00");
+        r.set(39, de39);
         if (req.hasField(48)) r.set(48, req.getString(48));
         if (req.hasField(70)) r.set(70, req.getString(70));
         channel.send(r);
-        log.info("[JPOS-CLI] Accuse 0810 DE39=00 envoye");
+        log.info("[JPOS-CLI] Accuse 0810 DE39={} envoye", de39);
     }
 
     // ====================================================================

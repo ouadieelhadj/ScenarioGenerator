@@ -97,6 +97,9 @@ public class McDmasMastercardHandler {
         String label = switch (de70 != null ? de70 : "") {
             case "001", "061" -> "SIGN-ON";
             case "002", "062" -> "SIGN-OFF";
+            case "162"        -> "SOLLICITATION DE CLE";
+            case "164"        -> "CONFIRMATION DE SUCCES";
+            case "165"        -> "AVIS D ECHEC";
             case "270"        -> "ECHO";
             default           -> "NETWORK(" + de70 + ")";
         };

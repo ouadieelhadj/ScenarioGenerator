@@ -2262,3 +2262,170 @@ n'est plus ecoute par personne.
 4. **Sens de l'echange de cles** : le membre pousse toujours la PEK vers le
    reseau. Chez MC SMS et SWAM, c'est le reseau qui distribue. A trancher
    avec les specifications DMAS.
+
+---
+
+## 26. DMAS — ECHANGE DE CLES (2026-07-21)
+
+### 26.1 TROIS MECANISMES, UNE SEULE DESTINATION
+
+Quel que soit le chemin, la cle atterrit dans la meme table :
+
+    membre  ->  mc_dmas_member_keys
+    reseau  ->  mc_dmas_mastercard_keys
+
+Une transaction 0100 dechiffrera donc le PIN avec la meme cle, peu importe
+comment elle est arrivee.
+
+| # | Mecanisme | Endpoint / declencheur | Statut initial |
+|---|---|---|---|
+| 1 | Injection manuelle | `POST /keys/inject` | ACTIVE |
+| 2 | Sollicitation 162 | `POST /keys/solicit` | RECEIVED puis ACTIVE |
+| 3 | Push par le membre | `POST /keyexchange/pek` | ACTIVE |
+
+Le mecanisme 3 est l'implementation historique : le membre genere la cle et
+la pousse au reseau. Conserve en attendant que les specifications DMAS
+tranchent, car il est l'inverse de ce que montrent les traces.
+
+---
+
+### 26.2 PREREQUIS — LA KEK
+
+La KEK (equivalent de la ZMK) est injectee **hors bande** des deux cotes.
+Elle n'est jamais echangee sur le reseau.
+
+    POST /api/admin/dmas/kek/bootstrap
+    corps {"memberGroupId":"TESTGRP01","kekClear":"13AED5DA1F32347523C708C11F2608FD"}
+
+Valeur de reference : `13AED5DA1F32347523C708C11F2608FD`, KCV `2D617C` —
+la meme que pour SWAM et MC SMS.
+
+Sans KEK, l'injection comme la sollicitation echouent : la PEK est toujours
+transportee chiffree sous la KEK.
+
+---
+
+### 26.3 INJECTION MANUELLE
+
+    POST /api/admin/dmas/keys/inject?clear=<32|48 hex>
+    POST /api/admin/dmas/keys/inject?underZmk=<32|48 hex>&kcv=<hex>
+    GET  /api/admin/dmas/keys/current
+
+`clear` : la cle en clair, chiffree sous la KEK avant import.
+`underZmk` : la cle deja chiffree, cas reel. Si `kcv` est fourni, il est
+verifie et la cle est rejetee en cas de discordance.
+
+Dans les deux cas la cle est importee sous le LMK local par le HSM, puis
+persistee avec ses deux formes et son KCV. L'ancienne cle du meme type
+passe en RETIRED.
+
+Test : `bash /f/MoneyCore/mc-sms/test-key-injection.sh`
+
+Resultat obtenu — meme PEK injectee des deux cotes :
+
+    cote   | key_type | kcv    | status | key_length
+    membre | PEK      | 43A186 | ACTIVE | 16
+    reseau | PEK      | 43A186 | ACTIVE | 16
+
+Le KCV `43A186` est exactement celui calcule a partir de la trace du
+simulateur (`43A1866D253E9365` tronque a 6) : **la cryptographie DMAS est
+identique a celle decodee dans les traces**.
+
+---
+
+### 26.4 MECANISME 162 — SOLLICITATION  [IMPLEMENTE ET VALIDE]
+
+#### Flux
+
+    membre -> reseau : 0800 DE70=162   sollicitation
+    reseau -> membre : 0810 DE70=162   accuse, SANS cle
+    reseau -> membre : 0800 DE70=161   la cle, DE48 SE11   [SPONTANE]
+    membre -> reseau : 0810 DE70=161   accuse
+    reseau -> membre : 0820 DE70=161   acquittement -> cle utilisable
+
+Flux **ASYNCHRONE** : la sollicitation n'obtient qu'un accuse ; la cle
+arrive plus tard sur le thread listener. D'ou la machine a etats
+PENDING -> RECEIVED -> ACTIVE. Le 0820 est ce qui autorise l'usage.
+
+Le reseau emet le 0820 **meme si le membre a rejete la cle** — comportement
+observe dans la trace du simulateur officiel.
+
+#### Classes
+
+**Cote membre** (`sg-mc-dmas-member`)
+- `McDmasKeyExchange.solicitPek()` — envoie le 162
+- `McDmasKeyExchange.handleKeyDelivery()` — importe, verifie le KCV,
+  persiste en RECEIVED ; retourne le DE39 du 0810
+- `McDmasKeyExchange.handleKeyAcknowledgement()` — passe a ACTIVE
+- `McDmasMemberClient` — route les 0800/161 et 0820/161 vers le service.
+  **`@Lazy` obligatoire** sur l'injection : le service prend le client au
+  constructeur, cycle Spring sinon.
+- `McDmasKeySolicitController` — `POST /api/admin/dmas/keys/solicit`
+
+**Cote reseau** (`sg-mc-dmas-mastercard`)
+- `McDmasKeyDelivery` — genere la PEK, la chiffre sous KEK, pousse le
+  0800/161, attend le 0810, envoie le 0820. Livraison dans un thread
+  separe pour ne pas bloquer le listener.
+- `McDmasMastercardServer` — declenche `deliverAsync()` apres avoir emis
+  le 0810 d'une sollicitation acceptee. **`@Lazy`** la aussi.
+- `McDmasMastercardHandler` — libelle les codes 162, 164, 165
+
+#### Test
+
+    bash /f/MoneyCore/mc-sms/test-key-162.sh
+
+Resultat obtenu, les 5 etapes en 800 ms :
+
+    11:13:10.061  membre -> 0800/162  STAN=609773
+    11:13:10.063  reseau -> 0810/162  DE39=00
+    11:13:10.378  reseau    PEK generee, KCV=8CB3C7
+    11:13:10.379  reseau -> 0800/161  STAN=237574
+    11:13:10.415  membre    import OK, KCV recu = calcule
+    11:13:10.436  membre -> 0810/161  DE39=00
+    11:13:10.865  reseau -> 0820/161
+    11:13:10.878  membre    PEK ACTIVE
+
+    cote   | key_type | kcv    | status | key_length
+    membre | PEK      | 8CB3C7 | ACTIVE | 16
+    reseau | PEK      | 8CB3C7 | ACTIVE | 16
+
+---
+
+### 26.5 CODES DE70 DE GESTION DE CLES
+
+| Code | Description | Implemente |
+|---|---|---|
+| 161 | Livraison de la cle (DE48 SE11) | oui, dans les deux sens |
+| 162 | Sollicitation d'echange | oui |
+| 163 | Sollicitation TR-31 (DE110) | non — voir section 24.3 |
+| 164 | Confirmation de succes | emis par le mecanisme 3 |
+| 165 | Avis d'echec | emis par le mecanisme 3 |
+
+---
+
+### 26.6 RECAPITULATIF DES SCRIPTS DE TEST DMAS
+
+| Script | Objet |
+|---|---|
+| `test-dmas.sh` | sign-on, liaison permanente, controle des ports |
+| `test-key-injection.sh` | injection manuelle de la KEK et de la PEK |
+| `test-key-162.sh` | echange de cle complet par sollicitation |
+
+Tous prennent `<login> <password>` en parametres optionnels
+(defaut : `admin` / `Admin123!`) et redemarrent les modules eux-memes,
+**reseau d'abord, membre ensuite**.
+
+---
+
+### 26.7 POINTS OUVERTS
+
+1. **Sens de l'echange** : les mecanismes 2 (reseau distribue) et 3 (membre
+   pousse) coexistent. Les traces montrent le reseau distribuant ; a
+   confirmer dans les specifications DMAS avant de supprimer le 3.
+2. **Code DE70 du sign-on** : `061` (client actuel) ou `001` (ancien
+   `McDmasNetworkManager`) ? Le serveur accepte les deux.
+3. **DE2 d'un 0800** : le membre annonce `TESTGRP01`, le reseau enregistre
+   `40260` — c'est `dmas.jpos.group-signon-id`. Que doit contenir le DE2 ?
+4. **`SessionOrchestrator`** utilise encore le mecanisme ephemere
+   (`McDmasNetworkManager`, `@Deprecated`).
+5. **TR-31 (163)** non implemente — specification complete en section 24.3.

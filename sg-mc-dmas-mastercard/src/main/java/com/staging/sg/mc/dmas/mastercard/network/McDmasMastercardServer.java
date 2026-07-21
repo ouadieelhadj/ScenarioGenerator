@@ -52,6 +52,7 @@ public class McDmasMastercardServer {
 
     private final NetworkRepository networkRepository;
     private final McDmasMastercardHandler handler;
+    private final McDmasKeyDelivery keyDelivery;
 
     @Value("${dmas.member-group:TESTGRP01}")
     private String memberGroup;
@@ -68,9 +69,11 @@ public class McDmasMastercardServer {
     private final Map<String, CompletableFuture<ISOMsg>> pending = new ConcurrentHashMap<>();
 
     public McDmasMastercardServer(NetworkRepository networkRepository,
-                                  @Lazy McDmasMastercardHandler handler) {
+                                  @Lazy McDmasMastercardHandler handler,
+                                  @Lazy McDmasKeyDelivery keyDelivery) {
         this.networkRepository = networkRepository;
         this.handler = handler;
+        this.keyDelivery = keyDelivery;
     }
 
     // ====================================================================
@@ -214,10 +217,15 @@ public class McDmasMastercardServer {
                 }
 
                 source.send(resp);
-                log.info("[JPOS-SRV] Repondu {} DE39={} STAN={}",
-                        resp.getMTI(),
-                        resp.hasField(39) ? resp.getString(39) : "?",
-                        stan);
+                String rc = resp.hasField(39) ? resp.getString(39) : "?";
+                log.info("[JPOS-SRV] Repondu {} DE39={} STAN={}", resp.getMTI(), rc, stan);
+
+                // Sollicitation acceptee : livrer la cle de facon asynchrone
+                String de70 = m.hasField(70) ? m.getString(70) : "";
+                if ("0800".equals(mti) && "162".equals(de70) && "00".equals(rc)) {
+                    log.info("[JPOS-SRV] Sollicitation 162 acceptee — livraison de la cle");
+                    keyDelivery.deliverAsync(m);
+                }
                 return true;
 
             } catch (Exception e) {
