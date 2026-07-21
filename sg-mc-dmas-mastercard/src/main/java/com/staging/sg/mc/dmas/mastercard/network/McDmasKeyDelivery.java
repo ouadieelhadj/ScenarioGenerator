@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
@@ -19,6 +20,15 @@ import java.util.Date;
 
 /**
  * Livraison de cle cote RESEAU MASTERCARD simule — mecanisme 162.
+ *
+ * DEUX FLUX, tous deux prevus par les specifications DMAS (p.154 et 157) :
+ *
+ *   CUSTOMER GENERATED  le client sollicite (0800/162), le reseau livre
+ *   SYSTEM GENERATED    le reseau livre spontanement, toutes les 24 heures
+ *
+ * ATTENTION AU VOCABULAIRE : "customer generated" qualifie la DEMANDE,
+ * pas la cle. Dans les deux cas c'est le RESEAU qui genere et distribue
+ * la PEK ; le client ne fait que la recevoir et l'accuser.
  *
  * Reproduit le comportement observe dans la trace du simulateur officiel :
  *
@@ -60,6 +70,10 @@ public class McDmasKeyDelivery {
     @Value("${dmas.timeout-seconds:30}")
     private int timeoutSeconds;
 
+    /** Renouvellement automatique toutes les 24 h (flux system generated). */
+    @Value("${dmas.pek.auto-renewal:false}")
+    private boolean autoRenewal;
+
     /** Derniere cle livree, conservee pour le controle et les tests. */
     private volatile String lastKcv;
     private volatile String lastKeyUnderKek;
@@ -100,6 +114,46 @@ public class McDmasKeyDelivery {
         t.start();
     }
 
+    /**
+     * Livraison spontanee, sans sollicitation prealable — flux
+     * "system generated". Utilisee par le renouvellement periodique et
+     * par l'endpoint de declenchement manuel.
+     */
+    public void deliverSpontaneous(String mgid) {
+        Thread t = new Thread(() -> {
+            try {
+                deliver(mgid, null);
+            } catch (Exception e) {
+                log.error("[DMAS-KEXS] Echec de la livraison spontanee : {}", e.getMessage(), e);
+            }
+        }, "mc-dmas-key-delivery-auto");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    /**
+     * Renouvellement periodique de la PEK — flux "system generated".
+     *
+     * Les specifications prevoient un echange toutes les 24 heures
+     * (p.157). Desactive par defaut pour ne pas perturber les tests :
+     * mettre dmas.pek.auto-renewal=true pour l'activer.
+     */
+    @Scheduled(fixedRateString = "${dmas.pek.renewal-interval-ms:86400000}",
+               initialDelayString = "${dmas.pek.renewal-initial-delay-ms:86400000}")
+    public void scheduledRenewal() {
+        if (!autoRenewal) return;
+        if (!server.hasActiveSession()) {
+            log.debug("[DMAS-KEXS] Renouvellement ignore : aucune session membre");
+            return;
+        }
+        // ATTENTION : getActiveMemberGroupId() retourne le DE2 du sign-on
+        // (Group Sign-on ID, ex. 40260), qui identifie le membre sur le
+        // RESEAU. La KEK, elle, est indexee sur le member_group_id INTERNE
+        // (ex. TESTGRP01). Deux notions distinctes aux noms proches.
+        log.info("[DMAS-KEXS] Renouvellement periodique de la PEK (system generated)");
+        deliverSpontaneous(defaultMgid);
+    }
+
     /** Genere, chiffre et pousse la cle dans un 0800 DE70=161. */
     private void deliver(String mgid, ISOMsg solicitation) throws Exception {
         McDmasKek kek = kekRepo.findByMemberGroupId(mgid).orElse(null);
@@ -126,19 +180,29 @@ public class McDmasKeyDelivery {
         String de48 = keb.buildDe48();
         keb.logDetail("0800/161 envoye (DE48)");
 
+        // DE2 : identifiant du membre SUR LE RESEAU (Group Sign-on ID),
+        // distinct de mgid qui indexe les cles en base.
+        String de2 = server.getActiveMemberGroupId();
+        if (de2 == null || de2.isBlank()) de2 = mgid;
+
         String stan = net.generateStan();
         ISOMsg m = new ISOMsg();
         m.setPackager(net.getPackager());
         m.setMTI("0800");
-        m.set(2,  mgid);
+        m.set(2,  de2);
         m.set(7,  new SimpleDateFormat("MMddHHmmss").format(new Date()));
         m.set(11, stan);
         m.set(33, FORWARDING_ID);
         m.set(48, de48);
-        if (solicitation.hasField(63)) m.set(63, solicitation.getString(63));
+        if (solicitation != null && solicitation.hasField(63)) {
+            m.set(63, solicitation.getString(63));
+        } else {
+            m.set(63, "BNET" + net.generateStan());
+        }
         m.set(70, "161");
 
-        log.info("[DMAS-KEXS] Livraison de la cle : 0800 DE70=161 STAN={}", stan);
+        log.info("[DMAS-KEXS] Livraison de la cle ({}) : 0800 DE70=161 STAN={}",
+                solicitation != null ? "sur sollicitation" : "spontanee", stan);
         ISOMsg resp = server.pushAndWait(m, timeoutSeconds);
 
         String rc = net.safeGet(resp, 39);
@@ -173,10 +237,13 @@ public class McDmasKeyDelivery {
             try {
                 Thread.sleep(DELAY_BEFORE_ACK_MS);
 
+                String de2 = server.getActiveMemberGroupId();
+                if (de2 == null || de2.isBlank()) de2 = mgid;
+
                 ISOMsg m = new ISOMsg();
                 m.setPackager(net.getPackager());
                 m.setMTI("0820");
-                m.set(2,  mgid);
+                m.set(2,  de2);
                 m.set(7,  new SimpleDateFormat("MMddHHmmss").format(new Date()));
                 m.set(11, delivery.getString(11));   // meme STAN que la livraison
                 m.set(33, FORWARDING_ID);

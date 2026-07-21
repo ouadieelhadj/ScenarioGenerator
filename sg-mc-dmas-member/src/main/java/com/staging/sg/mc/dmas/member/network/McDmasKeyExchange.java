@@ -38,9 +38,8 @@ import java.util.Map;
  *    arrive plus tard sur le thread listener. D'ou la machine a etats
  *    PENDING -> RECEIVED -> ACTIVE.
  *
- * 2. PUSH PAR LE MEMBRE (161 direct) — {@link #exchangePek}, l'existant :
- *    le membre genere lui-meme la cle et la pousse au reseau. Conserve
- *    en attendant que les specifications DMAS tranchent.
+ * 2. PUSH PAR LE MEMBRE (161 direct) — {@link #exchangePek} :
+ *    NON CONFORME AUX SPECIFICATIONS. Voir la note sur la methode.
  *
  * Une troisieme voie, l'injection manuelle par REST, mene a la meme
  * table (voir McDmasKeyInjectionController).
@@ -116,6 +115,8 @@ public class McDmasKeyExchange {
         req.set(2,  mgid);
         req.set(7,  dt);
         req.set(11, stan);
+        // DE33 : c'est lui qui identifie le demandeur pour le reseau
+        // (specifications p.154 : "the customer identified in DE 33").
         req.set(33, FORWARDING_ID);
         req.set(63, "BNET" + net.generateStan());
         req.set(70, DE70_KEY_SOLICITATION);
@@ -150,7 +151,10 @@ public class McDmasKeyExchange {
      */
     public String handleKeyDelivery(ISOMsg msg) {
         try {
-            String mgid = msg.hasField(2) ? msg.getString(2) : defaultMgid;
+            // La KEK est indexee sur NOTRE member_group_id (dmas.member-group-id),
+            // pas sur le DE2 du message : celui-ci porte le Group Sign-on ID,
+            // un identifiant RESEAU (ex. 40260) et non la cle de la base.
+            String mgid = defaultMgid;
             String de48 = net.safeGet(msg, 48);
             if (de48 == null || de48.isBlank()) {
                 log.error("[DMAS-KEX] 0800/161 sans DE48 — rejet");
@@ -219,7 +223,7 @@ public class McDmasKeyExchange {
      */
     public void handleKeyAcknowledgement(ISOMsg msg) {
         try {
-            String mgid = msg.hasField(2) ? msg.getString(2) : defaultMgid;
+            String mgid = defaultMgid;   // cle locale, cf. handleKeyDelivery
 
             McDmasMemberKey recue = acqKeyRepo
                     .findByMemberGroupIdAndKeyTypeAndStatus(mgid, "PEK", "RECEIVED")
@@ -247,9 +251,29 @@ public class McDmasKeyExchange {
     }
 
     // ====================================================================
-    //  MECANISME EXISTANT — le membre genere et pousse la cle
+    //  MECANISME NON CONFORME — le membre genere et pousse la cle
     // ====================================================================
 
+    /**
+     * Le membre genere lui-meme la PEK et la pousse au reseau.
+     *
+     * NON CONFORME AUX SPECIFICATIONS DMAS. Le guide decrit deux flux
+     * (p.154 et p.157) et, dans les DEUX, c'est le RESEAU qui genere et
+     * distribue la cle :
+     *
+     *   "customer generated"  le client SOLLICITE, le reseau livre
+     *   "system generated"    le reseau livre spontanement, toutes les 24 h
+     *
+     * Le qualificatif "customer generated" porte sur la DEMANDE, pas sur
+     * la cle — c'est ce qui avait induit en erreur.
+     *
+     * Conserve car utile en test : il exerce le chemin de reception du
+     * handler cote reseau (importKeyFromDe48). A ne pas utiliser contre
+     * un vrai MIP.
+     *
+     * @deprecated utiliser {@link #solicitPek} (mecanisme 162).
+     */
+    @Deprecated
     public Map<String, Object> exchangePek(String memberGroupId) throws Exception {
         return exchange(memberGroupId, "PEK", DE70_KEY_DELIVERY);
     }

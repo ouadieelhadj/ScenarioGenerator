@@ -15,6 +15,10 @@ spring:
 
 
 dmas:
+  pek:
+    auto-renewal: false
+    renewal-interval-ms: 86400000
+    renewal-initial-delay-ms: 86400000
   jpos:
     echo-interval-ms: 5000
   member-group-id: TESTGRP01

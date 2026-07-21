@@ -1,6 +1,7 @@
 package com.staging.sg.mc.dmas.mastercard.api;
 
 import com.staging.sg.common.iso.McPackagerEbcdic;
+import com.staging.sg.mc.dmas.mastercard.network.McDmasKeyDelivery;
 import com.staging.sg.mc.dmas.mastercard.network.McDmasMastercardServer;
 import org.jpos.iso.ISOMsg;
 import org.springframework.http.ResponseEntity;
@@ -33,11 +34,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class JposNetworkController {
 
     private final McDmasMastercardServer server;
+    private final McDmasKeyDelivery keyDelivery;
+
+    @org.springframework.beans.factory.annotation.Value("${dmas.member-group:TESTGRP01}")
+    private String defaultMgid;
     private final McPackagerEbcdic packager = new McPackagerEbcdic();
     private final AtomicInteger stanSeq = new AtomicInteger(900001);
 
-    public JposNetworkController(McDmasMastercardServer server) {
+    public JposNetworkController(McDmasMastercardServer server,
+                                 McDmasKeyDelivery keyDelivery) {
         this.server = server;
+        this.keyDelivery = keyDelivery;
     }
 
     /** Etat de la liaison avec le membre. */
@@ -101,6 +108,44 @@ public class JposNetworkController {
             }
             return ResponseEntity.ok(r);
 
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Declenche une livraison de PEK spontanee — flux "system generated"
+     * des specifications (p.157), celui qui s'execute normalement toutes
+     * les 24 heures.
+     *
+     *   POST /api/admin/dmas/jpos/push/pek
+     *
+     * Le renouvellement automatique est pilote par les proprietes
+     * dmas.pek.auto-renewal et dmas.pek.renewal-interval-ms ; cet
+     * endpoint permet de le declencher a la demande pour les tests.
+     */
+    @PostMapping("/push/pek")
+    public ResponseEntity<?> pushPek(
+            @RequestParam(required = false) String memberGroupId) {
+        try {
+            if (!server.hasActiveSession()) {
+                return ResponseEntity.badRequest().body(Map.of(
+                        "error", "Pas de session membre active — le membre doit faire un sign-on"));
+            }
+            // Par defaut le member_group_id INTERNE (celui qui indexe les
+            // cles en base), et non getActiveMemberGroupId() qui retourne
+            // le DE2 du sign-on — un identifiant reseau, notion distincte.
+            String mgid = (memberGroupId != null && !memberGroupId.isBlank())
+                    ? memberGroupId : defaultMgid;
+
+            keyDelivery.deliverSpontaneous(mgid);
+
+            Map<String, Object> r = new LinkedHashMap<>();
+            r.put("flux", "system generated");
+            r.put("member_group_id", mgid);
+            r.put("success", true);
+            r.put("note", "Livraison lancee : 0800/161 puis 0820/161 apres accuse du membre");
+            return ResponseEntity.ok(r);
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
         }

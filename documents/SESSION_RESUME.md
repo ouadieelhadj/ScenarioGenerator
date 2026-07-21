@@ -2429,3 +2429,83 @@ Tous prennent `<login> <password>` en parametres optionnels
 4. **`SessionOrchestrator`** utilise encore le mecanisme ephemere
    (`McDmasNetworkManager`, `@Deprecated`).
 5. **TR-31 (163)** non implemente — specification complete en section 24.3.
+
+---
+
+### 26.8 FLUX SYSTEM GENERATED + PIEGE DES DEUX IDENTIFIANTS (2026-07-21)
+
+#### Ce que disent les specifications (p.154 et p.157)
+
+Les deux flux decrits font **distribuer la cle par le RESEAU** :
+
+    customer generated  le client SOLLICITE (0800/162), le reseau livre
+    system generated    le reseau livre spontanement, toutes les 24 h
+
+**Piege de vocabulaire** : "customer generated" qualifie la DEMANDE, pas la
+cle. C'est ce qui avait fait croire que le membre devait generer la PEK.
+
+Consequence : `exchangePek` (le membre pousse) est marque `@Deprecated`
+NON CONFORME. Conserve car il exerce le chemin de reception du handler
+(`importKeyFromDe48`), mais a ne pas utiliser contre un vrai MIP.
+
+Autres precisions tirees des specifications :
+- **DE33** identifie le demandeur dans le 0800 de sollicitation
+- **DE2** porte l'ID du client dans le 0800 de livraison
+- la cle voyage "in DE 48 **or DE 110**" — les deux transports
+- le 0820 peut aussi "advise of the failure", pas seulement le succes
+
+#### Renouvellement automatique
+
+`McDmasKeyDelivery.scheduledRenewal()` — `@Scheduled`, desactive par
+defaut. Proprietes dans l'`application.yml` du module mastercard :
+
+    dmas:
+      pek:
+        auto-renewal: false
+        renewal-interval-ms: 86400000        # 24 h
+        renewal-initial-delay-ms: 86400000
+
+Declenchement manuel pour les tests :
+
+    POST /api/admin/dmas/jpos/push/pek
+
+#### PIEGE : DEUX IDENTIFIANTS AUX NOMS PROCHES
+
+C'est la cause de l'echec "KEK absente pour 40260" rencontre en test.
+
+| Identifiant | Valeur | Role |
+|---|---|---|
+| `member_group_id` | `TESTGRP01` | **cle de recherche EN BASE** (KEK, PEK) |
+| Group Sign-on ID | `40260` | identifiant du membre **SUR LE RESEAU**, porte par le DE2 |
+
+**REGLE : chaque cote cherche ses cles avec SON identifiant local.**
+Ne jamais utiliser le DE2 d'un message recu comme cle de recherche.
+
+    cote membre  ->  dmas.member-group-id  (defaut TESTGRP01)
+    cote reseau  ->  dmas.member-group     (defaut TESTGRP01)
+    DE2 emis     ->  server.getActiveMemberGroupId() / group-signon-id
+
+Deux erreurs successives ont ete commises avant d'arriver la :
+1. `deliverSpontaneous` prenait `getActiveMemberGroupId()` (= 40260) pour
+   chercher la KEK cote reseau
+2. puis, une fois le DE2 corrige a 40260, `handleKeyDelivery` cherchait la
+   KEK cote membre avec ce meme DE2
+
+#### Resultat du test des trois mecanismes
+
+`bash /f/MoneyCore/mc-sms/test-key-162.sh` purge la PEK avant chaque
+mecanisme et verifie qu'il y a bien 2 cles ACTIVE pour 1 seul KCV distinct.
+
+    1. sollicitation 162   KCV=663E3E   OK
+    2. system generated    KCV=593002   OK
+    3. injection manuelle  KCV=43A186   OK
+
+Les KCV 1 et 2 changent a chaque execution (cle generee aleatoirement par
+le reseau) ; le 3 vaut toujours 43A186, la cle injectee etant fixe.
+
+#### Note de configuration
+
+L'`application.yml` du module mastercard declare `dmas.member-group-id`
+alors que le code lit `dmas.member-group` (sans `-id`). Cela fonctionne
+par le defaut `TESTGRP01`, mais la propriete n'est pas reellement lue.
+A uniformiser.
