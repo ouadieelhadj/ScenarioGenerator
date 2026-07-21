@@ -1,6 +1,7 @@
 package com.staging.sg.mc.dmas.mastercard.api;
 
 import com.staging.sg.common.iso.McPackagerEbcdic;
+import com.staging.sg.common.service.McDmasInterfaceService;
 import com.staging.sg.mc.dmas.mastercard.network.McDmasKeyDelivery;
 import com.staging.sg.mc.dmas.mastercard.network.McDmasMastercardServer;
 import org.jpos.iso.ISOMsg;
@@ -36,26 +37,48 @@ public class JposNetworkController {
     private final McDmasMastercardServer server;
     private final McDmasKeyDelivery keyDelivery;
 
-    @org.springframework.beans.factory.annotation.Value("${dmas.member-group:TESTGRP01}")
-    private String defaultMgid;
+    private final McDmasInterfaceService iface;
     private final McPackagerEbcdic packager = new McPackagerEbcdic();
     private final AtomicInteger stanSeq = new AtomicInteger(900001);
 
     public JposNetworkController(McDmasMastercardServer server,
-                                 McDmasKeyDelivery keyDelivery) {
+                                 McDmasKeyDelivery keyDelivery,
+                                 McDmasInterfaceService iface) {
         this.server = server;
         this.keyDelivery = keyDelivery;
+        this.iface = iface;
     }
 
     /** Etat de la liaison avec le membre. */
     @GetMapping("/status")
-    public ResponseEntity<?> status() {
+    public ResponseEntity<?> status(@RequestParam(required = false) String bank) {
+        if (bank == null && iface.isMulti()) {
+            Map<String, Object> all = new LinkedHashMap<>();
+            for (String b : iface.bankCodes()) all.put(b, statusOf(b));
+            return ResponseEntity.ok(all);
+        }
+        return ResponseEntity.ok(statusOf(bank));
+    }
+
+    private Map<String, Object> statusOf(String bank) {
+        var cfg = iface.byBank(bank);
         Map<String, Object> r = new LinkedHashMap<>();
+        r.put("interface",       cfg.getIdInterface());
+        r.put("bank_code",       cfg.getBankCode());
+        r.put("label",           cfg.getLabel());
+        r.put("status",          iface.status(cfg.getBankCode()));
         r.put("role",            "SERVER");
-        r.put("session_active",  server.hasActiveSession());
-        r.put("member_group_id", server.getActiveMemberGroupId());
-        r.put("note", "Le sign-on est initie par le membre (port 8084)");
-        return ResponseEntity.ok(r);
+        r.put("iso_port",        cfg.getIsoPort());
+        r.put("session_active",  server.hasActiveSession(cfg.getBankCode()));
+        r.put("last_member_de2", server.getActiveMemberGroupId(cfg.getBankCode()));
+        r.put("note", "Le sign-on est initie par le membre");
+        return r;
+    }
+
+    /** Membres connectes sur chaque serveur. */
+    @GetMapping("/sessions")
+    public ResponseEntity<?> sessions() {
+        return ResponseEntity.ok(server.sessions());
     }
 
     /**
@@ -72,9 +95,10 @@ public class JposNetworkController {
     @PostMapping("/push/network")
     public ResponseEntity<?> pushNetwork(@RequestParam String de70,
                                          @RequestParam(defaultValue = "true") boolean wait,
-                                         @RequestParam(required = false) String de48) {
+                                         @RequestParam(required = false) String de48,
+                                         @RequestParam(required = false) String bank) {
         try {
-            if (!server.hasActiveSession()) {
+            if (!server.hasActiveSession(bank)) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "error", "Pas de session membre active — le membre doit faire un sign-on"));
             }
@@ -83,10 +107,10 @@ public class JposNetworkController {
             ISOMsg m = new ISOMsg();
             m.setPackager(packager);
             m.setMTI("0800");
-            m.set(2,  server.getActiveMemberGroupId());
+            m.set(2,  server.getActiveMemberGroupId(bank));
             m.set(7,  new SimpleDateFormat("MMddHHmmss").format(new Date()));
             m.set(11, stan);
-            m.set(33, "011901");
+            m.set(33, iface.fwdIdDe33());
             if (de48 != null && !de48.isBlank()) m.set(48, de48);
             m.set(70, de70);
 
@@ -96,13 +120,13 @@ public class JposNetworkController {
             r.put("stan",     stan);
 
             if (wait) {
-                ISOMsg resp = server.pushAndWait(m, 15);
+                ISOMsg resp = server.pushAndWait(bank, m, 15);
                 String rc = resp.hasField(39) ? resp.getString(39) : "??";
                 r.put("mti_received", resp.getMTI());
                 r.put("de039",        rc);
                 r.put("success",      "00".equals(rc));
             } else {
-                server.pushOnActiveSession(m);
+                server.pushOnActiveSession(bank, m);
                 r.put("success", true);
                 r.put("note",    "emis sans attente de reponse");
             }
@@ -126,22 +150,25 @@ public class JposNetworkController {
      */
     @PostMapping("/push/pek")
     public ResponseEntity<?> pushPek(
-            @RequestParam(required = false) String memberGroupId) {
+            @RequestParam(required = false) String bank,
+            @RequestParam(required = false) String memberDe2) {
         try {
-            if (!server.hasActiveSession()) {
+            if (!server.hasActiveSession(bank)) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "error", "Pas de session membre active — le membre doit faire un sign-on"));
             }
-            // Par defaut le member_group_id INTERNE (celui qui indexe les
-            // cles en base), et non getActiveMemberGroupId() qui retourne
-            // le DE2 du sign-on — un identifiant reseau, notion distincte.
-            String mgid = (memberGroupId != null && !memberGroupId.isBlank())
-                    ? memberGroupId : defaultMgid;
+            // Le DE2 designe le membre destinataire ; a defaut, le dernier
+            // membre vu sur ce serveur. On en deduit son member_group_id,
+            // qui indexe les cles en base — notion distincte du DE2.
+            String de2 = (memberDe2 != null && !memberDe2.isBlank())
+                    ? memberDe2 : server.getActiveMemberGroupId(bank);
+            String mgid = iface.memberGroupIdForDe2(de2);
 
-            keyDelivery.deliverSpontaneous(mgid);
+            keyDelivery.deliverSpontaneous(bank, mgid, de2);
 
             Map<String, Object> r = new LinkedHashMap<>();
             r.put("flux", "system generated");
+            r.put("member_de2", de2);
             r.put("member_group_id", mgid);
             r.put("success", true);
             r.put("note", "Livraison lancee : 0800/161 puis 0820/161 apres accuse du membre");
@@ -157,9 +184,10 @@ public class JposNetworkController {
      */
     @PostMapping("/push/advice")
     public ResponseEntity<?> pushAdvice(@RequestParam String de70,
-                                        @RequestParam(required = false) String de48) {
+                                        @RequestParam(required = false) String de48,
+                                        @RequestParam(required = false) String bank) {
         try {
-            if (!server.hasActiveSession()) {
+            if (!server.hasActiveSession(bank)) {
                 return ResponseEntity.badRequest().body(Map.of(
                         "error", "Pas de session membre active"));
             }
@@ -168,14 +196,14 @@ public class JposNetworkController {
             ISOMsg m = new ISOMsg();
             m.setPackager(packager);
             m.setMTI("0820");
-            m.set(2,  server.getActiveMemberGroupId());
+            m.set(2,  server.getActiveMemberGroupId(bank));
             m.set(7,  new SimpleDateFormat("MMddHHmmss").format(new Date()));
             m.set(11, stan);
-            m.set(33, "011901");
+            m.set(33, iface.fwdIdDe33());
             if (de48 != null && !de48.isBlank()) m.set(48, de48);
             m.set(70, de70);
 
-            server.pushOnActiveSession(m);
+            server.pushOnActiveSession(bank, m);
             return ResponseEntity.ok(Map.of(
                     "mti_sent", "0820",
                     "de070",    de70,

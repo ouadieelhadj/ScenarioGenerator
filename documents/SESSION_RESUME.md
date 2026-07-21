@@ -2509,3 +2509,144 @@ L'`application.yml` du module mastercard declare `dmas.member-group-id`
 alors que le code lit `dmas.member-group` (sans `-id`). Cela fonctionne
 par le defaut `TESTGRP01`, mais la propriete n'est pas reellement lue.
 A uniformiser.
+
+---
+
+## 27. DMAS MULTI-BANQUE (2026-07-21)
+
+DMAS abandonne la table `networks` au profit de `mc_dmas_interface`, et
+peut desormais servir plusieurs banques. SWAM et MC SMS ne sont pas
+touches et continuent d'utiliser `networks`.
+
+### 27.1 UN SEUL PARAMETRE AU DEMARRAGE
+
+    java -jar sg-mc-dmas-member.jar --sg.interface=DMAS_BANK_A
+
+Le module lit ensuite TOUT en base : identifiants ISO, ports, cible.
+Plus aucune valeur en dur — ni `FORWARDING_ID`, ni `TESTGRP01`, ni
+`40260`. Le parametre est OBLIGATOIRE : sans lui, le module refuse de
+demarrer plutot que de tourner avec des defauts qui masqueraient une
+erreur de configuration.
+
+Une liste est acceptee, et le module pilote alors N banques dans une
+seule JVM :
+
+    --sg.interface=DMAS_BANK_A,DMAS_BANK_B
+
+Le port REST est celui de la PREMIERE interface ; les appels designent
+ensuite la banque par `?bank=022905`, optionnel en mono-banque.
+
+### 27.2 LA TABLE
+
+`mc_dmas_interface`, une ligne par banque et par Mastercard :
+
+| Colonne | Role |
+|---|---|
+| `id_interface` | passe au demarrage |
+| `bank_code` | six chiffres, format ICA, unique |
+| `acq_ica_de32` / `acq_arid` | role acquereur |
+| `iss_ica_de100` / `iss_arid` | role emetteur |
+| `fwd_id_de33` | DE33, six chiffres chez DMAS |
+| `group_signon_de2` | DE2 des 0800 |
+| `member_group_id` | cle d'indexation des cles EN BASE |
+| `host` / `rest_port` / `iso_port` | ecoute |
+| `target_host` / `target_port` | ou se connecter |
+| `status` | OFF, SIGNON, PEK_EXCHANGED, READY, SIGNOFF |
+
+`target_host` / `target_port` rendent la cible indifferente : un module
+de ce projet ou un vrai MIP, selon la valeur.
+
+    UPDATE mc_dmas_interface
+    SET target_host = '10.23.33.114', target_port = 11127
+    WHERE id_interface = 'DMAS_BANK_A';
+
+Jeu de test livre :
+
+| id_interface | bank_code | REST | ISO | cible |
+|---|---|---|---|---|
+| DMAS_BANK_A | 022905 | 8084 | — | localhost:8500 |
+| DMAS_BANK_B | 022906 | 8085 | — | localhost:8503 |
+| DMAS_MASTERCARD_1 | 002202 | 8501 | 8500 | — |
+| DMAS_MASTERCARD_2 | 002203 | 8502 | 8503 | — |
+
+### 27.3 CLOISONNEMENT DES DONNEES
+
+`bank_code` a ete ajoute aux cinq tables DMAS (`kek`, `member_keys`,
+`mastercard_keys`, `cards`, `transactions`), avec des index prefixes par
+la banque. Sans cela, deux banques partageant un `member_group_id`
+ecraseraient mutuellement leurs cles. Les donnees existantes ont ete
+rattachees a la banque A.
+
+### 27.4 N LIAISONS DANS UNE JVM
+
+**Cote membre** — `McDmasMemberClient` devient un gestionnaire. Chaque
+banque a sa `Connection` : channel, thread d'ecoute, map `pending`,
+etat `signedOn`. Les liaisons sont independantes ; si l'une tombe,
+l'autre continue.
+
+**Cote Mastercard** — `McDmasMastercardServer` ouvre un `ISOServer` par
+interface, chacun conservant les sessions des membres qui s'y
+connectent, indexees par DE2.
+
+Toutes les methodes existent en deux formes, avec et sans banque. Sans
+banque, c'est l'interface principale qui repond — les classes
+appelantes existantes n'ont pas eu a changer.
+
+### 27.5 IDENTIFICATION DU MEMBRE PAR LE DE2
+
+C'est le mecanisme central du multi-banque cote reseau :
+
+    sign-on DE2=40260
+       -> lookupByGroupSignon("40260")
+       -> banque 022905
+       -> member_group_id TESTGRP01
+       -> les cles de CETTE banque
+
+`McDmasMastercardHandler` resout la banque a chaque message via
+`memberGroupIdForDe2()`. Un meme serveur peut donc accueillir plusieurs
+membres sans melanger leurs cles.
+
+### 27.6 STATUT DES INTERFACES
+
+    OFF -> SIGNON -> PEK_EXCHANGED -> READY -> SIGNOFF -> OFF
+
+`READY` suit automatiquement `PEK_EXCHANGED`. `OFF` est pose au
+demarrage et au `@PreDestroy`. Le Mastercard peut aussi poser le statut
+d'un membre via `markStatus()`, puisqu'il constate en premier la chute
+d'une socket.
+
+### 27.7 RESULTAT DU TEST
+
+`bash scripts/test/test-dmas-multibank.sh` — deux JVM, deux couples :
+
+    JVM 1  --sg.interface=DMAS_MASTERCARD_1,DMAS_MASTERCARD_2
+    JVM 2  --sg.interface=DMAS_BANK_A,DMAS_BANK_B
+
+    [JPOS-SRV:002202] ISOServer demarre sur :8500
+    [JPOS-SRV:002203] ISOServer demarre sur :8503
+    [JPOS-SRV] 2 serveurs ISO demarres
+    2 interfaces, port REST 8084 (la premiere)
+
+    membres connectes : {"002202":["40260"], "002203":["40261"]}
+
+    cote   | member_group_id | kcv    | status
+    membre | TESTGRP01       | 4FAA98 | ACTIVE
+    reseau | TESTGRP01       | 4FAA98 | ACTIVE
+    membre | TESTGRP02       | 275866 | ACTIVE
+    reseau | TESTGRP02       | 275866 | ACTIVE
+
+    VERDICT : 4 cles ACTIVE, 2 KCV distincts
+
+Chaque banque a SA cle, partagee avec SON Mastercard. Quatre sockets
+`ESTABLISHED`, deux par couple, portees par deux processus seulement.
+
+### 27.8 CE QUI RESTE
+
+1. Une transaction 0100 ne connait pas encore la banque : `bank_code`
+   est en base mais les requetes ne le filtrent pas partout.
+2. Le `NetworkPortEnvironmentPostProcessor` ne lit que le `rest_port` de
+   la premiere interface ; suffisant, mais a garder en tete.
+3. Le renouvellement automatique 24 h n'a pas ete teste en conditions
+   reelles.
+4. `SessionOrchestrator` utilise encore `McDmasNetworkManager`
+   (`@Deprecated`, connexion ephemere).

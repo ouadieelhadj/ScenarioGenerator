@@ -5,6 +5,7 @@ import com.staging.sg.common.entity.McDmasMastercardKey;
 import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.repository.McDmasKekRepository;
 import com.staging.sg.common.repository.McDmasMastercardKeyRepository;
+import com.staging.sg.common.service.McDmasInterfaceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -23,8 +24,8 @@ import java.util.Map;
  * Trois chemins menent a la meme table `mc_dmas_mastercard_keys` :
  *
  *   1. injection manuelle   <- ce controleur
- *   2. echange 162          <- le reseau genere et pousse (a venir)
- *   3. push par le membre   <- recu par McDmasMastercardHandler (existant)
+ *   2. echange 162          <- le reseau pousse la cle (a venir)
+ *   3. push par le membre   <- McDmasKeyExchange.exchangePek (existant)
  *
  * Une transaction 0100 dechiffrera donc le PIN avec la meme cle, quelle
  * que soit la facon dont elle est arrivee.
@@ -46,13 +47,16 @@ public class McDmasKeyInjectionController {
     private final HsmService hsm;
     private final McDmasKekRepository kekRepo;
     private final McDmasMastercardKeyRepository keyRepo;
+    private final McDmasInterfaceService iface;
 
     public McDmasKeyInjectionController(HsmService hsm,
                                         McDmasKekRepository kekRepo,
-                                        McDmasMastercardKeyRepository keyRepo) {
+                                        McDmasMastercardKeyRepository keyRepo,
+                                        McDmasInterfaceService iface) {
         this.hsm = hsm;
         this.kekRepo = kekRepo;
         this.keyRepo = keyRepo;
+        this.iface = iface;
     }
 
     /**
@@ -71,9 +75,10 @@ public class McDmasKeyInjectionController {
             @RequestParam(required = false) String underZmk,
             @RequestParam(required = false) String kcv,
             @RequestParam(defaultValue = "PEK") String keyType,
-            @RequestParam(defaultValue = "TESTGRP01") String memberGroupId) {
+            @RequestParam(required = false) String bank) {
 
         Map<String, Object> r = new LinkedHashMap<>();
+        String memberGroupId = iface.memberGroupId(bank);
         try {
             if ((clear == null || clear.isBlank()) && (underZmk == null || underZmk.isBlank())) {
                 return ResponseEntity.badRequest().body(Map.of(
@@ -167,13 +172,15 @@ public class McDmasKeyInjectionController {
         }
     }
 
-    /** Etat des cles du reseau. */
+    /** Etat des cles du membre. */
     @GetMapping("/current")
     public ResponseEntity<?> current(
-            @RequestParam(defaultValue = "TESTGRP01") String memberGroupId,
+            @RequestParam(required = false) String bank,
             @RequestParam(defaultValue = "PEK") String keyType) {
 
+        String memberGroupId = iface.memberGroupId(bank);
         Map<String, Object> r = new LinkedHashMap<>();
+        r.put("bank_code", bank != null ? bank : iface.bankCode());
         r.put("member_group_id", memberGroupId);
         r.put("key_type", keyType);
         r.put("table", "mc_dmas_mastercard_keys");

@@ -7,6 +7,7 @@ import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.iso.crypto.KeyExchangeBlock;
 import com.staging.sg.common.repository.McDmasKekRepository;
 import com.staging.sg.common.repository.McDmasMemberKeyRepository;
+import com.staging.sg.common.service.McDmasInterfaceService;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOUtil;
 import org.slf4j.Logger;
@@ -69,21 +70,21 @@ public class McDmasKeyExchange {
     private final McDmasKekRepository kekRepo;
     private final McDmasMemberKeyRepository acqKeyRepo;
     private final McDmasMemberClient client;
+    private final McDmasInterfaceService iface;
 
-    @Value("${dmas.timeout-seconds:30}")    private int    timeoutSeconds;
-    @Value("${dmas.member-group-id:TESTGRP01}") private String defaultMgid;
-
-    private static final String FORWARDING_ID = "002202";
+    @Value("${dmas.timeout-seconds:30}") private int timeoutSeconds;
 
     public McDmasKeyExchange(McDmasNetworkUtil net, HsmService hsm,
                              McDmasKekRepository kekRepo,
                              McDmasMemberKeyRepository acqKeyRepo,
-                             McDmasMemberClient client) {
+                             McDmasMemberClient client,
+                             McDmasInterfaceService iface) {
         this.net = net;
         this.hsm = hsm;
         this.kekRepo = kekRepo;
         this.acqKeyRepo = acqKeyRepo;
         this.client = client;
+        this.iface = iface;
     }
 
     // ====================================================================
@@ -95,8 +96,10 @@ public class McDmasKeyExchange {
      * elle sera poussee ensuite par le reseau dans un 0800 DE70=161,
      * traite par {@link #handleKeyDelivery} depuis le thread listener.
      */
-    public Map<String, Object> solicitPek(String mgid) throws Exception {
+    public Map<String, Object> solicitPek(String bankCode) throws Exception {
         Map<String, Object> r = new LinkedHashMap<>();
+        String mgid = iface.memberGroupId(bankCode);
+        r.put("bank_code", bankCode != null ? bankCode : iface.bankCode());
 
         McDmasKek kek = kekRepo.findByMemberGroupId(mgid).orElse(null);
         if (kek == null || kek.getKekClear() == null) {
@@ -112,18 +115,18 @@ public class McDmasKeyExchange {
         ISOMsg req = new ISOMsg();
         req.setPackager(net.getPackager());
         req.setMTI("0800");
-        req.set(2,  mgid);
+        req.set(2,  iface.byBank(bankCode).getGroupSignonDe2());
         req.set(7,  dt);
         req.set(11, stan);
         // DE33 : c'est lui qui identifie le demandeur pour le reseau
         // (specifications p.154 : "the customer identified in DE 33").
-        req.set(33, FORWARDING_ID);
+        req.set(33, iface.fwdIdDe33(bankCode));
         req.set(63, "BNET" + net.generateStan());
         req.set(70, DE70_KEY_SOLICITATION);
 
         log.info("[DMAS-KEX] Sollicitation d'echange de cle (0800 DE70=162 STAN={})", stan);
 
-        ISOMsg resp = client.pushAndWait(req, timeoutSeconds);
+        ISOMsg resp = client.pushAndWait(bankCode, req, timeoutSeconds);
         String rc = net.safeGet(resp, 39);
         boolean ok = "00".equals(rc);
 
@@ -149,12 +152,12 @@ public class McDmasKeyExchange {
      *
      * @return le code DE39 a renvoyer dans le 0810
      */
-    public String handleKeyDelivery(ISOMsg msg) {
+    public String handleKeyDelivery(String bankCode, ISOMsg msg) {
         try {
             // La KEK est indexee sur NOTRE member_group_id (dmas.member-group-id),
             // pas sur le DE2 du message : celui-ci porte le Group Sign-on ID,
             // un identifiant RESEAU (ex. 40260) et non la cle de la base.
-            String mgid = defaultMgid;
+            String mgid = iface.memberGroupId(bankCode);
             String de48 = net.safeGet(msg, 48);
             if (de48 == null || de48.isBlank()) {
                 log.error("[DMAS-KEX] 0800/161 sans DE48 — rejet");
@@ -221,9 +224,9 @@ public class McDmasKeyExchange {
      * Traite le 0820 DE70=161 : le reseau confirme que la cle est
      * utilisable. Passe la cle de RECEIVED a ACTIVE et retire l'ancienne.
      */
-    public void handleKeyAcknowledgement(ISOMsg msg) {
+    public void handleKeyAcknowledgement(String bankCode, ISOMsg msg) {
         try {
-            String mgid = defaultMgid;   // cle locale, cf. handleKeyDelivery
+            String mgid = iface.memberGroupId(bankCode);   // cle locale, cf. handleKeyDelivery
 
             McDmasMemberKey recue = acqKeyRepo
                     .findByMemberGroupIdAndKeyTypeAndStatus(mgid, "PEK", "RECEIVED")
@@ -244,6 +247,8 @@ public class McDmasKeyExchange {
             acqKeyRepo.save(recue);
             log.info("[DMAS-KEX] PEK ACTIVE (KCV={}) — utilisable pour le chiffrement PIN",
                     recue.getKcv());
+            iface.setStatus(bankCode != null ? bankCode : iface.bankCode(),
+                    McDmasInterfaceService.PEK_EXCHANGED);
 
         } catch (Exception e) {
             log.error("[DMAS-KEX] Erreur au traitement du 0820 : {}", e.getMessage(), e);
@@ -308,7 +313,7 @@ public class McDmasKeyExchange {
         req.set(2,  mgid);
         req.set(7,  dt);
         req.set(11, stan);
-        req.set(33, FORWARDING_ID);
+        req.set(33, iface.fwdIdDe33());
         req.set(48, de048);
         req.set(63, banknetRef);
         req.set(70, de070);
@@ -317,7 +322,7 @@ public class McDmasKeyExchange {
         log.info("[DMAS-KEX] DE2  Member Group ID       = {}", mgid);
         log.info("[DMAS-KEX] DE7  Transmission DateTime = {}", dt);
         log.info("[DMAS-KEX] DE11 STAN                  = {}", stan);
-        log.info("[DMAS-KEX] DE33 Forwarding Inst ID    = {}", FORWARDING_ID);
+        log.info("[DMAS-KEX] DE33 Forwarding Inst ID    = {}", iface.fwdIdDe33());
         log.info("[DMAS-KEX] DE63 Network Data          = {}", banknetRef);
         keb.logDetail("0800 envoye (DE48)");
 
@@ -368,7 +373,7 @@ public class McDmasKeyExchange {
             advice.set(2,  mgid);
             advice.set(7,  new SimpleDateFormat("MMddHHmmss").format(new Date()));
             advice.set(11, net.generateStan());
-            advice.set(33, FORWARDING_ID);
+            advice.set(33, iface.fwdIdDe33());
             advice.set(63, banknetRef);
             advice.set(70, adviceDe70);
 

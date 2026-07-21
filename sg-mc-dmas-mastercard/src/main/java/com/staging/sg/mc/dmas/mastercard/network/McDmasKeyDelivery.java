@@ -7,6 +7,7 @@ import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.iso.crypto.KeyExchangeBlock;
 import com.staging.sg.common.repository.McDmasKekRepository;
 import com.staging.sg.common.repository.McDmasMastercardKeyRepository;
+import com.staging.sg.common.service.McDmasInterfaceService;
 import org.jpos.iso.ISOMsg;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -56,16 +57,12 @@ public class McDmasKeyDelivery {
     /** Delai avant l'acquittement 0820, apres le 0810 du membre. */
     private static final long DELAY_BEFORE_ACK_MS = 400;
 
-    private static final String FORWARDING_ID = "011901";
-
     private final McDmasNetworkUtil net;
     private final HsmService hsm;
     private final McDmasKekRepository kekRepo;
     private final McDmasMastercardKeyRepository issKeyRepo;
     private final McDmasMastercardServer server;
-
-    @Value("${dmas.member-group:TESTGRP01}")
-    private String defaultMgid;
+    private final McDmasInterfaceService iface;
 
     @Value("${dmas.timeout-seconds:30}")
     private int timeoutSeconds;
@@ -81,12 +78,14 @@ public class McDmasKeyDelivery {
     public McDmasKeyDelivery(McDmasNetworkUtil net, HsmService hsm,
                              McDmasKekRepository kekRepo,
                              McDmasMastercardKeyRepository issKeyRepo,
-                             @Lazy McDmasMastercardServer server) {
+                             @Lazy McDmasMastercardServer server,
+                             McDmasInterfaceService iface) {
         this.net = net;
         this.hsm = hsm;
         this.kekRepo = kekRepo;
         this.issKeyRepo = issKeyRepo;
         this.server = server;
+        this.iface = iface;
     }
 
     public String getLastKcv()         { return lastKcv; }
@@ -101,11 +100,18 @@ public class McDmasKeyDelivery {
      * Execute dans un thread separe pour ne pas bloquer le listener.
      */
     public void deliverAsync(ISOMsg solicitation) {
-        String mgid = solicitation.hasField(2) ? solicitation.getString(2) : defaultMgid;
+        deliverAsync(null, solicitation);
+    }
+
+    /** Livraison sur sollicitation, pour une interface Mastercard donnee. */
+    public void deliverAsync(String bankCode, ISOMsg solicitation) {
+        // Le DE2 identifie le MEMBRE : on remonte a son member_group_id.
+        String de2  = solicitation.hasField(2) ? solicitation.getString(2) : null;
+        String mgid = iface.memberGroupIdForDe2(de2);
         Thread t = new Thread(() -> {
             try {
                 Thread.sleep(DELAY_BEFORE_KEY_MS);
-                deliver(mgid, solicitation);
+                deliver(bankCode, mgid, de2, solicitation);
             } catch (Exception e) {
                 log.error("[DMAS-KEXS] Echec de la livraison : {}", e.getMessage(), e);
             }
@@ -120,9 +126,14 @@ public class McDmasKeyDelivery {
      * par l'endpoint de declenchement manuel.
      */
     public void deliverSpontaneous(String mgid) {
+        deliverSpontaneous(null, mgid, null);
+    }
+
+    /** Livraison spontanee vers un membre precis. */
+    public void deliverSpontaneous(String bankCode, String mgid, String de2) {
         Thread t = new Thread(() -> {
             try {
-                deliver(mgid, null);
+                deliver(bankCode, mgid, de2, null);
             } catch (Exception e) {
                 log.error("[DMAS-KEXS] Echec de la livraison spontanee : {}", e.getMessage(), e);
             }
@@ -151,11 +162,12 @@ public class McDmasKeyDelivery {
         // RESEAU. La KEK, elle, est indexee sur le member_group_id INTERNE
         // (ex. TESTGRP01). Deux notions distinctes aux noms proches.
         log.info("[DMAS-KEXS] Renouvellement periodique de la PEK (system generated)");
-        deliverSpontaneous(defaultMgid);
+        deliverSpontaneous(iface.memberGroupId());
     }
 
     /** Genere, chiffre et pousse la cle dans un 0800 DE70=161. */
-    private void deliver(String mgid, ISOMsg solicitation) throws Exception {
+    private void deliver(String bankCode, String mgid, String memberDe2,
+                         ISOMsg solicitation) throws Exception {
         McDmasKek kek = kekRepo.findByMemberGroupId(mgid).orElse(null);
         if (kek == null || kek.getKekClear() == null) {
             log.error("[DMAS-KEXS] KEK absente pour {} — livraison impossible", mgid);
@@ -182,7 +194,8 @@ public class McDmasKeyDelivery {
 
         // DE2 : identifiant du membre SUR LE RESEAU (Group Sign-on ID),
         // distinct de mgid qui indexe les cles en base.
-        String de2 = server.getActiveMemberGroupId();
+        String de2 = (memberDe2 != null && !memberDe2.isBlank())
+                ? memberDe2 : server.getActiveMemberGroupId(bankCode);
         if (de2 == null || de2.isBlank()) de2 = mgid;
 
         String stan = net.generateStan();
@@ -192,7 +205,7 @@ public class McDmasKeyDelivery {
         m.set(2,  de2);
         m.set(7,  new SimpleDateFormat("MMddHHmmss").format(new Date()));
         m.set(11, stan);
-        m.set(33, FORWARDING_ID);
+        m.set(33, iface.fwdIdDe33());
         m.set(48, de48);
         if (solicitation != null && solicitation.hasField(63)) {
             m.set(63, solicitation.getString(63));
@@ -203,7 +216,7 @@ public class McDmasKeyDelivery {
 
         log.info("[DMAS-KEXS] Livraison de la cle ({}) : 0800 DE70=161 STAN={}",
                 solicitation != null ? "sur sollicitation" : "spontanee", stan);
-        ISOMsg resp = server.pushAndWait(m, timeoutSeconds);
+        ISOMsg resp = server.pushAndWait(bankCode, m, timeoutSeconds);
 
         String rc = net.safeGet(resp, 39);
         boolean ok = "00".equals(rc);
@@ -228,16 +241,18 @@ public class McDmasKeyDelivery {
         }
 
         // Acquittement 0820, emis meme en cas de rejet (cf. trace)
-        sendAcknowledgement(mgid, m, ok);
+        sendAcknowledgement(bankCode, mgid, de2, m, ok);
     }
 
     /** Envoie le 0820 DE70=161 : la cle devient utilisable cote membre. */
-    private void sendAcknowledgement(String mgid, ISOMsg delivery, boolean ok) {
+    private void sendAcknowledgement(String bankCode, String mgid, String memberDe2,
+                                     ISOMsg delivery, boolean ok) {
         Thread t = new Thread(() -> {
             try {
                 Thread.sleep(DELAY_BEFORE_ACK_MS);
 
-                String de2 = server.getActiveMemberGroupId();
+                String de2 = (memberDe2 != null && !memberDe2.isBlank())
+                        ? memberDe2 : server.getActiveMemberGroupId(bankCode);
                 if (de2 == null || de2.isBlank()) de2 = mgid;
 
                 ISOMsg m = new ISOMsg();
@@ -246,11 +261,11 @@ public class McDmasKeyDelivery {
                 m.set(2,  de2);
                 m.set(7,  new SimpleDateFormat("MMddHHmmss").format(new Date()));
                 m.set(11, delivery.getString(11));   // meme STAN que la livraison
-                m.set(33, FORWARDING_ID);
+                m.set(33, iface.fwdIdDe33());
                 if (delivery.hasField(63)) m.set(63, delivery.getString(63));
                 m.set(70, "161");
 
-                server.pushOnActiveSession(m);
+                server.pushOnActiveSession(bankCode, m);
                 log.info("[DMAS-KEXS] Acquittement envoye : 0820 DE70=161 STAN={} (membre ok={})",
                         m.getString(11), ok);
 

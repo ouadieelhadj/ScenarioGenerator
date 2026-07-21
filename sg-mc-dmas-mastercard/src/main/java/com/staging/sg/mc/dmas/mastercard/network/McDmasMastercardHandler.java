@@ -12,6 +12,7 @@ import com.staging.sg.common.repository.McDmasCardRepository;
 import com.staging.sg.common.repository.McDmasKekRepository;
 import com.staging.sg.common.repository.McDmasMastercardKeyRepository;
 import com.staging.sg.common.repository.McDmasTransactionRepository;
+import com.staging.sg.common.service.McDmasInterfaceService;
 import org.jpos.iso.ISOException;
 import org.jpos.iso.ISOMsg;
 import org.slf4j.Logger;
@@ -55,8 +56,20 @@ public class McDmasMastercardHandler {
     private final McDmasCardRepository cardRepo;
     private final McDmasTransactionRepository txRepo;
 
-    @Value("${dmas.member-group:TESTGRP01}")
-    private String memberGroup;
+    private final McDmasInterfaceService iface;
+
+    /**
+     * Cle d'indexation des cles, deduite du DE2 du message recu.
+     *
+     * Le DE2 d'un 0800 porte le Group Sign-on ID du membre (ex. 40260) ;
+     * on remonte a sa banque, donc a son member_group_id (TESTGRP01).
+     * C'est ce qui permet a un Mastercard de servir plusieurs banques
+     * sans melanger leurs cles.
+     */
+    private String memberGroup(ISOMsg msg) {
+        String de2 = (msg != null && msg.hasField(2)) ? msg.getString(2) : null;
+        return iface.memberGroupIdForDe2(de2);
+    }
 
     private final AtomicLong msgCount = new AtomicLong(0);
 
@@ -64,7 +77,8 @@ public class McDmasMastercardHandler {
                                    McDmasKekRepository kekRepo, KeyStoreRepository keyStoreRepo,
                                    McDmasMastercardKeyRepository issKeyRepo,
                                    McDmasCardRepository cardRepo,
-                                   McDmasTransactionRepository txRepo) {
+                                   McDmasTransactionRepository txRepo,
+                                   McDmasInterfaceService iface) {
         this.net = net;
         this.hsm = hsm;
         this.kekRepo = kekRepo;
@@ -72,6 +86,7 @@ public class McDmasMastercardHandler {
         this.issKeyRepo = issKeyRepo;
         this.cardRepo = cardRepo;
         this.txRepo = txRepo;
+        this.iface = iface;
     }
 
     public long getMessageCount() { return msgCount.get(); }
@@ -139,8 +154,8 @@ public class McDmasMastercardHandler {
                     ? keb.kcv.substring(0, 6) : keb.kcv;
             int keyLen = keyUnderKekHex.length() / 2;
 
-            McDmasKek kek = kekRepo.findByMemberGroupId(memberGroup)
-                    .orElseThrow(() -> new IllegalStateException("KEK introuvable " + memberGroup));
+            McDmasKek kek = kekRepo.findByMemberGroupId(memberGroup(request))
+                    .orElseThrow(() -> new IllegalStateException("KEK introuvable " + memberGroup(request)));
 
             HsmService.KeyResult imp =
                     hsm.importWorkingKey(keyType, keyUnderKekHex, kek.getKekClear(), keyLen);
@@ -152,9 +167,9 @@ public class McDmasMastercardHandler {
             if (!kcvOk) return "30";   // format error / KCV mismatch
 
             McDmasMastercardKey ik = issKeyRepo
-                    .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup, keyType, "ACTIVE")
+                    .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup(request), keyType, "ACTIVE")
                     .orElseGet(McDmasMastercardKey::new);
-            ik.setMemberGroupId(memberGroup);
+            ik.setMemberGroupId(memberGroup(request));
             ik.setKeyType(keyType);
             ik.setKeyLength(keyLen);
             ik.setKeyUnderLmk(imp.keyUnderLmkHex);
@@ -232,7 +247,7 @@ public class McDmasMastercardHandler {
             if (request.hasField(52)) {
                 byte[] pinBlock = request.getBytes(52);
                 McDmasMastercardKey pek = issKeyRepo
-                        .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup, "PEK", "ACTIVE")
+                        .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup(request), "PEK", "ACTIVE")
                         .orElse(null);
                 if (pek == null) {
                     log.warn("[DMAS-ISS] PEK introuvable pour dechiffrer le PIN -> 96");

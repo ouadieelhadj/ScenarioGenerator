@@ -1,15 +1,14 @@
 package com.staging.sg.mc.dmas.member.network;
 
-import com.staging.sg.common.entity.NetworkRef;
+import com.staging.sg.common.entity.McDmasInterface;
 import com.staging.sg.common.iso.McDmasLengthChannel;
 import com.staging.sg.common.iso.McPackagerEbcdic;
-import com.staging.sg.common.repository.NetworkRepository;
+import com.staging.sg.common.service.McDmasInterfaceService;
 import jakarta.annotation.PreDestroy;
 import org.jpos.iso.ISOMsg;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -18,180 +17,187 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * Client jPOS cote MEMBRE (notre banque) vers le reseau Mastercard DMAS.
- *
- * LIAISON PERMANENTE : le membre ouvre la socket, fait le sign-on, et la
- * garde ouverte. Un thread d'ecoute lit en continu tout ce qui arrive —
- * reponses correlees par STAN, et messages pousses par le reseau.
- *
- * Meme schema que SwamJposClient et McSmsJposClient.
+ * Liaisons permanentes du MEMBRE vers le reseau Mastercard DMAS.
  *
  * ------------------------------------------------------------------
- *  REMPLACE McDmasMemberServer
+ *  UNE LIAISON PAR BANQUE, DANS LA MEME JVM
  * ------------------------------------------------------------------
- * Avant, le membre hebergeait un ISOServer et attendait que le module
- * mastercard vienne s'y connecter — l'inverse de la realite et des deux
- * autres reseaux.
+ *     --sg.interface=DMAS_BANK_A                 une liaison
+ *     --sg.interface=DMAS_BANK_A,DMAS_BANK_B     deux liaisons
  *
- * L'API PUBLIQUE EST CONSERVEE A L'IDENTIQUE pour que McDmasKeyExchange,
- * McDmasAuthorization et LoadTestService n'aient pas a changer :
+ * Chaque banque possede sa PROPRE connexion, avec son channel, son
+ * thread d'ecoute, sa correlation par STAN et son etat de sign-on :
  *
- *     start(), stop(), hasActiveSession(), getActiveMemberGroupId(),
- *     pushAndWait(msg, timeout), pushOnActiveSession(msg)
+ *     022905 -> channel, listener, pending, signedOn --socket--> MC_1:8500
+ *     022906 -> channel, listener, pending, signedOn --socket--> MC_2:8503
  *
- * "push" garde son sens : emettre vers l'autre extremite. Seule la
- * mecanique sous-jacente change (socket sortante au lieu d'entrante).
+ * Les sockets restent ouvertes en continu et sont independantes : si
+ * l'une tombe, l'autre continue.
+ *
+ * Chaque methode existe en deux formes, avec et sans banque. Sans
+ * banque, c'est l'interface principale qui repond — les classes
+ * appelantes existantes fonctionnent donc sans modification.
  */
 @Component
 public class McDmasMemberClient {
 
     private static final Logger log = LoggerFactory.getLogger(McDmasMemberClient.class);
 
-    private static final String NETWORK_CODE = "DMAS";
-    private static final String DEFAULT_HOST = "localhost";
-    private static final int    DEFAULT_PORT = 8500;
-
-    private final NetworkRepository networkRepository;
-
-    @Value("${dmas.member-group-id:TESTGRP01}")
-    private String memberGroupId;
-
-    @Value("${dmas.jpos.group-signon-id:40260}")
-    private String groupSignonId;
-
-    @Value("${dmas.jpos.forwarding-id:011901}")
-    private String forwardingId;
+    private final McDmasInterfaceService iface;
 
     /** @Lazy : le service prend ce client au constructeur, cycle Spring sinon. */
     @Autowired @Lazy private McDmasKeyExchange keyExchange;
 
-    private McPackagerEbcdic    packager;
-    private McDmasLengthChannel channel;
-    private Thread              listenerThread;
-    private volatile boolean    running = false;
-    private volatile boolean    signedOn = false;
+    private final Map<String, Connection> connections = new ConcurrentHashMap<>();
 
-    private final AtomicInteger stanSeq = new AtomicInteger(1);
-
-    /** Correlation : STAN -> future en attente de la reponse. */
-    private final Map<String, CompletableFuture<ISOMsg>> pending = new ConcurrentHashMap<>();
-
-    public McDmasMemberClient(NetworkRepository networkRepository) {
-        this.networkRepository = networkRepository;
+    public McDmasMemberClient(McDmasInterfaceService iface) {
+        this.iface = iface;
     }
 
-    // ====================================================================
-    //  RESOLUTION HOST / PORT DEPUIS LA BASE
-    // ====================================================================
+    // ==================================================================
+    //  UNE CONNEXION = UNE LIAISON PERMANENTE
+    // ==================================================================
 
-    private String host() {
-        try {
-            Optional<NetworkRef> n = networkRepository.findByCode(NETWORK_CODE);
-            if (n.isPresent() && n.get().getIssuerHost() != null) {
-                return n.get().getIssuerHost();
-            }
-        } catch (Exception e) {
-            log.warn("[JPOS-CLI] Lecture host en base KO : {}", e.getMessage());
+    private class Connection {
+        final String bankCode;
+        final McDmasInterface cfg;
+
+        McPackagerEbcdic    packager;
+        McDmasLengthChannel channel;
+        Thread              listener;
+        volatile boolean    running  = false;
+        volatile boolean    signedOn = false;
+
+        final AtomicInteger stanSeq = new AtomicInteger(1);
+        final Map<String, CompletableFuture<ISOMsg>> pending = new ConcurrentHashMap<>();
+
+        Connection(McDmasInterface cfg) {
+            this.cfg = cfg;
+            this.bankCode = cfg.getBankCode();
         }
-        return DEFAULT_HOST;
-    }
 
-    private int port() {
-        try {
-            Optional<NetworkRef> n = networkRepository.findByCode(NETWORK_CODE);
-            if (n.isPresent() && n.get().getIssuerIsoPort() != null) {
-                return n.get().getIssuerIsoPort();
-            }
-        } catch (Exception e) {
-            log.warn("[JPOS-CLI] Lecture port en base KO : {}", e.getMessage());
+        String host() {
+            String h = cfg.getTargetHost();
+            return (h != null && !h.isBlank()) ? h : "localhost";
         }
-        return DEFAULT_PORT;
+
+        int port() {
+            Integer p = cfg.getTargetPort();
+            return (p != null) ? p : 8500;
+        }
+
+        synchronized void ensureConnected() throws Exception {
+            if (channel != null && channel.isConnected()) return;
+
+            String h = host();
+            int    p = port();
+            try {
+                packager = new McPackagerEbcdic();
+                channel  = new McDmasLengthChannel();
+                channel.setPackager(packager);
+                channel.setHost(h, p);
+                log.info("[JPOS-CLI:{}] Liaison permanente -> {}:{}", bankCode, h, p);
+                channel.connect();
+                startListener();
+            } catch (Exception e) {
+                channel = null;
+                log.error("[JPOS-CLI:{}] Reseau injoignable sur {}:{} — {}",
+                        bankCode, h, p, e.getMessage());
+                throw new IllegalStateException(
+                        "Reseau Mastercard DMAS indisponible sur " + h + ":" + p
+                      + " pour la banque " + bankCode, e);
+            }
+        }
+
+        void startListener() {
+            running = true;
+            listener = new Thread(() -> {
+                while (running) {
+                    try {
+                        handleIncoming(this, channel.receive());
+                    } catch (Exception e) {
+                        if (running) {
+                            log.error("[JPOS-CLI:{}] Erreur d'ecoute : {}", bankCode, e.getMessage());
+                        }
+                        running = false;
+                        signedOn = false;
+                    }
+                }
+                log.info("[JPOS-CLI:{}] Listener arrete", bankCode);
+            }, "mc-dmas-listener-" + bankCode);
+            listener.setDaemon(true);
+            listener.start();
+        }
+
+        void close() {
+            running = false;
+            signedOn = false;
+            try {
+                if (channel != null) channel.disconnect();
+            } catch (Exception ignore) { }
+        }
+
+        boolean isConnected() {
+            return channel != null && channel.isConnected();
+        }
+
+        String nextStan() {
+            return String.format("%06d", stanSeq.getAndIncrement() % 1_000_000);
+        }
     }
 
-    // ====================================================================
+    // ==================================================================
+    //  RESOLUTION
+    // ==================================================================
+
+    private Connection conn(String bankCode) {
+        McDmasInterface cfg = iface.byBank(bankCode);
+        return connections.computeIfAbsent(cfg.getBankCode(), b -> new Connection(cfg));
+    }
+
+    // ==================================================================
     //  CYCLE DE VIE
-    // ====================================================================
+    // ==================================================================
 
-    /**
-     * Pas de @PostConstruct : la connexion est etablie a la demande
-     * (premier signOn ou premier envoi), pour que le module demarre
-     * meme si le reseau n'est pas encore la.
-     */
+    /** Ouvre les liaisons de toutes les banques pilotees. */
     public void start() {
-        try {
-            ensureConnected();
-        } catch (Exception e) {
-            log.warn("[JPOS-CLI] Connexion differee : {}", e.getMessage());
+        for (McDmasInterface i : iface.all()) {
+            try {
+                conn(i.getBankCode()).ensureConnected();
+            } catch (Exception e) {
+                log.warn("[JPOS-CLI:{}] Connexion differee : {}",
+                        i.getBankCode(), e.getMessage());
+            }
         }
+    }
+
+    public void start(String bankCode) throws Exception {
+        conn(bankCode).ensureConnected();
     }
 
     @PreDestroy
     public void stop() {
-        running = false;
-        signedOn = false;
-        try {
-            if (channel != null) channel.disconnect();
-        } catch (Exception ignore) { }
-        log.info("[JPOS-CLI] Deconnecte");
+        connections.forEach((bank, c) -> {
+            c.close();
+            iface.setStatus(bank, McDmasInterfaceService.OFF);
+            log.info("[JPOS-CLI:{}] Deconnecte", bank);
+        });
     }
 
-    private synchronized void ensureConnected() throws Exception {
-        if (channel != null && channel.isConnected()) return;
+    // ==================================================================
+    //  ROUTAGE DES MESSAGES ENTRANTS
+    // ==================================================================
 
-        String h = host();
-        int    p = port();
-        try {
-            packager = new McPackagerEbcdic();
-            channel  = new McDmasLengthChannel();
-            channel.setPackager(packager);
-            channel.setHost(h, p);
-            log.info("[JPOS-CLI] Liaison permanente -> {}:{}", h, p);
-            channel.connect();
-            startListener();
-        } catch (Exception e) {
-            channel = null;
-            log.error("[JPOS-CLI] Reseau injoignable sur {}:{} — {}", h, p, e.getMessage());
-            throw new IllegalStateException(
-                    "Reseau Mastercard DMAS indisponible sur " + h + ":" + p
-                  + " — demarrer le module mastercard puis reessayer", e);
-        }
-    }
-
-    /** Thread d'ecoute continu sur la liaison permanente. */
-    private void startListener() {
-        running = true;
-        listenerThread = new Thread(() -> {
-            while (running) {
-                try {
-                    ISOMsg m = channel.receive();
-                    handleIncoming(m);
-                } catch (Exception e) {
-                    if (running) log.error("[JPOS-CLI] Erreur d'ecoute : {}", e.getMessage());
-                    running = false;
-                    signedOn = false;
-                }
-            }
-            log.info("[JPOS-CLI] Listener arrete");
-        }, "mc-dmas-member-listener");
-        listenerThread.setDaemon(true);
-        listenerThread.start();
-    }
-
-    /**
-     * Route un message entrant : reponse correlee par STAN, ou message
-     * pousse par le reseau (auquel cas on accuse reception).
-     */
-    private void handleIncoming(ISOMsg m) {
+    private void handleIncoming(Connection c, ISOMsg m) {
         try {
             String stan = m.hasField(11) ? m.getString(11) : null;
-            CompletableFuture<ISOMsg> fut = (stan != null) ? pending.remove(stan) : null;
+            CompletableFuture<ISOMsg> fut = (stan != null) ? c.pending.remove(stan) : null;
             if (fut != null) {
                 fut.complete(m);
                 return;
@@ -199,31 +205,28 @@ public class McDmasMemberClient {
 
             String mti  = m.getMTI();
             String de70 = m.hasField(70) ? m.getString(70) : "?";
-            log.info("[JPOS-CLI] Message POUSSE par le reseau : MTI={} DE70={} STAN={}",
-                    mti, de70, stan);
+            log.info("[JPOS-CLI:{}] Message POUSSE par le reseau : MTI={} DE70={} STAN={}",
+                    c.bankCode, mti, de70, stan);
 
             if ("0800".equals(mti)) {
-                // DE70=161 : le reseau nous livre une cle (mecanisme 162)
                 String rc = "161".equals(de70)
-                        ? keyExchange.handleKeyDelivery(m)
+                        ? keyExchange.handleKeyDelivery(c.bankCode, m)
                         : "00";
-                sendAck(m, rc);
+                sendAck(c, m, rc);
             } else if ("0820".equals(mti)) {
-                log.info("[JPOS-CLI] Advice 0820 DE70={} recu", de70);
+                log.info("[JPOS-CLI:{}] Advice 0820 DE70={} recu", c.bankCode, de70);
                 if ("161".equals(de70)) {
-                    // Acquittement : la cle livree devient utilisable
-                    keyExchange.handleKeyAcknowledgement(m);
+                    keyExchange.handleKeyAcknowledgement(c.bankCode, m);
                 }
             } else {
-                log.warn("[JPOS-CLI] MTI pousse non gere : {}", mti);
+                log.warn("[JPOS-CLI:{}] MTI pousse non gere : {}", c.bankCode, mti);
             }
         } catch (Exception e) {
-            log.error("[JPOS-CLI] Erreur de routage : {}", e.getMessage(), e);
+            log.error("[JPOS-CLI:{}] Erreur de routage : {}", c.bankCode, e.getMessage(), e);
         }
     }
 
-    /** Accuse un 0800 pousse par le reseau, champs ME recopies. */
-    private void sendAck(ISOMsg req, String de39) throws Exception {
+    private void sendAck(Connection c, ISOMsg req, String de39) throws Exception {
         ISOMsg r = new ISOMsg();
         r.setPackager(req.getPackager());
         r.setMTI("0810");
@@ -234,26 +237,46 @@ public class McDmasMemberClient {
         r.set(39, de39);
         if (req.hasField(48)) r.set(48, req.getString(48));
         if (req.hasField(70)) r.set(70, req.getString(70));
-        channel.send(r);
-        log.info("[JPOS-CLI] Accuse 0810 DE39={} envoye", de39);
+        c.channel.send(r);
+        log.info("[JPOS-CLI:{}] Accuse 0810 DE39={} envoye", c.bankCode, de39);
     }
 
-    // ====================================================================
-    //  API PUBLIQUE — conservee a l'identique
-    // ====================================================================
+    // ==================================================================
+    //  API — forme par defaut et forme par banque
+    // ==================================================================
 
-    /** true si la liaison est etablie et le sign-on accepte. */
-    public boolean hasActiveSession() {
-        return channel != null && channel.isConnected() && signedOn;
+    public boolean hasActiveSession() { return hasActiveSession(null); }
+
+    public boolean hasActiveSession(String bankCode) {
+        Connection c = conn(bankCode);
+        return c.isConnected() && c.signedOn;
     }
 
-    public String getActiveMemberGroupId() {
-        return signedOn ? memberGroupId : null;
+    public String getActiveMemberGroupId() { return getActiveMemberGroupId(null); }
+
+    public String getActiveMemberGroupId(String bankCode) {
+        Connection c = conn(bankCode);
+        return c.signedOn ? c.cfg.getGroupSignonDe2() : null;
     }
 
-    /** Emet un message sur la liaison permanente et attend SA reponse (STAN). */
+    /** Cle d'indexation des cles en base — a ne pas confondre avec le DE2. */
+    public String memberGroupId(String bankCode) {
+        return conn(bankCode).cfg.getMemberGroupId();
+    }
+
+    public boolean isConnected() { return isConnected(null); }
+
+    public boolean isConnected(String bankCode) {
+        return conn(bankCode).isConnected();
+    }
+
     public ISOMsg pushAndWait(ISOMsg msg, int timeoutSeconds) throws Exception {
-        ensureConnected();
+        return pushAndWait(null, msg, timeoutSeconds);
+    }
+
+    public ISOMsg pushAndWait(String bankCode, ISOMsg msg, int timeoutSeconds) throws Exception {
+        Connection c = conn(bankCode);
+        c.ensureConnected();
 
         String stan = msg.hasField(11) ? msg.getString(11) : null;
         if (stan == null) {
@@ -261,88 +284,108 @@ public class McDmasMemberClient {
         }
 
         CompletableFuture<ISOMsg> fut = new CompletableFuture<>();
-        pending.put(stan, fut);
+        c.pending.put(stan, fut);
         try {
-            channel.send(msg);
+            c.channel.send(msg);
             return fut.get(timeoutSeconds, TimeUnit.SECONDS);
         } catch (java.io.IOException e) {
-            signedOn = false;
-            log.error("[JPOS-CLI] Liaison rompue : {}", e.getMessage());
+            c.signedOn = false;
+            log.error("[JPOS-CLI:{}] Liaison rompue : {}", c.bankCode, e.getMessage());
             throw new IllegalStateException(
-                    "Liaison rompue avec le reseau — refaire un sign-on", e);
+                    "Liaison rompue avec le reseau pour " + c.bankCode
+                  + " — refaire un sign-on", e);
         } finally {
-            pending.remove(stan);
+            c.pending.remove(stan);
         }
     }
 
-    /** Emet un message SANS attendre de reponse (ex : 0820 advice). */
     public void pushOnActiveSession(ISOMsg msg) throws Exception {
-        ensureConnected();
-        channel.send(msg);
+        pushOnActiveSession(null, msg);
     }
 
-    // ====================================================================
-    //  SIGN-ON / ECHO
-    // ====================================================================
+    public void pushOnActiveSession(String bankCode, ISOMsg msg) throws Exception {
+        Connection c = conn(bankCode);
+        c.ensureConnected();
+        c.channel.send(msg);
+    }
 
-    public synchronized Map<String, Object> signOn() throws Exception {
-        ensureConnected();
-        Map<String, Object> r = sendNetworkMessage("061", "SIGN-ON");
-        signedOn = Boolean.TRUE.equals(r.get("success"));
-        if (signedOn) {
-            log.info("[JPOS-CLI] Sign-on accepte (memberGroup={})", memberGroupId);
+    // ==================================================================
+    //  SIGN-ON / ECHO / SIGN-OFF
+    // ==================================================================
+
+    public Map<String, Object> signOn() throws Exception { return signOn(null); }
+
+    public synchronized Map<String, Object> signOn(String bankCode) throws Exception {
+        Connection c = conn(bankCode);
+        c.ensureConnected();
+        Map<String, Object> r = sendNetworkMessage(c, "061", "SIGN-ON");
+        c.signedOn = Boolean.TRUE.equals(r.get("success"));
+        if (c.signedOn) {
+            log.info("[JPOS-CLI:{}] Sign-on accepte (memberGroup={})",
+                    c.bankCode, c.cfg.getMemberGroupId());
+            iface.setStatus(c.bankCode, McDmasInterfaceService.SIGNON);
         }
         return r;
     }
 
-    public Map<String, Object> echoTest() throws Exception {
-        ensureConnected();
-        return sendNetworkMessage("270", "ECHO-TEST");
+    public Map<String, Object> echoTest() throws Exception { return echoTest(null); }
+
+    public Map<String, Object> echoTest(String bankCode) throws Exception {
+        Connection c = conn(bankCode);
+        c.ensureConnected();
+        return sendNetworkMessage(c, "270", "ECHO-TEST");
     }
 
-    public Map<String, Object> signOff() throws Exception {
-        ensureConnected();
-        Map<String, Object> r = sendNetworkMessage("062", "SIGN-OFF");
-        signedOn = false;
+    public Map<String, Object> signOff() throws Exception { return signOff(null); }
+
+    public Map<String, Object> signOff(String bankCode) throws Exception {
+        Connection c = conn(bankCode);
+        c.ensureConnected();
+        Map<String, Object> r = sendNetworkMessage(c, "062", "SIGN-OFF");
+        c.signedOn = false;
+        iface.setStatus(c.bankCode, McDmasInterfaceService.SIGNOFF);
         return r;
     }
 
-    /** Keep-alive : echo periodique pour maintenir la liaison. */
+    /** Keep-alive : un echo par liaison etablie. */
     @Scheduled(fixedRateString = "${dmas.jpos.echo-interval-ms:60000}")
     public void scheduledEcho() {
-        if (!running || !signedOn) return;
-        try {
-            Map<String, Object> r = echoTest();
-            log.debug("[JPOS-CLI] Keep-alive : {}", r.get("success"));
-        } catch (Exception e) {
-            log.warn("[JPOS-CLI] Keep-alive echoue : {}", e.getMessage());
-        }
+        connections.forEach((bank, c) -> {
+            if (!c.running || !c.signedOn) return;
+            try {
+                Map<String, Object> r = echoTest(bank);
+                log.debug("[JPOS-CLI:{}] Keep-alive : {}", bank, r.get("success"));
+            } catch (Exception e) {
+                log.warn("[JPOS-CLI:{}] Keep-alive echoue : {}", bank, e.getMessage());
+            }
+        });
     }
 
-    /** Construit et envoie un 0800 de gestion reseau, attend le 0810. */
-    private Map<String, Object> sendNetworkMessage(String de70, String label) throws Exception {
-        String stan = String.format("%06d", stanSeq.getAndIncrement() % 1_000_000);
+    private Map<String, Object> sendNetworkMessage(Connection c, String de70, String label)
+            throws Exception {
+        String stan = c.nextStan();
         String dt   = new SimpleDateFormat("MMddHHmmss").format(new Date());
 
         ISOMsg m = new ISOMsg();
-        m.setPackager(packager);
+        m.setPackager(c.packager);
         m.setMTI("0800");
-        m.set(2,  groupSignonId);
+        m.set(2,  c.cfg.getGroupSignonDe2());
         m.set(7,  dt);
         m.set(11, stan);
-        m.set(33, forwardingId);
+        m.set(33, c.cfg.getFwdIdDe33());
         m.set(70, de70);
         m.set(94, "0I0    ");
         m.set(96, "000000");
 
-        log.info("[JPOS-CLI] {} -> 0800 DE70={} STAN={}", label, de70, stan);
-        ISOMsg resp = pushAndWait(m, 15);
+        log.info("[JPOS-CLI:{}] {} -> 0800 DE70={} STAN={}", c.bankCode, label, de70, stan);
+        ISOMsg resp = pushAndWait(c.bankCode, m, 15);
 
         String rc = resp.hasField(39) ? resp.getString(39) : "??";
         boolean ok = "00".equals(rc);
-        log.info("[JPOS-CLI] {} <- 0810 DE39={} ok={}", label, rc, ok);
+        log.info("[JPOS-CLI:{}] {} <- 0810 DE39={} ok={}", c.bankCode, label, rc, ok);
 
         Map<String, Object> r = new LinkedHashMap<>();
+        r.put("bank_code",    c.bankCode);
         r.put("label",        label);
         r.put("mti_sent",     "0800");
         r.put("de070",        de70);
@@ -351,9 +394,5 @@ public class McDmasMemberClient {
         r.put("de039",        rc);
         r.put("success",      ok);
         return r;
-    }
-
-    public boolean isConnected() {
-        return channel != null && channel.isConnected();
     }
 }

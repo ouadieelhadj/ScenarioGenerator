@@ -69,6 +69,34 @@ public class NetworkPortEnvironmentPostProcessor
                   + "sg.network.port-from-db=false.");
         }
 
+        // ------------------------------------------------------------------
+        //  DMAS multi-banque : --sg.interface prime sur la table networks
+        //
+        //  Chaque module recoit un seul parametre au demarrage et lit toute
+        //  sa configuration dans mc_dmas_interface :
+        //      java -jar sg-mc-dmas-member.jar --sg.interface=DMAS_BANK_A
+        //
+        //  Sans ce parametre, on retombe sur le chemin historique (table
+        //  networks), inchange pour SWAM et MC SMS.
+        // ------------------------------------------------------------------
+        String iface = env.getProperty("sg.interface");
+        if (iface != null && !iface.isBlank()) {
+            // Liste possible : le port REST est celui de la PREMIERE interface.
+            String firstIface = iface.split(",")[0].trim();
+            Integer ifacePort = readInterfacePort(url, user, pass, firstIface);
+            if (ifacePort == null) {
+                throw new IllegalStateException(
+                        "[SG-PORTS] rest_port est NULL dans mc_dmas_interface pour "
+                      + "id_interface='" + iface + "'");
+            }
+            Map<String, Object> ifaceProps = new HashMap<>();
+            ifaceProps.put("server.port", ifacePort);
+            env.getPropertySources().addFirst(new MapPropertySource(SOURCE_NAME, ifaceProps));
+            log("server.port=" + ifacePort
+              + " (mc_dmas_interface.rest_port pour id_interface=" + firstIface + ")");
+            return;
+        }
+
         String column = switch (role.toUpperCase()) {
             case "ACQUIRER" -> "acquirer_rest_port";
             case "ISSUER"   -> "issuer_rest_port";
@@ -116,6 +144,33 @@ public class NetworkPortEnvironmentPostProcessor
                     "[SG-PORTS] Base injoignable — demarrage annule. "
                   + "Les ports sont pilotes par la table `networks`, PostgreSQL doit etre "
                   + "demarre. Detail : " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Port REST depuis mc_dmas_interface (DMAS multi-banque).
+     * L'identifiant vient du parametre --sg.interface.
+     */
+    private Integer readInterfacePort(String url, String user, String pass, String iface) {
+        String sql = "SELECT rest_port FROM mc_dmas_interface WHERE id_interface = ?";
+        try (Connection c = DriverManager.getConnection(url, user, pass);
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setString(1, iface);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    throw new IllegalStateException(
+                            "[SG-PORTS] Aucune ligne dans mc_dmas_interface pour "
+                          + "id_interface='" + iface + "'. Verifier --sg.interface");
+                }
+                int p = rs.getInt(1);
+                return rs.wasNull() ? null : p;
+            }
+        } catch (IllegalStateException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "[SG-PORTS] Base injoignable — demarrage annule. Detail : "
+                  + e.getMessage(), e);
         }
     }
 

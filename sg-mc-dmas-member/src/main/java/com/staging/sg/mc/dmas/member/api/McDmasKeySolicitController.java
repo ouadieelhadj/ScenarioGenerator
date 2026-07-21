@@ -9,7 +9,11 @@ import java.util.Map;
 /**
  * Sollicitation d'echange de cle — mecanisme 162.
  *
- *   POST /api/admin/dmas/keys/solicit?memberGroupId=TESTGRP01
+ *   POST /api/admin/dmas/keys/solicit
+ *   POST /api/admin/dmas/keys/solicit?bank=022905
+ *
+ * En mono-banque, ?bank= peut etre omis. En multi-banque il designe
+ * la liaison a utiliser.
  *
  * Envoie un 0800 DE70=162. La cle n'arrive PAS dans la reponse : le
  * reseau la poussera ensuite dans un 0800 DE70=161, traite par le
@@ -32,9 +36,9 @@ public class McDmasKeySolicitController {
 
     @PostMapping("/solicit")
     public ResponseEntity<?> solicit(
-            @RequestParam(defaultValue = "TESTGRP01") String memberGroupId) {
+            @RequestParam(required = false) String bank) {
         try {
-            return ResponseEntity.ok(keyExchange.solicitPek(memberGroupId));
+            return ResponseEntity.ok(keyExchange.solicitPek(bank));
         } catch (Exception e) {
             return ResponseEntity.internalServerError()
                     .body(Map.of("error", String.valueOf(e.getMessage())));
