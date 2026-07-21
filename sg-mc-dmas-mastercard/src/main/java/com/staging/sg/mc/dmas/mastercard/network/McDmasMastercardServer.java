@@ -1,14 +1,8 @@
 package com.staging.sg.mc.dmas.mastercard.network;
 
-import com.staging.sg.common.entity.McDmasKek;
-import com.staging.sg.common.entity.McDmasMastercardKey;
 import com.staging.sg.common.entity.NetworkRef;
 import com.staging.sg.common.iso.McDmasLengthChannel;
 import com.staging.sg.common.iso.McPackagerEbcdic;
-import com.staging.sg.common.iso.crypto.JposHsmService;
-import com.staging.sg.common.iso.crypto.KeyExchangeBlock;
-import com.staging.sg.common.repository.McDmasKekRepository;
-import com.staging.sg.common.repository.McDmasMastercardKeyRepository;
 import com.staging.sg.common.repository.NetworkRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -19,36 +13,34 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.Map;
 
 /**
- * Serveur jPOS cote RESEAU MASTERCARD DMAS (simule).
+ * Transport reseau cote MASTERCARD DMAS simule.
  *
  * LIAISON PERMANENTE : l'ISOServer accepte la connexion du membre et
  * conserve la session (ISOSource) pour pouvoir y ECRIRE a tout moment.
- *
  * Meme schema que SwamJposServer et McSmsJposServer.
  *
  * ------------------------------------------------------------------
- *  REMPLACE McDmasMastercardServer
+ *  SEPARATION DES RESPONSABILITES
  * ------------------------------------------------------------------
- * Avant, ce module etait client : il se connectait au membre et lui
- * envoyait le sign-on. C'etait l'inverse de la realite. Desormais :
+ * Cette classe ne fait que du TRANSPORT : accepter, lire, router,
+ * envoyer. Toute la DECISION metier est dans McDmasMastercardHandler
+ * (moteur d'autorisation, reversal, advices, import de cles).
  *
- *     membre  ---- se connecte ---->  reseau Mastercard (ce module)
- *     membre  ---- 0800/061 ------->  0810 DE39=00
- *     membre  ---- 0100 ----------->  0110 (decision)
- *     membre  ---- 0800/161 ------->  0810 + import de la PEK
+ *     0800  ->  handler.buildNetworkResponse         ->  0810
+ *     0100  ->  handler.buildAuthResponse            ->  0110
+ *     0400  ->  handler.buildReversalResponse        ->  0410
+ *     0120  ->  handler.buildAdviceResponse          ->  0130
+ *     0420  ->  handler.buildReversalAdviceResponse  ->  0430
  *
- * Le SENS DE L'ECHANGE DE CLES est inchange pour l'instant : c'est
- * toujours le membre qui pousse la PEK. Ce point sera revu separement,
- * specifications DMAS en main.
+ * REMPLACE McDmasMastercardClient : avant l'inversion, ce module etait
+ * client et se connectait au membre — l'inverse de la realite.
  */
 @Component
 public class McDmasMastercardServer {
@@ -59,18 +51,15 @@ public class McDmasMastercardServer {
     private static final int    DEFAULT_ISO_PORT = 8500;
 
     private final NetworkRepository networkRepository;
-    private final JposHsmService hsm;
-    private final McDmasKekRepository kekRepo;
-    private final McDmasMastercardKeyRepository issKeyRepo;
     private final McDmasMastercardHandler handler;
 
-    @Value("${dmas.member-group-id:TESTGRP01}")
+    @Value("${dmas.member-group:TESTGRP01}")
     private String memberGroup;
 
     private ISOServer isoServer;
     private Thread    serverThread;
 
-    /** Session du membre, conservee pour pouvoir pousser des messages. */
+    /** Session du membre, conservee pour pouvoir lui pousser des messages. */
     private volatile ISOSource activeMemberSession;
     private volatile String    activeMemberGroupId;
     private final Object sendLock = new Object();
@@ -79,14 +68,8 @@ public class McDmasMastercardServer {
     private final Map<String, CompletableFuture<ISOMsg>> pending = new ConcurrentHashMap<>();
 
     public McDmasMastercardServer(NetworkRepository networkRepository,
-                                  JposHsmService hsm,
-                                  McDmasKekRepository kekRepo,
-                                  McDmasMastercardKeyRepository issKeyRepo,
                                   @Lazy McDmasMastercardHandler handler) {
         this.networkRepository = networkRepository;
-        this.hsm = hsm;
-        this.kekRepo = kekRepo;
-        this.issKeyRepo = issKeyRepo;
         this.handler = handler;
     }
 
@@ -104,7 +87,8 @@ public class McDmasMastercardServer {
             }
             log.warn("[JPOS-SRV] Port ISO absent en base, fallback {}", DEFAULT_ISO_PORT);
         } catch (Exception e) {
-            log.warn("[JPOS-SRV] Lecture port KO ({}), fallback {}", e.getMessage(), DEFAULT_ISO_PORT);
+            log.warn("[JPOS-SRV] Lecture du port KO ({}), fallback {}",
+                    e.getMessage(), DEFAULT_ISO_PORT);
         }
         return DEFAULT_ISO_PORT;
     }
@@ -125,7 +109,7 @@ public class McDmasMastercardServer {
             serverThread.start();
             log.info("[JPOS-SRV] ISOServer demarre sur :{} (McDmasLengthChannel/EBCDIC)", port);
         } catch (Exception e) {
-            log.error("[JPOS-SRV] Echec demarrage : {}", e.getMessage(), e);
+            log.error("[JPOS-SRV] Echec du demarrage : {}", e.getMessage(), e);
         }
     }
 
@@ -188,7 +172,7 @@ public class McDmasMastercardServer {
     }
 
     // ====================================================================
-    //  LISTENER
+    //  LISTENER — transport uniquement
     // ====================================================================
 
     private class MemberListener implements ISORequestListener {
@@ -207,12 +191,34 @@ public class McDmasMastercardServer {
                     return true;
                 }
 
-                if ("0800".equals(mti)) return handleNetwork(source, m);
-                if ("0100".equals(mti)) return handleAuthorization(source, m);
-                if ("0200".equals(mti)) return handleAuthorization(source, m);
+                // Toute requete entrante reactive la session
+                if (activeMemberSession == null) {
+                    activeMemberSession = source;
+                }
 
-                log.warn("[JPOS-SRV] MTI non gere : {}", mti);
-                return false;
+                ISOMsg resp = switch (mti) {
+                    case "0800" -> {
+                        trackSession(source, m);
+                        yield handler.buildNetworkResponse(m);
+                    }
+                    case "0100", "0200" -> handler.buildAuthResponse(m);
+                    case "0400"         -> handler.buildReversalResponse(m);
+                    case "0120"         -> handler.buildAdviceResponse(m);
+                    case "0420"         -> handler.buildReversalAdviceResponse(m);
+                    default             -> null;
+                };
+
+                if (resp == null) {
+                    log.warn("[JPOS-SRV] MTI non gere : {}", mti);
+                    return false;
+                }
+
+                source.send(resp);
+                log.info("[JPOS-SRV] Repondu {} DE39={} STAN={}",
+                        resp.getMTI(),
+                        resp.hasField(39) ? resp.getString(39) : "?",
+                        stan);
+                return true;
 
             } catch (Exception e) {
                 log.error("[JPOS-SRV] Erreur de traitement : {}", e.getMessage(), e);
@@ -220,122 +226,20 @@ public class McDmasMastercardServer {
             }
         }
 
-        /** 0800 : sign-on, echo, sign-off, echange de cles. */
-        private boolean handleNetwork(ISOSource source, ISOMsg m) throws Exception {
-            String de70 = m.hasField(70) ? m.getString(70) : "?";
-            String stan = m.hasField(11) ? m.getString(11) : "?";
-
-            String label = switch (de70) {
-                case "061" -> "SIGN-ON";
-                case "062" -> "SIGN-OFF";
-                case "270" -> "ECHO TEST";
-                case "161" -> "ECHANGE DE CLE";
-                default    -> "FONCTION " + de70;
-            };
-            log.info("[JPOS-SRV] {} recu (DE70={} STAN={})", label, de70, stan);
-
-            // Enregistrement de la session au sign-on
-            if ("061".equals(de70)) {
+        /** Suit l'etat de la session selon le code de gestion reseau. */
+        private void trackSession(ISOSource source, ISOMsg m) {
+            String de70 = m.hasField(70) ? m.getString(70) : "";
+            // 001 et 061 coexistent : ancien mecanisme et nouveau client.
+            // A unifier une fois le code DMAS confirme par les specifications.
+            if ("061".equals(de70) || "001".equals(de70)) {
                 activeMemberSession = source;
                 activeMemberGroupId = m.hasField(2) ? m.getString(2) : memberGroup;
                 log.info("[JPOS-SRV] Session membre enregistree (id={})", activeMemberGroupId);
-            } else if ("062".equals(de70)) {
+            } else if ("062".equals(de70) || "002".equals(de70)) {
                 log.info("[JPOS-SRV] Sign-off — session liberee");
                 activeMemberSession = null;
                 activeMemberGroupId = null;
-            } else if (activeMemberSession == null) {
-                // Toute autre fonction reactive la session si besoin
-                activeMemberSession = source;
             }
-
-            ISOMsg r = new ISOMsg();
-            r.setPackager(m.getPackager());
-            r.setMTI("0810");
-            if (m.hasField(2))  r.set(2,  m.getString(2));
-            r.set(7, new SimpleDateFormat("MMddHHmmss").format(new Date()));
-            if (m.hasField(11)) r.set(11, m.getString(11));
-            if (m.hasField(33)) r.set(33, m.getString(33));
-            r.set(39, "00");
-            r.set(63, "MCC000NPQ");
-            if (m.hasField(70)) r.set(70, m.getString(70));
-
-            source.send(r);
-            log.info("[JPOS-SRV] Repondu 0810 DE39=00 ({})", label);
-
-            // Echange de cles : le membre nous livre une PEK dans le DE48
-            if ("161".equals(de70) && m.hasField(48)) {
-                processReceivedPek(m);
-            }
-            return true;
-        }
-
-        /** 0100 / 0200 : decision d'autorisation. */
-        private boolean handleAuthorization(ISOSource source, ISOMsg m) throws Exception {
-            String stan = m.hasField(11) ? m.getString(11) : "?";
-            log.info("[JPOS-SRV] Autorisation {} recue (STAN={})", m.getMTI(), stan);
-
-            if (activeMemberSession == null) activeMemberSession = source;
-
-            ISOMsg resp = handler.buildAuthResponse(m);
-            source.send(resp);
-            log.info("[JPOS-SRV] Repondu {} DE39={} STAN={}",
-                    resp.getMTI(),
-                    resp.hasField(39) ? resp.getString(39) : "?",
-                    stan);
-            return true;
-        }
-    }
-
-    // ====================================================================
-    //  ECHANGE DE CLES — reception de la PEK
-    // ====================================================================
-
-    /** Dechiffre la PEK recue (DE48), verifie le KCV, la stocke sous LMK. */
-    private void processReceivedPek(ISOMsg m) {
-        try {
-            String de48 = m.getString(48);
-            KeyExchangeBlock keb = KeyExchangeBlock.parseDe48(de48);
-            log.info("[JPOS-SRV] DE48 parse : keyClass={} index={} cycle={} kcv_recu={}",
-                    keb.keyClassId, keb.keyIndex, keb.keyCycle, keb.kcv);
-
-            McDmasKek kek = kekRepo.findByMemberGroupId(memberGroup)
-                    .orElseThrow(() -> new IllegalStateException("KEK introuvable pour " + memberGroup));
-            if (kek.getKekClear() == null) {
-                throw new IllegalStateException("kek_clear absent pour " + memberGroup);
-            }
-
-            int keyLen = (kek.getKeyLength() != null) ? kek.getKeyLength() : 24;
-
-            JposHsmService.KeyResult result =
-                    hsm.importWorkingKey("PEK", keb.encryptedKeyHex, kek.getKekClear(), keyLen);
-
-            boolean kcvMatch = result.kcv != null && keb.kcv != null
-                    && result.kcv.equalsIgnoreCase(keb.kcv.substring(0, Math.min(6, keb.kcv.length())));
-            log.info("[JPOS-SRV] PEK dechiffree : KCV calcule={} recu={} match={}",
-                    result.kcv, keb.kcv, kcvMatch);
-
-            if (!kcvMatch) {
-                log.error("[JPOS-SRV] KCV different — PEK NON stockee");
-                return;
-            }
-
-            McDmasMastercardKey ik = issKeyRepo
-                    .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup, "PEK", "ACTIVE")
-                    .orElseGet(McDmasMastercardKey::new);
-            ik.setMemberGroupId(memberGroup);
-            ik.setKeyType("PEK");
-            ik.setKeyLength(keyLen);
-            ik.setKeyUnderLmk(result.keyUnderLmkHex);
-            ik.setKeyUnderKek(result.keyUnderKekHex.length() > 64
-                    ? result.keyUnderKekHex.substring(0, 64)
-                    : result.keyUnderKekHex);
-            ik.setKcv(result.kcv);
-            ik.setStatus("ACTIVE");
-            issKeyRepo.save(ik);
-            log.info("[JPOS-SRV] PEK persistee dans mc_dmas_mastercard_keys (KCV={})", result.kcv);
-
-        } catch (Exception e) {
-            log.error("[JPOS-SRV] Echec du traitement de la PEK : {}", e.getMessage(), e);
         }
     }
 }

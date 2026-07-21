@@ -2047,3 +2047,218 @@ retenue : le MIP reel est en EBCDIC, autant tester dans ce format.
 Le flux complet a ete rejoue en EBCDIC : sign-on, sollicitation 162,
 livraison 161, accuse, acquittement 0820. KCV `EFC3F0` identique des deux
 cotes, PEK ACTIVE.
+
+---
+
+## 25. PROCEDURES DE TEST DES TROIS RESEAUX (2026-07-21)
+
+Rappel commun a tous : **PostgreSQL doit tourner**. Depuis la mise en place
+du `NetworkPortEnvironmentPostProcessor`, les ports REST sont lus dans la
+table `networks` AVANT le demarrage de Tomcat — sans base, le module refuse
+de demarrer avec le message `[SG-PORTS] Base injoignable`.
+
+    export PGPASSWORD=postgres123
+    /f/MoneyCore/pgsql/bin/pg_ctl.exe -D /f/MoneyCore/pgsql/data \
+        -l /f/MoneyCore/pgsql/data/pg.log start
+
+Piege recurrent : un JAR verrouille ou un port occupe par un process Java
+resté en vie. Avant tout build ou test :
+
+    taskkill //F //IM java.exe        # double slash obligatoire en Git Bash
+
+---
+
+### 25.1 AUTHENTIFICATION
+
+DMAS protege ses endpoints par JWT ; il faut un token avant tout appel.
+
+    Login : admin / Admin123!
+    POST /auth/login   corps {"login":"admin","password":"Admin123!"}
+                       reponse : champ "token"
+
+    TOKEN=$(curl -s -X POST http://localhost:8084/auth/login \
+        -H "Content-Type: application/json" \
+        -d '{"login":"admin","password":"Admin123!"}' \
+        | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+
+    curl -X POST http://localhost:8084/api/admin/dmas/network/signon \
+        -H "Authorization: Bearer $TOKEN"
+
+En Git Bash, entourer le mot de passe de quotes SIMPLES : le `!` serait
+sinon interprete par l'historique du shell.
+
+SWAM et MC SMS ont un `SecurityConfig` en `permitAll` sur les endpoints
+d'administration : pas de token necessaire.
+
+---
+
+### 25.2 DMAS — `test-dmas.sh`
+
+    bash /f/MoneyCore/mc-sms/test-dmas.sh
+    bash /f/MoneyCore/mc-sms/test-dmas.sh <login> <password>   # si besoin
+
+Enchaine : arret des process, controle des ports, PostgreSQL, purge des
+logs, demarrage **mastercard d'abord** (c'est le serveur) puis **member**
+(le client), authentification, sign-on, et affichage des statuts.
+
+| Port | Role |
+|---|---|
+| 8084 | REST membre |
+| 8500 | ISO reseau — **seul serveur ISO** |
+| 8501 | REST reseau |
+| 8600 | ex-ISO membre — **doit rester libre** depuis l'inversion |
+
+Le script verifie trois choses :
+- aucun `Address already in use` au demarrage du reseau
+- le compteur `[JPOS-CLI]` (liaison permanente) contre `[DMAS-ACQ]`
+  (connexion ephemere) : seul le premier doit apparaitre
+- que plus personne n'ecoute sur 8600
+
+Endpoints :
+
+    POST /api/admin/dmas/network/{signon,signoff,echo}   membre  (8084)
+    GET  /api/admin/dmas/network/status                  membre
+    GET  /api/admin/dmas/jpos/status                     reseau  (8501)
+    POST /api/admin/dmas/jpos/push/network?de70=&wait=&de48=
+    POST /api/admin/dmas/jpos/push/advice?de70=&de48=
+
+Les deux derniers permettent au reseau d'emettre vers le membre sur la
+liaison permanente (echange de cles, advices, et les 0100/0200 a venir).
+
+---
+
+### 25.3 MASTERCARD SMS — `test-keyexchange.sh`
+
+    bash /f/MoneyCore/mc-sms/test-keyexchange.sh
+
+Enchaine : PostgreSQL, arret des process, purge des logs, demarrage
+**issuer d'abord** (simulateur MIP, serveur) puis **acquereur** (membre,
+client), bootstrap de la ZMK, sign-on, sollicitation d'echange de cle,
+puis comparaison des KCV des deux cotes.
+
+| Port | Role |
+|---|---|
+| 8095 | REST acquereur (membre) |
+| 8096 | ISO acquereur — non utilise |
+| 8097 | REST issuer (MIP simule) |
+| 8098 | ISO issuer — **seul serveur ISO** |
+
+Endpoints :
+
+    POST /api/admin/mc/keys/bootstrap-zmk?zmk=<32 ou 48 hex>
+    POST /api/admin/mc/keys/solicit                 0800 DE70=162
+    GET  /api/admin/mc/keys/current                 etat des cles
+    GET  /api/admin/mc/sim/last-key                 cle livree (8097)
+    POST /api/admin/mc/network/signon
+
+Resultat attendu : meme KCV des deux cotes et PEK en statut ACTIVE.
+La ZMK de reference est `13AED5DA1F32347523C708C11F2608FD` (KCV 2D617C),
+la meme que pour SWAM.
+
+Verifier qu'une seule socket est ouverte :
+
+    grep -c "Connecte au MIP" /f/ScenarioGenerator/logs/mc-sms-acquirer.log
+    # doit valoir 1
+
+---
+
+### 25.4 SWAM
+
+Les trois scenarios (local, relais, switch reel) sont decrits en detail a
+la **section 21.4**, avec la topologie du relais ncat et les adresses du
+switch.
+
+| Port | Role |
+|---|---|
+| 8094 | REST acquereur |
+| 8511 | REST issuer |
+| 11127 | relais ncat vers le switch reel (10.23.33.114) |
+
+Particularite : SWAM est le seul reseau avec un **MAC (DE64)**. En cas
+d'echec, verifier d'abord la recette MAC de la section 22.1, validee sur
+quatre vecteurs.
+
+---
+
+### 25.5 ORDRE DE DEMARRAGE — REGLE GENERALE
+
+Depuis l'inversion DMAS, les trois reseaux suivent le meme schema :
+
+    le SERVEUR d'abord, le CLIENT ensuite
+
+| Reseau | Serveur (demarrer en 1er) | Client (en 2nd) |
+|---|---|---|
+| DMAS | sg-mc-dmas-mastercard | sg-mc-dmas-member |
+| MC SMS | sg-mc-sms-issuer | sg-mc-sms-acquirer |
+| SWAM | sg-swam-issuer | sg-swam-acquirer |
+
+Le client se connecte a la demande : si le serveur n'est pas la, il ne
+plante pas au demarrage mais echoue au premier sign-on avec un message
+explicite.
+
+---
+
+### 25.6 RESULTAT DU TEST D'INVERSION DMAS (2026-07-21)
+
+Premier test complet apres l'inversion client/serveur. Tout est valide.
+
+    --- SIGN-ON ---
+    {"label":"SIGN-ON","mti_sent":"0800","de070":"061","stan":"000001",
+     "mti_received":"0810","de039":"00","success":true}
+
+    --- STATUT MEMBRE ---
+    {"role":"CLIENT","connected":true,"signed_on":true,
+     "member_group_id":"TESTGRP01"}
+
+    --- STATUT RESEAU ---
+    {"role":"SERVER","session_active":true,"member_group_id":"40260"}
+
+**La liaison est bien permanente**, prouve par les sockets restees
+ouvertes apres l'echange :
+
+    TCP  0.0.0.0:8500        0.0.0.0:0              LISTENING    76744  (reseau)
+    TCP  127.0.0.1:8500      127.0.0.1:59194        ESTABLISHED  76744
+    TCP  127.0.0.1:59194     127.0.0.1:8500         ESTABLISHED  95656  (membre)
+
+Avec l'ancien mecanisme ephemere, la connexion aurait ete fermee
+immediatement apres la reponse.
+
+Compteurs : 4 lignes `[JPOS-CLI]`, **0** ligne `[DMAS-ACQ]`. Le port 8600
+n'est plus ecoute par personne.
+
+#### Corrections apportees pendant ce test
+
+| Symptome | Cause | Correction |
+|---|---|---|
+| `Address already in use: bind` sur 8500 | `McDmasMastercardHandler` ouvrait son propre `ServerSocket`, en concurrence avec l'`ISOServer` | Retrait du serveur socket du handler ; les `handleXxx(req, out)` deviennent des `buildXxxResponse(req)` qui RETOURNENT la reponse |
+| Logique de cle dupliquee | `processReceivedPek` du serveur doublonnait `handleKeyExchange` du handler, en moins complet | `processReceivedPek` supprime ; le serveur delegue tout au handler |
+| `403` sur les endpoints | JWT : DMAS protege ses routes, contrairement a SWAM et MC SMS | Recuperer un token via `/auth/login` (admin / Admin123!) |
+| `permission denied for table users` | Les GRANT n'avaient ete poses que sur les tables `mc_dmas_*` | `GRANT SELECT, UPDATE ON users` et `key_store` aux deux utilisateurs |
+
+#### Repartition des responsabilites apres nettoyage
+
+    McDmasMastercardServer   transport seul : accepte, lit, route, envoie
+    McDmasMastercardHandler  decision metier : autorisation, reversal,
+                             advices, completion, import de cles
+
+    0800  ->  handler.buildNetworkResponse         ->  0810
+    0100  ->  handler.buildAuthResponse            ->  0110
+    0400  ->  handler.buildReversalResponse        ->  0410
+    0120  ->  handler.buildAdviceResponse          ->  0130
+    0420  ->  handler.buildReversalAdviceResponse  ->  0430
+
+#### Points ouverts
+
+1. **Code DE70 du sign-on** : le client emet `061`, l'ancien
+   `McDmasNetworkManager` utilisait `001`. Le serveur accepte les deux en
+   attendant que les specifications DMAS tranchent.
+2. **`member_group_id` incoherent** : le membre annonce `TESTGRP01`, le
+   reseau enregistre `40260` — c'est le DE2, qui porte
+   `dmas.jpos.group-signon-id` et non le member group. A verifier dans les
+   specifications : que doit contenir le DE2 d'un 0800 ?
+3. **`SessionOrchestrator`** utilise encore `McDmasNetworkManager`
+   (`@Deprecated`, connexion ephemere). A basculer, puis supprimer le
+   manager et `McDmasNetworkUtil.sendAndReceive`.
+4. **Sens de l'echange de cles** : le membre pousse toujours la PEK vers le
+   reseau. Chez MC SMS et SWAM, c'est le reseau qui distribue. A trancher
+   avec les specifications DMAS.
