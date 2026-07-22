@@ -32,6 +32,8 @@ public class McDmasAuthorization {
     private final HsmService hsm;
     private final McDmasMemberKeyRepository acqKeyRepo;
     private final McDmasMemberClient jposServer;
+    private final com.staging.sg.common.emv.McDmasEmv emv;
+    private final com.staging.sg.common.repository.McDmasCardRepository cardRepo;
 
     @Value("${dmas.issuer-host:localhost}") private String issuerHost;
     @Value("${dmas.issuer-port:8500}")      private int    issuerPort;
@@ -42,11 +44,15 @@ public class McDmasAuthorization {
     @Value("${dmas.default-mcc:5999}")      private String defaultMcc;
 
     public McDmasAuthorization(McDmasNetworkUtil net, HsmService hsm, McDmasMemberKeyRepository acqKeyRepo,
-                               McDmasMemberClient jposServer) {
+                               McDmasMemberClient jposServer,
+                               com.staging.sg.common.emv.McDmasEmv emv,
+                               com.staging.sg.common.repository.McDmasCardRepository cardRepo) {
         this.net = net;
         this.hsm = hsm;
         this.acqKeyRepo = acqKeyRepo;
         this.jposServer = jposServer;
+        this.emv = emv;
+        this.cardRepo = cardRepo;
     }
 
     /** Type métier -> (DE3 sf1, DE61 sf7, PIN requis). */
@@ -224,6 +230,60 @@ public class McDmasAuthorization {
             byte[] pinBlock = hsm.encryptPinBlock(pin, pan, pek.getKeyUnderLmk(), pek.getKcv(), pek.getKeyLength());
             msg.set(52, pinBlock);
         }
+        return msg;
+    }
+
+
+    /**
+     * Variante 0100 AVEC DE55 EMV construit.
+     *
+     * Charge les donnees EMV de la carte et sa MDK (sous LMK), fait
+     * construire le cryptogramme par McDmasEmv, et pose le DE55.
+     * L'ATC est incremente et persiste par carte a chaque appel.
+     *
+     * Activable independamment : les methodes existantes ne changent
+     * pas, le stress test reste inchange.
+     */
+    public org.jpos.iso.ISOMsg buildAuth0100WithEmv(String mti, String pan, String amount,
+                                                    String entryMode, String stan) throws Exception {
+        org.jpos.iso.ISOMsg msg = buildAuth0100(mti, pan, amount, entryMode, stan);
+
+        com.staging.sg.common.entity.McDmasCard card = cardRepo.findByPan(pan)
+                .orElseThrow(() -> new IllegalStateException("Carte inconnue : " + pan));
+
+        com.staging.sg.common.entity.McDmasMemberKey mdk = acqKeyRepo
+                .findByMemberGroupIdAndKeyTypeAndStatus(memberGroup, "MDK", "ACTIVE")
+                .orElseThrow(() -> new IllegalStateException(
+                        "MDK introuvable — faire le bootstrap MDK d'abord"));
+
+        // ATC incremente par carte, en base
+        int atc = (card.getEmvAtc() == null ? 0 : card.getEmvAtc()) + 1;
+        card.setEmvAtc(atc);
+        cardRepo.save(card);
+
+        com.staging.sg.common.emv.McDmasEmv.EmvInput in =
+                new com.staging.sg.common.emv.McDmasEmv.EmvInput();
+        in.mdkUnderLmk = mdk.getKeyUnderLmk();
+        in.mdkKcv      = mdk.getKcv();
+        in.mdkLenBytes = mdk.getKeyLength() != null ? mdk.getKeyLength() : 16;
+        in.pan         = pan;
+        in.psn         = card.getEmvPsn()        != null ? card.getEmvPsn()        : "00";
+        in.atc         = atc;
+        in.aid         = card.getEmvAid();
+        in.aip         = card.getEmvAip();
+        in.iad         = card.getEmvIad();
+        in.appVersion  = card.getEmvAppVersion();
+        in.cvmResults  = card.getEmvCvmResults() != null ? card.getEmvCvmResults() : "010002";
+        in.amount      = amount;
+        in.currency    = defaultCurrency;
+        in.countryCode = "0504";
+        in.date        = new java.text.SimpleDateFormat("yyMMdd").format(new java.util.Date());
+
+        com.staging.sg.common.emv.McDmasEmv.EmvResult r = emv.build(in);
+        msg.set(55, r.de55);
+
+        log.info("[DMAS-AUTH] DE55 construit — ARQC={} ATC={} pan={}",
+                r.arqc, atc, maskPan(pan));
         return msg;
     }
 

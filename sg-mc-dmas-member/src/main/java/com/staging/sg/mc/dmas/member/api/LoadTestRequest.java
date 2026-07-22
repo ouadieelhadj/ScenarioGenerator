@@ -20,6 +20,7 @@ public class LoadTestRequest {
 
     // ----- v1.1.0 : tirage de cartes + PIN -----
     public boolean withPin = false;       // si true, chiffre le PIN block (DE52) sous PEK
+    public boolean withEmv = false;      // si true, construit le DE55 EMV (ARQC)
     public List<CardEntry> cards;         // si non vide, tire une carte au hasard PAR transaction
 
     /** Une carte du pool de tirage : PAN + PIN clair. */

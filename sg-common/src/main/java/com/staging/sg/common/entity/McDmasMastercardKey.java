@@ -13,6 +13,12 @@ public class McDmasMastercardKey {
 
     @Column(name = "member_group_id", length = 20) private String memberGroupId;
     @Column(name = "key_type",        length = 3)  private String keyType;
+
+    @jakarta.persistence.Column(name = "key_label")
+    private String keyLabel;
+
+    @jakarta.persistence.Column(name = "bank_code")
+    private String bankCode;
     @Column(name = "key_length")                    private Integer keyLength = 24;
     @Column(name = "key_under_lmk",   length = 64) private String keyUnderLmk;
     @Column(name = "key_under_kek",   length = 64) private String keyUnderKek;
@@ -41,4 +47,8 @@ public class McDmasMastercardKey {
     public void setKcv(String v)              { this.kcv = v; }
     public void setStatus(String v)           { this.status = v; }
     public void setCreatedAt(LocalDateTime v) { this.createdAt = v; }
+    public String getBankCode() { return bankCode; }
+    public void setBankCode(String v) { this.bankCode = v; }
+    public String getKeyLabel() { return keyLabel; }
+    public void setKeyLabel(String v) { this.keyLabel = v; }
 }

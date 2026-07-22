@@ -57,6 +57,7 @@ public class McDmasMastercardHandler {
     private final McDmasTransactionRepository txRepo;
 
     private final McDmasInterfaceService iface;
+    private final com.staging.sg.mc.dmas.mastercard.emv.McDmasEmvValidator emvValidator;
 
     /**
      * Cle d'indexation des cles, deduite du DE2 du message recu.
@@ -78,7 +79,8 @@ public class McDmasMastercardHandler {
                                    McDmasMastercardKeyRepository issKeyRepo,
                                    McDmasCardRepository cardRepo,
                                    McDmasTransactionRepository txRepo,
-                                   McDmasInterfaceService iface) {
+                                   McDmasInterfaceService iface,
+                                   com.staging.sg.mc.dmas.mastercard.emv.McDmasEmvValidator emvValidator) {
         this.net = net;
         this.hsm = hsm;
         this.kekRepo = kekRepo;
@@ -87,6 +89,7 @@ public class McDmasMastercardHandler {
         this.cardRepo = cardRepo;
         this.txRepo = txRepo;
         this.iface = iface;
+        this.emvValidator = emvValidator;
     }
 
     public long getMessageCount() { return msgCount.get(); }
@@ -195,6 +198,7 @@ public class McDmasMastercardHandler {
      * Construit la reponse 0110 : decision metier + echo des DE d'origine.
      */
     public ISOMsg buildAuthResponse(ISOMsg request) throws ISOException {
+        validateDe55IfPresent(request);
         msgCount.incrementAndGet();
         String pan     = net.safeGet(request, 2);
         String amountS = net.safeGet(request, 4);
@@ -618,5 +622,27 @@ public class McDmasMastercardHandler {
         if (request.hasField(70)) response.set(70, request.getString(70));
         response.set(39, rc);
         return response;
+    }
+
+    /**
+     * Journalise et VALIDE le DE55 EMV d'une autorisation, si present.
+     * Le membre est identifie par le member_group_id resolu via le DE2.
+     */
+    private void validateDe55IfPresent(ISOMsg request) {
+        try {
+            if (!request.hasField(55)) return;
+            String mgid = memberGroup(request);
+            String bank = iface.memberGroupIdForDe2(
+                    request.hasField(2) ? request.getString(2) : null);
+            var result = emvValidator.validate(request, mgid, null);
+            if (Boolean.TRUE.equals(result.get("validated"))) {
+                log.info("[DMAS-ISS] ARQC VALIDE");
+            } else if (Boolean.TRUE.equals(result.get("present"))) {
+                log.warn("[DMAS-ISS] ARQC NON valide ou non verifiable : {}",
+                        result.getOrDefault("reason", result.get("arqc_calcule")));
+            }
+        } catch (Exception e) {
+            log.error("[DMAS-ISS] Erreur validation DE55 : {}", e.getMessage());
+        }
     }
 }

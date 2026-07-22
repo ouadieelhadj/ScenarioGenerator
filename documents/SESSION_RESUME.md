@@ -2650,3 +2650,177 @@ Chaque banque a SA cle, partagee avec SON Mastercard. Quatre sockets
    reelles.
 4. `SessionOrchestrator` utilise encore `McDmasNetworkManager`
    (`@Deprecated`, connexion ephemere).
+
+---
+
+## 28. TRANSACTION 0100 : DE55 EMV ET ARQC (2026-07-21)
+
+Le membre construit un DE55 EMV complet, ARQC compris. Le reseau le
+valide. Cinq lots (A a E) plus la mise en place d'une table de cartes
+propre a l'orchestrateur.
+
+### 28.1 ANALYSE PREPARATOIRE
+
+Trace de reference (EMVCo) : PAN 6799998900000070041, DE4 502.00,
+DE32 022905, DE33 002202, 18 tags dans le DE55.
+
+**Attribut du DE55 (guide p.1935)** : `b…255; LLLVAR`, binaire, longueur
+sur 3 positions, contenu = subelements TLV EMV (Book 3). Le packager le
+declare deja correctement : `fields[55] = new IFB_LLLBINARY(255, ...)`.
+Aucune correction necessaire. `msg.set(55, byte[])` suffit.
+
+**Tous les DE du 0100 verifies** (de-0100.txt) : seul le 55 est en
+LLLVAR 3 positions binaire ; tous les autres sont fixes ou LLVAR 2
+positions, deja geres puisque le stress test passe.
+
+**Deux niveaux a distinguer** :
+- attributs des DE (representation, longueur) — niveau message
+- subelements internes (TLV pour DE55, subfields pour DE48/61/22/43)
+Seul le DE55 a ete detaille tag par tag ; les subelements des autres DE
+restent a documenter au besoin.
+
+### 28.2 LES 18 TAGS DU DE55 ET LEUR SOURCE
+
+| Tag | Nom | Source |
+|---|---|---|
+| 9F26 | ARQC | calcule |
+| 9F27 | CID | fixe 80 |
+| 9F10 | IAD | carte |
+| 9F37 | Unpredictable Number | aleatoire |
+| 9F36 | ATC | carte, incremente en base |
+| 95 | TVR | terminal |
+| 9A | Date | horloge |
+| 9C | Transaction Type | parametre |
+| 9F02 | Amount | = DE4 |
+| 5F2A | Currency | = DE49 |
+| 82 | AIP | carte |
+| 9F1A | Terminal Country | 0504 (Maroc) |
+| 9F03 | Other Amount | 0 |
+| 9F33 | Terminal Capabilities | terminal |
+| 9F34 | CVM Results | mode PIN |
+| 9F35 | Terminal Type | terminal |
+| 84 | AID | carte |
+| 9F09 | App Version | carte |
+
+### 28.3 CHOIX CRYPTOGRAPHIQUES — STANDARD EMV
+
+L'ARQC suit le standard EMV par defaut (a rendre parametrable par carte
+si un membre reel impose un autre schema) :
+
+    Cle ICC      EMV Book 2, Option A
+                 ICC = 3DES( PAN[16 droite] || PSN ) sous MDK
+    Cle session  EMV Common Session Key (CSK)
+                 SK derivee de l'ATC sous ICC
+    ARQC         MAC ISO 9797-1 algorithme 3 (Retail MAC)
+    CDOL1        ordre M/Chip : 9F02 9F03 9F1A 95 5F2A 9A 9C 9F37 82 9F36 9F10
+
+### 28.4 JEU DE CLES DE TEST VALIDE
+
+Jeu Visa de test, verifie cryptographiquement (KCV calcules = KCV du
+document, et MDK1 chiffree sous ZCMK redonne la valeur attendue) :
+
+    ZCMK/KEK  13AED5DA1F32347523C708C11F2608FD   KCV 2D617C
+    MDK1      6E46FE409DF704BCA75E7FF270B65E73   KCV 944A44
+    MDK2      F1299BB0B35E512F5DD0A257F18C3158   KCV 4B58E5
+
+L'ARQC de la trace n'a PAS ete rejoue (decision : on le suppose correct,
+tests avec un membre reel plus tard). Le simulateur validera l'ARQC
+quand un vrai membre enverra ses cryptogrammes.
+
+### 28.5 LES CINQ LOTS
+
+**Lot A — donnees EMV en base**
+- `key_label` (identifiant lisible) sur les trois tables de cles
+- unicite corrigee : `(bank_code, member_group_id, key_type, status)` —
+  sans bank_code, deux banques ne pourraient avoir chacune leur MDK
+- `key_type` porte de 3 a 8 caracteres
+- colonnes EMV sur mc_dmas_cards (aid, aip, psn, atc, app_version, iad,
+  cvm_results)
+- endpoints `POST /api/admin/dmas/mdk/bootstrap` des deux cotes : la MDK
+  est chiffree sous LMK par le HSM, JAMAIS en clair en base
+- `bankCode` enfin mappe dans les entites McDmasMemberKey /
+  McDmasMastercardKey (colonne existait sans getter/setter)
+
+**Lot B — service McDmasEmv (sg-common)**
+- derivation ICC, derivation session, calcul ARQC, assemblage TLV
+- `hsm.exposeClearKey` reconstruit la MDK sous LMK et n'expose ses
+  octets qu'en memoire, jamais en base
+
+**Lot C — branchement sur le 0100**
+- champs EMV + bankCode dans l'entite McDmasCard
+- `buildAuth0100WithEmv` charge carte + MDK, incremente l'ATC PAR CARTE
+  en base, construit et pose le DE55
+- les methodes 0100 existantes ne changent pas : stress test intact
+
+**Lot D — validation cote reseau**
+- McDmasEmv deplace dans sg-common (partage membre/reseau, une seule
+  implementation crypto)
+- McDmasEmvValidator : decode le DE55, recalcule l'ARQC avec la MDK du
+  reseau, compare
+- `recomputeArqc` ajoute au service partage
+- validation appelee dans buildAuthResponse (0100/0200)
+
+**Lot E — raccordement au flux de campagne**
+- flag `WITH_EMV` dans campaigns.config (JSON), sur le modele de WITH_PIN
+- circuit : CampaignRunService [orchestrateur] lit WITH_EMV -> body
+  -> LoadTestRequest.withEmv [membre] -> LoadTestService branche
+  buildAuth0100WithEmv
+- un loadtest a 1 TPS / 1 s = une transaction unique, donc test unitaire
+
+### 28.6 SEPARATION ORCHESTRATEUR / MEMBRE
+
+L'orchestrateur ne doit pas lire les tables metier du membre. Il avait
+une dependance a `DmasCardRepository` (classe disparue au renommage,
+lisait mc_dmas_cards), qui cassait le build.
+
+Correction : table PROPRE a l'orchestrateur,
+`sg_orchestrator_cards_dmas` (nom prefixe par reseau pour distinguer
+SWAM et MC SMS a venir), entite `SgOrchestratorCardDmas` et repository
+dans sg-common. CampaignRunService lit desormais cette table.
+
+### 28.7 DECISION D'ARCHITECTURE : ACQUEREUR REEL (a venir)
+
+Objectif : faire du membre un ACQUEREUR REEL. Or dans la realite :
+
+| Acteur | A la MDK ? | Role |
+|---|---|---|
+| Emetteur | oui | personnalise les cartes, valide l'ARQC |
+| Acquereur | NON | relaie le DE55, ne le comprend pas |
+| Carte/puce | cle ICC derivee | calcule l'ARQC |
+
+Un acquereur reel ne calcule pas l'ARQC : il recoit le DE55 tout fait de
+la puce et le relaie. La spec le dit : DE55 = "binary data that only the
+issuer processes".
+
+**Direction retenue** : l'ORCHESTRATEUR joue le TERMINAL. Il porte la
+table de cartes, les donnees EMV et la MDK, construit le DE55, et le
+passe au membre dans le body REST. Le membre redevient un pur acquereur
+qui assemble le 0100 et relaie, sans jamais voir la MDK. Le reseau
+(emetteur) garde sa MDK pour valider — c'est correct et realiste.
+
+**Ligne de partage** : ce n'est pas "qui construit l'ISOMsg" (un
+acquereur reel assemble bien le message) mais "qui calcule l'ARQC" (la
+puce, donc l'orchestrateur-terminal).
+
+### 28.8 REFACTORING BIDIRECTIONNEL (a venir)
+
+Isoler dans sg-common la construction de message, le PIN et l'EMV, pour
+les reutiliser dans les DEUX sens :
+
+    SENS SORTANT  membre acquereur : construit 0100, reseau valide
+    SENS ENTRANT  reseau emetteur  : construit 0100, MEMBRE valide
+
+Dans le sens entrant, les roles s'inversent : le mastercard construit le
+0100 (carte du membre utilisee ailleurs), le membre decide et valide
+l'ARQC, le membre est en DE100 (receiving) et non DE32. Un assembleur
+neutre dans sg-common evite de tout dupliquer.
+
+### 28.9 RESTE A FAIRE
+
+1. Deplacer McDmasEmv + MDK cote orchestrateur (terminal), alleger le
+   membre (decision 28.7 pas encore codee)
+2. Isoler construction message / PIN / EMV dans sg-common (28.8)
+3. Implementer le sens entrant (0100 emetteur)
+4. Filtrer les transactions par bank_code partout
+5. FK campaigns.network -> networks : les campagnes utilisent encore
+   networks, pas mc_dmas_interface

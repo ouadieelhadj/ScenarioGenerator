@@ -446,4 +446,15 @@ public class JposHsmService implements HsmService {
                 ISOUtil.hexString(expectedMac), ISOUtil.hexString(computed), ok);
         return ok;
     }
+
+    /**
+     * Reconstruit une cle depuis sa valeur sous LMK et rend ses octets
+     * EN CLAIR, uniquement en memoire, pour les calculs EMV (derivation
+     * de la cle ICC puis de la cle de session). La cle n'est jamais
+     * ecrite en clair en base.
+     */
+    public byte[] exposeClearKey(String keyType, String underLmkHex, String kcv, int keyLenBytes) throws Exception {
+        SecureDESKey k = rebuildKey(keyType, underLmkHex, kcv, keyLenBytes);
+        return k.getKeyBytes();
+    }
 }
