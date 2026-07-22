@@ -96,3 +96,11 @@ SELECT 'key_type longueur' AS controle,
 
 SELECT bank_code, key_type, key_label, kcv, status
 FROM mc_dmas_mastercard_keys ORDER BY bank_code, key_type;
+
+-- ------------------------------------------------------------
+--  Droits applicatifs (sinon permission denied a l'execution)
+-- ------------------------------------------------------------
+GRANT SELECT, INSERT, UPDATE ON mc_dmas_cards           TO mc_dmas_member, mc_dmas_mastercard;
+GRANT SELECT, INSERT, UPDATE ON mc_dmas_member_keys     TO mc_dmas_member;
+GRANT SELECT, INSERT, UPDATE ON mc_dmas_mastercard_keys TO mc_dmas_mastercard;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public   TO mc_dmas_member, mc_dmas_mastercard;

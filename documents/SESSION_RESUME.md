@@ -2824,3 +2824,71 @@ neutre dans sg-common evite de tout dupliquer.
 4. Filtrer les transactions par bank_code partout
 5. FK campaigns.network -> networks : les campagnes utilisent encore
    networks, pas mc_dmas_interface
+
+### 28.9 CHAINE EMV VALIDEE DE BOUT EN BOUT — match=true
+
+Le test `test-dmas-emv.sh` fait passer un 0100 complet : demarrage du
+couple A, sign-on, KEK, PEK (echange 162), MDK des deux cotes, puis un
+0100 avec DE55 via un loadtest 1 TPS / 1 s. Resultat :
+
+    [EMV] ARQC=... ATC=1 (cote membre)
+    [EMV-VAL] ARQC recu=... calcule=... match=true (cote reseau)
+    ATC incremente 0 -> 1 en base
+
+Trois bugs corriges pour y arriver :
+
+1. **Droits PostgreSQL** — permission denied sur mc_dmas_cards. GRANT
+   SELECT/INSERT/UPDATE aux users mc_dmas_member et mc_dmas_mastercard,
+   ajoutes en permanence.
+
+2. **Bootstrap MDK reseau** — il resolvait la banque par byBank(bank),
+   mais le module Mastercard ne pilote pas la banque du membre (022905).
+   Corrige : accepte memberGroupId direct, ou le deduit de la banque via
+   lookupByBankCode (qui lit TOUTE la base, pas les seules interfaces
+   pilotees).
+
+3. **exposeClearKey rendait la cle SOUS LMK** — getKeyBytes() retourne
+   la MDK chiffree sous LMK, pas le clair. Membre et reseau ayant des
+   LMK differentes, les deux ICC divergeaient (kcv 5A5EB0 vs 684922)
+   malgre une MDK claire identique (meme KCV 944A44). Corrige :
+   decryptFromLMK (protected, appele par reflection) dechiffre reellement
+   sous LMK. Les deux modules retrouvent le meme clair 6E46FE40...5E73,
+   donc la meme ICC, donc le meme ARQC.
+
+Trace de diagnostic EMV-TRACE ajoutee (PSN, ATC, tags CDOL1, KCV des
+cles ICC et session, CDOL1, ARQC) des deux cotes — utile a conserver.
+
+### 28.10 PIN ET ARQC : DEUX NIVEAUX DE RIGUEUR HSM
+
+Distinction importante a garder en tete pour la production :
+
+**PIN** — la PEK ne sort JAMAIS du HSM. encryptPinBlock /
+decryptPinBlock passent la PEK sous LMK ; le HSM la dechiffre en interne
+et fait le calcul (chiffrement du block, ou verification) sans jamais
+exposer la cle. Bonne pratique.
+
+**ARQC** — exposeClearKey dechiffre la MDK sous LMK et la RETOURNE EN
+CLAIR ; la derivation ICC -> session -> ARQC se fait DEHORS, dans
+McDmasEmv. La MDK claire transite en memoire (jamais en base). Moins pur
+que le PIN, faute de primitive EMV dans le SMAdapter jPOS.
+
+| | Cle sort du HSM ? | Calcul |
+|---|---|---|
+| PIN | non | dans le HSM |
+| ARQC | oui (clair en memoire) | hors HSM (McDmasEmv) |
+
+Acceptable pour le simulateur. Une version production ferait la
+derivation ICC et la generation ARQC DANS le HSM (via SecureDESKey,
+jamais de clair expose), alignee sur le traitement du PIN. C'est une
+dette assumee, pas un bug.
+
+### 28.11 VALIDATION PIN AVEC UN MEMBRE REEL (a faire)
+
+Avec un membre reel, le dechiffrement du PIN block fonctionnerait (HSM
+interne, PEK partagee par l'echange 162), MAIS :
+- le format du block (ISO-0 / FORMAT00 actuel) doit correspondre a celui
+  du membre
+- surtout, la VALIDATION actuelle compare le PIN dechiffre a carte.pin
+  stocke EN CLAIR (base de test). Impossible avec un membre reel dont on
+  ignore le PIN. Il faudrait une validation par PVV ou PIN offset
+  (derivee cryptographique), non implementee.

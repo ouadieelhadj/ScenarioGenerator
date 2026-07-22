@@ -49,15 +49,27 @@ public class MdkBootstrapController {
     public ResponseEntity<?> bootstrap(@RequestBody Map<String, String> body) {
         try {
             String mdkClear = body.get("mdkClear");
-            String bank     = body.get("bank");
+            // Cote reseau, la MDK est indexee sur le member_group_id DU MEMBRE
+            // (ex. TESTGRP01), pas sur la banque du Mastercard. Le membre est
+            // identifie soit par memberGroupId direct, soit deduit du DE2.
+            String mgid = body.get("memberGroupId");
+            String bank = body.get("bank");
             if (mdkClear == null || mdkClear.isBlank()) {
                 return ResponseEntity.badRequest().body(Map.of("error", "mdkClear requis"));
             }
-
-            var cfg  = iface.byBank(bank);
-            String mgid      = cfg.getMemberGroupId();
-            String bankCode  = cfg.getBankCode();
-            String label     = "MDK-" + bankCode;
+            // Repli : si bank fournie et pilotee, en deduire le member_group_id ;
+            // sinon si un DE2 est donne, le resoudre ; sinon memberGroupId direct.
+            if (mgid == null || mgid.isBlank()) {
+                if (bank != null && !bank.isBlank()) {
+                    var found = iface.lookupByBankCode(bank);
+                    mgid = (found != null) ? found.getMemberGroupId() : bank;
+                } else {
+                    return ResponseEntity.badRequest().body(Map.of(
+                            "error", "memberGroupId requis (ou bank connue)"));
+                }
+            }
+            String bankCode = bank;
+            String label    = "MDK-" + (bank != null ? bank : mgid);
 
             JposHsmService.KekUnderLmk formed = hsm.formKekUnderLmk(mdkClear);
 

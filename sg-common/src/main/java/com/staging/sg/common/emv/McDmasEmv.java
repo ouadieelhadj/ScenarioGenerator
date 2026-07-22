@@ -110,6 +110,7 @@ public class McDmasEmv {
         String arqcHex = ISOUtil.hexString(arqc).toUpperCase();
 
         // 5. assemblage du DE55
+        traceArqc("MEMBRE", in, icc, sk, cdol, arqcHex);
         byte[] de55 = assembleDe55(in, arqcHex);
 
         EmvResult r = new EmvResult();
@@ -136,7 +137,9 @@ public class McDmasEmv {
         byte[] sk  = deriveSessionKey(icc, in.atc);
         byte[] cdol = buildCdol1(in);
         byte[] arqc = retailMac(sk, cdol);
-        return ISOUtil.hexString(arqc).toUpperCase();
+        String arqcHex = ISOUtil.hexString(arqc).toUpperCase();
+        traceArqc("RESEAU", in, icc, sk, cdol, arqcHex);
+        return arqcHex;
     }
 
     // ==================================================================
@@ -340,6 +343,27 @@ public class McDmasEmv {
         while (sb.length() + hex.length() < lenChars) sb.append('0');
         sb.append(hex);
         return sb.toString();
+    }
+
+    /** Trace detaillee du calcul ARQC, pour comparer membre et reseau. */
+    private void traceArqc(String cote, EmvInput in, byte[] icc, byte[] sk,
+                           byte[] cdol, String arqc) {
+        try {
+            log.info("[EMV-TRACE:{}] PAN=***{} PSN={} ATC={}", cote,
+                    in.pan != null && in.pan.length()>=4 ? in.pan.substring(in.pan.length()-4) : in.pan,
+                    in.psn, in.atc);
+            log.info("[EMV-TRACE:{}]   9F02={} 9F03={} 9F1A={} 95={} 5F2A={}", cote,
+                    pad(in.amount,12), pad(in.otherAmount,12), pad(in.countryCode,4),
+                    pad(in.tvr,10), pad(in.currency,4));
+            log.info("[EMV-TRACE:{}]   9A={} 9C={} 9F37={} 82={} 9F36={} 9F10={}", cote,
+                    pad(in.date,6), pad(in.txType,2),
+                    in.unpredictable, pad(in.aip,4), atcHex(in.atc), in.iad);
+            log.info("[EMV-TRACE:{}]   ICC.kcv={} SK.kcv={}", cote, kcv3(icc), kcv3(sk));
+            log.info("[EMV-TRACE:{}]   CDOL1={}", cote, ISOUtil.hexString(cdol).toUpperCase());
+            log.info("[EMV-TRACE:{}]   ARQC={}", cote, arqc);
+        } catch (Exception e) {
+            log.warn("[EMV-TRACE:{}] trace KO : {}", cote, e.getMessage());
+        }
     }
 
     private String kcv3(byte[] key) throws Exception {

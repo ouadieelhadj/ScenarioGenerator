@@ -453,8 +453,50 @@ public class JposHsmService implements HsmService {
      * de la cle ICC puis de la cle de session). La cle n'est jamais
      * ecrite en clair en base.
      */
+
+    /**
+     * Rend les octets EN CLAIR d'une cle stockee sous LMK.
+     *
+     * getKeyBytes() sur un SecureDESKey retourne la cle chiffree sous
+     * LMK, pas le clair — l'utiliser pour deriver donnait des resultats
+     * differents entre modules (LMK distinctes). On dechiffre donc
+     * reellement sous LMK via jceHandler.decryptData, comme le HSM le
+     * fait en interne pour ses propres operations.
+     *
+     * Le clair n'existe qu'en memoire, le temps du calcul EMV ; il n'est
+     * jamais ecrit en base.
+     */
     public byte[] exposeClearKey(String keyType, String underLmkHex, String kcv, int keyLenBytes) throws Exception {
         SecureDESKey k = rebuildKey(keyType, underLmkHex, kcv, keyLenBytes);
-        return k.getKeyBytes();
+        // decryptFromLMK est protected dans JCESecurityModule : reflection.
+        java.lang.reflect.Method m = null;
+        Class<?> c = sm.getClass();
+        while (c != null && m == null) {
+            try {
+                m = c.getDeclaredMethod("decryptFromLMK", SecureDESKey.class);
+            } catch (NoSuchMethodException ignore) {
+                c = c.getSuperclass();
+            }
+        }
+        if (m == null) {
+            throw new IllegalStateException("decryptFromLMK introuvable sur " + sm.getClass());
+        }
+        m.setAccessible(true);
+        Object key = m.invoke(sm, k);   // javax.crypto.spec.SecretKeySpec ou Key
+        byte[] clear;
+        if (key instanceof java.security.Key jk) {
+            clear = jk.getEncoded();
+        } else if (key instanceof byte[] b) {
+            clear = b;
+        } else {
+            throw new IllegalStateException("Type inattendu de decryptFromLMK : " + key.getClass());
+        }
+        // Un DESede sur 16 octets peut revenir sur 24 (K1K2K3=K1K2K1) : on retaille
+        if (keyLenBytes == 16 && clear.length == 24) {
+            byte[] t = new byte[16];
+            System.arraycopy(clear, 0, t, 0, 16);
+            clear = t;
+        }
+        return clear;
     }
 }
