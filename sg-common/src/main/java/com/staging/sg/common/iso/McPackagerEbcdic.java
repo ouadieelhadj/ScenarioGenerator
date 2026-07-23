@@ -51,9 +51,9 @@ public class McPackagerEbcdic extends ISOBasePackager {
         // DE22 : POS entry mode — n-3
         fields[22] = new IFE_NUMERIC (3,  "POS ENTRY MODE");
         // DE32 : acquiring institution id — LLVAR n-11
-        fields[32] = new IFE_NUMERIC (6,  "ACQUIRING INSTITUTION ID");
+        fields[32] = new IFE_LLNUM    (11, "ACQUIRING INSTITUTION ID");
         // DE33 : forwarding institution id (002202 = reseau MC) — n-6
-        fields[33] = new IFE_NUMERIC (6,  "FORWARDING INSTITUTION ID");
+        fields[33] = new IFE_LLNUM    (11, "FORWARDING INSTITUTION ID");
         // DE37 : retrieval reference number — ans-12
         fields[37] = new IFE_CHAR    (12, "RETRIEVAL REFERENCE NUMBER");
         // DE39 : response code (présent sur 0810)
@@ -80,7 +80,7 @@ public class McPackagerEbcdic extends ISOBasePackager {
         fields[90] = new IFE_NUMERIC (42, "ORIGINAL DATA ELEMENTS");
 
         fields[94] = new IFE_CHAR    (7,  "SERVICE INDICATOR");
-        fields[96] = new IFE_NUMERIC (6,  "MESSAGE SECURITY CODE");
+        fields[96] = new IFE_NUMERIC (8,  "MESSAGE SECURITY CODE");
         fields[5]  = new IFE_NUMERIC (12, "AMOUNT, RECONCILIATION");
         fields[6]  = new IFE_NUMERIC (12, "AMOUNT, CARDHOLDER BILLING");
         fields[8]  = new IFE_NUMERIC (8,  "AMOUNT, CARDHOLDER BILLING FEE");
@@ -115,7 +115,7 @@ public class McPackagerEbcdic extends ISOBasePackager {
         fields[51] = new IFE_NUMERIC (3,  "CURRENCY CODE, CARDHOLDER BILLING");
         fields[53] = new IFE_NUMERIC (16, "SECURITY-RELATED CONTROL INFO");
         fields[54] = new IFE_LLLCHAR (240, "AMOUNTS, ADDITIONAL");
-        fields[55] = new IFB_LLLBINARY (255, "INTEGRATED CIRCUIT CARD DATA");
+        fields[55] = new IFE_LLLBINARY (255, "INTEGRATED CIRCUIT CARD DATA");
         fields[56] = new IFE_LLLCHAR (37, "ORIGINAL DATA ELEMENTS, MESSAGE TYPE");
         fields[62] = new IFE_LLLCHAR (999, "ADDITIONAL DATA-2");
         fields[64] = new IFB_BINARY  (8,  "MAC, PRIMARY");

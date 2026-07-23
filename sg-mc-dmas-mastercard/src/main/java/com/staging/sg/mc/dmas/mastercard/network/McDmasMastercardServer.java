@@ -3,6 +3,7 @@ package com.staging.sg.mc.dmas.mastercard.network;
 import com.staging.sg.common.entity.McDmasInterface;
 import com.staging.sg.common.iso.McDmasLengthChannel;
 import com.staging.sg.common.iso.McPackagerEbcdic;
+import com.staging.sg.common.iso.IsoDump;
 import com.staging.sg.common.service.McDmasInterfaceService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -234,7 +235,7 @@ public class McDmasMastercardServer {
         s.pending.put(stan, fut);
         try {
             synchronized (s.sendLock) {
-                src.send(msg);
+                IsoDump.dump("MASTERCARD", "ENVOI", msg); src.send(msg);
             }
             return fut.get(timeoutSeconds, TimeUnit.SECONDS);
         } catch (java.io.IOException e) {
@@ -258,7 +259,7 @@ public class McDmasMastercardServer {
             throw new IllegalStateException("Pas de session membre active sur " + s.bankCode);
         }
         synchronized (s.sendLock) {
-            src.send(msg);
+            IsoDump.dump("MASTERCARD", "ENVOI", msg); src.send(msg);
         }
     }
 
@@ -274,6 +275,7 @@ public class McDmasMastercardServer {
 
         @Override
         public boolean process(ISOSource source, ISOMsg m) {
+            IsoDump.dump("MASTERCARD", "RECEPTION", m);
             try {
                 String mti  = m.getMTI();
                 String stan = m.hasField(11) ? m.getString(11) : null;
@@ -308,7 +310,7 @@ public class McDmasMastercardServer {
                     return false;
                 }
 
-                source.send(resp);
+                IsoDump.dump("MASTERCARD", "ENVOI", resp); source.send(resp);
                 String rc = resp.hasField(39) ? resp.getString(39) : "?";
                 log.info("[JPOS-SRV:{}] Repondu {} DE39={} STAN={}",
                         srv.bankCode, resp.getMTI(), rc, stan);

@@ -102,7 +102,7 @@ public class McDmasEmv {
         byte[] icc = deriveIcc(mdk, in.pan, in.psn);
 
         // 3. cle de session (EMV CSK)
-        byte[] sk = deriveSessionKey(icc, in.atc);
+        byte[] sk = deriveSessionKey(icc, in.atc, unpredictable(in));
 
         // 4. donnees CDOL1 et ARQC
         byte[] cdol = buildCdol1(in);
@@ -134,7 +134,7 @@ public class McDmasEmv {
     public String recomputeArqc(EmvInput in) throws Exception {
         byte[] mdk = mdkClear(in);
         byte[] icc = deriveIcc(mdk, in.pan, in.psn);
-        byte[] sk  = deriveSessionKey(icc, in.atc);
+        byte[] sk  = deriveSessionKey(icc, in.atc, unpredictable(in));
         byte[] cdol = buildCdol1(in);
         byte[] arqc = retailMac(sk, cdol);
         String arqcHex = ISOUtil.hexString(arqc).toUpperCase();
@@ -170,6 +170,17 @@ public class McDmasEmv {
      *   ICC_gauche  = 3DES( Y )      sous MDK
      *   ICC_droite  = 3DES( Y XOR FF..FF ) sous MDK
      */
+    /** Parite impaire sur chaque octet — exigee par M/Chip pour les cles derivees. */
+    private byte[] oddParity(byte[] in) {
+        byte[] out = new byte[in.length];
+        for (int i = 0; i < in.length; i++) {
+            int v = in[i] & 0xFE;
+            int bits = Integer.bitCount(v);
+            out[i] = (byte) (v | ((bits % 2 == 0) ? 1 : 0));
+        }
+        return out;
+    }
+
     private byte[] deriveIcc(byte[] mdk, String pan, String psn) throws Exception {
         String digits = pan.replaceAll("[^0-9]", "");
         String right16;
@@ -195,7 +206,7 @@ public class McDmasEmv {
         byte[] icc = new byte[16];
         System.arraycopy(left,  0, icc, 0, 8);
         System.arraycopy(right, 0, icc, 8, 8);
-        return icc;
+        return oddParity(icc);   // M/Chip : parite impaire
     }
 
     /**
@@ -204,13 +215,26 @@ public class McDmasEmv {
      *   R = ATC(2) || 0F || 00 00 00 00 00   pour la moitie droite
      *   SK = 3DES(R) sous ICC, par moitie
      */
-    private byte[] deriveSessionKey(byte[] icc, int atc) throws Exception {
+    /**
+     * Cle de session — M/Chip 4 (CVN 10).
+     *   R_gauche = ATC || F0 || 00 || UN
+     *   R_droite = ATC || 0F || 00 || UN
+     *   SK = 3DES(R) sous la cle ICC, par moitie
+     *
+     * Difference avec le CSK generique : les 4 derniers octets portent
+     * l'Unpredictable Number, pas des zeros.
+     */
+    private byte[] deriveSessionKey(byte[] icc, int atc, String unHex) throws Exception {
         byte[] atcB = new byte[]{ (byte)((atc >> 8) & 0xFF), (byte)(atc & 0xFF) };
+        byte[] un   = ISOUtil.hex2byte(unHex);
 
         byte[] rL = new byte[8];
-        rL[0] = atcB[0]; rL[1] = atcB[1]; rL[2] = (byte)0xF0;
+        rL[0] = atcB[0]; rL[1] = atcB[1]; rL[2] = (byte)0xF0; rL[3] = 0x00;
+        System.arraycopy(un, 0, rL, 4, 4);
+
         byte[] rR = new byte[8];
-        rR[0] = atcB[0]; rR[1] = atcB[1]; rR[2] = (byte)0x0F;
+        rR[0] = atcB[0]; rR[1] = atcB[1]; rR[2] = (byte)0x0F; rR[3] = 0x00;
+        System.arraycopy(un, 0, rR, 4, 4);
 
         byte[] skL = tdesEcb(icc, rL, Cipher.ENCRYPT_MODE);
         byte[] skR = tdesEcb(icc, rR, Cipher.ENCRYPT_MODE);
@@ -281,31 +305,37 @@ public class McDmasEmv {
         b.write(ISOUtil.hex2byte(unpredictable(in)));        // 9F37
         b.write(ISOUtil.hex2byte(pad(in.aip, 4)));           // 82
         b.write(ISOUtil.hex2byte(atcHex(in.atc)));           // 9F36
-        b.write(ISOUtil.hex2byte(in.iad));                   // 9F10
+        // 9F10 : pour CVN 10 / M/Chip 4, seuls 6 octets de l'IAD entrent
+        // dans les donnees signees (octets 3 a 8 du tag complet).
+        String iadFull = in.iad == null ? "" : in.iad.replaceAll("[^0-9A-Fa-f]", "");
+        String iadPart = iadFull.length() >= 16 ? iadFull.substring(4, 16) : iadFull;
+        b.write(ISOUtil.hex2byte(iadPart));                  // 9F10 partiel
         return b.toByteArray();
     }
 
     /** Assemble les 18 tags EMV en TLV binaire. */
     private byte[] assembleDe55(EmvInput in, String arqcHex) throws Exception {
         ByteArrayOutputStream b = new ByteArrayOutputStream();
-        tlv(b, "9F26", arqcHex);                 // ARQC
-        tlv(b, "9F27", "80");                     // CID = ARQC
-        tlv(b, "9F10", in.iad);                    // IAD
-        tlv(b, "9F37", unpredictable(in));         // UN
-        tlv(b, "9F36", atcHex(in.atc));            // ATC
+        tlv(b, "9F33", in.termCapabilities);       // Terminal Capabilities
         tlv(b, "95",   pad(in.tvr, 10));           // TVR
+        tlv(b, "9F37", unpredictable(in));         // Unpredictable Number
+        tlv(b, "9F26", arqcHex);                   // ARQC
+        tlv(b, "9F36", atcHex(in.atc));            // ATC
+        tlv(b, "82",   pad(in.aip, 4));            // AIP
+        tlv(b, "9C",   pad(in.txType, 2));         // Transaction Type
+        tlv(b, "9F1A", pad(in.countryCode, 4));    // Terminal Country
         tlv(b, "9A",   pad(in.date, 6));           // date
-        tlv(b, "9C",   pad(in.txType, 2));         // type
         tlv(b, "9F02", pad(in.amount, 12));        // montant
         tlv(b, "5F2A", pad(in.currency, 4));       // devise
         tlv(b, "9F03", pad(in.otherAmount, 12));   // autre montant
-        tlv(b, "82",   pad(in.aip, 4));            // AIP
-        tlv(b, "9F1A", pad(in.countryCode, 4));    // pays
-        tlv(b, "9F34", pad(in.cvmResults, 6));     // CVM results
-        tlv(b, "9F33", in.termCapabilities);       // term capabilities
-        tlv(b, "9F35", in.termType);               // term type
-        tlv(b, "84",   in.aid);                     // AID
-        tlv(b, "9F09", pad(in.appVersion, 4));      // app version
+        tlv(b, "9F27", "80");                      // CID = ARQC
+        tlv(b, "9F34", pad(in.cvmResults, 6));     // CVM Results
+        tlv(b, "9F35", in.termType);               // Terminal Type
+        tlv(b, "9F53", "52");                      // Transaction Category Code
+        tlv(b, "84",   in.aid);                    // AID
+        tlv(b, "9F09", pad(in.appVersion, 4));     // App Version
+        tlv(b, "9F41", "00000001");                // Transaction Sequence Counter
+        tlv(b, "9F10", in.iad);                    // IAD (en dernier)
         return b.toByteArray();
     }
 

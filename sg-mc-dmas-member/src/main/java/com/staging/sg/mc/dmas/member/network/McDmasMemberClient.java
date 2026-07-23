@@ -1,5 +1,7 @@
 package com.staging.sg.mc.dmas.member.network;
 
+import com.staging.sg.common.iso.IsoDump;
+
 import com.staging.sg.common.entity.McDmasInterface;
 import com.staging.sg.common.iso.McDmasLengthChannel;
 import com.staging.sg.common.iso.McPackagerEbcdic;
@@ -120,7 +122,7 @@ public class McDmasMemberClient {
             listener = new Thread(() -> {
                 while (running) {
                     try {
-                        handleIncoming(this, channel.receive());
+                        { org.jpos.iso.ISOMsg __rx = channel.receive(); IsoDump.dump("MEMBRE", "RECEPTION", __rx); handleIncoming(this, __rx); }
                     } catch (Exception e) {
                         if (running) {
                             log.error("[JPOS-CLI:{}] Erreur d'ecoute : {}", bankCode, e.getMessage());
@@ -237,7 +239,7 @@ public class McDmasMemberClient {
         r.set(39, de39);
         if (req.hasField(48)) r.set(48, req.getString(48));
         if (req.hasField(70)) r.set(70, req.getString(70));
-        c.channel.send(r);
+        IsoDump.dump("MEMBRE", "ENVOI", r); c.channel.send(r);
         log.info("[JPOS-CLI:{}] Accuse 0810 DE39={} envoye", c.bankCode, de39);
     }
 
@@ -286,7 +288,7 @@ public class McDmasMemberClient {
         CompletableFuture<ISOMsg> fut = new CompletableFuture<>();
         c.pending.put(stan, fut);
         try {
-            c.channel.send(msg);
+            IsoDump.dump("MEMBRE", "ENVOI", msg); c.channel.send(msg);
             return fut.get(timeoutSeconds, TimeUnit.SECONDS);
         } catch (java.io.IOException e) {
             c.signedOn = false;
@@ -306,7 +308,7 @@ public class McDmasMemberClient {
     public void pushOnActiveSession(String bankCode, ISOMsg msg) throws Exception {
         Connection c = conn(bankCode);
         c.ensureConnected();
-        c.channel.send(msg);
+        IsoDump.dump("MEMBRE", "ENVOI", msg); c.channel.send(msg);
     }
 
     // ==================================================================
@@ -374,8 +376,8 @@ public class McDmasMemberClient {
         m.set(11, stan);
         m.set(33, c.cfg.getFwdIdDe33());
         m.set(70, de70);
-        m.set(94, "0I0    ");
-        m.set(96, "000000");
+        m.set(94, "0B0    ");
+        m.set(96, "00000000");
 
         log.info("[JPOS-CLI:{}] {} -> 0800 DE70={} STAN={}", c.bankCode, label, de70, stan);
         ISOMsg resp = pushAndWait(c.bankCode, m, 15);

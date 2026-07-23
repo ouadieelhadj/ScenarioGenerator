@@ -2892,3 +2892,126 @@ interne, PEK partagee par l'echange 162), MAIS :
   stocke EN CLAIR (base de test). Impossible avec un membre reel dont on
   ignore le PIN. Il faudrait une validation par PVV ou PIN offset
   (derivee cryptographique), non implementee.
+
+---
+
+## 29. CONFORMITE AU RESEAU REEL — 0100 EMV APPROUVE (2026-07-23)
+
+Notre membre dialogue desormais avec le **simulateur Mastercard reel**
+(AcquirerSwitchSimulator, format Mastercard Credit 26Q3) : sign-on
+accepte, 0100 EMV approuve, ARQC valide par l'emetteur.
+
+### 29.1 MONTAGE
+
+    poste .21 (notre membre)
+        -> relais ncat sur 10.23.33.114:11127
+        -> simulateur reel 10.23.33.146:7001
+
+Relais sur .114 (Linux, seule machine voyant les deux sous-reseaux) :
+
+    ncat -l 11127 --keep-open --sh-exec "ncat 10.23.33.146 7001" &
+
+Cible pointee en base :
+
+    UPDATE mc_dmas_interface
+    SET target_host='10.23.33.114', target_port=11127
+    WHERE id_interface='DMAS_BANK_A';
+
+Pas d'echange de cle 162 : KEK et MDK sont bootstrappees directement
+des deux cotes.
+
+### 29.2 LA CAUSE RACINE : LONGUEUR DU DE55
+
+Le simulateur rejetait le DE55 avec « Index and length must refer to a
+location within the string », et n'envoyait aucun 0110. Comparaison
+octet par octet avec le membre reel, juste apres le DE49 :
+
+    NOUS : ...F5F0F4  01 36     <- longueur en BCD binaire
+    WAY4 : ...F5F0F4  F1F2F6    <- longueur "126" en EBCDIC
+
+Le packager declarait DE55 en `IFB_LLLBINARY`, qui ecrit la longueur en
+BCD. Le reseau la lit comme de l'EBCDIC, obtient une valeur absurde et
+sort des bornes du buffer.
+
+**Correction** : nouvelle classe `IFE_LLLBINARY` (sg-common/iso) —
+longueur sur 3 chiffres EBCDIC puis octets bruts. `IFE_LLLCHAR` ne
+convenait pas : il aurait converti les DONNEES en EBCDIC, corrompant le
+TLV.
+
+### 29.3 AUTRES ECARTS DE CONFORMITE CORRIGES
+
+Chacun revele par le simulateur, l'un apres l'autre (DE44 pointait le
+champ fautif) :
+
+| DE | Avant | Apres |
+|---|---|---|
+| 32 / 33 | `IFE_NUMERIC(6)` fixe | **`IFE_LLNUM`** (LLVAR) |
+| 33 | absent du 0100 | present |
+| 94 | `0I0    ` | `0B0    ` (SF2 = Both) |
+| 96 | `000000` (6) | `00000000` (8) — spec n-8 |
+| 22 | `051` | `052` |
+| 23 | absent | `000` (PSN) |
+| 48 | `610500001` | ` 22050601A610500001` (TCC + SE22 + SE61) |
+| 41/42/43 | absents | terminal, acceptor, name/location |
+| 49 | `840` | `504` (MAD) |
+| 61 | `000000000000` | `000001000030050420100` |
+| 12/13/14/35/37 | absents | requis en mode chip (DE22.1 = 05) |
+
+Le packager DE32/33 en longueur fixe etait un **vrai bug**, masque en
+local : nos deux modules partageaient le meme defaut et se comprenaient
+entre eux. Il n'est ressorti que face au reseau reel.
+
+### 29.4 CRYPTOGRAPHIE M/Chip 4 (CVN 10)
+
+Le simulateur a livre le detail de son calcul, ce qui a permis de
+reproduire sa chaine exactement (verifiee en local avant livraison) :
+
+    1. cle ICC    EMV Book 2 Option A + PARITE IMPAIRE     <- manquait
+    2. cle sess.  ATC || F0/0F || 00 || UN                 <- UN, pas des zeros
+    3. CDOL1      9F02 9F03 9F1A 95 5F2A 9A 9C 9F37 82 9F36
+                  || IAD[octets 3 a 8]                     <- 6 octets seulement
+    4. MAC        ISO 9797-1 alg 3 (Retail MAC) — deja correct
+
+Points a retenir :
+- la **parite impaire** sur la cle ICC derivee est exigee par M/Chip
+- la cle de session porte l'**Unpredictable Number** dans ses 4 derniers
+  octets, contrairement au CSK generique
+- pour CVN 10, seuls **6 octets** de l'IAD entrent dans les donnees
+  signees (`9F10 (appended part)` dans la trace du simulateur)
+
+**MDK du simulateur** : `9E15204313F7318ACB79B90BD986AD29` (KCV 850571).
+L'ancienne MDK de test Visa ne correspond pas a ses cartes.
+
+### 29.5 ORDRE DES TAGS DU DE55
+
+Aligne sur le membre reel :
+
+    9F33 95 9F37 9F26 9F36 82 9C 9F1A 9A 9F02 5F2A 9F03
+    9F27 9F34 9F35 9F53 84 9F09 9F41 9F10
+
+### 29.6 TRACE ISO DETAILLEE
+
+`IsoDump` (sg-common/iso), appele a chaque envoi et reception des DEUX
+cotes, affiche facon PowerCARD : buffer hexa, MTI, chaque champ
+`FLD (nnn) : (len) : [valeur]`, puis le **DE55 decode tag par tag** avec
+le libelle de chaque tag. C'est cet outil qui a permis tout le
+diagnostic.
+
+### 29.7 RESULTAT
+
+    0100 -> DE55 136 octets, ARQC=450CAC52BE213678, ATC=4
+    0110 <- DE39=00 APPROVED, DE38=220007
+            DE55 : 91 (10) A077DD68E333B9D40012  = ARPC
+
+Le tag 91 (Issuer Authentication Data) prouve que l'emetteur a **valide
+notre ARQC** et renvoie son ARPC.
+
+### 29.8 RESTE A FAIRE
+
+1. **Verifier l'ARPC** cote membre (tag 91 recu mais non controle), et
+   le **generer** cote notre Mastercard quand il joue l'emetteur :
+   `ARPC = 3DES( ARQC XOR (ARC || 00...) )` sous la cle de session
+2. Rejouer le test local membre <-> notre mastercard : le calcul ARQC a
+   change des deux cotes, il doit toujours concorder
+3. Rendre parametrables par carte le CVN et le schema de derivation
+   (aujourd'hui M/Chip 4 en dur)

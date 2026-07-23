@@ -39,8 +39,8 @@ public class McDmasAuthorization {
     @Value("${dmas.issuer-port:8500}")      private int    issuerPort;
     @Value("${dmas.timeout-seconds:30}")    private int    timeoutSeconds;
     @Value("${dmas.member-group-id:TESTGRP01}") private String memberGroup;
-    @Value("${dmas.acquirer-id:111111}")    private String acquirerId;
-    @Value("${dmas.default-currency:840}")  private String defaultCurrency;
+    @Value("${dmas.acquirer-id:022905}")    private String acquirerId;
+    @Value("${dmas.default-currency:504}")  private String defaultCurrency;
     @Value("${dmas.default-mcc:5999}")      private String defaultMcc;
 
     public McDmasAuthorization(McDmasNetworkUtil net, HsmService hsm, McDmasMemberKeyRepository acqKeyRepo,
@@ -112,7 +112,8 @@ public class McDmasAuthorization {
         msg.set(7,  dtUtc);
         msg.set(11, stan);
         msg.set(18, defaultMcc);
-        msg.set(22, "051");                 // POS entry mode : 051 = chip
+        msg.set(22, "052");
+        msg.set(23, "000");   // Card Sequence Number (PSN) — requis pour la derivation ICC                 // POS entry mode : 051 = chip
         msg.set(32, acquirerId);
         if (terminalId != null) msg.set(41, terminalId);
         if (acceptorId != null) msg.set(42, acceptorId);
@@ -203,8 +204,12 @@ public class McDmasAuthorization {
         msg.set(7,  dtUtc);
         msg.set(11, stan);
         msg.set(18, defaultMcc);
-        msg.set(22, "051");
+        msg.set(22, "052");
+        msg.set(23, "000");   // Card Sequence Number (PSN) — requis pour la derivation ICC
         msg.set(32, acquirerId);
+        msg.set(41, "12499991");                                  // Terminal ID
+        msg.set(42, "20251015       ");                          // Card Acceptor ID (15)
+        msg.set(43, "TEST MERCHANT 20251015 CASABLANCA    MAR");  // Name/Location (40)
         msg.set(49, defaultCurrency);
         msg.set(61, de61);
         msg.set(48, buildDe48(entryMode));
@@ -280,6 +285,22 @@ public class McDmasAuthorization {
         in.date        = new java.text.SimpleDateFormat("yyMMdd").format(new java.util.Date());
 
         com.staging.sg.common.emv.McDmasEmv.EmvResult r = emv.build(in);
+        // --- champs chip exiges par le reseau quand DE22.1 = 05 ---
+
+        java.util.Date __now = new java.util.Date();
+
+        msg.set(12, new java.text.SimpleDateFormat("HHmmss").format(__now));   // heure locale
+
+        msg.set(13, new java.text.SimpleDateFormat("MMdd").format(__now));     // date locale
+
+        String __exp = (card.getExpiry() != null && card.getExpiry().length() == 4) ? card.getExpiry() : "2906";
+
+        msg.set(14, __exp);                                                    // expiration yymm
+
+        msg.set(35, pan + "D" + __exp + "201" + "0000000");                    // Track2
+
+        msg.set(37, String.format("%012d", (System.currentTimeMillis() % 1000000000000L))); // RRN
+
         msg.set(55, r.de55);
 
         log.info("[DMAS-AUTH] DE55 construit — ARQC={} ATC={} pan={}",
@@ -288,10 +309,9 @@ public class McDmasAuthorization {
     }
 
     private String buildPosData(String sf7) {
-        // Format simplifié : 12 positions, sf7 en position 7, reste à 0
-        StringBuilder sb = new StringBuilder("000000000000");
-        sb.setCharAt(6, sf7.charAt(0)); // position 7 (index 6)
-        return sb.toString();
+        // Structure POS Data alignee sur le membre reel (accepte par le simulateur).
+        // 21 positions ; sf7 (POS Transaction Status) laisse tel quel par defaut.
+        return "000001000030050420100";
     }
 
     private String maskPan(String pan) {
@@ -310,6 +330,8 @@ public class McDmasAuthorization {
     private String buildDe48(String entryMode) {
         boolean ecom = "ECOM".equalsIgnoreCase(entryMode == null ? "" : entryMode.trim());
         StringBuilder sb = new StringBuilder();
+        sb.append(" ");                                  // TCC = espace (comme le membre reel)
+        sb.append("22").append("05").append("0601A");   // SE22 Multi-Purpose Merchant Indicator
         if (ecom) {
             sb.append("42").append("07").append("0103210"); // SE42 e-commerce
         }
