@@ -31,3 +31,5 @@ dmcs/
 
 # Logs runtime des services
 run-logs/
+inspect-project.sh
+project-info.txt
