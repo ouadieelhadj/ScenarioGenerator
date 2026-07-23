@@ -130,6 +130,18 @@ public class McDmasEmvValidator {
             r.put("arqc_recu", arqcRecu);
             r.put("arqc_calcule", arqcCalcule);
             r.put("validated", match);
+
+            // ARPC : reponse cryptographique de l'emetteur, si l'ARQC est bon
+            if (match) {
+                try {
+                    String arc = "0012";   // approbation, valeur observee sur le reseau reel
+                    r.put("arpc", emv.computeArpc(in, arqcRecu, arc));
+                    r.put("arc",  arc);
+                } catch (Exception ae) {
+                    log.warn("[EMV-VAL] calcul ARPC impossible : {}", ae.getMessage());
+                }
+            }
+
             log.info("[EMV-VAL] ARQC recu={} calcule={} match={}",
                     arqcRecu, arqcCalcule, match);
             return r;

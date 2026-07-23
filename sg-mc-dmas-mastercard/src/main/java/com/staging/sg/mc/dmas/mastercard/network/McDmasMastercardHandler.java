@@ -198,11 +198,10 @@ public class McDmasMastercardHandler {
      * Construit la reponse 0110 : decision metier + echo des DE d'origine.
      */
     public ISOMsg buildAuthResponse(ISOMsg request) throws ISOException {
-        validateDe55IfPresent(request);
+        java.util.Map<String,Object> emvResult = validateDe55IfPresent(request);
         msgCount.incrementAndGet();
         String pan     = net.safeGet(request, 2);
         String amountS = net.safeGet(request, 4);
-
         log.info("[DMAS-ISS] === Recu {} Authorization ===", request.getMTI());
         log.info("[DMAS-ISS] DE2  PAN              = {}", maskPan(pan));
         log.info("[DMAS-ISS] DE3  Processing Code  = {}", net.safeGet(request, 3));
@@ -223,12 +222,47 @@ public class McDmasMastercardHandler {
         ISOMsg resp = new ISOMsg();
         resp.setPackager(net.getPackager());
         resp.setMTI("0110");
+        // champs recopies de la requete
         if (request.hasField(2))  resp.set(2,  request.getString(2));
         if (request.hasField(3))  resp.set(3,  request.getString(3));
         if (request.hasField(4))  resp.set(4,  request.getString(4));
         if (request.hasField(7))  resp.set(7,  request.getString(7));
         if (request.hasField(11)) resp.set(11, request.getString(11));
+        if (request.hasField(32)) resp.set(32, request.getString(32));
+        if (request.hasField(37)) resp.set(37, request.getString(37));
+        if (request.hasField(41)) resp.set(41, request.getString(41));
+        if (request.hasField(49)) resp.set(49, request.getString(49));
+
+        // dates de reglement et de conversion, comme le reseau reel
+        String mmdd = new java.text.SimpleDateFormat("MMdd").format(new java.util.Date());
+        resp.set(15, mmdd);
+        resp.set(16, mmdd);
+
+        // code d'autorisation, uniquement si approuve
+        if ("00".equals(rc)) {
+            String authId = String.format("%06d",
+                    (int) (System.currentTimeMillis() % 1000000L));
+            resp.set(38, authId);
+            log.info("[DMAS-ISS] DE38 Authorization ID = {}", authId);
+        }
+
         resp.set(39, rc);
+
+        // DE55 de reponse : tag 91 = ARPC || ARC, si l'ARQC a ete valide
+        if (emvResult != null && Boolean.TRUE.equals(emvResult.get("validated"))) {
+            Object arpc = emvResult.get("arpc");
+            Object arc  = emvResult.get("arc");
+            if (arpc != null && arc != null) {
+                try {
+                    String tlv = "910A" + arpc + arc;   // tag 91, longueur 10
+                    resp.set(55, org.jpos.iso.ISOUtil.hex2byte(tlv));
+                    log.info("[DMAS-ISS] DE55 reponse tag 91 = {}{}", arpc, arc);
+                } catch (Exception e) {
+                    log.warn("[DMAS-ISS] pose du DE55 reponse impossible : {}", e.getMessage());
+                }
+            }
+        }
+
         log.info("[DMAS-ISS] 0110 construit DE39={} ({})", rc, rcLabel(rc));
         return resp;
     }
@@ -628,9 +662,9 @@ public class McDmasMastercardHandler {
      * Journalise et VALIDE le DE55 EMV d'une autorisation, si present.
      * Le membre est identifie par le member_group_id resolu via le DE2.
      */
-    private void validateDe55IfPresent(ISOMsg request) {
+    private java.util.Map<String,Object> validateDe55IfPresent(ISOMsg request) {
         try {
-            if (!request.hasField(55)) return;
+            if (!request.hasField(55)) return null;
             String mgid = memberGroup(request);
             String bank = iface.memberGroupIdForDe2(
                     request.hasField(2) ? request.getString(2) : null);
@@ -641,8 +675,10 @@ public class McDmasMastercardHandler {
                 log.warn("[DMAS-ISS] ARQC NON valide ou non verifiable : {}",
                         result.getOrDefault("reason", result.get("arqc_calcule")));
             }
+            return result;
         } catch (Exception e) {
             log.error("[DMAS-ISS] Erreur validation DE55 : {}", e.getMessage());
         }
+        return null;
     }
 }

@@ -171,6 +171,35 @@ public class McDmasEmv {
      *   ICC_droite  = 3DES( Y XOR FF..FF ) sous MDK
      */
     /** Parite impaire sur chaque octet — exigee par M/Chip pour les cles derivees. */
+    /**
+     * ARPC — Authorisation Response Cryptogram, la reponse de l'emetteur.
+     *
+     *   ARPC = 3DES( ARQC XOR (ARC || 00 00 00 00 00 00) )  sous la CLE ICC
+     *
+     * Formule verifiee contre le reseau reel. A noter : c'est la cle ICC
+     * qui chiffre, pas la cle de session (contrairement a l'ARQC).
+     *
+     * L'ARC (Authorisation Response Code) vaut 0012 pour une approbation
+     * chez le reseau observe.
+     */
+    public String computeArpc(EmvInput in, String arqcHex, String arcHex) throws Exception {
+        byte[] mdk = mdkClear(in);
+        byte[] icc = deriveIcc(mdk, in.pan, in.psn);
+
+        byte[] arqc = ISOUtil.hex2byte(arqcHex);
+        byte[] arc  = new byte[8];
+        byte[] a    = ISOUtil.hex2byte(arcHex);
+        System.arraycopy(a, 0, arc, 0, Math.min(a.length, 8));
+
+        byte[] x = new byte[8];
+        for (int i = 0; i < 8; i++) x[i] = (byte) (arqc[i] ^ arc[i]);
+
+        byte[] arpc = tdesEcb(icc, x, Cipher.ENCRYPT_MODE);
+        String hex = ISOUtil.hexString(arpc).toUpperCase();
+        log.info("[EMV] ARPC={} (ARQC={} ARC={})", hex, arqcHex, arcHex);
+        return hex;
+    }
+
     private byte[] oddParity(byte[] in) {
         byte[] out = new byte[in.length];
         for (int i = 0; i < in.length; i++) {

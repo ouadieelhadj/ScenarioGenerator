@@ -3015,3 +3015,60 @@ notre ARQC** et renvoie son ARPC.
    change des deux cotes, il doit toujours concorder
 3. Rendre parametrables par carte le CVN et le schema de derivation
    (aujourd'hui M/Chip 4 en dur)
+
+---
+
+## 30. ARPC ET 0110 ENRICHI COTE EMETTEUR (2026-07-23)
+
+Notre Mastercard validait l'ARQC (`match=true`) mais renvoyait un 0110
+squelettique : six champs, la ou le reseau reel en renvoie quatorze,
+dont le code d'autorisation et l'ARPC.
+
+### 30.1 FORMULE DE L'ARPC
+
+    ARPC = 3DES( ARQC XOR (ARC || 00 00 00 00 00 00) )  sous la CLE ICC
+
+Verifiee contre une transaction reelle du simulateur :
+
+    ARQC = 450CAC52BE213678
+    ARC  = 0012                (approbation)
+    ARPC = A077DD68E333B9D4    <- reproduit exactement
+
+**Subtilite** : c'est la **cle ICC** qui chiffre, pas la cle de session
+— contrairement a l'ARQC. La formule a ete trouvee par retro-ingenierie
+(dechiffrement de l'ARPC sous les deux cles ; seule la cle ICC redonne
+`ARQC XOR 0012000000000000`).
+
+### 30.2 LE 0110 ENRICHI
+
+| DE | Contenu |
+|---|---|
+| 2, 3, 4, 7, 11 | recopies (deja le cas) |
+| 32, 37, 41, 49 | recopies de la requete |
+| 15, 16 | dates de reglement et de conversion |
+| **38** | code d'autorisation, seulement si approuve |
+| 39 | code reponse |
+| **55** | `91` + ARPC(8) + ARC(2), si l'ARQC a ete valide |
+
+Resultat observe :
+
+    FLD (055) : (012) : [910A753BE0A0E9E06C1B0012]
+      91 (10) 753BE0A0E9E06C1B0012   Issuer Authentication Data (ARPC)
+
+### 30.3 TEST LOCAL APRES LES CHANGEMENTS DE CRYPTO
+
+Le passage a M/Chip 4 (parite impaire, UN dans la cle de session, IAD
+tronque) touchait `McDmasEmv`, partage par les deux modules. Le test
+local confirme qu'ils concordent toujours :
+
+    [EMV-VAL] ARQC recu=0C8C79C4AD6E9D44 calcule=0C8C79C4AD6E9D44 match=true
+    [DMAS-ISS] ARQC VALIDE
+
+### 30.4 RESTE A FAIRE
+
+1. **Verifier l'ARPC cote membre** : il le recoit mais ne le controle
+   pas. Une vraie carte validerait l'authentification de l'emetteur.
+2. Rendre l'ARC parametrable : `0012` est la valeur d'approbation
+   observee ; un refus devrait porter un autre code.
+3. Rendre le CVN et le schema de derivation parametrables par carte
+   (M/Chip 4 est aujourd'hui en dur).
