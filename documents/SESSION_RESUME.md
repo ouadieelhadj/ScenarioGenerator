@@ -1,3 +1,131 @@
+# 0. REPRISE RAPIDE — A LIRE EN PREMIER
+
+## 0.1 Ce qu'il faut savoir en arrivant
+
+Projet `ScenarioGenerator`, branche `feature/multi-network`.
+Simulateur de flux monetiques : trois reseaux (DMAS, SWAM, MC SMS).
+Le chantier en cours est **DMAS**.
+
+L'assistant travaille dans un conteneur Linux isole : **aucun acces**
+au disque F:, a la base, a IntelliJ ni a GitHub. Le conteneur **ne
+persiste pas** d'une session a l'autre. La memoire du projet vit sur le
+disque et sur GitHub, via les commits et ce resume.
+
+Fonctionnement : l'assistant livre des scripts dans
+`/mnt/user-data/outputs/`, l'utilisateur les telecharge dans
+`/f/MoneyCore/mc-sms/` et les lance, puis colle les resultats.
+
+## 0.2 Pieges d'environnement — les connaitre evite de perdre du temps
+
+| Piege | Consequence | Parade |
+|---|---|---|
+| **Python absent** cote Windows (Git Bash) | tout script livre avec `python3` echoue | ecrire les scripts en `awk` / `sed` / `perl` |
+| **JAR verrouille** par un java resté vivant | `mvn clean` echoue | `taskkill //F //IM java.exe` (double slash en Git Bash) avant tout build |
+| **PostgreSQL doit tourner** avant le demarrage | les ports REST sont lus en base AVANT Tomcat | `pg_ctl.exe -D /f/MoneyCore/pgsql/data -l .../pg.log start` |
+| **grep sur un flux bufferise** | `java -jar ... \| grep` bloque | lire le fichier de log a la place |
+| **Collages en piece jointe** parfois vides | l'assistant ne voit rien | rediriger vers un `.txt` puis l'uploader, ou coller en texte |
+| **perl multiligne** sur un fichier Java | peut VIDER le fichier | preferer `head`/`cat`/`tail` par numeros de ligne ; commiter avant |
+| **`!` dans un mot de passe** en Git Bash | interprete par l'historique | quotes SIMPLES : `'Admin123!'` |
+| **Fichiers `.bat`** generes sous Linux | `'M' is not recognized` | convertir en ASCII pur + CRLF |
+
+## 0.3 Chemins et commandes
+
+**Poste principal (10.2.54.21)**
+
+    repo        /f/ScenarioGenerator
+    JDK         /f/MoneyCore/jdk-26_windows-x64_bin/jdk-26.0.1
+    Maven       /f/MoneyCore/idea-2026.1.3.win/plugins/maven/lib/maven3/bin/mvn
+    PostgreSQL  /f/MoneyCore/pgsql/bin   base scenariogenerator, postgres/postgres123
+    livraisons  /f/MoneyCore/mc-sms
+    specs DMAS  /f/MoneyCore/Documents/MasterCard/CIS/CIS_m_DMAS_en-us-2025-11-04.txt
+
+**Machine 10.23.33.126** (notre Mastercard face au membre reel)
+
+    jar         D:\swam-issuer\sg-mc-dmas-mastercard-1.0.0-SNAPSHOT.jar
+    JDK         D:\jdk-26\jdk-26.0.1
+    PostgreSQL  D:\LanaCash\wk\PostgreSQL\18\bin
+    LMK         D:/swam-issuer/keys/dmas-lmk.lmk
+    user base   swam_issuer_user
+    PAS d'acces internet : copier le jar depuis le poste principal
+
+**Machine 10.23.33.114** — relais `ncat`, voit les deux sous-reseaux
+
+    ncat -l <port> --keep-open --sh-exec "ncat <ip_cible> <port_cible>" &
+
+**Build**
+
+    taskkill //F //IM java.exe
+    export JAVA_HOME="/f/MoneyCore/jdk-26_windows-x64_bin/jdk-26.0.1"
+    "/f/MoneyCore/idea-2026.1.3.win/plugins/maven/lib/maven3/bin/mvn" \
+        -pl sg-mc-dmas-member,sg-mc-dmas-mastercard -am clean package -DskipTests -q
+
+**Demarrage d'un module DMAS** — le parametre d'interface est OBLIGATOIRE
+
+    java -jar sg-mc-dmas-member/target/*.jar     --sg.interface=DMAS_BANK_A
+    java -jar sg-mc-dmas-mastercard/target/*.jar --sg.interface=DMAS_MASTERCARD_1
+
+**Authentification REST** — DMAS protege par JWT, SWAM et MC SMS en permitAll
+
+    TOKEN=$(curl -s -X POST http://localhost:8084/auth/login \
+        -H "Content-Type: application/json" \
+        -d '{"login":"admin","password":"Admin123!"}' \
+        | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+
+## 0.4 Ports
+
+| Reseau | REST | ISO |
+|---|---|---|
+| DMAS banque A / B | 8084 / 8085 | — |
+| DMAS Mastercard 1 / 2 | 8501 / 8502 | 8500 / 8503 |
+| MC SMS acquereur / issuer | 8095 / 8097 | 8096 / 8098 |
+| SWAM acquereur / issuer | 8094 / 8511 | — |
+
+## 0.5 Cles de reference
+
+| Cle | Valeur | KCV |
+|---|---|---|
+| KEK / ZMK | `13AED5DA1F32347523C708C11F2608FD` | `2D617C` |
+| TPK / PEK (AWK1 Visa) | `0BAECB044F57F25723BA7C75737C7989` | `439B5A` |
+| MDK simulateur | `9E15204313F7318ACB79B90BD986AD29` | `850571` |
+| MDK1 Visa | `6E46FE409DF704BCA75E7FF270B65E73` | `944A44` |
+
+## 0.6 Ou en est le chantier
+
+**Acquis, teste et commite**
+- multi-banque : une interface par banque, N liaisons par JVM
+- transaction 0100 EMV : DE55 construit, ARQC calcule et valide
+- conformite au **simulateur Mastercard reel** : sign-on accepte,
+  0100 EMV approuve, ARQC valide
+- ARPC et 0110 enrichi cote emetteur
+- face au **membre reel Way4** : chaine ISO complete et PIN valides
+
+**Bloquant**
+- ARQC de Way4 non valide : il utilise **CVN 01**, notre code fait du
+  CVN 10 en dur. Il faut sa trace de calcul pour elucider le schema,
+  comme cela avait ete fait pour le CVN 10 avec le simulateur.
+
+**Chantiers ouverts, par ordre d'interet**
+1. rendre le schema cryptographique parametrable par carte (lire le CVN
+   dans l'IAD recu) — section 31.8
+2. verifier l'ARPC cote membre ; ARC parametrable — section 30.4
+3. orchestrateur = terminal : y deplacer la MDK et McDmasEmv, alleger le
+   membre en pur acquereur — section 28.7
+4. refactoring bidirectionnel : isoler construction/PIN/EMV dans
+   sg-common pour le sens entrant — section 28.8
+5. validation PIN par PVV ou PIN offset — section 28.11
+6. filtrer les transactions par bank_code partout
+7. renommer SWAM et MC SMS selon la convention member/mastercard
+
+## 0.7 Comment lire la suite
+
+| Section | Sujet |
+|---|---|
+| 27 | multi-banque |
+| 28 | transaction 0100 EMV, DE55, ARQC |
+| 29 | conformite au reseau reel |
+| 30 | ARPC et 0110 enrichi |
+| **31** | **cryptage Mastercard — la synthese a lire pour toute question de cles** |
+
 # SESSION RESUME — ScenarioGenerator
 
 > Fichier de reprise de session : etat d'avancement, ce qui est en cours, ce qui reste.
