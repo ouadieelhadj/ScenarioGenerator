@@ -111,7 +111,26 @@ public class McDmasEmvValidator {
             in.mdkKcv      = mdk.getKcv();
             in.mdkLenBytes = mdk.getKeyLength() != null ? mdk.getKeyLength() : 16;
             in.pan         = pan;
-            in.psn         = card.getEmvPsn() != null ? card.getEmvPsn() : "00";
+
+            // DE23 is a 3-digit Card Sequence Number in ISO 8583.
+            // EMV PSN is the last 2 digits (for example DE23=001 -> PSN=01).
+            String psnDb = normalizePsn(card.getEmvPsn());
+            String rawDe23 = msg.hasField(23) ? msg.getString(23) : null;
+            String psnDe23 = normalizePsn(rawDe23);
+
+            // DE23=000 does not provide a usable PSN.
+            // In that case, use the PSN stored for the card.
+            boolean de23Usable = psnDe23 != null && !"00".equals(psnDe23);
+            in.psn = de23Usable ? psnDe23 : (psnDb != null ? psnDb : "00");
+
+            String psnSource = de23Usable ? "DE23" : (psnDb != null ? "DB" : "DEFAULT");
+            log.info("[EMV-VAL] PSN source={} value={} (DE23={} DB={})",
+                    psnSource, in.psn, rawDe23 != null ? rawDe23 : "absent", psnDb);
+
+            if (de23Usable && psnDb != null && !psnDe23.equals(psnDb)) {
+                log.warn("[EMV-VAL] PSN mismatch: DE23={} DB={} - DE23 is used for ARQC",
+                        psnDe23, psnDb);
+            }
             in.atc         = Integer.parseInt(atcHex, 16);
             in.aip         = aip;
             in.iad         = iad;
@@ -153,4 +172,12 @@ public class McDmasEmvValidator {
             return r;
         }
     }
+    private String normalizePsn(String raw) {
+        if (raw == null) return null;
+        String digits = raw.replaceAll("[^0-9]", "");
+        if (digits.isEmpty()) return null;
+        if (digits.length() == 1) return "0" + digits;
+        return digits.substring(digits.length() - 2);
+    }
+
 }
