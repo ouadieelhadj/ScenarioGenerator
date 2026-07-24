@@ -1,5 +1,3 @@
-server:
-  port: 8094   # REST du module acquereur SWAM
 
 spring:
   liquibase:
@@ -29,3 +27,17 @@ swam:
     representation: "ascii"
     reject-code: "916"
     enforce: true
+
+dmas:
+  lmk:
+    file: F:/ScenarioGenerator/keys/dmas-lmk.lmk
+
+
+logging:
+  file:
+    name: F:/ScenarioGenerator/logs/swam-acquirer.log
+
+sg:
+  network:
+    code: SWAM
+    role: ACQUIRER

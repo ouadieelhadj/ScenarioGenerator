@@ -15,7 +15,7 @@ import com.staging.sg.common.repository.SwamIssKeyRepository;
 import com.staging.sg.common.iso.crypto.JposHsmService;
 import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.iso.SwamDe48;
-import com.staging.sg.common.iso.crypto.McMacBuilder;
+import com.staging.sg.common.iso.crypto.SwamMacBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -25,25 +25,34 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Serveur jPOS cote CENTRE/SWITCH (SWAM issuer).
- * Logique d'autorisation REELLE (option a) : verifie la carte dans swam_cards,
- * debite le solde si suffisant, persiste dans swam_iss_transactions.
  *
- * Codes DE39 (spec HPS annexe A) :
- *   000 = approuve
- *   116 = solde insuffisant
- *   114 = compte inexistant (carte inconnue)
- *   062 = carte restreinte / inactive
+ * Flux conforme spec HPS + logs reels du membre Way4 (section 20 du SESSION_RESUME) :
+ *   1. Membre -> Switch : 1804 DE24=801 (Sign-on)
+ *   2. Switch -> Membre : 1814 DE39=800 (Reponse sign-on)
+ *   3. Switch -> Membre : 1804 DE24=811 (ZPK poussee par le switch, DE48 = P16<len>X<cle>)
+ *   4. Membre -> Switch : 1814 DE39=800 (Accuse reception ZPK)
+ *   5. Membre -> Switch : 1100 (Transaction)
+ *   6. Switch -> Membre : 1110 (Reponse transaction)
+ *
+ * MAC (section 20.7) :
+ *   - cle    = la ZMK utilisee comme TAK (double longueur). Il n'y a PAS de ZAK.
+ *   - algo   = 3DES-CBC-MAC (ISO 9797 Algorithm 1), padding Method 1 (zeros).
+ *   - donnee = message packe SANS MTI, SANS bitmap, SANS DE128 (cf SwamMacBuilder).
+ *   - DE128  = les swam.mac.length premiers octets du MAC (4 en reel HPS).
  */
 @Component
 public class SwamJposServer {
 
     private static final Logger log = LoggerFactory.getLogger(SwamJposServer.class);
     private static final int DEFAULT_ISO_PORT = 8510;
+    private static final String MGID = "TESTGRP01";
 
     private final NetworkRepository networkRepository;
     private final SwamCardRepository cardRepository;
@@ -51,13 +60,23 @@ public class SwamJposServer {
     private final SwamKekRepository kekRepository;
     private final SwamIssKeyRepository issKeyRepository;
     private final JposHsmService hsm;
-    @Value("${swam.mac.fields:4,11,37,41,42}") private String macFields;
-    @Value("${swam.mac.representation:ascii}") private String macRepr;
+
+    /** Longueur du DE128 en octets. 4 = mode HPS reel (doit matcher SwamPackager). */
+    @Value("${swam.mac.length:4}")        private int macLength;
     @Value("${swam.mac.reject-code:916}") private String macRejectCode;
-    @Value("${swam.mac.enforce:true}") private boolean macEnforce;
+    @Value("${swam.mac.enforce:true}")    private boolean macEnforce;
+
+    /** Push spontane de la ZPK apres le sign-on (flux HPS reel). */
+    @Value("${swam.keypush.enabled:true}") private boolean keyPushEnabled;
+
+    /** DE33 (forwarding institution id) des messages emis par le switch. Numerique. */
+    @Value("${swam.forwarding-id:300853}") private String forwardingId;
 
     private ISOServer isoServer;
     private Thread serverThread;
+
+    /** Compteur STAN pour les messages spontanes du switch. */
+    private final AtomicInteger stanCounter = new AtomicInteger(900000);
 
     public SwamJposServer(NetworkRepository networkRepository,
                           SwamCardRepository cardRepository,
@@ -100,7 +119,8 @@ public class SwamJposServer {
             serverThread = new Thread(isoServer, "swam-jpos-server");
             serverThread.setDaemon(true);
             serverThread.start();
-            log.info("[SWAM-SRV] ISOServer demarre sur :{} (SwamLengthChannel/ASCII)", port);
+            log.info("[SWAM-SRV] ISOServer demarre sur :{} (SwamLengthChannel/ASCII) — keyPush={} macLen={}o",
+                    port, keyPushEnabled, macLength);
         } catch (Exception e) {
             log.error("[SWAM-SRV] Echec demarrage : {}", e.getMessage(), e);
         }
@@ -120,6 +140,7 @@ public class SwamJposServer {
                 String mti = m.getMTI();
                 log.info("[SWAM-SRV] Recu MTI={} STAN={}", mti, m.hasField(11) ? m.getString(11) : "?");
                 if ("1804".equals(mti)) return handleNetwork(source, m);
+                if ("1814".equals(mti)) return handleNetworkResponse(m);   // accuse reception ZPK
                 if ("1100".equals(mti)) return handleAuthorization(source, m);
                 log.warn("[SWAM-SRV] MTI non gere : {}", mti);
                 return false;
@@ -136,48 +157,62 @@ public class SwamJposServer {
                 case "802" -> "SIGN-OFF"; default -> "FUNC-" + func;
             };
             log.info("[SWAM-SRV] Gestion reseau {} (DE24={})", label, func);
+
+            // ── Key exchange A LA DEMANDE du membre (811/899) ───────────────
+            // Conserve pour compatibilite avec notre acquereur SWAM interne.
+            // Le vrai membre HPS n'utilise PAS ce chemin (il attend le push).
             if ("811".equals(func) || "899".equals(func)) {
                 return handleKeyExchange(source, m, func);
             }
+
+            // ── Reponse 1814 au membre ──────────────────────────────────────
             ISOMsg r = new ISOMsg();
             r.setPackager(m.getPackager());
             r.setMTI("1814");
-            r.set(7, new SimpleDateFormat("MMddHHmmss").format(new Date()));
+            r.set(7, new SimpleDateFormat("yyMMddHHmm").format(new Date()));
             if (m.hasField(11)) r.set(11, m.getString(11));
+            if (m.hasField(12)) r.set(12, m.getString(12));
             if (m.hasField(24)) r.set(24, m.getString(24));
+            if (m.hasField(25)) r.set(25, m.getString(25));
+            r.set(33, forwardingId);
+            if (m.hasField(37)) r.set(37, m.getString(37));
             r.set(39, "800");
+            poseMacOnResponse(r);
             source.send(r);
             log.info("[SWAM-SRV] Repondu 1814 DE39=800 ({})", label);
+
+            // ── Apres sign-on : pousser la ZPK spontanement (flux HPS reel) ─
+            if ("801".equals(func) && keyPushEnabled) {
+                pushZpk(source, m.getPackager());
+            }
             return true;
         }
 
         /**
-         * Echange de cles (spec HPS) : le CENTRE genere la cle sous ZMK et la
-         * renvoie dans le 1814 (DE48). 811 -> ZPK (P16), 899 -> ZAK (P10).
-         * Persiste dans swam_iss_keys.
+         * Key exchange A LA DEMANDE : le membre envoie 1804 DE24=811/899 (sans cle),
+         * le CENTRE genere la cle sous ZMK et la renvoie dans le 1814 (DE48).
+         * 811 -> ZPK (P16), 899 -> ZAK (P10). Persiste dans swam_iss_keys.
+         * CHEMIN INTERNE (notre acquereur) — pas utilise par le vrai membre.
          */
         private boolean handleKeyExchange(ISOSource source, ISOMsg m, String func) throws Exception {
-            String mgid = "TESTGRP01";
             String keyType = "811".equals(func) ? "PEK" : "MAK";
             String tagKey  = "811".equals(func) ? SwamDe48.TAG_ZPK : SwamDe48.TAG_ZAK;
             String tagKcv  = "811".equals(func) ? SwamDe48.TAG_ZPK_KCV : SwamDe48.TAG_ZAK_KCV;
 
-            SwamKek kek = kekRepository.findByMemberGroupId(mgid)
-                    .orElseThrow(() -> new IllegalStateException("KEK SWAM introuvable pour " + mgid));
+            SwamKek kek = kekRepository.findByMemberGroupId(MGID)
+                    .orElseThrow(() -> new IllegalStateException("KEK SWAM introuvable pour " + MGID));
             if (kek.getKekClear() == null)
-                throw new IllegalStateException("kek_clear absent pour " + mgid);
+                throw new IllegalStateException("kek_clear absent pour " + MGID);
 
-            // Generation cote CENTRE : ZPK double (16o) / ZAK simple (8o)
             HsmService.KeyResult gen = "811".equals(func)
                     ? hsm.generateWorkingKey(keyType, 16, kek.getKekClear())
                     : hsm.generateWorkingKeySingle(keyType, kek.getKekClear());
             int keyLen = gen.keyUnderKekHex.length() / 2;
 
-            // Persister la cle emise cote issuer
             SwamIssKey ik = issKeyRepository
-                    .findByMemberGroupIdAndKeyTypeAndStatus(mgid, keyType, "ACTIVE")
+                    .findByMemberGroupIdAndKeyTypeAndStatus(MGID, keyType, "ACTIVE")
                     .orElseGet(SwamIssKey::new);
-            ik.setMemberGroupId(mgid);
+            ik.setMemberGroupId(MGID);
             ik.setKeyType(keyType);
             ik.setKeyLength(keyLen);
             ik.setKeyUnderLmk(gen.keyUnderLmkHex);
@@ -188,37 +223,103 @@ public class SwamJposServer {
             log.info("[SWAM-SRV] {} genere+persiste (KCV={}, {}hex) -> {}",
                     keyType, gen.kcv, gen.keyUnderKekHex.length(), tagKey);
 
-            // Construire DE48 = tagKey<cle hex> + tagKcv<kcv>
             String de48 = new SwamDe48()
                     .put(tagKey, gen.keyUnderKekHex)
                     .put(tagKcv, gen.kcv)
                     .build();
 
-            // Reponse 1814 DE39=800 + DE48
             ISOMsg r = new ISOMsg();
             r.setPackager(m.getPackager());
             r.setMTI("1814");
-            r.set(7, new SimpleDateFormat("MMddHHmmss").format(new Date()));
+            r.set(7, new SimpleDateFormat("yyMMddHHmm").format(new Date()));
             if (m.hasField(11)) r.set(11, m.getString(11));
+            if (m.hasField(12)) r.set(12, m.getString(12));
             if (m.hasField(24)) r.set(24, m.getString(24));
+            if (m.hasField(25)) r.set(25, m.getString(25));
+            r.set(33, forwardingId);
+            if (m.hasField(37)) r.set(37, m.getString(37));
             r.set(39, "800");
             r.set(48, de48);
+            poseMacOnResponse(r);
             source.send(r);
             log.info("[SWAM-SRV] Repondu 1814 DE39=800 (key exchange {}) DE48len={}", func, de48.length());
             return true;
         }
 
         /**
-         * Logique d'autorisation (a) : debit reel.
-         * Cherche la carte, verifie statut + solde, debite si OK, persiste.
+         * Le switch POUSSE la ZPK au membre apres le sign-on (flux HPS reel).
+         * 1804 DE24=811, DE48 = P16<len>X<ZPK hex sous ZMK>.
+         * Le prefixe 'X' est OBLIGATOIRE et compte dans la longueur (P16033X + 32 hex).
          */
+        private void pushZpk(ISOSource source, ISOPackager packager) {
+            try {
+                SwamKek kek = kekRepository.findByMemberGroupId(MGID).orElse(null);
+                if (kek == null || kek.getKekClear() == null) {
+                    log.warn("[SWAM-SRV] KEK absente -> ZPK non poussee (bootstrap d'abord)");
+                    return;
+                }
+
+                // ZPK double longueur (16 octets), chiffree sous ZMK
+                HsmService.KeyResult gen = hsm.generateWorkingKey("PEK", 16, kek.getKekClear());
+
+                SwamIssKey ik = issKeyRepository
+                        .findByMemberGroupIdAndKeyTypeAndStatus(MGID, "PEK", "ACTIVE")
+                        .orElseGet(SwamIssKey::new);
+                ik.setMemberGroupId(MGID);
+                ik.setKeyType("PEK");
+                ik.setKeyLength(gen.keyUnderKekHex.length() / 2);
+                ik.setKeyUnderLmk(gen.keyUnderLmkHex);
+                ik.setKeyUnderKek(gen.keyUnderKekHex.length() > 64 ? gen.keyUnderKekHex.substring(0,64) : gen.keyUnderKekHex);
+                ik.setKcv(gen.kcv);
+                ik.setStatus("ACTIVE");
+                issKeyRepository.save(ik);
+                log.info("[SWAM-SRV] ZPK generee+persistee (KCV={})", gen.kcv);
+
+                // DE48 format HPS reel : P16 + longueur(3) + 'X' + cle hex
+                String de48 = new SwamDe48()
+                        .put(SwamDe48.TAG_ZPK, "X" + gen.keyUnderKekHex)
+                        .build();
+
+                String stan = String.format("%06d", stanCounter.incrementAndGet() % 1000000);
+                Date now = new Date();
+
+                ISOMsg push = new ISOMsg();
+                push.setPackager(packager);
+                push.setMTI("1804");
+                push.set(7,  new SimpleDateFormat("yyMMddHHmm").format(now));
+                push.set(11, stan);
+                push.set(12, new SimpleDateFormat("yyMMddHHmmss").format(now));
+                push.set(24, "811");
+                push.set(25, "0000");
+                push.set(33, forwardingId);          // LLVAR : le packager pose la longueur
+                push.set(37, stan + "000000");
+                push.set(48, de48);
+                poseMacOnResponse(push);
+                source.send(push);
+                log.info("[SWAM-SRV] ZPK poussee -> 1804 DE24=811 STAN={} DE48=[{}] KCV={}",
+                        stan, de48, gen.kcv);
+
+            } catch (Exception e) {
+                log.error("[SWAM-SRV] pushZpk erreur : {}", e.getMessage(), e);
+            }
+        }
+
+        /** Traite le 1814 recu du membre en reponse au key push. */
+        private boolean handleNetworkResponse(ISOMsg m) {
+            String func = m.hasField(24) ? m.getString(24) : "?";
+            String de39 = m.hasField(39) ? m.getString(39) : "?";
+            String stan = m.hasField(11) ? m.getString(11) : "?";
+            log.info("[SWAM-SRV] Recu 1814 DE24={} DE39={} STAN={} (accuse reception key push)", func, de39, stan);
+            return true;
+        }
+
+        /** Logique d'autorisation (a) : debit reel. */
         private boolean handleAuthorization(ISOSource source, ISOMsg m) throws Exception {
             String pan = m.hasField(2) ? m.getString(2) : null;
             long amount = m.hasField(4) ? Long.parseLong(m.getString(4)) : 0L;
             String stan = m.hasField(11) ? m.getString(11) : "";
             log.info("[SWAM-SRV] Autorisation 1100 PAN={} montant={}", maskPan(pan), amount);
 
-            // Verification MAC (DE128) si presente et si MAK disponible
             String macCheck = verifyIncomingMac(m);
             if (macEnforce && "FAIL".equals(macCheck)) {
                 log.warn("[SWAM-SRV] MAC invalide -> rejet DE39={}", macRejectCode);
@@ -239,35 +340,28 @@ public class SwamJposServer {
 
             Optional<SwamCard> opt = (pan != null) ? cardRepository.findByPan(pan) : Optional.empty();
             if (opt.isEmpty()) {
-                responseCode = "114";                 // compte inexistant
-                status = "DECLINED";
+                responseCode = "114"; status = "DECLINED";
                 log.info("[SWAM-SRV] Carte inconnue -> DE39=114");
             } else {
                 SwamCard card = opt.get();
                 if (!"ACTIVE".equals(card.getStatus())) {
-                    responseCode = "062";             // carte restreinte/inactive
-                    status = "DECLINED";
+                    responseCode = "062"; status = "DECLINED";
                     log.info("[SWAM-SRV] Carte inactive ({}) -> DE39=062", card.getStatus());
                 } else if (m.hasField(52) && !verifyPin(m, pan, card.getPin())) {
-                    responseCode = "117";             // PIN incorrect
-                    status = "DECLINED";
+                    responseCode = "117"; status = "DECLINED";
                     log.info("[SWAM-SRV] PIN incorrect -> DE39=117");
                 } else if (card.getBalance() < amount) {
-                    responseCode = "116";             // solde insuffisant
-                    status = "DECLINED";
+                    responseCode = "116"; status = "DECLINED";
                     log.info("[SWAM-SRV] Solde insuffisant ({} < {}) -> DE39=116", card.getBalance(), amount);
                 } else {
-                    // Debit reel
                     card.setBalance(card.getBalance() - amount);
                     card.setUpdatedAt(java.time.LocalDateTime.now());
                     cardRepository.save(card);
-                    responseCode = "000";             // approuve
-                    status = "APPROVED";
+                    responseCode = "000"; status = "APPROVED";
                     log.info("[SWAM-SRV] APPROUVE, nouveau solde={} -> DE39=000", card.getBalance());
                 }
             }
 
-            // Persister la transaction cote issuer
             try {
                 SwamIssTransaction tx = new SwamIssTransaction();
                 tx.setPan(pan != null ? pan : "");
@@ -284,14 +378,13 @@ public class SwamJposServer {
                 log.error("[SWAM-SRV] Persistance tx KO : {}", e.getMessage());
             }
 
-            // Reponse 1110
             ISOMsg r = new ISOMsg();
             r.setPackager(m.getPackager());
             r.setMTI("1110");
             if (m.hasField(2))  r.set(2,  m.getString(2));
             if (m.hasField(3))  r.set(3,  m.getString(3));
             if (m.hasField(4))  r.set(4,  m.getString(4));
-            r.set(7, new SimpleDateFormat("MMddHHmmss").format(new Date()));
+            r.set(7, new SimpleDateFormat("yyMMddHHmm").format(new Date()));
             if (m.hasField(11)) r.set(11, m.getString(11));
             if (m.hasField(12)) r.set(12, m.getString(12));
             if (m.hasField(32)) r.set(32, m.getString(32));
@@ -306,46 +399,53 @@ public class SwamJposServer {
             return true;
         }
 
-        /** Verifie le DE128 recu. Renvoie OK / FAIL / SKIP (pas de MAC ou pas de MAK). */
+        // ====================================================================
+        //  MAC SWAM REEL : cle = ZMK (comme TAK), 3DES-CBC-MAC, DE128 tronque
+        // ====================================================================
+
+        /** @return "OK" | "FAIL" | "SKIP" */
         private String verifyIncomingMac(ISOMsg m) {
             try {
-                if (!m.hasField(128)) return "SKIP";
-                com.staging.sg.common.entity.SwamIssKey mak = issKeyRepository
-                        .findByMemberGroupIdAndKeyTypeAndStatus("TESTGRP01", "MAK", "ACTIVE").orElse(null);
-                if (mak == null) { log.warn("[SWAM-SRV] MAK absente -> MAC non verifie"); return "SKIP"; }
-                byte[] input = McMacBuilder.build(m, macFields, macRepr);
+                if (!m.hasField(128)) {
+                    log.info("[SWAM-SRV] DE128 absent -> MAC non verifie (SKIP)");
+                    return "SKIP";
+                }
+                SwamKek kek = kekRepository.findByMemberGroupId(MGID).orElse(null);
+                if (kek == null || kek.getKekClear() == null) {
+                    log.warn("[SWAM-SRV] ZMK claire absente -> MAC non verifie (SKIP)");
+                    return "SKIP";
+                }
+                byte[] input = SwamMacBuilder.build(m);
                 byte[] rxMac = m.getBytes(128);
-                com.staging.sg.common.entity.SwamKek kek = kekRepository.findByMemberGroupId("TESTGRP01").orElse(null);
-                if (kek == null || kek.getKekClear() == null) { log.warn("[SWAM-SRV] KEK claire absente -> MAC non verifie"); return "SKIP"; }
-                boolean ok = hsm.verifyMacSingle(input, mak.getKeyUnderKek(), kek.getKekClear(), rxMac);
-                log.info("[SWAM-SRV] Verif MAC DE128 -> {}", ok ? "OK" : "FAIL");
+                boolean ok = hsm.verifyMacZmk(input, kek.getKekClear(), rxMac);
+                log.info("[SWAM-SRV] Verif MAC DE128 ({} octets) -> {}", rxMac.length, ok ? "OK" : "FAIL");
                 return ok ? "OK" : "FAIL";
             } catch (Exception e) {
-                log.error("[SWAM-SRV] verifyIncomingMac erreur : {}", e.getMessage());
+                log.error("[SWAM-SRV] verifyIncomingMac erreur : {}", e.getMessage(), e);
                 return "FAIL";
             }
         }
 
-        /** Pose le DE128 sur une reponse (1110) avec la MAK du switch. */
+        /** Calcule et pose le DE128 (macLength premiers octets du MAC 3DES). */
         private void poseMacOnResponse(ISOMsg r) {
             try {
-                com.staging.sg.common.entity.SwamIssKey mak = issKeyRepository
-                        .findByMemberGroupIdAndKeyTypeAndStatus("TESTGRP01", "MAK", "ACTIVE").orElse(null);
-                if (mak == null) return;
-                byte[] input = McMacBuilder.build(r, macFields, macRepr);
-                com.staging.sg.common.entity.SwamKek kek = kekRepository.findByMemberGroupId("TESTGRP01").orElse(null);
-                if (kek == null || kek.getKekClear() == null) return;
-                byte[] mac = hsm.generateMacSingle(input, mak.getKeyUnderKek(), kek.getKekClear());
+                SwamKek kek = kekRepository.findByMemberGroupId(MGID).orElse(null);
+                if (kek == null || kek.getKekClear() == null) {
+                    log.warn("[SWAM-SRV] ZMK claire absente -> DE128 non pose");
+                    return;
+                }
+                byte[] input = SwamMacBuilder.build(r);
+                byte[] full  = hsm.generateMacZmk(input, kek.getKekClear());
+                byte[] mac   = (macLength > 0 && macLength < full.length)
+                        ? Arrays.copyOfRange(full, 0, macLength)
+                        : full;
                 r.set(128, mac);
+                log.info("[SWAM-SRV] DE128 pose ({} octets) = {}", mac.length, ISOUtil.hexString(mac));
             } catch (Exception e) {
-                log.error("[SWAM-SRV] poseMacOnResponse erreur : {}", e.getMessage());
+                log.error("[SWAM-SRV] poseMacOnResponse erreur : {}", e.getMessage(), e);
             }
         }
 
-        /**
-         * Dechiffre le PIN block (DE52) sous ZPK, compare au PIN de la carte.
-         * Tolerant (retourne true) si DE53 invalide ou ZPK absente.
-         */
         private boolean verifyPin(ISOMsg m, String pan, String cardPin) {
             try {
                 String de53 = m.hasField(53) ? m.getString(53) : null;
@@ -353,16 +453,14 @@ public class SwamJposServer {
                     log.warn("[SWAM-SRV] DE53 absent/methode non ZPK -> PIN non verifie (tolerant)");
                     return true;
                 }
-                com.staging.sg.common.entity.SwamIssKey pek = issKeyRepository
-                        .findByMemberGroupIdAndKeyTypeAndStatus("TESTGRP01", "PEK", "ACTIVE").orElse(null);
+                SwamIssKey pek = issKeyRepository
+                        .findByMemberGroupIdAndKeyTypeAndStatus(MGID, "PEK", "ACTIVE").orElse(null);
                 if (pek == null) {
                     log.warn("[SWAM-SRV] ZPK issuer absente -> PIN non verifie (tolerant)");
                     return true;
                 }
                 byte[] pinBlock = m.getBytes(52);
-                String decrypted = hsm.decryptPinBlock(
-                        pinBlock, pan,
-                        pek.getKeyUnderLmk(), pek.getKcv(), pek.getKeyLength());
+                String decrypted = hsm.decryptPinBlock(pinBlock, pan, pek.getKeyUnderLmk(), pek.getKcv(), pek.getKeyLength());
                 boolean ok = decrypted.equals(cardPin);
                 log.info("[SWAM-SRV] Verif PIN -> {}", ok ? "OK" : "FAIL");
                 return ok;

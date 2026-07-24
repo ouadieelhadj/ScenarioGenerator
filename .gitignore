@@ -28,3 +28,5 @@ scripts/TNR_*.txt
 sg-frontend/.angular/
 sg-frontend/node_modules/
 target/
+inspect-project.sh
+project-info.txt

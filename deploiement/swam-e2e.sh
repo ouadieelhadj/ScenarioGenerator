@@ -122,8 +122,8 @@ KCV_ZAK=$(echo "$R" | grep -o '"kcv_computed":"[^"]*"' | cut -d'"' -f4)
 # Verif concordance base
 ZPK_MATCH=$(db "SELECT (i.kcv=a.kcv)::text FROM swam_iss_keys i JOIN swam_acq_keys a ON i.member_group_id=a.member_group_id AND i.key_type=a.key_type WHERE i.key_type='PEK' AND i.member_group_id='$MGID' AND i.status='ACTIVE' AND a.status='ACTIVE';")
 ZAK_MATCH=$(db "SELECT (i.kcv=a.kcv)::text FROM swam_iss_keys i JOIN swam_acq_keys a ON i.member_group_id=a.member_group_id AND i.key_type=a.key_type WHERE i.key_type='MAK' AND i.member_group_id='$MGID' AND i.status='ACTIVE' AND a.status='ACTIVE';")
-[ "$ZPK_MATCH" = "t" ] && ok "ZPK KCV concordant en base" || fail "ZPK KCV non concordant en base"
-[ "$ZAK_MATCH" = "t" ] && ok "ZAK KCV concordant en base" || fail "ZAK KCV non concordant en base"
+[ "$ZPK_MATCH" = "t" ] || [ "$ZPK_MATCH" = "true" ] && ok "ZPK KCV concordant en base" || fail "ZPK KCV non concordant en base"
+[ "$ZAK_MATCH" = "t" ] || [ "$ZAK_MATCH" = "true" ] && ok "ZAK KCV concordant en base" || fail "ZAK KCV non concordant en base"
 
 # ---------------------------------------------------------------
 # 8) Tests d'achat

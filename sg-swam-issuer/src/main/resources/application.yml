@@ -1,5 +1,3 @@
-server:
-  port: 8511   # REST du module (bootstrap Spring, ne peut pas venir de la base)
 
 spring:
   liquibase:
@@ -30,3 +28,19 @@ swam:
     representation: "ascii"
     reject-code: "916"
     enforce: true
+
+dmas:
+  lmk:
+    file: F:/ScenarioGenerator/keys/dmas-lmk.lmk
+
+logging:
+  file:
+    name: F:/ScenarioGenerator/logs/swam-issuer.log
+  level:
+    org.jpos: DEBUG
+    com.staging.sg: DEBUG
+
+sg:
+  network:
+    code: SWAM
+    role: ISSUER

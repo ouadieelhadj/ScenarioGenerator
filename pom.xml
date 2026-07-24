@@ -23,10 +23,12 @@
         <module>sg-generator-orchestrator</module>
         <module>sg-dmcs-issuer</module>
         <module>sg-dmcs-acquirer</module>
-        <module>sg-dmas-acquirer</module>
-        <module>sg-dmas-issuer</module>
+        <module>sg-mc-dmas-member</module>
+        <module>sg-mc-dmas-mastercard</module>
         <module>sg-swam-issuer</module>
         <module>sg-swam-acquirer</module>
+        <module>sg-mc-sms-acquirer</module>
+        <module>sg-mc-sms-issuer</module>
     </modules>
 
     <properties>

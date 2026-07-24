@@ -40,7 +40,7 @@ public class CampaignRunService {
     private final CampaignExecutionResultRepository resultRepo;
     private final UserRepository userRepo;
     private final DmasClient dmasClient;
-    private final DmasCardRepository cardRepo;
+    private final SgOrchestratorCardDmasRepository cardRepo;
     private final MessageTypeRepository messageTypeRepo;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -57,7 +57,7 @@ public class CampaignRunService {
                               CampaignExecutionResultRepository resultRepo,
                               UserRepository userRepo,
                               DmasClient dmasClient,
-                              DmasCardRepository cardRepo,
+                              SgOrchestratorCardDmasRepository cardRepo,
                               MessageTypeRepository messageTypeRepo) {
         this.campaignRepo = campaignRepo;
         this.stepRepo = stepRepo;
@@ -139,13 +139,14 @@ public class CampaignRunService {
             CampaignExecution exec = execRepo.findById(execId).orElseThrow();
 
             // v1.1.0 : mode carte (RANDOM) + PIN depuis le config
-            boolean randomCards = false, withPin = false;
+            boolean randomCards = false, withPin = false, withEmv = false;
             Long amountMin = null, amountMax = null;
             try {
                 if (campaign.getConfig() != null && !campaign.getConfig().isBlank()) {
                     Map<?,?> cfg = objectMapper.readValue(campaign.getConfig(), Map.class);
                     randomCards = "RANDOM".equalsIgnoreCase(String.valueOf(cfg.get("DE002_PAN_MODE")));
                     withPin = Boolean.TRUE.equals(cfg.get("WITH_PIN"));
+                    withEmv = Boolean.TRUE.equals(cfg.get("WITH_EMV"));
                     // VARIABLE_FIELDS.AMOUNT { mode: RANGE, min, max } -> montant variable par transaction
                     Object vf = cfg.get("VARIABLE_FIELDS");
                     if (vf instanceof Map<?,?> vfm) {
@@ -167,6 +168,7 @@ public class CampaignRunService {
                 if (cardPool.isEmpty()) throw new RuntimeException("Mode RANDOM mais aucune carte ACTIVE avec solde dans dmas_cards");
             }
             final boolean fWithPin = withPin;
+            final boolean fWithEmv = withEmv;
             final List<Map<String,String>> fCardPool = cardPool;
             final Long fAmountMin = amountMin, fAmountMax = amountMax;
 
@@ -205,6 +207,7 @@ public class CampaignRunService {
                 body.put("targetTps", tps);
                 body.put("concurrency", conc);
                 body.put("withPin", fWithPin);
+                body.put("withEmv", fWithEmv);
                 body.put("mti", fMti);
                 if (!fCardPool.isEmpty()) body.put("cards", fCardPool);
                 if (fAmountMin != null && fAmountMax != null) {

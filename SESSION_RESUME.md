@@ -4,8 +4,8 @@
 > Couvre DEUX depots : le BACK `ScenarioGenerator` (Java/Spring, repo GitHub) et le
 > FRONT `sg-frontend` (Angular 18, dossier separe non encore versionne).
 
-**Derniere mise a jour :** 2026-07-08 (session 10 : incr.2 crypto SWAM complet + packaging)
-**Branche back :** chore/cleanup-modules (merge v1.3.0 fait) / feature/multi-network (dev)
+**Derniere mise a jour :** 2026-07-14 (session 13 : MAC valide par Way4 RC[0] + flux switch reel sign-on/ZPK/ZAK OK)
+**Branche back :** feature/multi-network (dev, a jour) / chore/cleanup-modules (merge v1.3.0)
 **Version courante back :** v1.3.0 (taguee, publiee) - SWAM incr.1+2 crypto complet
 
 ---
@@ -536,6 +536,9 @@ Chaque etape committee + testee avant la suivante.
 
 ## 16. SWAM incr.2 — RECAP CRYPTO FIGE (lecture PDF HSID v3.20 faite, NE PAS refaire)
 
+> ATTENTION : les decisions GAP-A (sens du key exchange), GAP-B (plage MAC),
+> ZAK/P10 et DE128=8 octets sont **OBSOLETES**. Voir section 20 (interop reelle Way4).
+
 > Source : Description_Interface_Switch-SID_V3-20_05012024.pdf. Recap verifie
 > ligne par ligne. 3 niveaux : [SPEC]=litteral, [INF]=inference sure non ecrite,
 > [DECISION]=trou spec tranche par nous (on maitrise switch + banque).
@@ -599,6 +602,9 @@ Chaque etape committee + testee avant la suivante.
 ---
 
 ## 17. SWAM incr.2 TERMINE + etat session 10 (2026-07-08)
+
+> ATTENTION : les DECISIONS CRYPTO FIGEES ci-dessous (ZAK simple longueur, plage MAC
+> 4,11,37,41,42, DE128 8 octets) sont **OBSOLETES** face au vrai membre. Voir section 20.
 
 > Session 10 : finalisation crypto SWAM, vrai ZMK ceremonie de cles, packaging deploiement.
 > Branche : feature/multi-network (merge -> chore/cleanup-modules, tag v1.3.0).
@@ -833,3 +839,405 @@ done
 | `create-full-db.sh` | Genere un dump SQL complet (transfert vers autre PC) |
 | `db-restore.sh` | Restaure depuis un dump SQL |
 | `package-swam-issuer.sh` | Package le switch pour deploiement (JAR+SQL+bat) |
+
+---
+
+## 19. SESSION 11 — INSTALLATION NOUVEAU PC (2026-07-09, COMPLETED)
+
+> Installation et validation complete de la plateforme SWAM sur un PC secondaire
+> (Windows 10, F:\MoneyCore\, PostgreSQL 18 portable zip, JDK 26, IntelliJ).
+> E2E SWAM : PASSED 27/27.
+
+### Environnement PC secondaire valide
+- PostgreSQL 18 portable : F:\MoneyCore\pgsql\ (initdb UTF8 locale=C via cygpath)
+- JDK 26 : F:\MoneyCore\jdk-26_windows-x64_bin\jdk-26.0.1\bin\java.exe
+  (compatible source/target=21 du pom.xml — pas de --release donc pas de blocage)
+- Maven : F:\MoneyCore\idea-2026.1.3.win\plugins\maven\lib\maven3\bin\mvn
+- Projet : F:\ScenarioGenerator (git clone + checkout feature/multi-network)
+
+### Pieges rencontres et solutions
+
+**[PIEGE] initdb --pwfile sous Git Bash**
+- --pwfile=<(echo ...) -> convertit en /proc/PID/fd/N -> FileNotFoundException
+- Solution : cygpath -w pour convertir le chemin bash en chemin Windows natif.
+
+**[PIEGE] LMK chemin en dur dans JposHsmService.java**
+- @Value("${dmas.lmk.file:D:/MoneyCore/ScenarioGenerator/keys/dmas-lmk.lmk}")
+- Solution : ajouter dans application.yml des modules SWAM :
+  dmas.lmk.file: F:/ScenarioGenerator/keys/dmas-lmk.lmk
+- Le dossier keys/ est desormais versionne dans le repo (environnement test).
+
+**[PIEGE] Grants SWAM manquants dans create-db.sql**
+- swam_kek, swam_iss_keys, networks non accordes a swam_issuer_user / swam_acquirer_user.
+- Solution : grants complets ajoutes en fin de create-db.sql (commit session 11).
+- swam_issuer_user : swam_kek/iss_keys/iss_transactions/cards (SUG) + networks (S)
+- swam_acquirer_user : swam_kek/acq_keys/acq_transactions (SUG) + networks/cards (S)
+- Les deux : USAGE+SELECT sur ALL SEQUENCES
+
+**[PIEGE] PostgreSQL 18 : bool retourne "true"/"false" au lieu de "t"/"f"**
+- swam-e2e.sh comparait [ "$ZPK_MATCH" = "t" ] -> toujours FAIL sur PG18.
+- Solution : [ "$ZPK_MATCH" = "t" ] || [ "$ZPK_MATCH" = "true" ] (compatible PG16+PG18).
+- Corrige dans deploiement/swam-e2e.sh (commit session 11).
+
+**[PIEGE] JAR verrouille par le process lors de mvn clean**
+- Solution : toujours killer les ports 8510/8511/8094 avant de relancer le E2E.
+
+**[PIEGE] Ordre SQL des migrations**
+- Les migrations separees jouees dans le mauvais ordre cassent les FK.
+- Solution : utiliser uniquement create-db.sql (standalone, ordre correct garanti).
+
+### Procedure demarrage rapide PC secondaire (F:)
+
+    # 1. Demarrer PostgreSQL
+    "/f/MoneyCore/pgsql/bin/pg_ctl.exe" -D "/f/MoneyCore/pgsql/data" -l "/f/MoneyCore/pgsql/data/postgres.log" start
+
+    # 2. Killer les ports si services en cours
+    for PORT in 8510 8511 8094; do
+      for p in $(netstat -ano 2>/dev/null | grep LISTENING | grep ":$PORT " | awk '{print $NF}' | sort -u); do
+        taskkill //PID "$p" //F 2>/dev/null || true
+      done
+    done
+
+    # 3. Lancer le E2E
+    bash /f/MoneyCore/swam-e2e-f.sh
+
+---
+
+## 20. SESSION 12 — INTEROP MEMBRE REEL WAY4 (2026-07-10 / 2026-07-13, EN COURS)
+
+> ATTENTION : les decisions crypto de la section 20.7 (3DES-CBC-MAC, plage MAC,
+> "pas de ZAK") sont **OBSOLETES**. Le vrai algo est X9.19 et il existe bien une
+> ZAK poussee par le centre. Voir SECTION 21 (validee contre Way4 + switch reel).
+
+> Premiere connexion d'un VRAI membre (Way4 / PowerCARD, machine Linux 10.23.33.114)
+> sur notre switch SWAM. Resultat : SIGN-ON et SIGN-OFF PASSENT (1804/801 -> 1814/800).
+> Cette section CORRIGE plusieurs decisions des sections 16 et 17, qui etaient des
+> hypotheses (GAP-A / GAP-B) et se revelent FAUSSES face au vrai membre.
+
+### 20.1 TOPOLOGIE DE TEST
+
+    Membre Way4 (Linux)          Aiguilleur / jump host         Switch SWAM
+    10.23.33.114        ---->    10.23.33.126:8510      ---->   10.2.54.21:8510
+                                 (netsh portproxy)
+
+- Pas de droits admin sur 10.2.54.21 -> pare-feu non ouvrable -> le portproxy restait
+  bloque en SYN_SENT. SOLUTION RETENUE : on a deplace le switch SWAM SUR le jump host
+  10.23.33.126 (droits admin OK), et supprime le portproxy.
+  `netsh interface portproxy delete v4tov4 listenaddress=0.0.0.0 listenport=8510`
+- Sur 10.23.33.126 : PostgreSQL 18 portable dans D:\pgsql, JDK 26 dans
+  D:\jdk-26\jdk-26.0.1, JAR + keys dans D:\swam-issuer.
+- Lancement du switch (CMD, pas PowerShell — PowerShell casse les backslash du -D) :
+  `D:\jdk-26\jdk-26.0.1\bin\java.exe -Ddmas.lmk.file=D:/swam-issuer/keys/dmas-lmk.lmk
+   -Dspring.datasource.url=jdbc:postgresql://127.0.0.1:5432/scenariogenerator
+   -Dspring.datasource.username=swam_issuer_user -Dspring.datasource.password=postgres123
+   -jar D:\swam-issuer\sg-swam-issuer-1.0.0-SNAPSHOT.jar`
+- Bootstrap KEK avec la VRAIE ZMK (section 17) :
+  `curl -X POST http://localhost:8511/api/admin/swam/kek/bootstrap -H "Content-Type: application/json"
+   -d "{\"memberGroupId\":\"TESTGRP01\",\"kekClear\":\"E95870465DD6CB8F041F5EBA4F7C62CB\"}"`
+  -> KCV attendu F6EE59.
+
+### 20.2 TRAME REELLE WAY4 (sign-on 1804, capturee)
+
+    30 30 39 34                          "0094"        prefixe longueur, 4 car ASCII
+    49 53 4F 37 30 31 30 30 30 30 30     "ISO70100000" header PowerCARD, 11 octets
+    31 38 30 34                          "1804"        MTI, 4 car ASCII
+    82 30 01 80 88 00 ... (16 octets)    bitmap BINAIRE (pas ASCII-hex)
+    <DEs en ASCII>
+    <DE128 = MAC, 8 car ASCII = 4 octets binaires>
+
+Header PowerCARD (11 o) = 'ISO' (3) + entete (8) :
+- pos 1   : produit ('6' emetteur, '7' emetteur+acquereur, '8' acquereur)
+- pos 2-5 : version protocole = '0100'
+- pos 6-8 : premier DE en erreur, sinon '000'
+
+DEs du sign-on Way4 : DE7, DE11, DE12, DE24=801, DE25, DE33 (LLVAR), DE37, DE128.
+
+### 20.3 CORRECTIONS FAITES ET POUSSEES (commits 9082f45, 9e7fc44)
+
+- **[FIX] Header PowerCARD 11 octets** : `SwamLengthChannel` lit prefixe(4) puis
+  header(11), retourne msgLen-11 au packager ; en emission il ajoute 11 a la longueur
+  et ecrit `ISO60100000`. Le packager ne voit QUE MTI+bitmap+DEs.
+- **[FIX] Bitmap BINAIRE** : `SwamPackager` fields[1] = `IFB_BITMAP(16)` (etait IFA_BITMAP,
+  qui attend de l'ASCII-hex -> parsing muet).
+- **[FIX] Log payload brut** : `SwamLengthChannel` override `unpack(ISOMsg, byte[])`,
+  logge HEX+ASCII du payload complet AVANT parsing, try/catch pour ne plus avaler
+  les ISOException silencieusement. NE PAS overrider `streamReceive()` : ca casse la
+  liaison permanente. Cycle jPOS = receive() -> getMessageLength() -> streamReceive() -> unpack().
+- **[FIX] Key push apres sign-on** : `SwamJposServer.pushZpk()` derriere le flag
+  `swam.keypush.enabled` (defaut **false** pour ne pas casser l'E2E local).
+  `handleKeyExchange()` (811/899 entrants) est CONSERVE en parallele.
+- **[CONFIG]** `dmas.lmk.file` + `logging.level` ajoutes dans les 2 application.yml.
+
+### 20.4 RESULTAT INTEROP
+
+    2026-07-13 09:13 — [SWAM-SRV] Recu MTI=1804 STAN=133001
+                       [SWAM-SRV] Gestion reseau SIGN-ON (DE24=801)
+                       [SWAM-SRV] Repondu 1814 DE39=800 (SIGN-ON)     <-- OK
+                       [SWAM-SRV] Recu MTI=1804 STAN=133002 DE24=802
+                       [SWAM-SRV] Repondu 1814 DE39=800 (SIGN-OFF)    <-- OK
+
+Way4 fait sign-on puis sign-off, puis keep-alive (bytes=0 toutes les 2-5 s).
+Il n'envoie PAS de demande de key exchange : il ATTEND que le centre pousse la cle.
+
+### 20.5 FLUX REEL CONFIRME (annule et remplace le GAP-A de la section 16)
+
+    1. Membre -> Switch : 1804 DE24=801   (sign-on)
+    2. Switch -> Membre : 1814 DE39=800   (reponse sign-on)
+    3. Switch -> Membre : 1804 DE24=811   (KEY PUSH : ZPK sous ZMK, dans DE48)
+    4. Membre -> Switch : 1814 DE39=800   (accuse) + le membre sauvegarde la ZPK
+    5. Membre -> Switch : 0200            (transaction, MAC pose)
+    6. Switch -> Membre : 0210
+
+C'est donc le CENTRE qui POUSSE la cle spontanement apres le sign-on.
+Le membre ne demande jamais rien. (Section 16 disait l'inverse : c'etait notre convention.)
+
+### 20.6 FORMAT DE48 REEL (corrige la section 16)
+
+Observe sur le switch reel :  `P16033XA10D7ED90967C5E18A7B5BA57FFB0672`
+
+    P16  = tag
+    033  = longueur = 33 = 1 (le X) + 32 (la cle hex)
+    X    = PREFIXE OBLIGATOIRE (indique cle chiffree sous ZMK)
+    A10D...0672 = ZPK chiffree sous ZMK, 32 hex = 16 octets
+
+=> notre `SwamDe48` doit produire `put(TAG_ZPK, "X" + zpkUnderZmkHex)` et NE PAS
+   emettre de tag KCV separe (K16/K10 : tags maison, le vrai membre ne les attend pas).
+
+### 20.7 MAC REEL SWAM (annule et remplace le GAP-B + la decision ZAK de la section 17)
+
+Commande HSM Thales cote SWAM (fournie par l'equipe) :
+
+    M6 0 0 01 1 003 U38471EE27378C7DFAEA2CD18E63172EE <data>
+
+    M6   = command code
+    0    = single block
+    0    = input format binaire
+    01   = ISO 9797 MAC Algorithm 1 (= ANSI X9.9)
+    1    = ISO 9797 Padding Method 1 (padding 0x00)
+    003  = TAK  (Terminal Authentication Key, sous paire LMK 16-17)
+    U... = cle DOUBLE longueur (le U = double length Thales)
+
+DECISIONS FIGEES (validees avec l'equipe SWAM) :
+- **Cle MAC = la ZMK, utilisee comme TAK.** Il n'y a PAS de ZAK/P10 dans le vrai flux.
+  => on ne pousse QUE la ZPK. Le key exchange 899 n'existe pas cote reel.
+- **Algorithme = 3DES-CBC-MAC** (ISO 9797 Alg 1 avec cle double longueur),
+  padding Method 1 (zeros). Pas le DES simple de l'incr. 2.3.
+- **Donnee MACee = le message PACKE, SANS MTI, SANS BITMAP, SANS DE128.**
+  Donc les DEs avec leurs prefixes de longueur (ex : DE33 -> `06200853`,
+  DE48 -> `039P16033X...`). Ce n'est PAS la liste `4,11,37,41,42` de McMacBuilder.
+- **DE128 = les 4 PREMIERS octets du MAC** (le MAC brut fait 8 octets).
+  => `SwamPackager` fields[128] = `IFA_BINARY(4)` (8 caracteres ASCII sur le fil).
+- Cote reponse : le switch pose son propre DE128 ; le membre verifie en retirant
+  le DE128 recu avant de recalculer. Symetrique.
+
+### 20.8 A FAIRE (reprise immediate)
+
+1. **`SwamMacBuilder`** (nouveau, dans sg-common/iso/crypto) : packe l'ISOMsg, retire
+   MTI (4o) + bitmap (16o) + DE128, retourne les octets a MACer.
+2. **`JposHsmService.generateMacZmk(byte[] data, String zmkClearHex)`** : 3DES-CBC-MAC
+   ISO 9797 Alg 1, padding zeros, retourne 8 octets (troncature a 4 cote appelant).
+3. **`SwamJposServer`** : `verifyIncomingMac()` / `poseMacOnResponse()` utilisent la ZMK
+   (kek clear) + troncature 4 octets. Plus de MAK/ZAK.
+4. **`SwamPackager`** : fields[128] = `IFA_BINARY(4)`.
+   ATTENTION : passer DE128 de 8 -> 4 CASSE l'E2E local actuel
+   (`Binary data length not the same as the packager length (8/4)`) : l'E2E doit etre
+   adapte en meme temps (il teste encore le ZAK exchange 899, qui disparait).
+5. Activer `swam.keypush.enabled=true` pour le mode reel, puis retester avec Way4 :
+   sign-on -> key push ZPK -> accuse -> transaction 0200.
+
+### 20.9 PIEGES RENCONTRES (session 12)
+
+- **[PIEGE] Python absent** sur le PC : tous les scripts de patch doivent utiliser
+  `sed` / `cat`, jamais `python`.
+- **[PIEGE] JAR verrouille** par le process qui tourne -> `mvn clean` echoue.
+  Toujours killer les ports 8510/8511/8094 AVANT de recompiler.
+- **[PIEGE] PowerShell casse `-Ddmas.lmk.file=D:\...`** (backslash interpretes).
+  Lancer le JAR depuis CMD, et utiliser des slash : `D:/swam-issuer/keys/dmas-lmk.lmk`.
+- **[PIEGE] Ne pas overrider `streamReceive()`** dans le channel : la liaison
+  permanente se casse. Overrider `unpack()` pour tracer.
+- **[PIEGE] `\\10.2.54.21\f$`** inaccessible entre les 2 sous-reseaux : copie manuelle
+  via le presse-papier / lecteur RDP (`\\tsclient\f\`).
+- Erreurs Way4 `RC[96] Invalid key usage` : c'etait AVANT le fix du header/bitmap.
+  Une fois le parsing corrige, le sign-on passe. Ne pas conclure trop vite a un
+  probleme HSM cote membre.
+
+---
+
+## 21. SESSION 13 — MAC VALIDE PAR WAY4 + FLUX SWITCH REEL (2026-07-14)
+
+> Journee majeure. Le MAC SWAM est VALIDE par le membre reel Way4 (RC[0]), et le
+> flux reseau complet est deroule contre le SWITCH SWAM REEL (sign-on + push
+> ZPK/ZAK). Cette section CORRIGE la section 20.7, dont l'algorithme (3DES-CBC),
+> la plage MAC et l'affirmation "pas de ZAK" etaient FAUX.
+
+### 21.1 CE QUI EST VALIDE (avec preuves)
+
+| Element | Preuve |
+|---|---|
+| MAC sortant : X9.19 + ZMK + bitmap bit128 ON | Way4 HSM : `Verify MAC Rs RC[0] VerifRC[0]` |
+| Sign-on membre -> switch REEL accepte | reponse `1814 DE39=800` |
+| Import ZPK (tag P16) 16 octets depuis switch reel | KCV=0D765E |
+| Import ZAK (tag P10) 16 octets depuis switch reel | KCV=B85F60 |
+| Header produit '6' accepte par le switch reel | pas de rejet |
+
+Commits : b5abde6 (MAC X9.19 valide Way4), a93927e (flux switch reel).
+
+### 21.2 LE MAC SWAM — LA VERITE (annule et remplace section 20.7)
+
+**Sens MEMBRE -> SWITCH (ce que NOUS emettons, VALIDE) :**
+- Algorithme : **ANSI X9.19 = ISO 9797-1 Algorithme 3** (retail MAC).
+  NB : PAS le 3DES-CBC simple (Alg 1) qu'on avait code au depart.
+  Retail MAC = CBC-DES avec K1 sur tous les blocs, puis sur le DERNIER bloc :
+  DES-decrypt K2 + DES-encrypt K1.
+- Cle : la **ZMK** en clair (16 octets), utilisee comme cle MAC. Confirme :
+  on reproduit le MAC de Way4 a l'octet pres.
+- Padding : ISO 9797 Method 1 (zeros).
+- Donnee MACee : le message PACKE = **MTI + bitmap(16o) + DEs**, prive de la
+  seule VALEUR du DE128. Le BIT 128 reste ALLUME dans le bitmap.
+- DE128 : les **4 premiers octets** du MAC (IFA_BINARY(4)).
+
+**PIEGE CRITIQUE DU BITMAP (cause du "MAC check failed" initial) :**
+- `msg.unset(128)` eteint le bit 128 -> jPOS n'emet plus le bitmap secondaire
+  -> bitmap 8 octets au lieu de 16, premier octet 0x02 au lieu de 0x82
+  -> buffer ampute de 8 octets, MAC faux.
+- SOLUTION (SwamMacBuilder) : `copy.set(128, new byte[]{0,0,0,0})` puis packer,
+  puis retirer les 8 derniers octets ASCII. Le bitmap garde bit128 ON.
+
+**VECTEUR DE TEST (rejouable sans Way4) :**
+- Sign-on Way4 recu, donnee 75 octets :
+  `31383034823001808800...` (MTI 1804 + bitmap + DEs)
+  hex complet dans les logs du 14/07.
+- ZMK = E95870465DD6CB8F041F5EBA4F7C62CB
+- X9.19 -> MAC 8o `586AC5D390D8...` -> DE128 (4o) = **586AC5D3**
+- Si un futur calcul ne redonne pas 586AC5D3 sur ce buffer, l'implementation
+  a regresse.
+
+### 21.3 FLUX RESEAU REEL — sequencement M1..M8 (convention de reference)
+
+```
+   MEMBRE                                   SWITCH REEL
+   (nous ou Way4)                           10.110.7.72:7097
+        |                                        |
+  [M1]  | ---- 1804 DE24=801 ----------------->  |  SIGN-ON (MAC ZMK)
+  [M2]  | <--- 1814 DE39=800 ------------------  |  reponse sign-on
+  [M3]  | <--- 1804 DE24=811 ------------------  |  PUSH ZPK
+        |      DE48 = P16 033 X<zpk 16o>         |
+  [M4]  | ---- 1814 DE39=800 ----------------->  |  accuse ZPK (MAC ZMK)
+  [M5]  | <--- 1804 DE24=899 ------------------  |  PUSH ZAK
+        |      DE48 = P10 033 X<zak 16o>         |
+  [M6]  | ---- 1814 DE39=800 ----------------->  |  accuse ZAK
+  [M7]  | <--- 1804 DE24=802 ------------------  |  SIGN-OFF (declenche par switch)
+  [M8]  | ---- 1814 DE39=800 ----------------->  |  accuse sign-off
+        ============ session etablie ============
+  [T1]  | ---- 1100 (achat) ------------------>  |  AUTORISATION
+        |      DE52 (PIN/ZPK) + DE128 (MAC)      |  MAC = ??? (a confirmer)
+  [T2]  | <--- 1110 DE39=000 ------------------  |  reponse
+```
+
+Points confirmes : ZPK sous tag **P16**, ZAK sous tag **P10**, les deux en
+16 octets (double longueur), prefixe 'X' obligatoire dans le DE48.
+
+### 21.4 COMMENT LANCER — 3 SCENARIOS
+
+**SCENARIO A — E2E LOCAL (acquereur <-> issuer, tout en local)**
+```bash
+# networks doit pointer sur localhost :
+psql ... -c "UPDATE networks SET issuer_host='localhost', issuer_iso_port=8510 WHERE code='SWAM';"
+bash /f/MoneyCore/swam-e2e-f.sh
+# Attendu : 27/27 (KEK de test D5D44F, header 6)
+```
+
+**SCENARIO B — WAY4 (membre reel) -> NOTRE ISSUER (switch)**
+```bash
+# 1. JAR issuer sur .126 (D:\swam-issuer\), lancer depuis CMD :
+D:\jdk-26\jdk-26.0.1\bin\java.exe -Ddmas.lmk.file=D:/swam-issuer/keys/dmas-lmk.lmk ^
+  -Dspring.datasource.url=jdbc:postgresql://127.0.0.1:5432/scenariogenerator ^
+  -Dspring.datasource.username=swam_issuer_user -Dspring.datasource.password=postgres123 ^
+  -jar D:\swam-issuer\sg-swam-issuer-1.0.0-SNAPSHOT.jar
+# Controle demarrage : "ISOServer demarre sur :8510 — keyPush=true macLen=4o"
+
+# 2. Bootstrap VRAIE ZMK (KCV F6EE59) :
+curl -X POST http://localhost:8511/api/admin/swam/kek/bootstrap ^
+  -H "Content-Type: application/json" ^
+  -d "{\"memberGroupId\":\"TESTGRP01\",\"kekClear\":\"E95870465DD6CB8F041F5EBA4F7C62CB\"}"
+# Verifier "kcv":"F6EE59"
+
+# 3. Debug PIN en clair (optionnel) : ajouter -Dswam.debug.pin-clear=true au lancement
+
+# 4. Lancer Way4. Chercher dans les logs issuer :
+#    [HSM] generateMacZmk (X9.19 ...) / [SWAM-DUMP] / DE39=800
+```
+
+**SCENARIO C — NOTRE ACQUEREUR -> SWITCH SWAM REEL (via relais)**
+```bash
+# 1. Relais ncat sur .114 (Linux, atteint le switch reel) :
+ncat -l 11127 --keep-open --sh-exec "ncat 10.110.7.72 7097" &
+ss -lnt | grep 11127     # doit montrer 0.0.0.0:11127
+
+# 2. Depuis .21, verifier le chemin :
+powershell -Command "Test-NetConnection -ComputerName 10.23.33.114 -Port 11127"
+# TcpTestSucceeded : True
+
+# 3. Pointer networks sur le relais :
+psql ... -c "UPDATE networks SET issuer_host='10.23.33.114', issuer_iso_port=11127 WHERE code='SWAM';"
+
+# 4. Demarrer l'acquereur (port 8094) :
+java.exe -Ddmas.lmk.file=F:/ScenarioGenerator/keys/dmas-lmk.lmk ^
+  -jar F:/ScenarioGenerator/sg-swam-acquirer/target/sg-swam-acquirer-1.0.0-SNAPSHOT.jar
+
+# 5. Bootstrap VRAIE ZMK cote acquereur (port 8094) :
+curl -X POST http://localhost:8094/api/admin/swam/kek/bootstrap ^
+  -H "Content-Type: application/json" ^
+  -d "{\"memberGroupId\":\"TESTGRP01\",\"kekClear\":\"E95870465DD6CB8F041F5EBA4F7C62CB\"}"
+# Verifier "kcv":"F6EE59"
+
+# 6. Lancer le flux :
+bash /f/MoneyCore/AcquiringSwamReel.sh
+# Endpoints : /api/admin/swam/network/signon, /keyexchange/zpk, /keyexchange/zak
+
+# 7. APRES le test : remettre networks en local + enlever le relais
+psql ... -c "UPDATE networks SET issuer_host='localhost', issuer_iso_port=8510 WHERE code='SWAM';"
+# sur .114 : pkill ncat
+```
+IMPORTANT scenario C : PREVENIR l'equipe SWAM + ARRETER Way4 (conflit de
+session sur DE33=300853, switch de prod).
+
+### 21.5 CE QUI RESTE A FAIRE (questions ouvertes)
+
+1. **MAC ENTRANT du switch NON REPRODUCTIBLE.** Les MAC que le switch REEL pose
+   sur ses push (M3 ZPK=1778A700, M5 ZAK=EF334A49) ne se recalculent avec AUCUNE
+   combinaison testee (ZMK/ZAK x X9.19/3DES/DES x plages MTI+bitmap/DEs seuls).
+   - Le mail SWAM (14/07) donne l'algo du CENTRE : ISO 9797 **Algorithme 1**
+     (3DES-CBC avec cle double), padding method 1, cle = **TAK**, sur la donnee
+     applicative SANS MTI ni bitmap (commence par "0061...").
+   - La TAK n'est ni la ZMK ni la ZAK de session (test exhaustif KO).
+   - ACTION : demander a SWAM (a) quelle cle exacte, (b) plage exacte, en leur
+     donnant le vecteur 1778A700 + le buffer M3. NON BLOQUANT (on ne verifie pas
+     le MAC entrant), mais REQUIS pour MACer le 1100.
+
+2. **DE7 decale d'une heure.** .126 en +01:00, Way4/switch en UTC. On envoie
+   14:05, ils envoient 13:05. Corriger : SimpleDateFormat DE7 en UTC
+   (setTimeZone(TimeZone.getTimeZone("UTC"))). N'affecte pas le MAC mais peut
+   declencher un controle anti-rejeu.
+
+3. **Transaction 1100 (achat) contre le switch reel.** Bloque par : cle MAC a
+   confirmer (TAK/ZAK ?), PIN block sous ZPK a valider, PAN de test autorise a
+   obtenir de l'equipe, feu vert + Way4 arrete.
+
+4. **Sign-off M7 declenche par le switch** apres les key exchanges : comprendre
+   si c'est systematique (test) ou un rejet. Refaire un sign-on avant tout 1100.
+
+### 21.6 FLAG DEBUG PIN
+
+- `-Dswam.debug.pin-clear=true` -> log WARN "*** DEBUG PIN EN CLAIR ***"
+  (encrypt cote acquereur + decrypt cote issuer). Defaut false.
+- A DESACTIVER EN PRODUCTION. Verifier par `grep -r "pin-clear"` avant livraison.
+
+### 21.7 CLES DE REFERENCE (memo)
+
+| Cle | Valeur claire / KCV | Usage |
+|---|---|---|
+| ZMK (vraie) | E95870465DD6CB8F041F5EBA4F7C62CB / F6EE59 | chiffre les cles + MAC sign-on |
+| ZMK sous LMK | E98805FBB4DE36AC2C7742E242CF80D8 | (stockage) |
+| KEK de test | 0123456789ABCDEF... / D5D44F | E2E local uniquement |
+| ZPK/ZAK | poussees par le switch, KCV variables | par session |

@@ -40,6 +40,14 @@ public class JposHsmService implements HsmService {
     @Value("${dmas.lmk.file:D:/MoneyCore/ScenarioGenerator/keys/dmas-lmk.lmk}")
     private String lmkFile;
 
+    /**
+     * DEBUG UNIQUEMENT — affiche le PIN EN CLAIR dans les logs.
+     * DOIT rester false en production. Activation explicite au lancement :
+     *     -Dswam.debug.pin-clear=true
+     */
+    @Value("${swam.debug.pin-clear:false}")
+    private boolean debugPinClear;
+
     @Value("${dmas.lmk.rebuild:false}")
     private boolean lmkRebuild;
 
@@ -207,9 +215,15 @@ public class JposHsmService implements HsmService {
         // 2. Export sous PEK -> PIN block destiné au DE052
         EncryptedPIN underPek = sm.exportPIN(underLmk, pek, SMAdapter.FORMAT00);
         byte[] block = underPek.getPINBlock();
-        log.info("[HSM] encryptPinBlock — pan=***{} blockLen={} block={}",
-                pan.length() >= 4 ? pan.substring(pan.length()-4) : pan,
-                block.length, ISOUtil.hexString(block));
+        if (debugPinClear) {
+            log.warn("[HSM] *** DEBUG PIN EN CLAIR *** encryptPinBlock pan=***{} pin={} block={}  <<< A DESACTIVER EN PRODUCTION",
+                    pan.length() >= 4 ? pan.substring(pan.length()-4) : pan,
+                    pin, ISOUtil.hexString(block));
+        } else {
+            log.info("[HSM] encryptPinBlock — pan=***{} blockLen={} block={}",
+                    pan.length() >= 4 ? pan.substring(pan.length()-4) : pan,
+                    block.length, ISOUtil.hexString(block));
+        }
         return block;
     }
 
@@ -222,8 +236,13 @@ public class JposHsmService implements HsmService {
         // 2. Importer sous LMK puis déchiffrer
         EncryptedPIN underLmk = sm.importPIN(underPek, pek);
         String pin = sm.decryptPIN(underLmk);
-        log.info("[HSM] decryptPinBlock — pan=***{} pinLen={}",
-                pan.length() >= 4 ? pan.substring(pan.length()-4) : pan, pin.length());
+        if (debugPinClear) {
+            log.warn("[HSM] *** DEBUG PIN EN CLAIR *** decryptPinBlock pan=***{} pin={}  <<< A DESACTIVER EN PRODUCTION",
+                    pan.length() >= 4 ? pan.substring(pan.length()-4) : pan, pin);
+        } else {
+            log.info("[HSM] decryptPinBlock — pan=***{} pinLen={}",
+                    pan.length() >= 4 ? pan.substring(pan.length()-4) : pan, pin.length());
+        }
         return pin;
     }
 
@@ -348,5 +367,136 @@ public class JposHsmService implements HsmService {
         log.info("[HSM] verifyMacSingle — attendu={} calcule={} match={}",
                 ISOUtil.hexString(expectedMac), ISOUtil.hexString(computed), ok);
         return ok;
+    }
+    // ========================================================================
+    //  MAC SWAM REEL — VALIDE PAR WAY4 (RC[0]) le 14/07/2026
+    //  - cle     : la ZMK EN CLAIR, utilisee comme ZAK (16 octets)
+    //  - algo    : ANSI X9.19 = ISO 9797-1 Algorithme 3 (retail MAC)
+    //  - padding : ISO 9797 Padding Method 1 = zeros (zeroPad)
+    //  - donnee  : MTI + bitmap (bit128 ON) + DEs, sans la valeur du MAC
+    //  - DE128   : les 4 PREMIERS octets du MAC
+    // ========================================================================
+
+    /**
+     * MAC ANSI X9.19 (ISO 9797-1 Algorithme 3, "retail MAC"), padding Method 1 (zeros).
+     *
+     * VALIDE PAR LE MEMBRE REEL WAY4 le 14/07/2026 : Verify MAC Rs RC[0] VerifRC[0].
+     *
+     * Conforme aux logs Way4 :
+     *   macAlgorithm      = ANSI_X9_19
+     *   bufferPaddingMode = ISO_9797_PADDING_METHOD_1
+     *   key               = ZAK (= la ZMK cote SWAM, 16 octets)
+     *
+     * Cle 16 octets (double longueur K1||K2) :
+     *   - CBC-DES avec K1 sur TOUS les blocs
+     *   - sur le DERNIER bloc uniquement : DES-decrypt K2 puis DES-encrypt K1
+     * Cle 8 octets : X9.19 degenere en DES-CBC-MAC simple (K1==K2).
+     *
+     * Retourne 8 octets. L'appelant tronque a swam.mac.length (4) pour DE128.
+     */
+    public byte[] generateMacZmk(byte[] data, String zmkClearHex) throws Exception {
+        byte[] zmk = ISOUtil.hex2byte(zmkClearHex);
+        byte[] k1, k2;
+        if (zmk.length == 16 || zmk.length == 24) {
+            k1 = java.util.Arrays.copyOfRange(zmk, 0, 8);
+            k2 = java.util.Arrays.copyOfRange(zmk, 8, 16);
+        } else if (zmk.length == 8) {
+            k1 = zmk; k2 = zmk;
+        } else {
+            throw new IllegalArgumentException("ZMK attendue 8/16/24 octets, recue " + zmk.length);
+        }
+
+        byte[] padded = zeroPad(data);
+
+        Cipher desK1 = Cipher.getInstance("DES/CBC/NoPadding");
+        desK1.init(Cipher.ENCRYPT_MODE,
+                   new SecretKeySpec(k1, "DES"),
+                   new javax.crypto.spec.IvParameterSpec(new byte[8]));
+        byte[] all  = desK1.doFinal(padded);
+        byte[] last = java.util.Arrays.copyOfRange(all, all.length - 8, all.length);
+
+        Cipher decK2 = Cipher.getInstance("DES/ECB/NoPadding");
+        decK2.init(Cipher.DECRYPT_MODE, new SecretKeySpec(k2, "DES"));
+        byte[] tmp = decK2.doFinal(last);
+
+        Cipher encK1 = Cipher.getInstance("DES/ECB/NoPadding");
+        encK1.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(k1, "DES"));
+        byte[] mac = encK1.doFinal(tmp);
+
+        log.info("[HSM] generateMacZmk (X9.19 / ISO9797-3, cle {}o) dataLen={} padded={} mac8={} mac4={}",
+                zmk.length, data.length, padded.length,
+                ISOUtil.hexString(mac),
+                ISOUtil.hexString(java.util.Arrays.copyOfRange(mac, 0, 4)));
+        return mac;
+    }
+
+    /**
+     * Verifie un MAC SWAM. Compare sur la longueur du MAC recu :
+     *   - si expectedMac fait 4 octets -> on compare les 4 premiers du MAC calcule
+     *   - si 8 octets -> comparaison complete
+     */
+    public boolean verifyMacZmk(byte[] data, String zmkClearHex, byte[] expectedMac) throws Exception {
+        byte[] full = generateMacZmk(data, zmkClearHex);
+        int n = (expectedMac == null) ? 0 : expectedMac.length;
+        byte[] computed = (n > 0 && n < full.length)
+                ? java.util.Arrays.copyOfRange(full, 0, n)
+                : full;
+        boolean ok = java.util.Arrays.equals(computed, expectedMac);
+        log.info("[HSM] verifyMacZmk — attendu={} calcule={} match={}",
+                ISOUtil.hexString(expectedMac), ISOUtil.hexString(computed), ok);
+        return ok;
+    }
+
+    /**
+     * Reconstruit une cle depuis sa valeur sous LMK et rend ses octets
+     * EN CLAIR, uniquement en memoire, pour les calculs EMV (derivation
+     * de la cle ICC puis de la cle de session). La cle n'est jamais
+     * ecrite en clair en base.
+     */
+
+    /**
+     * Rend les octets EN CLAIR d'une cle stockee sous LMK.
+     *
+     * getKeyBytes() sur un SecureDESKey retourne la cle chiffree sous
+     * LMK, pas le clair — l'utiliser pour deriver donnait des resultats
+     * differents entre modules (LMK distinctes). On dechiffre donc
+     * reellement sous LMK via jceHandler.decryptData, comme le HSM le
+     * fait en interne pour ses propres operations.
+     *
+     * Le clair n'existe qu'en memoire, le temps du calcul EMV ; il n'est
+     * jamais ecrit en base.
+     */
+    public byte[] exposeClearKey(String keyType, String underLmkHex, String kcv, int keyLenBytes) throws Exception {
+        SecureDESKey k = rebuildKey(keyType, underLmkHex, kcv, keyLenBytes);
+        // decryptFromLMK est protected dans JCESecurityModule : reflection.
+        java.lang.reflect.Method m = null;
+        Class<?> c = sm.getClass();
+        while (c != null && m == null) {
+            try {
+                m = c.getDeclaredMethod("decryptFromLMK", SecureDESKey.class);
+            } catch (NoSuchMethodException ignore) {
+                c = c.getSuperclass();
+            }
+        }
+        if (m == null) {
+            throw new IllegalStateException("decryptFromLMK introuvable sur " + sm.getClass());
+        }
+        m.setAccessible(true);
+        Object key = m.invoke(sm, k);   // javax.crypto.spec.SecretKeySpec ou Key
+        byte[] clear;
+        if (key instanceof java.security.Key jk) {
+            clear = jk.getEncoded();
+        } else if (key instanceof byte[] b) {
+            clear = b;
+        } else {
+            throw new IllegalStateException("Type inattendu de decryptFromLMK : " + key.getClass());
+        }
+        // Un DESede sur 16 octets peut revenir sur 24 (K1K2K3=K1K2K1) : on retaille
+        if (keyLenBytes == 16 && clear.length == 24) {
+            byte[] t = new byte[16];
+            System.arraycopy(clear, 0, t, 0, 16);
+            clear = t;
+        }
+        return clear;
     }
 }

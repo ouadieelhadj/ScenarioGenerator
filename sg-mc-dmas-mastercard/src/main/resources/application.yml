@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: sg-mc-dmas-mastercard
+  datasource:
+    url: jdbc:postgresql://localhost:5432/scenariogenerator
+    username: mc_dmas_mastercard
+    password: postgres123
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  liquibase:
+    enabled: false
+
+
+dmas:
+  pek:
+    auto-renewal: false
+    renewal-interval-ms: 86400000
+    renewal-initial-delay-ms: 86400000
+  jpos:
+    echo-interval-ms: 5000
+  member-group-id: TESTGRP01
+  lmk:
+    file: F:/ScenarioGenerator/keys/dmas-lmk-iss.lmk
+    rebuild: false
+  mac:
+    fields: "4,11,37,41,42"
+    representation: ebcdic
+
+jwt:
+  secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
+  expiration-ms: 86400000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info
+
+logging:
+  file:
+    name: F:/ScenarioGenerator/logs/mc-dmas-mastercard.log
+
+sg:
+  network:
+    code: DMAS
+    role: ISSUER

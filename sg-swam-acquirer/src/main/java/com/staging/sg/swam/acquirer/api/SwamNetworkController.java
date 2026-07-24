@@ -2,12 +2,10 @@ package com.staging.sg.swam.acquirer.api;
 
 import com.staging.sg.swam.acquirer.network.SwamAuthorization;
 import com.staging.sg.swam.acquirer.network.SwamJposClient;
-import com.staging.sg.swam.acquirer.network.SwamKeyExchange;
 import com.staging.sg.swam.acquirer.network.SwamMac;
 import com.staging.sg.swam.acquirer.network.SwamPin;
 import com.staging.sg.common.entity.SwamAcqTransaction;
 import com.staging.sg.common.repository.SwamAcqTransactionRepository;
-import java.time.LocalDateTime;
 import org.jpos.iso.ISOMsg;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,7 +14,17 @@ import java.util.Map;
 
 /**
  * Pilotage SWAM cote Membre : gestion reseau (sign-on/echo/sign-off) + achat unitaire.
- * Le sign-on etablit la connexion permanente (conforme a la decision : sign-on par REST).
+ *
+ * SEQUENCEMENT DES CLES (corrige) :
+ *   L'acquereur (membre) NE DEMANDE PAS les cles. Le SWITCH les POUSSE
+ *   spontanement apres le sign-on (1804 DE24=811 pour la ZPK, 1804 DE24=899
+ *   pour la ZAK). Ces push sont traites AUTOMATIQUEMENT par le receiver de
+ *   SwamJposClient (import sous LMK + reponse 1814 DE39=800).
+ *
+ *   -> Les anciens endpoints /keyexchange/zpk et /keyexchange/zak, qui
+ *      faisaient EMETTRE a l'acquereur des 1804/811 et 1804/899 (modele "pull"),
+ *      ont ete RETIRES : le switch reel fonctionne en "push" et rejetait ces
+ *      demandes avec DE39=880.
  */
 @RestController
 @RequestMapping("/api/admin/swam")
@@ -25,17 +33,15 @@ public class SwamNetworkController {
     private final SwamJposClient client;
     private final SwamAuthorization auth;
     private final SwamAcqTransactionRepository txRepo;
-    private final SwamKeyExchange keyExchange;
     private final SwamMac swamMac;
     private final SwamPin swamPin;
 
     public SwamNetworkController(SwamJposClient client, SwamAuthorization auth,
-                                SwamAcqTransactionRepository txRepo, SwamKeyExchange keyExchange,
-                                SwamMac swamMac, SwamPin swamPin) {
+                                 SwamAcqTransactionRepository txRepo,
+                                 SwamMac swamMac, SwamPin swamPin) {
         this.client = client;
         this.auth = auth;
         this.txRepo = txRepo;
-        this.keyExchange = keyExchange;
         this.swamMac = swamMac;
         this.swamPin = swamPin;
     }
@@ -58,26 +64,21 @@ public class SwamNetworkController {
     private Map<String,Object> network(String func, String label) throws Exception {
         client.connect();
         ISOMsg req = auth.buildNetwork(func, client.getPackager());
+        // Pose le DE128 (MAC) : X9.19 avec la ZMK (recette sortante validee).
+        // La ZMK est la seule cle disponible avant l'echange ZPK/ZAK, donc elle
+        // sert a MACer le sign-on (et les autres messages reseau).
+        String macSent = swamMac.apply(req);
         ISOMsg resp = client.sendAndWait(req, 10);
         Map<String,Object> r = new LinkedHashMap<>();
         r.put("label", label);
         r.put("mti_sent", "1804");
         r.put("de24_func", func);
         r.put("stan", req.getString(11));
+        r.put("de128_mac_sent", macSent);
         r.put("mti_received", resp.getMTI());
         r.put("de39_action", resp.hasField(39) ? resp.getString(39) : null);
         r.put("success", "800".equals(resp.hasField(39) ? resp.getString(39) : ""));
         return r;
-    }
-
-    @PostMapping("/keyexchange/zpk")
-    public Map<String,Object> keyExchangeZpk() throws Exception {
-        return keyExchange.exchangeZpk();
-    }
-
-    @PostMapping("/keyexchange/zak")
-    public Map<String,Object> keyExchangeZak() throws Exception {
-        return keyExchange.exchangeZak();
     }
 
     @PostMapping("/purchase")
@@ -88,7 +89,7 @@ public class SwamNetworkController {
         String stan = auth.nextStan_();
         ISOMsg req = auth.buildAuth1100(pan, amount, stan, client.getPackager());
         swamPin.apply(req, pin);               // pose DE52+DE53 si pin fourni
-                String macSent = swamMac.apply(req);   // pose DE128 (MAC reel)
+        String macSent = swamMac.apply(req);   // pose DE128 (MAC reel)
         ISOMsg resp = client.sendAndWait(req, 10);
         String rc = resp.hasField(39) ? resp.getString(39) : null;
 
@@ -106,7 +107,6 @@ public class SwamNetworkController {
             tx.setStatus("000".equals(rc) ? "APPROVED" : "DECLINED");
             txRepo.save(tx);
         } catch (Exception e) {
-            // log seulement, ne bloque pas la reponse
             System.err.println("[SWAM-ACQ] Persistance tx KO : " + e.getMessage());
         }
 
