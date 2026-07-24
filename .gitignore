@@ -1,33 +1,30 @@
-# Maven
-target/
-*/target/
-*.jar
-*.war
-*.class
-
-# IntelliJ
-.idea/
-*.iml
-*.iws
-*.ipr
-
-# Logs
-logs/
-*.log
-
-# Reports
-reports/
-scripts/TNR_*.txt
-
-# OS
-.DS_Store
-Thumbs.db
-dmas_context_dump.txt
-keys/
-dmas_net_dump.txt
 
 # Artefacts IPM generes
-dmcs/
-
+# IntelliJ
+# Logs
 # Logs runtime des services
+# Maven
+# OS
+# Reports
+*.class
+*.iml
+*.ipr
+*.iws
+*.jar
+*.log
+*.war
+*/target/
+.DS_Store
+.idea/
+Thumbs.db
+dmas_context_dump.txt
+dmas_net_dump.txt
+dmcs/
+keys/
+logs/
+reports/
 run-logs/
+scripts/TNR_*.txt
+sg-frontend/.angular/
+sg-frontend/node_modules/
+target/
