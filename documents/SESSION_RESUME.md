@@ -3072,3 +3072,190 @@ local confirme qu'ils concordent toujours :
    observee ; un refus devrait porter un autre code.
 3. Rendre le CVN et le schema de derivation parametrables par carte
    (M/Chip 4 est aujourd'hui en dur).
+
+---
+
+## 31. CRYPTAGE MASTERCARD — SYNTHESE
+
+Tout ce que le projet sait de la cryptographie Mastercard, appris en
+confrontant nos modules au simulateur officiel puis au membre reel Way4.
+
+### 31.1 LES CLES ET LEUR CIRCULATION
+
+| Cle | Role | Ou elle vit |
+|---|---|---|
+| **LMK** | cle maitre du HSM local | fichier, propre a CHAQUE machine |
+| **KEK / ZMK** | protege le transport des cles | sous LMK, en base |
+| **PEK / ZPK / TPK** | chiffre le PIN block (DE52) | sous LMK, en base |
+| **MAK** | MAC des messages | sous LMK, en base |
+| **MDK** | cle maitre emetteur, derive les cles carte | sous LMK, en base |
+| **cle ICC** | derivee par carte, jamais transportee | recalculee a la volee |
+| **cle de session** | derivee par transaction | recalculee a la volee |
+
+**Regle absolue** : ce qui circule sur le reseau, c'est le RESULTAT
+(PIN block, ARQC, ARPC), jamais les cles derivees. Chaque cote refait
+la derivation depuis la MDK qu'il detient.
+
+### 31.2 PIEGE MAJEUR : LES CLES NE SE COPIENT PAS D'UNE MACHINE A L'AUTRE
+
+`key_under_lmk` contient la cle chiffree sous le LMK **de la machine**.
+Copier ces lignes vers un autre poste les rend illisibles :
+
+    org.jpos.security.jceadapter.JCEHandlerException: Parity not adjusted
+
+Le dechiffrement produit du bruit, et jPOS s'en apercoit au controle de
+parite. **Toujours rebootstrapper les cles sur la machine cible**, jamais
+les copier via un dump SQL.
+
+### 31.3 PIEGE : LA VARIANTE DE LMK DEPEND DU TYPE DE CLE
+
+jPOS chiffre chaque cle sous une variante de LMK **propre a son type**
+(ZMK, ZPK, TAK...). Une cle formee comme MDK puis relue comme PEK donne
+du bruit — meme erreur de parite.
+
+Consequence : on ne peut pas detourner `mdk/bootstrap` pour poser une
+PEK. Il faut l'endpoint qui forme la cle avec le bon type :
+
+    POST /api/admin/dmas/keys/inject?clear=...&keyType=PEK&bank=...
+
+### 31.4 PIN — LA PEK NE SORT JAMAIS DU HSM
+
+    encryptPinBlock / decryptPinBlock
+      -> passent la PEK SOUS LMK au HSM
+      -> le HSM dechiffre en interne et calcule
+      -> la cle claire ne quitte jamais le HSM
+
+Format observe sur le reseau reel : **ISO-0 (FORMAT00)**.
+Le PIN block est le PIN XOR un bloc derive du PAN :
+
+    PAN block = 0000 || 12 chiffres du PAN (avant le check digit)
+
+Verification faite sur un PIN block de Way4 : dechiffre sous TPK
+`0BAECB044F57F25723BA7C75737C7989`, il redonne bien le PIN `1234`.
+C'est le controle le plus simple pour valider qu'une cle est la bonne.
+
+**Limite actuelle** : la validation compare le PIN dechiffre a
+`carte.pin` stocke en clair. Avec un membre reel dont on ignore le PIN,
+il faudrait une validation par **PVV ou PIN offset**. Non implemente.
+
+### 31.5 ARQC — LA CHAINE COMPLETE
+
+    MDK (sous LMK)
+      -> dechiffree en memoire (decryptFromLMK)     <- ETAPE CRITIQUE
+      -> cle ICC   = derivation par carte
+      -> cle sess. = derivation par transaction
+      -> ARQC      = MAC sur les donnees CDOL1
+
+**Le piege qui a coute le plus cher** : `getKeyBytes()` sur un
+`SecureDESKey` retourne la cle CHIFFREE sous LMK, pas le clair. Deriver
+depuis cette valeur donne des resultats differents sur chaque machine,
+puisque les LMK different. Il faut un vrai dechiffrement
+(`JCESecurityModule.decryptFromLMK`, protected, appele par reflexion).
+
+Symptome : meme MDK (meme KCV des deux cotes) mais cles ICC differentes.
+
+### 31.6 M/Chip 4 — CVN 10
+
+Schema valide contre le simulateur officiel, reproduit exactement :
+
+    1. cle ICC    EMV Book 2 Option A + PARITE IMPAIRE
+                  Y = 16 chiffres droite de (PAN || PSN)
+                  ICC = 3DES(Y) || 3DES(Y XOR FF..FF)  sous MDK
+                  puis parite impaire sur chaque octet
+
+    2. cle sess.  SK_gauche = 3DES( ATC || F0 || 00 || UN ) sous ICC
+                  SK_droite = 3DES( ATC || 0F || 00 || UN ) sous ICC
+                  (l'UN dans les 4 derniers octets, pas des zeros)
+
+    3. donnees    9F02 9F03 9F1A 95 5F2A 9A 9C 9F37 82 9F36
+                  || IAD[octets 3 a 8]        <- 6 octets seulement
+
+    4. ARQC       MAC ISO 9797-1 algorithme 3 (Retail MAC)
+                  bourrage EMV : 0x80 puis des 0x00
+
+### 31.7 ARPC — LA REPONSE DE L'EMETTEUR
+
+    ARPC = 3DES( ARQC XOR (ARC || 00 00 00 00 00 00) )  sous la CLE ICC
+
+**Subtilite** : c'est la cle **ICC** qui chiffre, pas la cle de session
+— contrairement a l'ARQC. Trouve par retro-ingenierie : seul le
+dechiffrement sous ICC redonne `ARQC XOR ARC||000000000000`.
+
+ARC observe pour une approbation : `0012`.
+Transporte dans le DE55 de reponse : `91` + ARPC(8) + ARC(2).
+
+### 31.8 LE CVN COMMANDE TOUT
+
+Le **Cryptogram Version Number** est le 2e octet de l'IAD (tag 9F10) :
+
+    IAD = KDI(1) || CVN(1) || CVR(6) ...
+           ^        ^
+           |        version du schema cryptographique
+           index de la MDK a utiliser
+
+Observe :
+
+| Source | IAD | KDI | CVN |
+|---|---|---|---|
+| simulateur officiel | `0110A0...00FF` (18 o) | 01 | **10** |
+| membre reel Way4    | `0101A00000200000` (8 o) | 01 | **01** |
+
+Notre implementation fait du **CVN 10 en dur**. Face a Way4 (CVN 01),
+l'ARQC ne concorde pas — et plus d'un millier de variantes de
+derivation testees n'ont pas permis de retrouver son schema.
+
+**A faire** : rendre le schema parametrable par carte, en lisant le CVN
+dans l'IAD recu. Et pour le CVN 01, obtenir de Way4 le detail de son
+calcul — c'est ainsi que le schema CVN 10 avait ete elucide.
+
+### 31.9 METHODE DE DIAGNOSTIC
+
+Ce qui a permis de resoudre chaque probleme, dans l'ordre d'efficacite :
+
+1. **La trace de calcul du partenaire.** Le simulateur donnait sa cle
+   ICC, sa cle de session, ses donnees d'entree et son ARQC. Comparer
+   ligne a ligne revele immediatement l'ecart. C'est ce qui a livre la
+   parite impaire, l'UN dans la cle de session et l'IAD tronque.
+
+2. **La retro-ingenierie.** Dechiffrer le resultat sous les cles
+   candidates pour retrouver l'entree. C'est ainsi qu'on a su que la
+   cle de session portait l'UN, et que l'ARPC utilisait la cle ICC.
+
+3. **Le PIN block comme test de cle.** Le dechiffrer et verifier qu'il
+   redonne un PIN plausible valide la cle en une operation.
+
+4. **La trace EMV-TRACE des deux cotes** (PSN, ATC, tous les tags du
+   CDOL1, KCV des cles ICC et session, CDOL1 assemble, ARQC). Si les
+   CDOL1 concordent mais pas les KCV, le probleme est dans les cles ;
+   l'inverse pointe les donnees.
+
+### 31.10 TEST AVEC LE MEMBRE REEL WAY4 (2026-07-23)
+
+Montage, sans relais :
+
+    Way4 (10.23.33.114)  ---->  notre Mastercard (10.23.33.126:8500)
+
+Mise en route de `.126` : base repartie de zero (schema copie depuis le
+poste de reference), user `swam_issuer_user`, LMK dedie
+`D:/swam-issuer/keys/dmas-lmk.lmk`, PostgreSQL dans
+`D:\LanaCash\wk\PostgreSQL\18`, jar dans `D:\swam-issuer`.
+
+Points rencontres :
+- `sg_orchestrator_cards_dmas` exigee par le scan JPA meme cote
+  Mastercard (l'entite est dans sg-common, tous les modules la voient)
+- droits a accorder sur `users` et toutes les tables au user du module
+- cles importees illisibles (voir 31.2) — rebootstrapper sur place
+- `keys/inject` repond 403 sur cette machine alors que la classe est
+  dans le jar : route non resolue, a elucider
+
+Resultat :
+
+| Etape | Etat |
+|---|---|
+| Reception et decodage du 0100 | ✅ 22 champs, DE55 tag par tag |
+| Reponse 0110 bien formee | ✅ |
+| PIN block | ✅ dechiffre, PIN 1234, ISO-0 |
+| ARQC | ❌ CVN 01 non implemente |
+
+La chaine ISO et le PIN fonctionnent face a un membre reel. Seul le
+schema cryptographique CVN 01 reste a implementer.
