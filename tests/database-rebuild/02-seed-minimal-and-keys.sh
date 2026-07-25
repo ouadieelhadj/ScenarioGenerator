@@ -24,7 +24,7 @@ PSQL=("$PG_BIN/psql.exe" -U "$DB_ADMIN" -h "$DB_HOST" -p "$DB_PORT"
 echo "[1/3] Paramétrage et cartes"
 "${PSQL[@]}" -v admin_bcrypt="$ADMIN_BCRYPT" <<'SQL'
 BEGIN;
-TRUNCATE networks,mc_dmas_interface,roles,permissions,role_permissions,
+TRUNCATE networks,mc_dmas_interface,swam_interface,roles,permissions,role_permissions,
          users,mc_dmas_cards,swam_cards RESTART IDENTITY CASCADE;
 
 INSERT INTO networks
@@ -37,12 +37,26 @@ VALUES
 INSERT INTO mc_dmas_interface
  (id_interface,bank_code,label,acq_ica_de32,iss_ica_de100,fwd_id_de33,
   group_signon_de2,member_group_id,business_role,host,rest_port,target_host,
-  target_port,status,active,iso_port)
+  target_port,status,active,iso_port,log_file)
 VALUES
  ('DMAS_BANK_A','022905','Banque A','022905','022905','022905','40260',
-  'TESTGRP01','BOTH','localhost',8084,'localhost',8500,'OFF',true,NULL),
+  'TESTGRP01','BOTH','localhost',8084,'localhost',8500,'OFF',true,NULL,
+  'D:/MoneyCore/ScenarioGenerator/logs/mc-dmas-member.log'),
  ('DMAS_MASTERCARD_1','002202','Mastercard DMAS 1',NULL,NULL,'002202',NULL,
-  'TESTGRP01','BOTH','localhost',8501,NULL,NULL,'OFF',true,8500);
+  'TESTGRP01','BOTH','localhost',8501,NULL,NULL,'OFF',true,8500,
+  'D:/MoneyCore/ScenarioGenerator/logs/mc-dmas-mastercard.log');
+
+INSERT INTO swam_interface
+ (id_interface,bank_code,label,acquirer_code_de32,issuer_code_de33,
+  member_group_id,business_role,host,rest_port,iso_port,target_host,target_port,
+  log_file,status,active)
+VALUES
+ ('SWAM_MEMBER_A','12345','Membre SWAM A','12345','300853','TESTGRP01',
+  'ACQUIRER','localhost',8094,NULL,'localhost',8510,
+  'D:/MoneyCore/ScenarioGenerator/logs/swam-acquirer.log','OFF',true),
+ ('SWAM_NETWORK_1','300853','Reseau SWAM',NULL,'300853','TESTGRP01',
+  'ISSUER','localhost',8511,8510,NULL,NULL,
+  'D:/MoneyCore/ScenarioGenerator/logs/swam-issuer.log','OFF',true);
 
 INSERT INTO roles(id,code,label) VALUES
  (1,'ADMIN','Administrateur'),(3,'OBSERVATEUR','Observateur'),

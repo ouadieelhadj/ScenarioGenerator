@@ -1,11 +1,10 @@
 package com.staging.sg.swam.issuer.network;
 
-import com.staging.sg.common.entity.NetworkRef;
 import com.staging.sg.common.entity.SwamCard;
 import com.staging.sg.common.entity.SwamIssTransaction;
 import com.staging.sg.common.iso.SwamPackager;
 import com.staging.sg.common.iso.SwamLengthChannel;
-import com.staging.sg.common.repository.NetworkRepository;
+import com.staging.sg.common.service.SwamInterfaceService;
 import com.staging.sg.common.repository.SwamCardRepository;
 import com.staging.sg.common.repository.SwamIssTransactionRepository;
 import com.staging.sg.common.entity.SwamKek;
@@ -51,10 +50,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class SwamJposServer {
 
     private static final Logger log = LoggerFactory.getLogger(SwamJposServer.class);
-    private static final int DEFAULT_ISO_PORT = 8510;
-    private static final String MGID = "TESTGRP01";
-
-    private final NetworkRepository networkRepository;
+    private final SwamInterfaceService interfaceService;
     private final SwamCardRepository cardRepository;
     private final SwamIssTransactionRepository txRepository;
     private final SwamKekRepository kekRepository;
@@ -69,22 +65,19 @@ public class SwamJposServer {
     /** Push spontane de la ZPK apres le sign-on (flux HPS reel). */
     @Value("${swam.keypush.enabled:true}") private boolean keyPushEnabled;
 
-    /** DE33 (forwarding institution id) des messages emis par le switch. Numerique. */
-    @Value("${swam.forwarding-id:300853}") private String forwardingId;
-
     private ISOServer isoServer;
     private Thread serverThread;
 
     /** Compteur STAN pour les messages spontanes du switch. */
     private final AtomicInteger stanCounter = new AtomicInteger(900000);
 
-    public SwamJposServer(NetworkRepository networkRepository,
+    public SwamJposServer(SwamInterfaceService interfaceService,
                           SwamCardRepository cardRepository,
                           SwamIssTransactionRepository txRepository,
                           SwamKekRepository kekRepository,
                           SwamIssKeyRepository issKeyRepository,
                           JposHsmService hsm) {
-        this.networkRepository = networkRepository;
+        this.interfaceService = interfaceService;
         this.cardRepository = cardRepository;
         this.txRepository = txRepository;
         this.kekRepository = kekRepository;
@@ -93,18 +86,27 @@ public class SwamJposServer {
     }
 
     private int resolvePort() {
-        try {
-            Optional<NetworkRef> swam = networkRepository.findByCode("SWAM");
-            if (swam.isPresent() && swam.get().getIssuerIsoPort() != null) {
-                int p = swam.get().getIssuerIsoPort();
-                log.info("[SWAM-SRV] Port ISO lu depuis networks : {}", p);
-                return p;
-            }
-            log.warn("[SWAM-SRV] Port ISO absent en base, fallback {}", DEFAULT_ISO_PORT);
-        } catch (Exception e) {
-            log.warn("[SWAM-SRV] Lecture port base KO ({}), fallback {}", e.getMessage(), DEFAULT_ISO_PORT);
+        Integer port = interfaceService.get().getIsoPort();
+        if (port == null) {
+            throw new IllegalStateException("[SWAM-IF] iso_port obligatoire cote issuer");
         }
-        return DEFAULT_ISO_PORT;
+        return port;
+    }
+
+    private String forwardingId() {
+        String value = interfaceService.get().getIssuerCodeDe33();
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("[SWAM-IF] issuer_code_de33 obligatoire");
+        }
+        return value;
+    }
+
+    private String memberGroupId() {
+        String value = interfaceService.get().getMemberGroupId();
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("[SWAM-IF] member_group_id obligatoire");
+        }
+        return value;
     }
 
     @PostConstruct
@@ -174,7 +176,7 @@ public class SwamJposServer {
             if (m.hasField(12)) r.set(12, m.getString(12));
             if (m.hasField(24)) r.set(24, m.getString(24));
             if (m.hasField(25)) r.set(25, m.getString(25));
-            r.set(33, forwardingId);
+            r.set(33, forwardingId());
             if (m.hasField(37)) r.set(37, m.getString(37));
             r.set(39, "800");
             poseMacOnResponse(r);
@@ -199,10 +201,11 @@ public class SwamJposServer {
             String tagKey  = "811".equals(func) ? SwamDe48.TAG_ZPK : SwamDe48.TAG_ZAK;
             String tagKcv  = "811".equals(func) ? SwamDe48.TAG_ZPK_KCV : SwamDe48.TAG_ZAK_KCV;
 
-            SwamKek kek = kekRepository.findByMemberGroupId(MGID)
-                    .orElseThrow(() -> new IllegalStateException("KEK SWAM introuvable pour " + MGID));
+            SwamKek kek = kekRepository.findByMemberGroupId(memberGroupId())
+                    .orElseThrow(() -> new IllegalStateException(
+                            "KEK SWAM introuvable pour " + memberGroupId()));
             if (kek.getKekClear() == null)
-                throw new IllegalStateException("kek_clear absent pour " + MGID);
+                throw new IllegalStateException("kek_clear absent pour " + memberGroupId());
 
             HsmService.KeyResult gen = "811".equals(func)
                     ? hsm.generateWorkingKey(keyType, 16, kek.getKekClear())
@@ -210,9 +213,10 @@ public class SwamJposServer {
             int keyLen = gen.keyUnderKekHex.length() / 2;
 
             SwamIssKey ik = issKeyRepository
-                    .findByMemberGroupIdAndKeyTypeAndStatus(MGID, keyType, "ACTIVE")
+                    .findByMemberGroupIdAndKeyTypeAndStatus(
+                            memberGroupId(), keyType, "ACTIVE")
                     .orElseGet(SwamIssKey::new);
-            ik.setMemberGroupId(MGID);
+            ik.setMemberGroupId(memberGroupId());
             ik.setKeyType(keyType);
             ik.setKeyLength(keyLen);
             ik.setKeyUnderLmk(gen.keyUnderLmkHex);
@@ -236,7 +240,7 @@ public class SwamJposServer {
             if (m.hasField(12)) r.set(12, m.getString(12));
             if (m.hasField(24)) r.set(24, m.getString(24));
             if (m.hasField(25)) r.set(25, m.getString(25));
-            r.set(33, forwardingId);
+            r.set(33, forwardingId());
             if (m.hasField(37)) r.set(37, m.getString(37));
             r.set(39, "800");
             r.set(48, de48);
@@ -253,7 +257,7 @@ public class SwamJposServer {
          */
         private void pushZpk(ISOSource source, ISOPackager packager) {
             try {
-                SwamKek kek = kekRepository.findByMemberGroupId(MGID).orElse(null);
+                SwamKek kek = kekRepository.findByMemberGroupId(memberGroupId()).orElse(null);
                 if (kek == null || kek.getKekClear() == null) {
                     log.warn("[SWAM-SRV] KEK absente -> ZPK non poussee (bootstrap d'abord)");
                     return;
@@ -263,9 +267,10 @@ public class SwamJposServer {
                 HsmService.KeyResult gen = hsm.generateWorkingKey("PEK", 16, kek.getKekClear());
 
                 SwamIssKey ik = issKeyRepository
-                        .findByMemberGroupIdAndKeyTypeAndStatus(MGID, "PEK", "ACTIVE")
+                        .findByMemberGroupIdAndKeyTypeAndStatus(
+                                memberGroupId(), "PEK", "ACTIVE")
                         .orElseGet(SwamIssKey::new);
-                ik.setMemberGroupId(MGID);
+                ik.setMemberGroupId(memberGroupId());
                 ik.setKeyType("PEK");
                 ik.setKeyLength(gen.keyUnderKekHex.length() / 2);
                 ik.setKeyUnderLmk(gen.keyUnderLmkHex);
@@ -291,7 +296,7 @@ public class SwamJposServer {
                 push.set(12, new SimpleDateFormat("yyMMddHHmmss").format(now));
                 push.set(24, "811");
                 push.set(25, "0000");
-                push.set(33, forwardingId);          // LLVAR : le packager pose la longueur
+                push.set(33, forwardingId());        // LLVAR : le packager pose la longueur
                 push.set(37, stan + "000000");
                 push.set(48, de48);
                 poseMacOnResponse(push);
@@ -410,7 +415,7 @@ public class SwamJposServer {
                     log.info("[SWAM-SRV] DE128 absent -> MAC non verifie (SKIP)");
                     return "SKIP";
                 }
-                SwamKek kek = kekRepository.findByMemberGroupId(MGID).orElse(null);
+                SwamKek kek = kekRepository.findByMemberGroupId(memberGroupId()).orElse(null);
                 if (kek == null || kek.getKekClear() == null) {
                     log.warn("[SWAM-SRV] ZMK claire absente -> MAC non verifie (SKIP)");
                     return "SKIP";
@@ -429,7 +434,7 @@ public class SwamJposServer {
         /** Calcule et pose le DE128 (macLength premiers octets du MAC 3DES). */
         private void poseMacOnResponse(ISOMsg r) {
             try {
-                SwamKek kek = kekRepository.findByMemberGroupId(MGID).orElse(null);
+                SwamKek kek = kekRepository.findByMemberGroupId(memberGroupId()).orElse(null);
                 if (kek == null || kek.getKekClear() == null) {
                     log.warn("[SWAM-SRV] ZMK claire absente -> DE128 non pose");
                     return;
@@ -454,7 +459,8 @@ public class SwamJposServer {
                     return true;
                 }
                 SwamIssKey pek = issKeyRepository
-                        .findByMemberGroupIdAndKeyTypeAndStatus(MGID, "PEK", "ACTIVE").orElse(null);
+                        .findByMemberGroupIdAndKeyTypeAndStatus(
+                                memberGroupId(), "PEK", "ACTIVE").orElse(null);
                 if (pek == null) {
                     log.warn("[SWAM-SRV] ZPK issuer absente -> PIN non verifie (tolerant)");
                     return true;

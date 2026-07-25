@@ -1,5 +1,6 @@
 package com.staging.sg.swam.acquirer.network;
 
+import com.staging.sg.common.service.SwamInterfaceService;
 import org.jpos.iso.ISOMsg;
 import org.springframework.stereotype.Component;
 
@@ -11,10 +12,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 public class SwamAuthorization {
 
-    /** DE33 : identifiant institution (valeur observee cote Way4). */
-    private static final String FORWARDING_ID = "300853";
+    private final SwamInterfaceService interfaceService;
 
     private final AtomicInteger stanSeq = new AtomicInteger(1);
+
+    public SwamAuthorization(SwamInterfaceService interfaceService) {
+        this.interfaceService = interfaceService;
+    }
 
     private String nextStan() {
         int v = stanSeq.getAndIncrement() % 1000000;
@@ -41,7 +45,7 @@ public class SwamAuthorization {
         m.set(12, nowLocal12());         // aaMMjjHHmmss
         m.set(24, func);
         m.set(25, "1000");               // message reason code (comme Way4)
-        m.set(33, FORWARDING_ID);        // forwarding institution id
+        m.set(33, requiredDe33());
         m.set(37, stan + "000000");      // retrieval reference number (12)
         return m;
     }
@@ -59,7 +63,7 @@ public class SwamAuthorization {
         m.set(12, nowLocal12());
         m.set(22, "051         ");     // POS data code an12
         m.set(24, "100");             // function code
-        m.set(32, "12345");           // acquiring institution id
+        m.set(32, requiredDe32());
         m.set(37, String.format("%012d", Long.parseLong(stan)));
         m.set(41, "TERM0001");
         m.set(42, "MERCHANT000001 ");
@@ -68,4 +72,20 @@ public class SwamAuthorization {
     }
 
     public String nextStan_() { return nextStan(); }
+
+    private String requiredDe32() {
+        String value = interfaceService.get().getAcquirerCodeDe32();
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("[SWAM-IF] acquirer_code_de32 obligatoire");
+        }
+        return value;
+    }
+
+    private String requiredDe33() {
+        String value = interfaceService.get().getIssuerCodeDe33();
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("[SWAM-IF] issuer_code_de33 obligatoire");
+        }
+        return value;
+    }
 }

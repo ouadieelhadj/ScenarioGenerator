@@ -14,8 +14,7 @@ spring:
       ddl-auto: validate
     open-in-view: false
 
-# NB : le port ISO du serveur jPOS n'est PLUS ici.
-# Il est lu depuis la table networks (issuer_iso_port pour code=SWAM).
+# REST, port ISO, DE33 et fichier de log sont lus depuis swam_interface.
 
 jwt:
   secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
@@ -34,8 +33,6 @@ dmas:
     file: F:/ScenarioGenerator/keys/dmas-lmk.lmk
 
 logging:
-  file:
-    name: F:/ScenarioGenerator/logs/swam-issuer.log
   level:
     org.jpos: DEBUG
     com.staging.sg: DEBUG

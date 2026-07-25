@@ -14,7 +14,7 @@ spring:
       ddl-auto: validate
     open-in-view: false
 
-# NB : host + port du switch cible sont lus depuis networks (code=SWAM).
+# REST, cible ISO, DE32/DE33 et fichier de log sont lus depuis swam_interface.
 
 jwt:
   secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
@@ -32,10 +32,6 @@ dmas:
   lmk:
     file: F:/ScenarioGenerator/keys/dmas-lmk.lmk
 
-
-logging:
-  file:
-    name: F:/ScenarioGenerator/logs/swam-acquirer.log
 
 sg:
   network:

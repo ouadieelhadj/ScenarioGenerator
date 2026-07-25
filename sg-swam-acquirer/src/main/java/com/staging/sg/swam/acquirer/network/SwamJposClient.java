@@ -1,6 +1,5 @@
 package com.staging.sg.swam.acquirer.network;
 
-import com.staging.sg.common.entity.NetworkRef;
 import com.staging.sg.common.entity.SwamAcqKey;
 import com.staging.sg.common.entity.SwamKek;
 import com.staging.sg.common.iso.SwamDe48;
@@ -8,7 +7,7 @@ import com.staging.sg.common.iso.SwamPackager;
 import com.staging.sg.common.iso.SwamLengthChannel;
 import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.iso.crypto.JposHsmService;
-import com.staging.sg.common.repository.NetworkRepository;
+import com.staging.sg.common.service.SwamInterfaceService;
 import com.staging.sg.common.repository.SwamAcqKeyRepository;
 import com.staging.sg.common.repository.SwamKekRepository;
 import jakarta.annotation.PreDestroy;
@@ -20,7 +19,6 @@ import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -39,11 +37,8 @@ import java.util.concurrent.TimeUnit;
 public class SwamJposClient {
 
     private static final Logger log = LoggerFactory.getLogger(SwamJposClient.class);
-    private static final String DEFAULT_HOST = "localhost";
-    private static final int    DEFAULT_PORT = 8510;
-    private static final String MGID = "TESTGRP01";
 
-    private final NetworkRepository networkRepository;
+    private final SwamInterfaceService interfaceService;
     private final SwamPackager packager = new SwamPackager();
     private SwamLengthChannel channel;
 
@@ -57,24 +52,32 @@ public class SwamJposClient {
     private Thread receiver;
     private volatile boolean running = false;
 
-    public SwamJposClient(NetworkRepository networkRepository) {
-        this.networkRepository = networkRepository;
+    public SwamJposClient(SwamInterfaceService interfaceService) {
+        this.interfaceService = interfaceService;
     }
 
     private String host() {
-        try {
-            Optional<NetworkRef> s = networkRepository.findByCode("SWAM");
-            if (s.isPresent() && s.get().getIssuerHost() != null) return s.get().getIssuerHost();
-        } catch (Exception e) { log.warn("[SWAM-CLI] host base KO: {}", e.getMessage()); }
-        return DEFAULT_HOST;
+        String host = interfaceService.get().getTargetHost();
+        if (host == null || host.isBlank()) {
+            throw new IllegalStateException("[SWAM-IF] target_host obligatoire");
+        }
+        return host;
     }
 
     private int port() {
-        try {
-            Optional<NetworkRef> s = networkRepository.findByCode("SWAM");
-            if (s.isPresent() && s.get().getIssuerIsoPort() != null) return s.get().getIssuerIsoPort();
-        } catch (Exception e) { log.warn("[SWAM-CLI] port base KO: {}", e.getMessage()); }
-        return DEFAULT_PORT;
+        Integer port = interfaceService.get().getTargetPort();
+        if (port == null) {
+            throw new IllegalStateException("[SWAM-IF] target_port obligatoire");
+        }
+        return port;
+    }
+
+    private String memberGroupId() {
+        String value = interfaceService.get().getMemberGroupId();
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("[SWAM-IF] member_group_id obligatoire");
+        }
+        return value;
     }
 
     /** Etablit la connexion permanente si pas deja connectee. */
@@ -162,7 +165,7 @@ public class SwamJposClient {
             int keyLen = keyUnderKekHex.length() / 2;
             log.info("[SWAM-CLI] {} recue du switch ({} hex, {} octets)", keyType, keyUnderKekHex.length(), keyLen);
 
-            SwamKek kek = kekRepo.findByMemberGroupId(MGID).orElse(null);
+            SwamKek kek = kekRepo.findByMemberGroupId(memberGroupId()).orElse(null);
             if (kek == null || kek.getKekClear() == null) {
                 log.error("[SWAM-CLI] KEK absente -> impossible d'importer la cle (bootstrap d'abord)");
                 sendAck(msg, "909");
@@ -182,9 +185,10 @@ public class SwamJposClient {
 
             // Persister
             SwamAcqKey ak = acqKeyRepo
-                    .findByMemberGroupIdAndKeyTypeAndStatus(MGID, keyType, "ACTIVE")
+                    .findByMemberGroupIdAndKeyTypeAndStatus(
+                            memberGroupId(), keyType, "ACTIVE")
                     .orElseGet(SwamAcqKey::new);
-            ak.setMemberGroupId(MGID);
+            ak.setMemberGroupId(memberGroupId());
             ak.setKeyType(keyType);
             ak.setKeyLength(keyLen);
             ak.setKeyUnderLmk(imp.keyUnderLmkHex);

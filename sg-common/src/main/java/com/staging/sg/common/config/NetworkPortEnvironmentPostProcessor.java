@@ -81,19 +81,29 @@ public class NetworkPortEnvironmentPostProcessor
         // ------------------------------------------------------------------
         String iface = env.getProperty("sg.interface");
         if (iface != null && !iface.isBlank()) {
-            // Liste possible : le port REST est celui de la PREMIERE interface.
             String firstIface = iface.split(",")[0].trim();
-            Integer ifacePort = readInterfacePort(url, user, pass, firstIface);
+            String interfaceTable = "SWAM".equalsIgnoreCase(code)
+                    ? "swam_interface" : "mc_dmas_interface";
+            InterfaceBootConfig boot = readInterfaceBootConfig(
+                    url, user, pass, interfaceTable, firstIface);
+            Integer ifacePort = boot.restPort();
             if (ifacePort == null) {
                 throw new IllegalStateException(
-                        "[SG-PORTS] rest_port est NULL dans mc_dmas_interface pour "
+                        "[SG-PORTS] rest_port est NULL dans " + interfaceTable + " pour "
                       + "id_interface='" + iface + "'");
             }
             Map<String, Object> ifaceProps = new HashMap<>();
             ifaceProps.put("server.port", ifacePort);
+            if (boot.logFile() == null || boot.logFile().isBlank()) {
+                throw new IllegalStateException(
+                        "[SG-PORTS] log_file est NULL dans " + interfaceTable + " pour "
+                      + "id_interface='" + iface + "'");
+            }
+            ifaceProps.put("logging.file.name", boot.logFile());
             env.getPropertySources().addFirst(new MapPropertySource(SOURCE_NAME, ifaceProps));
             log("server.port=" + ifacePort
-              + " (mc_dmas_interface.rest_port pour id_interface=" + firstIface + ")");
+              + ", logging.file.name=" + boot.logFile()
+              + " (" + interfaceTable + " pour id_interface=" + firstIface + ")");
             return;
         }
 
@@ -151,19 +161,22 @@ public class NetworkPortEnvironmentPostProcessor
      * Port REST depuis mc_dmas_interface (DMAS multi-banque).
      * L'identifiant vient du parametre --sg.interface.
      */
-    private Integer readInterfacePort(String url, String user, String pass, String iface) {
-        String sql = "SELECT rest_port FROM mc_dmas_interface WHERE id_interface = ?";
+    private InterfaceBootConfig readInterfaceBootConfig(
+            String url, String user, String pass, String table, String iface) {
+        String sql = "SELECT rest_port, log_file FROM " + table
+                   + " WHERE id_interface = ?";
         try (Connection c = DriverManager.getConnection(url, user, pass);
              PreparedStatement ps = c.prepareStatement(sql)) {
             ps.setString(1, iface);
             try (ResultSet rs = ps.executeQuery()) {
                 if (!rs.next()) {
                     throw new IllegalStateException(
-                            "[SG-PORTS] Aucune ligne dans mc_dmas_interface pour "
+                            "[SG-PORTS] Aucune ligne dans " + table + " pour "
                           + "id_interface='" + iface + "'. Verifier --sg.interface");
                 }
                 int p = rs.getInt(1);
-                return rs.wasNull() ? null : p;
+                Integer port = rs.wasNull() ? null : p;
+                return new InterfaceBootConfig(port, rs.getString(2));
             }
         } catch (IllegalStateException e) {
             throw e;
@@ -173,6 +186,8 @@ public class NetworkPortEnvironmentPostProcessor
                   + e.getMessage(), e);
         }
     }
+
+    private record InterfaceBootConfig(Integer restPort, String logFile) {}
 
     /** Le logger Spring n'existe pas encore a ce stade du boot : sortie console. */
     private void log(String msg) {

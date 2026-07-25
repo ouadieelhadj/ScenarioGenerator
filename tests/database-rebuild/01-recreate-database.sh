@@ -93,8 +93,10 @@ run_create() {
 echo "[4/7] CREATE par DMAS member"
 psql_admin "$DB_NAME" -c "
 SET ROLE mc_dmas_member;
-CREATE TABLE mc_dmas_interface(id_interface varchar(64) PRIMARY KEY,rest_port integer);
-INSERT INTO mc_dmas_interface VALUES('DMAS_BANK_A',8084);
+CREATE TABLE mc_dmas_interface(
+ id_interface varchar(64) PRIMARY KEY,rest_port integer,log_file varchar(500));
+INSERT INTO mc_dmas_interface VALUES(
+ 'DMAS_BANK_A',8084,'D:/MoneyCore/ScenarioGenerator/logs/mc-dmas-member.log');
 RESET ROLE;"
 run_create sg-mc-dmas-member "$ROOT/keys/dmas-lmk-acq.lmk" DMAS_BANK_A
 
@@ -103,8 +105,9 @@ psql_admin "$DB_NAME" -c "
 REASSIGN OWNED BY mc_dmas_member TO mc_dmas_mastercard;
 SET ROLE mc_dmas_mastercard;
 INSERT INTO mc_dmas_interface
- (id_interface,bank_code,rest_port,iso_port,member_group_id,status,active)
- VALUES('DMAS_MASTERCARD_1','002202',8501,8500,'TESTGRP01','OFF',true);
+ (id_interface,bank_code,rest_port,iso_port,member_group_id,status,active,log_file)
+ VALUES('DMAS_MASTERCARD_1','002202',8501,8500,'TESTGRP01','OFF',true,
+ 'D:/MoneyCore/ScenarioGenerator/logs/mc-dmas-mastercard.log');
 RESET ROLE;"
 run_create sg-mc-dmas-mastercard "$ROOT/keys/dmas-lmk-iss.lmk" DMAS_MASTERCARD_1
 
@@ -116,12 +119,27 @@ INSERT INTO networks
  (id,code,name,active,issuer_rest_port,issuer_iso_port,acquirer_rest_port,
   acquirer_host,issuer_host)
  VALUES(1,'SWAM','Switch Al Maghrib',true,8511,8510,8094,'localhost','localhost');
+INSERT INTO swam_interface
+ (id_interface,bank_code,label,issuer_code_de33,member_group_id,business_role,
+  host,rest_port,iso_port,log_file,status,active)
+ VALUES('SWAM_NETWORK_1','300853','Reseau SWAM','300853','TESTGRP01','ISSUER',
+  'localhost',8511,8510,
+  'D:/MoneyCore/ScenarioGenerator/logs/swam-issuer.log','OFF',true);
 RESET ROLE;"
-run_create sg-swam-issuer "$ROOT/keys/dmas-lmk.lmk"
+run_create sg-swam-issuer "$ROOT/keys/dmas-lmk.lmk" SWAM_NETWORK_1
 
 echo "[7/7] CREATE final par SWAM acquéreur"
-psql_admin "$DB_NAME" -c \
-  "REASSIGN OWNED BY swam_issuer_user TO swam_acquirer_user;"
-run_create sg-swam-acquirer "$ROOT/keys/dmas-lmk.lmk"
+psql_admin "$DB_NAME" -c "
+REASSIGN OWNED BY swam_issuer_user TO swam_acquirer_user;
+SET ROLE swam_acquirer_user;
+INSERT INTO swam_interface
+ (id_interface,bank_code,label,acquirer_code_de32,issuer_code_de33,
+  member_group_id,business_role,host,rest_port,target_host,target_port,
+  log_file,status,active)
+ VALUES('SWAM_MEMBER_A','12345','Membre SWAM A','12345','300853',
+  'TESTGRP01','ACQUIRER','localhost',8094,'localhost',8510,
+  'D:/MoneyCore/ScenarioGenerator/logs/swam-acquirer.log','OFF',true);
+RESET ROLE;"
+run_create sg-swam-acquirer "$ROOT/keys/dmas-lmk.lmk" SWAM_MEMBER_A
 
 echo "Schéma généré. Lancer ensuite 02-seed-minimal-and-keys.sh"

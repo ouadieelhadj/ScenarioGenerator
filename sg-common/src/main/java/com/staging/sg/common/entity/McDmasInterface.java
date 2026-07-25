@@ -93,6 +93,9 @@ public class McDmasInterface {
     @Column(name = "target_port")
     private Integer targetPort;
 
+    @Column(name = "log_file", length = 500)
+    private String logFile;
+
     // --- etat ---
 
     /** OFF, SIGNON, PEK_EXCHANGED, READY, SIGNOFF. */
@@ -129,6 +132,7 @@ public class McDmasInterface {
     public Integer getIsoPort()       { return isoPort; }
     public String getTargetHost()     { return targetHost; }
     public Integer getTargetPort()    { return targetPort; }
+    public String getLogFile()        { return logFile; }
     public String getStatus()         { return status; }
     public LocalDateTime getStatusUpdated() { return statusUpdated; }
     public Boolean getActive()        { return active; }
@@ -149,6 +153,7 @@ public class McDmasInterface {
     public void setIsoPort(Integer v)       { this.isoPort = v; }
     public void setTargetHost(String v)     { this.targetHost = v; }
     public void setTargetPort(Integer v)    { this.targetPort = v; }
+    public void setLogFile(String v)        { this.logFile = v; }
     public void setStatus(String v)         { this.status = v; }
     public void setStatusUpdated(LocalDateTime v) { this.statusUpdated = v; }
     public void setActive(Boolean v)        { this.active = v; }

@@ -22,3 +22,7 @@ Les autres paramètres surchargeables sont `SG_ROOT`, `JAVA_BIN`,
 
 Ne jamais recopier `key_under_lmk` entre machines. Exécuter le script sur
 le poste cible afin de reformer les clés sous son propre LMK.
+
+Pour SWAM, `INTERFACE_ID` vaut par défaut `SWAM_NETWORK_1` côté issuer et
+`SWAM_MEMBER_A` côté acquéreur. La ligne de `swam_interface` fournit les
+ports REST/ISO, la cible, DE32/DE33, le groupe de clés et le fichier de log.
