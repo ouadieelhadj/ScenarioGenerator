@@ -1,0 +1,115 @@
+<div class="page-header">
+  <h1><i class="pi pi-chart-line"></i> {{ 'executionView.title' | translate }}</h1>
+</div>
+
+@if (error()) {
+  <div class="alert-error"><i class="pi pi-exclamation-circle"></i> {{ error()! | translate }}</div>
+}
+
+<div class="toolbar">
+  <label class="campaign-select">
+    <span>{{ 'executionView.selectCampaign' | translate }}</span>
+    <select (change)="onSelectCampaign($any($event.target).value)">
+      <option value="">{{ 'executionView.selectPlaceholder' | translate }}</option>
+      @for (c of campaigns(); track c.id) {
+        <option [value]="c.id">{{ c.name }} ({{ c.category }})</option>
+      }
+    </select>
+  </label>
+</div>
+
+<div class="card">
+  @if (selectedCampaignId() === null) {
+    <div class="empty">{{ 'executionView.pickCampaign' | translate }}</div>
+  } @else if (loading()) {
+    <div class="empty"><i class="pi pi-spin pi-spinner"></i> {{ 'common.loading' | translate }}</div>
+  } @else if (executions().length === 0) {
+    <div class="empty">{{ 'executionView.noExecution' | translate }}</div>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{{ 'executionView.col.execId' | translate }}</th>
+          <th>{{ 'executionView.col.status' | translate }}</th>
+          <th>{{ 'executionView.col.txTotal' | translate }}</th>
+          <th>{{ 'executionView.col.txApproved' | translate }}</th>
+          <th>{{ 'executionView.col.txDeclined' | translate }}</th>
+          <th>{{ 'executionView.col.tpsAvg' | translate }}</th>
+          <th>{{ 'executionView.col.verdict' | translate }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (ex of executions(); track ex.campaignExecutionId) {
+          <tr class="clickable" (click)="openDetail(ex)">
+            <td>#{{ ex.campaignExecutionId }}</td>
+            <td><span class="status-pill" [class]="statusClass(ex.status)">{{ ex.status }}</span></td>
+            <td>{{ ex.txTotal }}</td>
+            <td class="ok">{{ ex.txApproved }}</td>
+            <td class="err">{{ ex.txDeclined }}</td>
+            <td>{{ ex.tpsActualAvg }}</td>
+            <td>
+              @if (ex.verdict) {
+                <span class="verdict-pill" [class]="verdictClass(ex.verdict)">{{ ex.verdict }}</span>
+              } @else { <span class="muted">—</span> }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+@if (detail(); as d) {
+  <div class="dialog-overlay" (click)="closeDetail()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-head">
+        <h2>{{ 'executionView.detail.title' | translate }} #{{ d.campaignExecutionId }}</h2>
+        <button class="icon" (click)="closeDetail()"><i class="pi pi-times"></i></button>
+      </div>
+      <div class="dialog-body">
+        <div class="detail-grid">
+          <div class="metric wide">
+            <span class="m-label">{{ 'executionView.col.status' | translate }}</span>
+            <span class="status-pill" [class]="statusClass(d.status)">{{ d.status }}</span>
+          </div>
+          <div class="metric">
+            <span class="m-label">{{ 'executionView.col.txTotal' | translate }}</span>
+            <span class="m-value">{{ d.txTotal }}</span>
+          </div>
+          <div class="metric">
+            <span class="m-label">{{ 'executionView.col.txApproved' | translate }}</span>
+            <span class="m-value ok">{{ d.txApproved }}</span>
+          </div>
+          <div class="metric">
+            <span class="m-label">{{ 'executionView.col.txDeclined' | translate }}</span>
+            <span class="m-value err">{{ d.txDeclined }}</span>
+          </div>
+          <div class="metric">
+            <span class="m-label">{{ 'executionView.col.tpsAvg' | translate }}</span>
+            <span class="m-value">{{ d.tpsActualAvg }}</span>
+          </div>
+          <div class="metric">
+            <span class="m-label">{{ 'executionView.detail.respAvg' | translate }}</span>
+            <span class="m-value">{{ d.responseTimeAvg }}</span>
+          </div>
+          <div class="metric wide">
+            <span class="m-label">{{ 'executionView.col.verdict' | translate }}</span>
+            @if (d.verdict) {
+              <span class="verdict-pill" [class]="verdictClass(d.verdict)">{{ d.verdict }}</span>
+            } @else { <span class="m-value muted">—</span> }
+          </div>
+          @if (d.verdictDetail) {
+            <div class="metric wide">
+              <span class="m-label">{{ 'executionView.detail.verdictDetail' | translate }}</span>
+              <span class="m-detail">{{ d.verdictDetail }}</span>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="dialog-foot">
+        <button class="btn-ghost" (click)="closeDetail()">{{ 'executionView.detail.close' | translate }}</button>
+      </div>
+    </div>
+  </div>
+}
+

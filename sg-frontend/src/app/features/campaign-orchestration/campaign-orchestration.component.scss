@@ -1,0 +1,101 @@
+.page-header h1 {
+  font-size: 20px; color: var(--sg-text-primary);
+  display: flex; align-items: center; gap: 10px; margin: 0 0 var(--sg-gap-lg);
+  i { color: var(--sg-color-primary); }
+}
+
+.alert-error {
+  display: flex; align-items: center; gap: 8px;
+  background: color-mix(in srgb, var(--sg-color-danger) 8%, transparent);
+  color: var(--sg-color-danger); padding: 10px 14px;
+  border-radius: var(--sg-radius-sm); margin-bottom: var(--sg-gap-md); font-size: 14px;
+}
+
+.orch-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: var(--sg-gap-lg);
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+
+.card {
+  background: var(--sg-bg-surface);
+  border: 1px solid var(--sg-border);
+  border-radius: var(--sg-radius);
+  overflow: hidden;
+}
+.card-head {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--sg-border);
+  font-weight: 500;
+  color: var(--sg-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  .exec-id { color: var(--sg-text-muted); font-size: 13px; }
+  .head-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+  .live {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12px; color: var(--sg-color-success);
+    i { font-size: 8px; animation: pulse 1.2s infinite; }
+  }
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.empty { padding: var(--sg-gap-xl); text-align: center; color: var(--sg-text-muted); }
+
+.camp-list { list-style: none; margin: 0; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.camp-list li {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-radius: var(--sg-radius-sm);
+  &:hover { background: var(--sg-bg-hover); }
+}
+.camp-info { display: flex; flex-direction: column; gap: 2px; }
+.camp-name { font-weight: 500; color: var(--sg-text-primary); font-size: 14px; }
+.camp-meta { font-size: 12px; color: var(--sg-text-muted); }
+
+.exec-panel {
+  padding: var(--sg-gap-lg);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--sg-gap-md);
+}
+.metric {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 12px 14px;
+  background: var(--sg-bg-page);
+  border-radius: var(--sg-radius-sm);
+  &.wide { grid-column: 1 / -1; }
+}
+.m-label { font-size: 12px; color: var(--sg-text-muted); text-transform: uppercase; }
+.m-value { font-size: 22px; font-weight: 600; color: var(--sg-text-primary);
+  &.ok { color: var(--sg-color-success); } &.err { color: var(--sg-color-danger); } &.muted { color: var(--sg-text-muted); } }
+.m-detail { font-size: 13px; color: var(--sg-text-secondary); }
+
+.status-pill, .verdict-pill {
+  align-self: flex-start;
+  padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 500;
+}
+.st-run { background: color-mix(in srgb, var(--sg-color-primary) 15%, transparent); color: var(--sg-color-primary); }
+.st-ok { background: color-mix(in srgb, var(--sg-color-success) 15%, transparent); color: var(--sg-color-success); }
+.st-err { background: color-mix(in srgb, var(--sg-color-danger) 15%, transparent); color: var(--sg-color-danger); }
+.v-pass { background: color-mix(in srgb, var(--sg-color-success) 15%, transparent); color: var(--sg-color-success); }
+.v-fail { background: color-mix(in srgb, var(--sg-color-danger) 15%, transparent); color: var(--sg-color-danger); }
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--sg-color-primary); color: #fff; border: none;
+  padding: 9px 16px; border-radius: var(--sg-radius-sm); cursor: pointer; font-size: 14px;
+  &:hover:not(:disabled) { background: var(--sg-color-primary-hover); }
+  &:disabled { opacity: 0.6; cursor: default; }
+  &.sm { padding: 6px 12px; font-size: 13px; }
+}
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid var(--sg-border-strong);
+  padding: 8px 14px; border-radius: var(--sg-radius-sm); cursor: pointer;
+  color: var(--sg-text-secondary); font-size: 14px;
+  &:hover { background: var(--sg-bg-hover); }
+  &.sm { padding: 5px 10px; font-size: 12px; }
+}
+

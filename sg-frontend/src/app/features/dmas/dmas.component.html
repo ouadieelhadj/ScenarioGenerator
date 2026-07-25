@@ -1,0 +1,106 @@
+<div class="page-header">
+  <h1><i class="pi pi-credit-card"></i> {{ 'dmas.title' | translate }}</h1>
+</div>
+
+<div class="tabs">
+  <button [class.active]="tab()==='network'" (click)="setTab('network')">{{ 'dmas.tab.network' | translate }}</button>
+  <button [class.active]="tab()==='keys'" (click)="setTab('keys')">{{ 'dmas.tab.keys' | translate }}</button>
+  <button [class.active]="tab()==='cards'" (click)="setTab('cards')">{{ 'dmas.tab.cards' | translate }}</button>
+  <button [class.active]="tab()==='auth'" (click)="setTab('auth')">{{ 'dmas.tab.auth' | translate }}</button>
+</div>
+
+<div class="dmas-layout">
+  <div class="card panel">
+    <!-- RESEAU -->
+    @if (tab() === 'network') {
+      <p class="desc">{{ 'dmas.network.desc' | translate }}</p>
+      <div class="btn-row">
+        <button class="btn-primary" (click)="signon()" [disabled]="busy()"><i class="pi pi-sign-in"></i> {{ 'dmas.network.signon' | translate }}</button>
+        <button class="btn-ghost" (click)="signoff()" [disabled]="busy()"><i class="pi pi-sign-out"></i> {{ 'dmas.network.signoff' | translate }}</button>
+        <button class="btn-ghost" (click)="netStatus()" [disabled]="busy()"><i class="pi pi-info-circle"></i> {{ 'dmas.network.status' | translate }}</button>
+      </div>
+    }
+
+    <!-- CLES -->
+    @if (tab() === 'keys') {
+      <p class="desc">{{ 'dmas.keys.desc' | translate }}</p>
+      <label><span>{{ 'dmas.keys.memberGroupId' | translate }}</span>
+        <input type="text" [(ngModel)]="memberGroupId" /></label>
+      <label><span>{{ 'dmas.keys.kekClear' | translate }}</span>
+        <input type="text" [(ngModel)]="kekClear" /></label>
+      <div class="btn-row">
+        <button class="btn-primary" (click)="bootstrapKek()" [disabled]="busy()"><i class="pi pi-key"></i> {{ 'dmas.keys.bootstrap' | translate }}</button>
+        <button class="btn-ghost" (click)="exchangePek()" [disabled]="busy()"><i class="pi pi-sync"></i> {{ 'dmas.keys.pek' | translate }}</button>
+      </div>
+    }
+
+    <!-- CARTES -->
+    @if (tab() === 'cards') {
+      <p class="desc">{{ 'dmas.cards.desc' | translate }}</p>
+      <div class="grid">
+        <label><span>{{ 'dmas.cards.pan' | translate }}</span><input type="text" [(ngModel)]="card.pan" /></label>
+        <label><span>{{ 'dmas.cards.pin' | translate }}</span><input type="text" [(ngModel)]="card.pin" /></label>
+        <label><span>{{ 'dmas.cards.balance' | translate }}</span><input type="number" [(ngModel)]="card.balance" /></label>
+        <label><span>{{ 'dmas.cards.currency' | translate }}</span><input type="text" [(ngModel)]="card.currency" /></label>
+        <label><span>{{ 'dmas.cards.expiry' | translate }}</span><input type="text" [(ngModel)]="card.expiry" /></label>
+      </div>
+      <div class="btn-row">
+        <button class="btn-primary" (click)="createCard()" [disabled]="busy()"><i class="pi pi-plus"></i> {{ 'dmas.cards.create' | translate }}</button>
+      </div>
+      <hr />
+      <div class="grid">
+        <label><span>{{ 'dmas.cards.pan' | translate }}</span><input type="text" [(ngModel)]="lookupPan" /></label>
+        <label><span>{{ 'dmas.cards.balance' | translate }}</span><input type="number" [(ngModel)]="balanceAmount" /></label>
+      </div>
+      <div class="btn-row">
+        <button class="btn-ghost" (click)="getCard()" [disabled]="busy()"><i class="pi pi-search"></i> {{ 'dmas.cards.get' | translate }}</button>
+        <button class="btn-ghost" (click)="setBalance()" [disabled]="busy()"><i class="pi pi-wallet"></i> {{ 'dmas.cards.setBalance' | translate }}</button>
+      </div>
+    }
+
+    <!-- TEST 0100 -->
+    @if (tab() === 'auth') {
+      <p class="desc">{{ 'dmas.auth.desc' | translate }}</p>
+      <div class="grid">
+        <label><span>{{ 'dmas.auth.pan' | translate }}</span><input type="text" [(ngModel)]="auth.DE002_PAN" /></label>
+        <label><span>{{ 'dmas.auth.amount' | translate }}</span><input type="number" [(ngModel)]="auth.DE004_AMOUNT" /></label>
+        <label><span>{{ 'dmas.auth.processingCode' | translate }}</span><input type="text" [(ngModel)]="auth.DE003_PROCESSING_CODE" /></label>
+        <label><span>{{ 'dmas.auth.currency' | translate }}</span><input type="text" [(ngModel)]="auth.DE049_CURRENCY_CODE" /></label>
+      </div>
+      <button class="link-btn" (click)="showAdvanced.set(!showAdvanced())">
+        <i class="pi" [class.pi-chevron-down]="!showAdvanced()" [class.pi-chevron-up]="showAdvanced()"></i>
+        {{ 'dmas.auth.advanced' | translate }}
+      </button>
+      @if (showAdvanced()) {
+        <div class="grid">
+          <label><span>{{ 'dmas.auth.mcc' | translate }}</span><input type="text" [(ngModel)]="auth.DE018_MCC" /></label>
+          <label><span>{{ 'dmas.auth.pin' | translate }}</span><input type="text" [(ngModel)]="auth.DE052_PIN" /></label>
+        </div>
+      }
+      <div class="btn-row">
+        <button class="btn-primary" (click)="sendAuth()" [disabled]="busy()"><i class="pi pi-send"></i> {{ 'dmas.auth.send' | translate }}</button>
+      </div>
+    }
+  </div>
+
+  <!-- Zone de log -->
+  <div class="card log-panel">
+    <div class="log-head">
+      <span>{{ 'dmas.result' | translate }}</span>
+      @if (log().length) { <button class="icon" (click)="clearLog()"><i class="pi pi-trash"></i></button> }
+    </div>
+    <div class="log-body">
+      @if (busy()) { <div class="log-busy"><i class="pi pi-spin pi-spinner"></i> {{ 'dmas.sending' | translate }}</div> }
+      @for (e of log(); track $index) {
+        <div class="log-entry" [class.ok]="e.ok" [class.err]="!e.ok">
+          <div class="log-label">
+            <i class="pi" [class.pi-check-circle]="e.ok" [class.pi-times-circle]="!e.ok"></i>
+            {{ e.label }} — {{ (e.ok ? 'dmas.success' : 'dmas.error') | translate }}
+          </div>
+          <pre>{{ e.detail }}</pre>
+        </div>
+      }
+    </div>
+  </div>
+</div>
+

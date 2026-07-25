@@ -1,0 +1,28 @@
+# Dependencies
+/node_modules/
+
+# Build outputs
+/dist/
+/tmp/
+/out-tsc/
+/bazel-out/
+
+# Angular cache
+/.angular/cache/
+.angular/
+
+# IDE
+/.idea/
+/.vscode/
+*.iml
+
+# Logs
+*.log
+npm-debug.log*
+
+# Environnement local
+.DS_Store
+Thumbs.db
+
+# Tests
+/coverage/

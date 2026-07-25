@@ -1,0 +1,63 @@
+.page-header h1 {
+  font-size: 20px; color: var(--sg-text-primary);
+  display: flex; align-items: center; gap: 10px; margin: 0 0 var(--sg-gap-sm);
+  i { color: var(--sg-color-primary); }
+}
+.intro { color: var(--sg-text-secondary); font-size: 14px; margin-bottom: var(--sg-gap-lg); }
+
+.card {
+  background: var(--sg-bg-surface); border: 1px solid var(--sg-border);
+  border-radius: var(--sg-radius); overflow: hidden;
+}
+
+.config-table {
+  width: 100%; border-collapse: collapse;
+  th, td { text-align: left; padding: 14px 16px; font-size: 14px; }
+  thead th {
+    background: var(--sg-bg-hover); color: var(--sg-text-secondary);
+    font-weight: 500; font-size: 12px; text-transform: uppercase;
+    border-bottom: 1px solid var(--sg-border);
+  }
+  tbody tr:not(.msg-row) { border-bottom: 1px solid var(--sg-border); }
+  input {
+    width: 120px; padding: 8px 10px; border: 1px solid var(--sg-border-strong);
+    border-radius: var(--sg-radius-sm); font-size: 14px;
+    background: var(--sg-bg-surface); color: var(--sg-text-primary);
+    &:focus { outline: 2px solid var(--sg-color-primary); border-color: transparent; }
+    &:disabled { opacity: 0.5; }
+  }
+}
+
+.svc { display: flex; flex-direction: column; gap: 2px; }
+.svc-name { font-weight: 500; color: var(--sg-text-primary); }
+.svc-key { font-size: 12px; color: var(--sg-text-muted); font-family: var(--sg-font-mono); }
+
+.port-badge {
+  display: inline-block; padding: 3px 12px; border-radius: 999px;
+  background: color-mix(in srgb, var(--sg-color-success) 15%, transparent);
+  color: var(--sg-color-success); font-weight: 500; font-family: var(--sg-font-mono);
+  &.off { background: var(--sg-bg-hover); color: var(--sg-text-muted); }
+}
+
+.action-cell { display: flex; align-items: center; gap: 8px; }
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--sg-color-primary); color: #fff; border: none;
+  padding: 8px 16px; border-radius: var(--sg-radius-sm); cursor: pointer; font-size: 14px;
+  &:hover:not(:disabled) { background: var(--sg-color-primary-hover); }
+  &:disabled { opacity: 0.6; cursor: default; }
+  &.sm { padding: 7px 14px; font-size: 13px; }
+}
+.icon {
+  border: none; background: none; cursor: pointer; padding: 7px;
+  border-radius: var(--sg-radius-sm); color: var(--sg-text-secondary);
+  &:hover { background: var(--sg-bg-hover); }
+}
+
+.msg-row td { padding-top: 0; padding-bottom: 12px; }
+.msg {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 13px;
+  color: var(--sg-color-success);
+  &.err { color: var(--sg-color-danger); }
+}
+

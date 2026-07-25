@@ -1,0 +1,96 @@
+<div class="page-header">
+  <div>
+    <h1><i class="pi pi-cog"></i> {{ 'admin.title' | translate }}</h1>
+    <p class="sub">{{ 'admin.subtitle' | translate }}</p>
+  </div>
+  <button class="btn-primary" *hasPermission="'USER_MANAGE'" (click)="openCreate()">
+    <i class="pi pi-user-plus"></i> {{ 'admin.new' | translate }}
+  </button>
+</div>
+
+@if (error()) {
+  <div class="alert-error"><i class="pi pi-exclamation-circle"></i> {{ error()! | translate }}</div>
+}
+
+<div class="card">
+  @if (loading()) {
+    <div class="empty"><i class="pi pi-spin pi-spinner"></i> {{ 'common.loading' | translate }}</div>
+  } @else if (users().length === 0) {
+    <div class="empty">{{ 'admin.none' | translate }}</div>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{{ 'admin.col.id' | translate }}</th>
+          <th>{{ 'admin.col.login' | translate }}</th>
+          <th>{{ 'admin.col.email' | translate }}</th>
+          <th>{{ 'admin.col.role' | translate }}</th>
+          <th>{{ 'admin.col.active' | translate }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (u of users(); track u.id) {
+          <tr>
+            <td>{{ u.id }}</td>
+            <td class="name">{{ u.login }}</td>
+            <td class="muted">{{ u.email }}</td>
+            <td><span class="role-tag">{{ u.role }}</span></td>
+            <td>
+              @if (u.active) { <span class="badge on">{{ 'common.yes' | translate }}</span> }
+              @else { <span class="badge off">{{ 'common.no' | translate }}</span> }
+            </td>
+            <td class="actions">
+              <button class="icon" *hasPermission="'USER_MANAGE'" (click)="openEdit(u)" [title]="'common.edit' | translate">
+                <i class="pi pi-pencil"></i>
+              </button>
+              <button class="icon" *hasPermission="'USER_MANAGE'" (click)="toggle(u)"
+                      [title]="(u.active ? 'admin.deactivate' : 'admin.activate') | translate">
+                <i class="pi" [class.pi-lock]="u.active" [class.pi-lock-open]="!u.active"></i>
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+@if (showForm()) {
+  <div class="dialog-overlay" (click)="closeForm()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-head">
+        <h2>{{ (editingId() ? 'admin.editTitle' : 'admin.newTitle') | translate }}</h2>
+        <button class="icon" (click)="closeForm()"><i class="pi pi-times"></i></button>
+      </div>
+      <div class="dialog-body">
+        <label>
+          <span>{{ 'admin.field.login' | translate }} *</span>
+          <input type="text" [(ngModel)]="form.login" [disabled]="editingId() !== null" />
+        </label>
+        <label>
+          <span>{{ 'admin.field.email' | translate }} *</span>
+          <input type="email" [(ngModel)]="form.email" />
+        </label>
+        <label>
+          <span>{{ 'admin.field.password' | translate }} @if (editingId()) { <em class="hint">({{ 'admin.field.passwordHint' | translate }})</em> }</span>
+          <input type="password" [(ngModel)]="form.password" autocomplete="new-password" />
+        </label>
+        <label>
+          <span>{{ 'admin.field.role' | translate }} *</span>
+          <select [(ngModel)]="form.role">
+            @for (r of roles; track r) { <option [value]="r">{{ r }}</option> }
+          </select>
+        </label>
+      </div>
+      <div class="dialog-foot">
+        <button class="btn-ghost" (click)="closeForm()">{{ 'common.cancel' | translate }}</button>
+        <button class="btn-primary" (click)="save()" [disabled]="saving()">
+          @if (saving()) { <i class="pi pi-spin pi-spinner"></i> {{ 'common.saving' | translate }} }
+          @else { {{ 'common.save' | translate }} }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+

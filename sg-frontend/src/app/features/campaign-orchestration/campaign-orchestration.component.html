@@ -1,0 +1,95 @@
+<div class="page-header">
+  <h1><i class="pi pi-play"></i> {{ 'orchestration.title' | translate }}</h1>
+</div>
+
+@if (error()) {
+  <div class="alert-error"><i class="pi pi-exclamation-circle"></i> {{ error()! | translate }}</div>
+}
+
+<div class="orch-layout">
+  <!-- Colonne gauche : campagnes actives -->
+  <div class="card">
+    <div class="card-head">{{ 'orchestration.selectCampaign' | translate }}</div>
+    @if (loading()) {
+      <div class="empty"><i class="pi pi-spin pi-spinner"></i> {{ 'common.loading' | translate }}</div>
+    } @else if (activeCampaigns().length === 0) {
+      <div class="empty">{{ 'orchestration.noCampaign' | translate }}</div>
+    } @else {
+      <ul class="camp-list">
+        @for (c of activeCampaigns(); track c.id) {
+          <li>
+            <div class="camp-info">
+              <span class="camp-name">{{ c.name }}</span>
+              <span class="camp-meta">{{ c.category }} · {{ c.loadSteps.length }} {{ 'campaign.col.steps' | translate }}</span>
+            </div>
+            <button class="btn-primary sm" *hasPermission="['TPS_RUN','CAMPAIGN_REPLAY']"
+                    (click)="launch(c)" [disabled]="launchingId() === c.id || following()">
+              @if (launchingId() === c.id) { <i class="pi pi-spin pi-spinner"></i> {{ 'orchestration.launching' | translate }} }
+              @else { <i class="pi pi-play"></i> {{ 'orchestration.launch' | translate }} }
+            </button>
+          </li>
+        }
+      </ul>
+    }
+  </div>
+
+  <!-- Colonne droite : suivi de l'execution -->
+  <div class="card">
+    <div class="card-head">
+      {{ 'orchestration.execution' | translate }}
+      @if (executionId()) { <span class="exec-id">#{{ executionId() }}</span> }
+      <div class="head-actions">
+        @if (following()) {
+          <span class="live"><i class="pi pi-circle-fill"></i> {{ 'orchestration.autoRefresh' | translate }}</span>
+          <button class="btn-ghost sm" (click)="stopPolling()">{{ 'orchestration.stopFollow' | translate }}</button>
+        } @else if (executionId()) {
+          <button class="btn-ghost sm" (click)="refresh()"><i class="pi pi-refresh"></i> {{ 'orchestration.refresh' | translate }}</button>
+        }
+      </div>
+    </div>
+
+    @if (!execution()) {
+      <div class="empty">{{ 'orchestration.running' | translate }}…</div>
+    } @else {
+      <div class="exec-panel">
+        <div class="metric wide">
+          <span class="m-label">{{ 'orchestration.status' | translate }}</span>
+          <span class="status-pill" [class]="statusClass(execution()!.status)">{{ execution()!.status }}</span>
+        </div>
+        <div class="metric">
+          <span class="m-label">{{ 'orchestration.txTotal' | translate }}</span>
+          <span class="m-value">{{ execution()!.txTotal }}</span>
+        </div>
+        <div class="metric">
+          <span class="m-label">{{ 'orchestration.txApproved' | translate }}</span>
+          <span class="m-value ok">{{ execution()!.txApproved }}</span>
+        </div>
+        <div class="metric">
+          <span class="m-label">{{ 'orchestration.txDeclined' | translate }}</span>
+          <span class="m-value err">{{ execution()!.txDeclined }}</span>
+        </div>
+        <div class="metric">
+          <span class="m-label">{{ 'orchestration.tpsAvg' | translate }}</span>
+          <span class="m-value">{{ execution()!.tpsActualAvg }}</span>
+        </div>
+        <div class="metric">
+          <span class="m-label">{{ 'orchestration.respAvg' | translate }}</span>
+          <span class="m-value">{{ execution()!.responseTimeAvg }}</span>
+        </div>
+        <div class="metric wide">
+          <span class="m-label">{{ 'orchestration.verdict' | translate }}</span>
+          @if (execution()!.verdict) {
+            <span class="verdict-pill" [class]="verdictClass(execution()!.verdict)">{{ execution()!.verdict }}</span>
+          } @else { <span class="m-value muted">—</span> }
+        </div>
+        @if (execution()!.verdictDetail) {
+          <div class="metric wide">
+            <span class="m-label">{{ 'orchestration.detail' | translate }}</span>
+            <span class="m-detail">{{ execution()!.verdictDetail }}</span>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
+

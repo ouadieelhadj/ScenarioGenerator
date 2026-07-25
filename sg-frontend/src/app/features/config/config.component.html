@@ -1,0 +1,66 @@
+<div class="page-header">
+  <h1><i class="pi pi-sliders-h"></i> {{ 'portConfig.title' | translate }}</h1>
+</div>
+
+<p class="intro">{{ 'portConfig.intro' | translate }}</p>
+
+<!-- SECTION : Ports des services (extensible : d'autres sections viendront ici) -->
+<div class="card">
+  <table class="config-table">
+    <thead>
+      <tr>
+        <th>{{ 'portConfig.service' | translate }}</th>
+        <th>{{ 'portConfig.currentPort' | translate }}</th>
+        <th>{{ 'portConfig.newPort' | translate }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.key) {
+        <tr>
+          <td class="svc">
+            <span class="svc-name">{{ row.label }}</span>
+            <span class="svc-key">{{ row.key }}</span>
+          </td>
+          <td>
+            @if (row.status === 'loading') {
+              <i class="pi pi-spin pi-spinner"></i>
+            } @else if (row.serverPort !== null) {
+              <span class="port-badge">{{ row.serverPort }}</span>
+            } @else {
+              <span class="port-badge off">—</span>
+            }
+          </td>
+          <td>
+            <input type="number" [(ngModel)]="row.newPort"
+                   [disabled]="row.status === 'restarting' || row.serverPort === null" />
+          </td>
+          <td class="action-cell">
+            <button class="btn-primary sm" (click)="apply(row)"
+                    [disabled]="row.status === 'restarting' || row.serverPort === null">
+              @if (row.status === 'restarting') {
+                <i class="pi pi-spin pi-spinner"></i> {{ 'portConfig.applying' | translate }}
+              } @else {
+                {{ 'portConfig.apply' | translate }}
+              }
+            </button>
+            <button class="icon" (click)="loadServerPort(row.key)" [title]="'portConfig.refresh' | translate">
+              <i class="pi pi-refresh"></i>
+            </button>
+          </td>
+        </tr>
+        @if (row.message) {
+          <tr class="msg-row">
+            <td colspan="4">
+              <span class="msg" [class.err]="row.status === 'error'">
+                <i class="pi" [class.pi-info-circle]="row.status !== 'error'" [class.pi-exclamation-circle]="row.status === 'error'"></i>
+                {{ row.message | translate:{ port: row.newPort } }}
+              </span>
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>
+

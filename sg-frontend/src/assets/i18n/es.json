@@ -1,0 +1,244 @@
+{
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "edit": "Editar",
+    "delete": "Eliminar",
+    "create": "Crear",
+    "loading": "Cargando…",
+    "saving": "Guardando…",
+    "yes": "Sí",
+    "no": "No",
+    "actions": "Acciones",
+    "confirmDelete": "¿Confirmar la eliminación?",
+    "required": "obligatorio"
+  },
+  "menu": {
+    "dashboard": "Panel de control",
+    "campaignGeneration": "Generación de campaña",
+    "campaignOrchestration": "Orquestación de campaña",
+    "executions": "Consulta de ejecuciones",
+    "dmas": "Monética DMAS",
+    "admin": "Administración",
+    "help": "Ayuda",
+    "config": "Configuración"
+  },
+  "topbar": {
+    "theme": "Tema",
+    "language": "Idioma",
+    "logout": "Cerrar sesión"
+  },
+  "login": {
+    "subtitle": "Plataforma de simulación monética",
+    "username": "Usuario",
+    "password": "Contraseña",
+    "submit": "Iniciar sesión",
+    "connecting": "Conectando…",
+    "errorInvalid": "Usuario o contraseña incorrectos",
+    "errorDisabled": "Cuenta desactivada",
+    "errorNoServer": "Sin respuesta del servidor (¿servicio detenido o CORS?)",
+    "errorGeneric": "Conexión imposible. Verifique que los servicios estén iniciados."
+  },
+  "campaign": {
+    "title": "Generación de campaña",
+    "new": "Nueva campaña",
+    "none": "No hay campañas. Cree una para empezar.",
+    "loadError": "No se pueden cargar las campañas.",
+    "saveError": "Error al guardar.",
+    "deleteError": "Error al eliminar.",
+    "editTitle": "Editar campaña",
+    "newTitle": "Nueva campaña",
+    "col": {
+      "id": "ID",
+      "name": "Nombre",
+      "category": "Categoría",
+      "steps": "Niveles",
+      "slaError": "SLA err. máx",
+      "active": "Activa",
+      "createdBy": "Creada por",
+      "network": "Red"
+    },
+    "field": {
+      "name": "Nombre",
+      "category": "Categoría",
+      "description": "Descripción",
+      "config": "Configuración (JSON)",
+      "expectedDe039": "DE039 esperado",
+      "slaP95": "SLA P95 máx (ms)",
+      "slaError": "SLA tasa de error máx (%)",
+      "slaApproval": "SLA aprobación mín (%)",
+      "stopOnError": "Detener si tasa de error (%)",
+      "active": "Activa",
+      "loadSteps": "Niveles de carga (TPS)",
+      "addStep": "Añadir un nivel",
+      "stepStart": "Inicio (s)",
+      "stepEnd": "Fin (s)",
+      "stepTps": "TPS",
+      "network": "Red",
+      "initiator": "Iniciador"
+    },
+    "help": {
+      "name": "Nombre de la campaña (ej. CAMP-DEMO). Obligatorio.",
+      "category": "Categoría de la campaña (ej. DMAS). Define el tipo de transacciones generadas. Obligatorio.",
+      "description": "Texto libre que describe la campaña. Opcional.",
+      "config": "JSON que describe la generación: modo de PAN, presencia de PIN, campos variables (importe, etc.). Núcleo de la campaña.",
+      "expectedDe039": "Código de respuesta ISO esperado (00 = aprobado). Verifica que las transacciones devuelven el resultado esperado.",
+      "slaP95": "Tiempo de respuesta máx en el percentil 95, en ms. Ej. 500 = 95% de las transacciones bajo 500 ms.",
+      "slaError": "Tasa de error máxima tolerada, en %. Más allá, veredicto FAILED.",
+      "slaApproval": "Tasa de aprobación mínima esperada, en %. Ej. 90 = al menos 90% aprobadas.",
+      "stopOnError": "Umbral de parada automática. Si la tasa de error supera este valor durante la ejecución, la campaña se detiene.",
+      "active": "Si está marcada, la campaña está activa y puede lanzarse.",
+      "loadSteps": "Perfil de carga: cada nivel define un caudal (TPS) sobre un intervalo de tiempo.",
+      "stepStart": "Momento de inicio del nivel, en segundos desde el lanzamiento.",
+      "stepEnd": "Momento de fin del nivel, en segundos.",
+      "stepTps": "Caudal objetivo (transacciones por segundo) durante este nivel.",
+      "network": "Red de pago destino (DMAS, SWAM...)",
+      "initiator": "Lado que emite la carga: ACQUIRER (banco->switch) o ISSUER (switch->banco)"
+    }
+  },
+  "help": {
+    "title": "Ayuda",
+    "intro": "Documentación de las pantallas de la plataforma. Haga clic en una sección para desplegarla."
+  },
+  "placeholder": {
+    "toImplement": "Pantalla «{{name}}» — por implementar."
+  },
+  "orchestration": {
+    "title": "Orquestación de campaña",
+    "selectCampaign": "Campañas activas",
+    "noCampaign": "No hay campaña activa. Active una en la pantalla Generación.",
+    "launch": "Lanzar",
+    "launching": "Lanzando…",
+    "running": "En ejecución",
+    "execution": "Ejecución",
+    "autoRefresh": "Actualización automática",
+    "stopFollow": "Detener seguimiento",
+    "refresh": "Actualizar",
+    "launchError": "Error al lanzar la campaña.",
+    "followError": "No se puede obtener el estado de la ejecución.",
+    "status": "Estado",
+    "txTotal": "Transacciones",
+    "txApproved": "Aprobadas",
+    "txDeclined": "Rechazadas",
+    "verdict": "Veredicto",
+    "tpsAvg": "TPS medio",
+    "respAvg": "Tiempo de respuesta medio (ms)",
+    "detail": "Detalle"
+  },
+  "executionView": {
+    "title": "Consulta de ejecuciones",
+    "selectCampaign": "Elegir una campaña",
+    "selectPlaceholder": "— Seleccionar —",
+    "noExecution": "No hay ejecuciones para esta campaña.",
+    "loadError": "No se pueden cargar las ejecuciones.",
+    "pickCampaign": "Seleccione una campaña para ver sus ejecuciones.",
+    "col": {
+      "execId": "Ejec. #",
+      "status": "Estado",
+      "txTotal": "Tx total",
+      "txApproved": "Aprobadas",
+      "txDeclined": "Rechazadas",
+      "tpsAvg": "TPS medio",
+      "verdict": "Veredicto"
+    },
+    "detail": {
+      "title": "Detalle de la ejecución",
+      "close": "Cerrar",
+      "respAvg": "Tiempo de respuesta medio (ms)",
+      "verdictDetail": "Detalle del veredicto"
+    }
+  },
+  "dmas": {
+    "title": "Monética DMAS",
+    "tab": {
+      "network": "Red",
+      "keys": "Claves",
+      "cards": "Tarjetas",
+      "auth": "Prueba 0100"
+    },
+    "network": {
+      "desc": "Gestión de la sesión de red jPOS con el simulador.",
+      "signon": "Sign-on",
+      "signoff": "Sign-off",
+      "status": "Estado de red"
+    },
+    "keys": {
+      "desc": "Inicialización de las claves criptográficas.",
+      "memberGroupId": "Grupo miembro",
+      "kekClear": "KEK en claro",
+      "bootstrap": "Bootstrap KEK",
+      "pek": "Intercambio PEK"
+    },
+    "cards": {
+      "desc": "Aprovisionamiento y consulta de tarjetas de prueba.",
+      "pan": "PAN",
+      "pin": "PIN",
+      "balance": "Saldo (céntimos)",
+      "currency": "Divisa",
+      "expiry": "Caducidad (AAMM)",
+      "create": "Aprovisionar",
+      "get": "Consultar",
+      "setBalance": "Ajustar saldo",
+      "status": "Estado",
+      "notFound": "Tarjeta no encontrada"
+    },
+    "auth": {
+      "desc": "Enviar una autorización unitaria (mensaje 0100).",
+      "pan": "PAN (DE002)",
+      "amount": "Importe (DE004, céntimos)",
+      "processingCode": "Código de proceso (DE003)",
+      "mcc": "MCC (DE018)",
+      "currency": "Divisa (DE049)",
+      "pin": "PIN (DE052)",
+      "send": "Enviar 0100",
+      "advanced": "Campos avanzados"
+    },
+    "result": "Resultado",
+    "success": "Éxito",
+    "error": "Error",
+    "sending": "Enviando…"
+  },
+  "portConfig": {
+    "title": "Configuración de puertos",
+    "intro": "Consulte y modifique el puerto de cada servicio. El servicio se reinicia automáticamente en el nuevo puerto.",
+    "service": "Servicio",
+    "currentPort": "Puerto actual",
+    "newPort": "Nuevo puerto",
+    "apply": "Aplicar",
+    "applying": "Reiniciando…",
+    "refresh": "Actualizar",
+    "restarting": "El servicio se reinicia en el puerto {{port}}…",
+    "reconnected": "Reconectado en el puerto {{port}}",
+    "unreachable": "Servicio inaccesible",
+    "invalidPort": "Puerto inválido (1024-65535)",
+    "changeError": "Error al cambiar el puerto.",
+    "sameFront": "Puerto conocido por el front"
+  },
+  "admin": {
+    "title": "Administración",
+    "subtitle": "Gestión de usuarios",
+    "new": "Nuevo usuario",
+    "none": "No hay usuarios.",
+    "loadError": "No se pueden cargar los usuarios.",
+    "saveError": "Error al guardar.",
+    "editTitle": "Editar usuario",
+    "newTitle": "Nuevo usuario",
+    "col": {
+      "id": "ID",
+      "login": "Usuario",
+      "email": "Correo",
+      "role": "Rol",
+      "active": "Activo"
+    },
+    "field": {
+      "login": "Usuario",
+      "password": "Contraseña",
+      "email": "Correo",
+      "role": "Rol",
+      "passwordHint": "Dejar vacío para no cambiar"
+    },
+    "toggle": "Activar/Desactivar",
+    "activate": "Activar",
+    "deactivate": "Desactivar"
+  }
+}

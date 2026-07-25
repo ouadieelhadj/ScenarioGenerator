@@ -1,0 +1,56 @@
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">
+      <i class="pi pi-bolt"></i>
+      <span>ScenarioGenerator</span>
+    </div>
+    <nav class="menu">
+      @for (item of menu(); track item.route) {
+        <a class="menu-item" [routerLink]="item.route" routerLinkActive="active">
+          <i [class]="item.icon"></i>
+          <span>{{ item.labelKey | translate }}</span>
+        </a>
+      }
+    </nav>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="spacer"></div>
+
+      <div class="lang-picker">
+        <i class="pi pi-globe"></i>
+        <select (change)="onLangChange($any($event.target).value)">
+          @for (l of languages; track l.code) {
+            <option [value]="l.code" [selected]="l.code === currentLang()">{{ l.flag }} {{ l.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="theme-picker">
+        <i class="pi pi-palette"></i>
+        <select (change)="onThemeChange($any($event.target).value)">
+          @for (t of themes(); track t.id) {
+            <option [value]="t.id" [selected]="t.id === currentTheme().id">{{ t.label }}</option>
+          }
+        </select>
+        <input type="color" [title]="'topbar.theme' | translate"
+               (input)="onPrimaryColorChange($any($event.target).value)" />
+      </div>
+
+      <div class="user-box">
+        <i class="pi pi-user"></i>
+        <span>{{ user()?.login }}</span>
+        <span class="role">{{ user()?.role }}</span>
+        <button class="logout" (click)="logout()" [title]="'topbar.logout' | translate">
+          <i class="pi pi-sign-out"></i>
+        </button>
+      </div>
+    </header>
+
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+</div>
+

@@ -1,0 +1,160 @@
+.page-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: var(--sg-gap-lg);
+  h1 { font-size: 20px; color: var(--sg-text-primary); display: flex; align-items: center; gap: 10px; margin: 0; }
+  h1 i { color: var(--sg-color-primary); }
+}
+
+.card {
+  background: var(--sg-bg-surface);
+  border: 1px solid var(--sg-border);
+  border-radius: var(--sg-radius);
+  overflow: hidden;
+}
+
+.empty {
+  padding: var(--sg-gap-xl);
+  text-align: center;
+  color: var(--sg-text-muted);
+}
+
+.data-table {
+  width: 100%; border-collapse: collapse;
+  th, td { text-align: left; padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--sg-border); }
+  th { background: var(--sg-bg-hover); color: var(--sg-text-secondary); font-weight: 500; font-size: 12px; text-transform: uppercase; }
+  td { color: var(--sg-text-primary); }
+  td.name { font-weight: 500; }
+  td.muted { color: var(--sg-text-muted); font-size: 13px; }
+  tbody tr:hover { background: var(--sg-bg-hover); }
+}
+
+.tag {
+  background: var(--sg-bg-hover); color: var(--sg-text-secondary);
+  padding: 2px 8px; border-radius: 4px; font-size: 12px;
+}
+.badge {
+  padding: 2px 10px; border-radius: 999px; font-size: 12px;
+  &.on { background: color-mix(in srgb, var(--sg-color-success) 15%, transparent); color: var(--sg-color-success); }
+  &.off { background: var(--sg-bg-hover); color: var(--sg-text-muted); }
+}
+
+.actions { display: flex; gap: 4px; }
+.icon {
+  border: none; background: none; cursor: pointer; padding: 6px;
+  border-radius: var(--sg-radius-sm); color: var(--sg-text-secondary);
+  &:hover { background: var(--sg-bg-hover); }
+  &.danger:hover { color: var(--sg-color-danger); }
+}
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--sg-color-primary); color: #fff; border: none;
+  padding: 9px 16px; border-radius: var(--sg-radius-sm); cursor: pointer; font-size: 14px;
+  &:hover:not(:disabled) { background: var(--sg-color-primary-hover); }
+  &:disabled { opacity: 0.6; }
+}
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 1px solid var(--sg-border-strong);
+  padding: 8px 14px; border-radius: var(--sg-radius-sm); cursor: pointer;
+  color: var(--sg-text-secondary); font-size: 14px;
+  &:hover { background: var(--sg-bg-hover); }
+}
+
+.alert-error {
+  display: flex; align-items: center; gap: 8px;
+  background: color-mix(in srgb, var(--sg-color-danger) 8%, transparent);
+  color: var(--sg-color-danger); padding: 10px 14px;
+  border-radius: var(--sg-radius-sm); margin-bottom: var(--sg-gap-md); font-size: 14px;
+}
+
+/* Dialog */
+.dialog-overlay {
+  position: fixed; inset: 0; background: rgba(15,23,42,0.5);
+  display: flex; align-items: center; justify-content: center; z-index: 100;
+  padding: var(--sg-gap-md);
+}
+.dialog {
+  background: var(--sg-bg-surface); border-radius: var(--sg-radius-lg);
+  width: 92vw; max-width: 860px; max-height: 90vh; display: flex; flex-direction: column;
+  box-shadow: var(--sg-shadow);
+}
+.dialog-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--sg-gap-md) var(--sg-gap-lg); border-bottom: 1px solid var(--sg-border);
+  h2 { margin: 0; font-size: 17px; color: var(--sg-text-primary); }
+}
+.dialog-body { padding: var(--sg-gap-lg); overflow-y: auto; display: flex; flex-direction: column; gap: var(--sg-gap-md); }
+.dialog-foot {
+  display: flex; justify-content: flex-end; gap: var(--sg-gap-sm);
+  padding: var(--sg-gap-md) var(--sg-gap-lg); border-top: 1px solid var(--sg-border);
+}
+
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: var(--sg-gap-md); }
+label {
+  display: flex; flex-direction: column; gap: 6px;
+  font-size: 13px; color: var(--sg-text-secondary);
+  &.check { flex-direction: row; align-items: center; gap: 8px; }
+  input, textarea {
+    padding: 9px 11px; border: 1px solid var(--sg-border-strong);
+    border-radius: var(--sg-radius-sm); font-size: 14px; font-family: inherit;
+    background: var(--sg-bg-surface); color: var(--sg-text-primary);
+    &:focus { outline: 2px solid var(--sg-color-primary); border-color: transparent; }
+  }
+  &.check input { width: auto; }
+}
+
+.steps { border: 1px solid var(--sg-border); border-radius: var(--sg-radius-sm); padding: var(--sg-gap-md); }
+.steps-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sg-gap-sm); font-size: 13px; color: var(--sg-text-secondary); }
+.steps-table {
+  width: 100%; border-collapse: collapse;
+  th, td { padding: 6px 8px; font-size: 13px; }
+  th { color: var(--sg-text-muted); font-weight: 500; text-align: left; }
+  input { width: 100%; padding: 6px 8px; border: 1px solid var(--sg-border-strong); border-radius: 4px; background: var(--sg-bg-surface); color: var(--sg-text-primary); }
+  select { width: 100%; padding: 6px 8px; border: 1px solid var(--sg-border-strong); border-radius: 4px; background: var(--sg-bg-surface); color: var(--sg-text-primary); }
+}
+
+/* Infobulles d'aide */
+.lbl { display: inline-flex; align-items: center; gap: 6px; }
+.help {
+  color: var(--sg-text-muted);
+  font-size: 13px;
+  cursor: help;
+  position: relative;
+}
+.help:hover { color: var(--sg-color-primary); }
+.help[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
+  width: 240px;
+  background: var(--sg-bg-sidebar);
+  color: #fff;
+  padding: 8px 10px;
+  border-radius: var(--sg-radius-sm);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  z-index: 200;
+  box-shadow: var(--sg-shadow);
+  white-space: normal;
+  text-align: left;
+  pointer-events: none;
+}
+.help[data-tip]:hover::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 2px);
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--sg-bg-sidebar);
+  z-index: 200;
+  pointer-events: none;
+}
+
+/* Les infobulles dans les entetes de table (paliers) alignees */
+.steps-table th { position: relative; }
+

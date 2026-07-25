@@ -1,0 +1,32 @@
+<div class="login-page">
+  <div class="login-card">
+    <div class="login-head">
+      <i class="pi pi-bolt"></i>
+      <h1>ScenarioGenerator</h1>
+      <p>{{ 'login.subtitle' | translate }}</p>
+    </div>
+
+    <form (ngSubmit)="submit()" class="login-form">
+      <label>
+        <span>{{ 'login.username' | translate }}</span>
+        <input type="text" name="login" [(ngModel)]="login" autocomplete="username"
+               placeholder="admin" autofocus />
+      </label>
+      <label>
+        <span>{{ 'login.password' | translate }}</span>
+        <input type="password" name="password" [(ngModel)]="password"
+               autocomplete="current-password" placeholder="••••••••" />
+      </label>
+
+      @if (errorKey()) {
+        <div class="login-error"><i class="pi pi-exclamation-circle"></i> {{ errorKey()! | translate }}</div>
+      }
+
+      <button type="submit" [disabled]="loading()">
+        @if (loading()) { <i class="pi pi-spin pi-spinner"></i> {{ 'login.connecting' | translate }} }
+        @else { {{ 'login.submit' | translate }} }
+      </button>
+    </form>
+  </div>
+</div>
+

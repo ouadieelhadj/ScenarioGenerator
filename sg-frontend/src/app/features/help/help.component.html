@@ -1,0 +1,37 @@
+<div class="page-header">
+  <h1><i class="pi pi-question-circle"></i> Aide</h1>
+</div>
+
+<p class="help-intro">
+  Documentation des écrans de la plateforme. Cliquez sur une section pour la déplier.
+</p>
+
+<div class="help-sections">
+  @for (section of sections; track section.id) {
+    <div class="help-section" [class.open]="openId() === section.id">
+      <button class="section-head" (click)="toggle(section.id)">
+        <i [class]="section.icon"></i>
+        <span class="section-title">{{ section.title }}</span>
+        <i class="pi pi-chevron-down chevron"></i>
+      </button>
+
+      @if (openId() === section.id) {
+        <div class="section-body">
+          <p class="section-intro">{{ section.intro }}</p>
+
+          @if (section.fields?.length) {
+            <div class="fields">
+              @for (f of section.fields; track f.name) {
+                <div class="field">
+                  <div class="field-name">{{ f.name }}</div>
+                  <div class="field-desc">{{ f.desc }}</div>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+</div>
+

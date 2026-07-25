@@ -1,0 +1,244 @@
+{
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "create": "Create",
+    "loading": "Loading…",
+    "saving": "Saving…",
+    "yes": "Yes",
+    "no": "No",
+    "actions": "Actions",
+    "confirmDelete": "Confirm deletion?",
+    "required": "required"
+  },
+  "menu": {
+    "dashboard": "Dashboard",
+    "campaignGeneration": "Campaign generation",
+    "campaignOrchestration": "Campaign orchestration",
+    "executions": "Execution monitoring",
+    "dmas": "DMAS payments",
+    "admin": "Administration",
+    "help": "Help",
+    "config": "Configuration"
+  },
+  "topbar": {
+    "theme": "Theme",
+    "language": "Language",
+    "logout": "Sign out"
+  },
+  "login": {
+    "subtitle": "Payment simulation platform",
+    "username": "Username",
+    "password": "Password",
+    "submit": "Sign in",
+    "connecting": "Signing in…",
+    "errorInvalid": "Invalid username or password",
+    "errorDisabled": "Account disabled",
+    "errorNoServer": "No response from server (service down or CORS?)",
+    "errorGeneric": "Connection failed. Check that the services are running."
+  },
+  "campaign": {
+    "title": "Campaign generation",
+    "new": "New campaign",
+    "none": "No campaigns yet. Create one to get started.",
+    "loadError": "Unable to load campaigns.",
+    "saveError": "Save failed.",
+    "deleteError": "Deletion failed.",
+    "editTitle": "Edit campaign",
+    "newTitle": "New campaign",
+    "col": {
+      "id": "ID",
+      "name": "Name",
+      "category": "Category",
+      "steps": "Steps",
+      "slaError": "SLA err. max",
+      "active": "Active",
+      "createdBy": "Created by",
+      "network": "Network"
+    },
+    "field": {
+      "name": "Name",
+      "category": "Category",
+      "description": "Description",
+      "config": "Configuration (JSON)",
+      "expectedDe039": "Expected DE039",
+      "slaP95": "SLA P95 max (ms)",
+      "slaError": "SLA max error rate (%)",
+      "slaApproval": "SLA min approval (%)",
+      "stopOnError": "Stop if error rate (%)",
+      "active": "Active",
+      "loadSteps": "Load steps (TPS)",
+      "addStep": "Add a step",
+      "stepStart": "Start (s)",
+      "stepEnd": "End (s)",
+      "stepTps": "TPS",
+      "network": "Network",
+      "initiator": "Initiator"
+    },
+    "help": {
+      "name": "Campaign name (e.g. CAMP-DEMO). Required.",
+      "category": "Campaign category (e.g. DMAS). Defines the type of generated transactions. Required.",
+      "description": "Free text describing the campaign. Optional.",
+      "config": "JSON describing generation: PAN mode, PIN presence, variable fields (amount, etc.). Core of the campaign.",
+      "expectedDe039": "Expected ISO response code (00 = approved). Checks that transactions return the expected result.",
+      "slaP95": "Max response time at 95th percentile, in ms. E.g. 500 = 95% of transactions under 500 ms.",
+      "slaError": "Maximum tolerated error rate, in %. Beyond it, verdict is FAILED.",
+      "slaApproval": "Minimum expected approval rate, in %. E.g. 90 = at least 90% approved.",
+      "stopOnError": "Automatic stop threshold. If the error rate exceeds this during execution, the campaign stops.",
+      "active": "If checked, the campaign is active and can be launched.",
+      "loadSteps": "Load profile: each step defines a throughput (TPS) over a time range.",
+      "stepStart": "Step start time, in seconds from launch.",
+      "stepEnd": "Step end time, in seconds.",
+      "stepTps": "Target throughput (transactions per second) during this step.",
+      "network": "Target payment network (DMAS, SWAM...)",
+      "initiator": "Side emitting load: ACQUIRER (bank->switch) or ISSUER (switch->bank)"
+    }
+  },
+  "help": {
+    "title": "Help",
+    "intro": "Documentation of the platform screens. Click a section to expand it."
+  },
+  "placeholder": {
+    "toImplement": "Screen \"{{name}}\" — to be implemented."
+  },
+  "orchestration": {
+    "title": "Campaign orchestration",
+    "selectCampaign": "Active campaigns",
+    "noCampaign": "No active campaign. Activate one in the Generation screen.",
+    "launch": "Launch",
+    "launching": "Launching…",
+    "running": "Running",
+    "execution": "Execution",
+    "autoRefresh": "Auto refresh",
+    "stopFollow": "Stop following",
+    "refresh": "Refresh",
+    "launchError": "Failed to launch the campaign.",
+    "followError": "Unable to fetch execution status.",
+    "status": "Status",
+    "txTotal": "Transactions",
+    "txApproved": "Approved",
+    "txDeclined": "Declined",
+    "verdict": "Verdict",
+    "tpsAvg": "Avg TPS",
+    "respAvg": "Avg response time (ms)",
+    "detail": "Detail"
+  },
+  "executionView": {
+    "title": "Execution monitoring",
+    "selectCampaign": "Choose a campaign",
+    "selectPlaceholder": "— Select —",
+    "noExecution": "No execution for this campaign.",
+    "loadError": "Unable to load executions.",
+    "pickCampaign": "Select a campaign to view its executions.",
+    "col": {
+      "execId": "Exec. #",
+      "status": "Status",
+      "txTotal": "Total tx",
+      "txApproved": "Approved",
+      "txDeclined": "Declined",
+      "tpsAvg": "Avg TPS",
+      "verdict": "Verdict"
+    },
+    "detail": {
+      "title": "Execution detail",
+      "close": "Close",
+      "respAvg": "Average response time (ms)",
+      "verdictDetail": "Verdict detail"
+    }
+  },
+  "dmas": {
+    "title": "DMAS payments",
+    "tab": {
+      "network": "Network",
+      "keys": "Keys",
+      "cards": "Cards",
+      "auth": "0100 Test"
+    },
+    "network": {
+      "desc": "jPOS network session management with the simulator.",
+      "signon": "Sign-on",
+      "signoff": "Sign-off",
+      "status": "Network status"
+    },
+    "keys": {
+      "desc": "Cryptographic keys initialization.",
+      "memberGroupId": "Member group",
+      "kekClear": "Clear KEK",
+      "bootstrap": "Bootstrap KEK",
+      "pek": "PEK exchange"
+    },
+    "cards": {
+      "desc": "Provisioning and lookup of test cards.",
+      "pan": "PAN",
+      "pin": "PIN",
+      "balance": "Balance (cents)",
+      "currency": "Currency",
+      "expiry": "Expiry (YYMM)",
+      "create": "Provision",
+      "get": "Look up",
+      "setBalance": "Set balance",
+      "status": "Status",
+      "notFound": "Card not found"
+    },
+    "auth": {
+      "desc": "Send a single authorization (0100 message).",
+      "pan": "PAN (DE002)",
+      "amount": "Amount (DE004, cents)",
+      "processingCode": "Processing code (DE003)",
+      "mcc": "MCC (DE018)",
+      "currency": "Currency (DE049)",
+      "pin": "PIN (DE052)",
+      "send": "Send 0100",
+      "advanced": "Advanced fields"
+    },
+    "result": "Result",
+    "success": "Success",
+    "error": "Error",
+    "sending": "Sending…"
+  },
+  "portConfig": {
+    "title": "Port configuration",
+    "intro": "View and change each service's port. The service restarts automatically on the new port.",
+    "service": "Service",
+    "currentPort": "Current port",
+    "newPort": "New port",
+    "apply": "Apply",
+    "applying": "Restarting…",
+    "refresh": "Refresh",
+    "restarting": "Service restarting on port {{port}}…",
+    "reconnected": "Reconnected on port {{port}}",
+    "unreachable": "Service unreachable",
+    "invalidPort": "Invalid port (1024-65535)",
+    "changeError": "Port change failed.",
+    "sameFront": "Port known by front"
+  },
+  "admin": {
+    "title": "Administration",
+    "subtitle": "User management",
+    "new": "New user",
+    "none": "No users.",
+    "loadError": "Unable to load users.",
+    "saveError": "Save failed.",
+    "editTitle": "Edit user",
+    "newTitle": "New user",
+    "col": {
+      "id": "ID",
+      "login": "Login",
+      "email": "Email",
+      "role": "Role",
+      "active": "Active"
+    },
+    "field": {
+      "login": "Login",
+      "password": "Password",
+      "email": "Email",
+      "role": "Role",
+      "passwordHint": "Leave empty to keep unchanged"
+    },
+    "toggle": "Enable/Disable",
+    "activate": "Enable",
+    "deactivate": "Disable"
+  }
+}

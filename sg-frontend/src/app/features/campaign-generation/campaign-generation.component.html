@@ -1,0 +1,210 @@
+<div class="page-header">
+  <h1><i class="pi pi-plus-circle"></i> {{ 'campaign.title' | translate }}</h1>
+  <button class="btn-primary" *hasPermission="'CAMPAIGN_CREATE'" (click)="openCreate()">
+    <i class="pi pi-plus"></i> {{ 'campaign.new' | translate }}
+  </button>
+</div>
+
+@if (error()) {
+  <div class="alert-error"><i class="pi pi-exclamation-circle"></i> {{ error()! | translate }}</div>
+}
+
+<div class="card">
+  @if (loading()) {
+    <div class="empty"><i class="pi pi-spin pi-spinner"></i> {{ 'common.loading' | translate }}</div>
+  } @else if (campaigns().length === 0) {
+    <div class="empty">{{ 'campaign.none' | translate }}</div>
+  } @else {
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>{{ 'campaign.col.id' | translate }}</th>
+          <th>{{ 'campaign.col.name' | translate }}</th>
+          <th>{{ 'campaign.col.network' | translate }}</th>
+          <th>{{ 'campaign.col.category' | translate }}</th>
+          <th>{{ 'campaign.col.steps' | translate }}</th>
+          <th>{{ 'campaign.col.slaError' | translate }}</th>
+          <th>{{ 'campaign.col.active' | translate }}</th>
+          <th>{{ 'campaign.col.createdBy' | translate }}</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (c of campaigns(); track c.id) {
+          <tr>
+            <td>{{ c.id }}</td>
+            <td class="name">{{ c.name }}</td>
+            <td><span class="tag net">{{ c.network }}</span></td>
+            <td><span class="tag">{{ c.category }}</span></td>
+            <td>{{ c.loadSteps.length }}</td>
+            <td>{{ c.slaErrorRateMax }}%</td>
+            <td>
+              @if (c.active) { <span class="badge on">{{ 'common.yes' | translate }}</span> }
+              @else { <span class="badge off">{{ 'common.no' | translate }}</span> }
+            </td>
+            <td class="muted">{{ c.createdByLogin }}</td>
+            <td class="actions">
+              <button class="icon" *hasPermission="'CAMPAIGN_CREATE'" (click)="openEdit(c)" [title]="'common.edit' | translate">
+                <i class="pi pi-pencil"></i>
+              </button>
+              <button class="icon danger" *hasPermission="'CAMPAIGN_CREATE'" (click)="remove(c)" [title]="'common.delete' | translate">
+                <i class="pi pi-trash"></i>
+              </button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  }
+</div>
+
+@if (showForm()) {
+  <div class="dialog-overlay" (click)="closeForm()">
+    <div class="dialog" (click)="$event.stopPropagation()">
+      <div class="dialog-head">
+        <h2>{{ (editingId() ? 'campaign.editTitle' : 'campaign.newTitle') | translate }}</h2>
+        <button class="icon" (click)="closeForm()"><i class="pi pi-times"></i></button>
+      </div>
+
+      <div class="dialog-body">
+        <div class="grid">
+          <label>
+            <span class="lbl">{{ 'campaign.field.name' | translate }} *
+              <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.name' | translate"></i>
+            </span>
+            <input type="text" [(ngModel)]="form.name" placeholder="CAMP-DEMO" />
+          </label>
+          <label>
+            <span class="lbl">{{ 'campaign.field.network' | translate }} *
+              <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.network' | translate"></i>
+            </span>
+            <select [(ngModel)]="form.network" (ngModelChange)="onNetworkChange()">
+              @for (n of networks(); track n.code) {
+                <option [value]="n.code">{{ n.code }} — {{ n.name }}</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span class="lbl">{{ 'campaign.field.category' | translate }} *
+              <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.category' | translate"></i>
+            </span>
+            <select [(ngModel)]="form.category">
+              @for (c of categories(); track c.category) {
+                <option [value]="c.category">{{ c.category }} ({{ c.code }})</option>
+              }
+            </select>
+          </label>
+          <label>
+            <span class="lbl">{{ 'campaign.field.initiator' | translate }} *
+              <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.initiator' | translate"></i>
+            </span>
+            <select [(ngModel)]="form.initiator">
+              @for (i of initiators; track i) {
+                <option [value]="i">{{ i }}</option>
+              }
+            </select>
+          </label>
+        </div>
+
+        <label>
+          <span class="lbl">{{ 'campaign.field.description' | translate }}
+            <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.description' | translate"></i>
+          </span>
+          <input type="text" [(ngModel)]="form.description" />
+        </label>
+
+        <label>
+          <span class="lbl">{{ 'campaign.field.config' | translate }}
+            <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.config' | translate"></i>
+          </span>
+          <textarea rows="3" [(ngModel)]="form.config"></textarea>
+        </label>
+
+        <div class="grid">
+          <label>
+            <span class="lbl">{{ 'campaign.field.expectedDe039' | translate }}
+              <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.expectedDe039' | translate"></i>
+            </span>
+            <input type="text" [(ngModel)]="form.expectedDe039" placeholder="00" />
+          </label>
+          <label>
+            <span class="lbl">{{ 'campaign.field.slaP95' | translate }}
+              <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.slaP95' | translate"></i>
+            </span>
+            <input type="number" [(ngModel)]="form.slaP95MaxMs" placeholder="500" />
+          </label>
+          <label>
+            <span class="lbl">{{ 'campaign.field.slaError' | translate }}
+              <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.slaError' | translate"></i>
+            </span>
+            <input type="number" [(ngModel)]="form.slaErrorRateMax" />
+          </label>
+          <label>
+            <span class="lbl">{{ 'campaign.field.slaApproval' | translate }}
+              <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.slaApproval' | translate"></i>
+            </span>
+            <input type="number" [(ngModel)]="form.slaApprovalMin" placeholder="90" />
+          </label>
+          <label>
+            <span class="lbl">{{ 'campaign.field.stopOnError' | translate }}
+              <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.stopOnError' | translate"></i>
+            </span>
+            <input type="number" [(ngModel)]="form.stopOnErrorRate" />
+          </label>
+          <label class="check">
+            <input type="checkbox" [(ngModel)]="form.active" />
+            <span class="lbl">{{ 'campaign.field.active' | translate }}
+              <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.active' | translate"></i>
+            </span>
+          </label>
+        </div>
+
+        <div class="steps">
+          <div class="steps-head">
+            <span>{{ 'campaign.field.loadSteps' | translate }}
+              <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.loadSteps' | translate"></i>
+            </span>
+            <button class="btn-ghost" (click)="addStep()"><i class="pi pi-plus"></i> {{ 'campaign.field.addStep' | translate }}</button>
+          </div>
+          <table class="steps-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>{{ 'campaign.field.stepStart' | translate }}
+                  <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.stepStart' | translate"></i>
+                </th>
+                <th>{{ 'campaign.field.stepEnd' | translate }}
+                  <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.stepEnd' | translate"></i>
+                </th>
+                <th>{{ 'campaign.field.stepTps' | translate }}
+                  <i class="pi pi-question-circle help" [attr.data-tip]="'campaign.help.stepTps' | translate"></i>
+                </th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (s of form.loadSteps; track $index) {
+                <tr>
+                  <td>{{ s.stepOrder }}</td>
+                  <td><input type="number" [(ngModel)]="s.startSeconds" /></td>
+                  <td><input type="number" [(ngModel)]="s.endSeconds" /></td>
+                  <td><input type="number" [(ngModel)]="s.tpsValue" /></td>
+                  <td><button class="icon danger" (click)="removeStep($index)"><i class="pi pi-trash"></i></button></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="dialog-foot">
+        <button class="btn-ghost" (click)="closeForm()">{{ 'common.cancel' | translate }}</button>
+        <button class="btn-primary" (click)="save()" [disabled]="saving()">
+          @if (saving()) { <i class="pi pi-spin pi-spinner"></i> {{ 'common.saving' | translate }} }
+          @else { {{ 'common.save' | translate }} }
+        </button>
+      </div>
+    </div>
+  </div>
+}
+

@@ -1,0 +1,244 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Éditer",
+    "delete": "Supprimer",
+    "create": "Créer",
+    "loading": "Chargement…",
+    "saving": "Enregistrement…",
+    "yes": "Oui",
+    "no": "Non",
+    "actions": "Actions",
+    "confirmDelete": "Confirmer la suppression ?",
+    "required": "obligatoire"
+  },
+  "menu": {
+    "dashboard": "Tableau de bord",
+    "campaignGeneration": "Génération de campagne",
+    "campaignOrchestration": "Orchestration de campagne",
+    "executions": "Consultation des exécutions",
+    "dmas": "Monétique DMAS",
+    "admin": "Administration",
+    "help": "Aide",
+    "config": "Configuration"
+  },
+  "topbar": {
+    "theme": "Thème",
+    "language": "Langue",
+    "logout": "Se déconnecter"
+  },
+  "login": {
+    "subtitle": "Plateforme de simulation monétique",
+    "username": "Identifiant",
+    "password": "Mot de passe",
+    "submit": "Se connecter",
+    "connecting": "Connexion…",
+    "errorInvalid": "Identifiant ou mot de passe incorrect",
+    "errorDisabled": "Compte désactivé",
+    "errorNoServer": "Aucune réponse du serveur (service arrêté ou CORS ?)",
+    "errorGeneric": "Connexion impossible. Vérifiez que les services sont démarrés."
+  },
+  "campaign": {
+    "title": "Génération de campagne",
+    "new": "Nouvelle campagne",
+    "none": "Aucune campagne. Créez-en une pour commencer.",
+    "loadError": "Impossible de charger les campagnes.",
+    "saveError": "Échec de l'enregistrement.",
+    "deleteError": "Échec de la suppression.",
+    "editTitle": "Éditer campagne",
+    "newTitle": "Nouvelle campagne",
+    "col": {
+      "id": "ID",
+      "name": "Nom",
+      "category": "Catégorie",
+      "steps": "Paliers",
+      "slaError": "SLA err. max",
+      "active": "Active",
+      "createdBy": "Créée par",
+      "network": "Reseau"
+    },
+    "field": {
+      "name": "Nom",
+      "category": "Catégorie",
+      "description": "Description",
+      "config": "Configuration (JSON)",
+      "expectedDe039": "DE039 attendu",
+      "slaP95": "SLA P95 max (ms)",
+      "slaError": "SLA taux d'erreur max (%)",
+      "slaApproval": "SLA approbation min (%)",
+      "stopOnError": "Arrêt si taux d'erreur (%)",
+      "active": "Active",
+      "loadSteps": "Paliers de charge (TPS)",
+      "addStep": "Ajouter un palier",
+      "stepStart": "Début (s)",
+      "stepEnd": "Fin (s)",
+      "stepTps": "TPS",
+      "network": "Reseau",
+      "initiator": "Initiateur"
+    },
+    "help": {
+      "name": "Nom de la campagne (ex. CAMP-DEMO). Obligatoire.",
+      "category": "Catégorie de la campagne (ex. DMAS). Détermine le type de transactions générées. Obligatoire.",
+      "description": "Texte libre décrivant la campagne. Optionnel.",
+      "config": "JSON décrivant la génération : mode de PAN, présence du PIN, champs variables (montant, etc.). Cœur de la campagne.",
+      "expectedDe039": "Code réponse ISO attendu (00 = approuvé). Vérifie que les transactions renvoient le résultat espéré.",
+      "slaP95": "Temps de réponse max au 95e percentile, en ms. Ex. 500 = 95% des transactions sous 500 ms.",
+      "slaError": "Taux d'erreur maximum toléré, en %. Au-delà, verdict FAILED.",
+      "slaApproval": "Taux d'approbation minimum attendu, en %. Ex. 90 = au moins 90% approuvées.",
+      "stopOnError": "Seuil d'arrêt automatique. Si le taux d'erreur dépasse cette valeur pendant l'exécution, la campagne s'arrête.",
+      "active": "Si coché, la campagne est active et peut être lancée.",
+      "loadSteps": "Profil de montée en charge : chaque palier définit un débit (TPS) sur une plage de temps.",
+      "stepStart": "Instant de début du palier, en secondes depuis le lancement.",
+      "stepEnd": "Instant de fin du palier, en secondes.",
+      "stepTps": "Débit visé (transactions par seconde) pendant ce palier.",
+      "network": "Reseau monetique cible (DMAS, SWAM...)",
+      "initiator": "Cote qui emet la charge : ACQUIRER (banque->switch) ou ISSUER (switch->banque)"
+    }
+  },
+  "help": {
+    "title": "Aide",
+    "intro": "Documentation des écrans de la plateforme. Cliquez sur une section pour la déplier."
+  },
+  "placeholder": {
+    "toImplement": "Écran « {{name}} » — à implémenter."
+  },
+  "orchestration": {
+    "title": "Orchestration de campagne",
+    "selectCampaign": "Campagnes actives",
+    "noCampaign": "Aucune campagne active. Activez une campagne dans l'écran Génération.",
+    "launch": "Lancer",
+    "launching": "Lancement…",
+    "running": "En cours d'exécution",
+    "execution": "Exécution",
+    "autoRefresh": "Rafraîchissement auto",
+    "stopFollow": "Arrêter le suivi",
+    "refresh": "Rafraîchir",
+    "launchError": "Échec du lancement de la campagne.",
+    "followError": "Impossible de récupérer le statut de l'exécution.",
+    "status": "Statut",
+    "txTotal": "Transactions",
+    "txApproved": "Approuvées",
+    "txDeclined": "Refusées",
+    "verdict": "Verdict",
+    "tpsAvg": "TPS moyen",
+    "respAvg": "Temps réponse moyen (ms)",
+    "detail": "Détail"
+  },
+  "executionView": {
+    "title": "Consultation des exécutions",
+    "selectCampaign": "Choisir une campagne",
+    "selectPlaceholder": "— Sélectionner —",
+    "noExecution": "Aucune exécution pour cette campagne.",
+    "loadError": "Impossible de charger les exécutions.",
+    "pickCampaign": "Sélectionnez une campagne pour voir ses exécutions.",
+    "col": {
+      "execId": "Exéc. #",
+      "status": "Statut",
+      "txTotal": "Tx total",
+      "txApproved": "Approuvées",
+      "txDeclined": "Refusées",
+      "tpsAvg": "TPS moy.",
+      "verdict": "Verdict"
+    },
+    "detail": {
+      "title": "Détail de l'exécution",
+      "close": "Fermer",
+      "respAvg": "Temps de réponse moyen (ms)",
+      "verdictDetail": "Détail du verdict"
+    }
+  },
+  "dmas": {
+    "title": "Monétique DMAS",
+    "tab": {
+      "network": "Réseau",
+      "keys": "Clés",
+      "cards": "Cartes",
+      "auth": "Test 0100"
+    },
+    "network": {
+      "desc": "Gestion de la session réseau jPOS avec le simulateur.",
+      "signon": "Sign-on",
+      "signoff": "Sign-off",
+      "status": "Statut réseau"
+    },
+    "keys": {
+      "desc": "Initialisation des clés cryptographiques.",
+      "memberGroupId": "Groupe membre",
+      "kekClear": "KEK en clair",
+      "bootstrap": "Bootstrap KEK",
+      "pek": "Échange PEK"
+    },
+    "cards": {
+      "desc": "Provisionnement et consultation des cartes de test.",
+      "pan": "PAN",
+      "pin": "PIN",
+      "balance": "Solde (centimes)",
+      "currency": "Devise",
+      "expiry": "Expiration (AAMM)",
+      "create": "Provisionner",
+      "get": "Consulter",
+      "setBalance": "Ajuster le solde",
+      "status": "Statut",
+      "notFound": "Carte introuvable"
+    },
+    "auth": {
+      "desc": "Envoi d'une autorisation unitaire (message 0100).",
+      "pan": "PAN (DE002)",
+      "amount": "Montant (DE004, centimes)",
+      "processingCode": "Code traitement (DE003)",
+      "mcc": "MCC (DE018)",
+      "currency": "Devise (DE049)",
+      "pin": "PIN (DE052)",
+      "send": "Envoyer 0100",
+      "advanced": "Champs avancés"
+    },
+    "result": "Résultat",
+    "success": "Succès",
+    "error": "Erreur",
+    "sending": "Envoi…"
+  },
+  "portConfig": {
+    "title": "Configuration des ports",
+    "intro": "Consultez et modifiez le port de chaque service. Le service redémarre automatiquement sur le nouveau port.",
+    "service": "Service",
+    "currentPort": "Port actuel",
+    "newPort": "Nouveau port",
+    "apply": "Appliquer",
+    "applying": "Redémarrage…",
+    "refresh": "Rafraîchir",
+    "restarting": "Le service redémarre sur le port {{port}}…",
+    "reconnected": "Reconnecté sur le port {{port}}",
+    "unreachable": "Service injoignable",
+    "invalidPort": "Port invalide (1024-65535)",
+    "changeError": "Échec du changement de port.",
+    "sameFront": "Port connu du front"
+  },
+  "admin": {
+    "title": "Administration",
+    "subtitle": "Gestion des utilisateurs",
+    "new": "Nouvel utilisateur",
+    "none": "Aucun utilisateur.",
+    "loadError": "Impossible de charger les utilisateurs.",
+    "saveError": "Échec de l'enregistrement.",
+    "editTitle": "Éditer l'utilisateur",
+    "newTitle": "Nouvel utilisateur",
+    "col": {
+      "id": "ID",
+      "login": "Identifiant",
+      "email": "E-mail",
+      "role": "Rôle",
+      "active": "Actif"
+    },
+    "field": {
+      "login": "Identifiant",
+      "password": "Mot de passe",
+      "email": "E-mail",
+      "role": "Rôle",
+      "passwordHint": "Laisser vide pour ne pas changer"
+    },
+    "toggle": "Activer/Désactiver",
+    "activate": "Activer",
+    "deactivate": "Désactiver"
+  }
+}
