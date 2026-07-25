@@ -1,153 +1,112 @@
-# sg-frontend — IHM Angular de la plateforme ScenarioGenerator
+# IHM ScenarioGenerator — Front Angular
 
-Interface web de la plateforme **ScenarioGenerator** : génération, orchestration et supervision de campagnes de tests monétiques (DMAS / SWAM).
-
----
-
-## Stack technique
-
-| Technologie | Version | Rôle |
-|---|---|---|
-| **Angular** | 18.2 | Framework principal (standalone components, Signals) |
-| **TypeScript** | 5.5 | Langage |
-| **PrimeNG** | 18 + thème Aura | Composants UI |
-| **@ngx-translate** | 18 | Internationalisation (FR / EN / ES) |
-| **RxJS** | 7.8 | Réactivité asynchrone |
-| **Angular Router** | 18 | Navigation lazy-loaded |
-
----
-
-## Architecture
-
-```
-sg-frontend/
-├── src/
-│   ├── app/
-│   │   ├── core/
-│   │   │   ├── auth/           AuthService (JWT, Signals)
-│   │   │   ├── config/         api.config.ts (URLs + ports dynamiques)
-│   │   │   ├── guards/         authGuard, permissionGuard
-│   │   │   ├── interceptors/   authInterceptor (JWT), errorInterceptor (401)
-│   │   │   ├── i18n/           LanguageService (fr/en/es)
-│   │   │   ├── models/         auth, admin, campaign, dmas
-│   │   │   ├── services/       campaign, dmas, network, user, portConfig
-│   │   │   └── theme/          ThemeService (clair/sombre, tokens CSS)
-│   │   ├── features/
-│   │   │   ├── login/          Page de connexion + page Accès refusé
-│   │   │   ├── dashboard/      Tableau de bord (placeholder)
-│   │   │   ├── campaign-generation/    CRUD campagnes
-│   │   │   ├── campaign-orchestration/ Lancement + suivi temps réel
-│   │   │   ├── execution-view/         Historique des exécutions
-│   │   │   ├── dmas/           Panel DMAS (cartes, clés, auth 0100)
-│   │   │   ├── admin/          Gestion utilisateurs
-│   │   │   ├── config/         Configuration des ports backend
-│   │   │   ├── help/           Aide contextuelle détaillée
-│   │   │   └── profile/        Profil utilisateur (placeholder)
-│   │   ├── layout/             MainLayout (sidebar, thème, langue)
-│   │   └── shared/             Directive hasPermission
-│   ├── assets/i18n/            fr.json / en.json / es.json
-│   └── environments/           environment.ts (dev) / environment.prod.ts
-└── package.json
-```
-
----
-
-## Pages et état
-
-| Route | Écran | Permissions | État |
-|---|---|---|---|
-| `/login` | Connexion | — | ✅ Fait |
-| `/dashboard` | Tableau de bord | — | ⏳ Placeholder |
-| `/campaign-generation` | CRUD campagnes | CAMPAIGN_CREATE | ✅ Fait |
-| `/campaign-orchestration` | Lancement + suivi | TPS_RUN | ✅ Fait |
-| `/executions` | Historique exécutions | EXECUTION_VIEW | ✅ Fait |
-| `/dmas` | DMAS (cartes, clés, auth) | CARD_PROVISION | ✅ Fait |
-| `/admin` | Gestion utilisateurs | USER_MANAGE | ✅ Fait |
-| `/config` | Configuration ports | USER_MANAGE | ✅ Fait |
-| `/help` | Aide détaillée | — | ✅ Fait |
-| `/profile` | Profil utilisateur | — | ⏳ Placeholder |
-
----
-
-## Backend requis
-
-Le frontend consomme trois services Spring Boot :
-
-| Service | Port dev | Rôle |
-|---|---|---|
-| Orchestrateur | `8080` | Campagnes, exécutions, users, auth JWT |
-| DMAS Acquéreur | `8084` | KEK, PEK, transactions DMAS |
-| DMAS Émetteur | `8501` | Cartes, sign-on |
-
-Les ports sont configurables à chaud depuis l'écran **Configuration** (sans redémarrer le frontend).
-
----
+Interface web de la plateforme ScenarioGenerator (Angular 18 standalone + PrimeNG), avec authentification JWT, RBAC par permission, et thème configurable (variables CSS centralisées + changement à chaud).
 
 ## Prérequis
 
-- **Node.js ≥ 18** (Angular 18 l'exige) — télécharger sur https://nodejs.org (LTS)
-- **npm** (inclus avec Node.js)
+- Node.js 18.19+ ou 20+
+- npm 10+
+- Les services back démarrés (orchestrateur 8080, acquéreur 8084, issuer 8501)
 
-Vérifier :
-```bash
-node --version   # v18.x / v20.x / v22.x
-npm --version
-```
+## Installation
 
----
-
-## Lancer en développement
+Ce dossier contient le code source. Pour l'utiliser dans un projet Angular fonctionnel :
 
 ```bash
-# 1. Cloner le repo
-git clone https://github.com/ouadieelhadj/ScenarioGenerator.git
-cd ScenarioGenerator/sg-frontend
+# 1. Se placer dans le dossier
+cd sg-frontend
 
 # 2. Installer les dépendances
 npm install
 
-# 3. Lancer le serveur de développement
+# 3. Lancer en développement
 npm start
-# -> http://localhost:4200
 ```
 
-Le frontend se connecte aux backends sur les ports par défaut (8080 / 8084 / 8501).  
-Assurez-vous que les services Spring Boot sont démarrés avant de naviguer.
+L'application démarre sur `http://localhost:4200`.
 
----
+Si `npm install` échoue sur les versions, vérifier que Node est à jour (`node -v`).
 
-## Build production
+## Connexion
 
-```bash
-npm run build
-# Sortie dans dist/sg-frontend/
+Compte administrateur : `admin` / `Admin123!`
+
+Le front appelle l'API sur `http://localhost:8080` (orchestrateur). Vérifier que le back tourne (voir le dossier `deploiement` du projet Java).
+
+## CORS
+
+Le back doit autoriser l'origine `http://localhost:4200`. Si les requêtes sont bloquées (erreur CORS dans la console), ajouter une configuration CORS côté Spring (à faire côté back).
+
+## Architecture
+
+```
+src/app/
+├── core/                        Socle technique
+│   ├── auth/                    AuthService (login, décodage JWT, permissions)
+│   ├── guards/                  authGuard + permissionGuard
+│   ├── interceptors/            Bearer token + gestion 401
+│   ├── models/                  Types TypeScript (miroir du back)
+│   ├── services/                Services API (à compléter)
+│   └── theme/                   ThemeService + thèmes + tokens
+├── shared/
+│   └── directives/              *hasPermission (masque selon permission)
+├── layout/                      Sidebar (filtrée par permission) + topbar (thème)
+├── features/                    Les 8 écrans
+│   ├── login/
+│   ├── dashboard/
+│   ├── campaign-generation/     Génération de campagne (CAMPAIGN_CREATE)
+│   ├── campaign-orchestration/  Orchestration de campagne (TPS_RUN)
+│   ├── execution-view/          Consultation des exécutions (EXECUTION_VIEW)
+│   ├── dmas/                    Monétique DMAS (CARD_PROVISION)
+│   ├── admin/                   Administration (USER_MANAGE...)
+│   └── profile/
+├── app.config.ts                Providers (router, http, interceptors, PrimeNG)
+├── app.routes.ts                Routes + permissions par écran
+└── app.component.ts
 ```
 
----
+## Système de thème (CSS configurable)
 
-## Fonctionnalités clés
+Toute la charte est centralisée dans `src/styles/_tokens.scss` sous forme de variables CSS (`--sg-color-primary`, `--sg-bg-surface`, etc.). Modifier une valeur ici la propage à toute l'application.
 
-- **Authentification JWT** : connexion → token stocké → rechargement de session automatique
-- **Contrôle d'accès par permission** : chaque route et bouton sont conditionnés aux permissions du JWT
-- **Thème clair / sombre** : switchable à chaud, persisté en localStorage
-- **Internationalisation** : français (défaut), anglais, espagnol
-- **Ports dynamiques** : les URLs backend sont reconfigurables depuis l'IHM sans redémarrage
-- **Suivi temps réel** : l'orchestration poll le statut d'exécution toutes les 2 secondes
+Le `ThemeService` (`core/theme/`) permet :
+- de basculer entre thèmes prédéfinis (clair / sombre) à chaud
+- de surcharger une variable à chaud (ex. couleur principale via le sélecteur de couleur dans la barre du haut)
+- de persister le choix de l'utilisateur (localStorage)
 
----
+Pour ajouter un thème : éditer `src/app/core/theme/themes.ts`.
 
-## Rôles utilisateurs
+## RBAC par permission
 
-| Rôle | Permissions |
-|---|---|
-| `ADMIN` | Tout (users, campagnes, config, exécutions, DMAS) |
-| `EXPLOITATION` | Campagnes, orchestration, exécutions, DMAS |
-| `OBSERVATEUR` | Consultation exécutions uniquement |
+L'accès aux écrans est contrôlé par **permission** (pas seulement par rôle). Les permissions sont lues dans le token JWT (claim `permissions`), rempli par le back au login.
 
----
+- **Routes** : chaque route déclare ses permissions dans `data.permissions`, vérifiées par `permissionGuard`.
+- **Menu** : la sidebar n'affiche que les écrans autorisés (voir `layout/menu.ts`).
+- **Éléments** : masquer un bouton avec la directive `*hasPermission`.
 
-## À implémenter
+Exemple :
+```html
+<button *hasPermission="'CAMPAIGN_CREATE'">Créer une campagne</button>
+```
 
-- Écran **Dashboard** (KPIs temps réel, graphiques)
-- Écran **Profil** (changement mot de passe)
-- Écran **SWAM** (panel équivalent DMAS pour le switch SWAM)
+Mapping écran → permission :
+
+| Écran | Permission requise |
+|-------|--------------------|
+| Génération de campagne | CAMPAIGN_CREATE, CAMPAIGN_GENERATE |
+| Orchestration de campagne | TPS_RUN, CAMPAIGN_REPLAY |
+| Consultation des exécutions | EXECUTION_VIEW, CAMPAIGN_VIEW |
+| Monétique DMAS | CARD_PROVISION |
+| Administration | USER_MANAGE, ROLE_MANAGE, CATALOG_MANAGE |
+
+## État d'avancement
+
+- ✅ Socle : auth JWT, RBAC, thème configurable, layout, routing
+- ✅ Écran login fonctionnel
+- ⬜ Les 7 autres écrans sont des placeholders — à implémenter (formulaires campagnes, tableaux d'exécutions, admin users, etc.)
+
+## Prochaines étapes suggérées
+
+1. Implémenter les services API dans `core/services/` (CampaignService, ExecutionService, UserService)
+2. Développer les écrans un par un, en commençant par la génération de campagne
+3. Ajouter la configuration CORS côté back
