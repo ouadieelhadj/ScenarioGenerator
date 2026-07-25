@@ -60,7 +60,8 @@ INSERT INTO permissions(id,code,label,category) VALUES
  (10,'TPS_CREATE','Créer un test de charge','CHARGE'),
  (11,'TPS_RUN','Lancer une exécution','CHARGE'),
  (12,'EXECUTION_VIEW','Consulter les exécutions','CHARGE');
-INSERT INTO role_permissions SELECT 1,id FROM permissions;
+INSERT INTO role_permissions(permission_id,role_id)
+SELECT id,1 FROM permissions;
 INSERT INTO users(id,login,password,email,role,active,created_at,created_by)
 VALUES(2,'admin',:'admin_bcrypt','admin@staging.com','ADMIN',true,now(),'system');
 
