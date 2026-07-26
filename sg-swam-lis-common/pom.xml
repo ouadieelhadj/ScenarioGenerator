@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.staging</groupId>
+        <artifactId>scenario-generator</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>sg-swam-lis-common</artifactId>
+    <packaging>jar</packaging>
+    <name>SG SWAM LIS Common</name>
+    <description>Packagers jPOS et validation commune du format SWAM LIS 4.13</description>
+    <dependencies>
+        <dependency>
+            <groupId>com.staging</groupId>
+            <artifactId>sg-common</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.jpos</groupId>
+            <artifactId>jpos</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

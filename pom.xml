@@ -27,6 +27,9 @@
         <module>sg-mc-dmas-mastercard</module>
         <module>sg-swam-issuer</module>
         <module>sg-swam-acquirer</module>
+        <module>sg-swam-lis-common</module>
+        <module>sg-swam-lis-member</module>
+        <module>sg-swam-lis-switch</module>
         <module>sg-mc-sms-acquirer</module>
         <module>sg-mc-sms-issuer</module>
     </modules>
@@ -43,6 +46,11 @@
             <dependency>
                 <groupId>com.staging</groupId>
                 <artifactId>sg-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.staging</groupId>
+                <artifactId>sg-swam-lis-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
