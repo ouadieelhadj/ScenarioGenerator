@@ -1025,6 +1025,34 @@ CREATE TABLE public.swam_acq_transactions (
     processing_code character varying(6),
     amount bigint NOT NULL,
     currency character varying(3),
+    local_transaction_dt character varying(12),
+    settlement_date character varying(6),
+    conversion_date character varying(4),
+    expiry_date character varying(4),
+    merchant_category_code character varying(4),
+    acquirer_country_code character varying(3),
+    forwarding_country_code character varying(3),
+    pos_data_code character varying(12),
+    function_code character varying(3),
+    message_reason_code character varying(4),
+    card_sequence_number character varying(3),
+    acquirer_institution_id character varying(11),
+    forwarding_institution_id character varying(11),
+    rrn character varying(12),
+    authorization_code character varying(6),
+    terminal_id character varying(8),
+    merchant_id character varying(15),
+    merchant_name_location character varying(40),
+    settlement_amount bigint,
+    billing_amount bigint,
+    settlement_currency character varying(3),
+    billing_currency character varying(3),
+    security_control_info character varying(99),
+    original_data_elements character varying(35),
+    sender_identification character varying(999),
+    clearing_eligible boolean DEFAULT false NOT NULL,
+    clearing_amount bigint DEFAULT 0 NOT NULL,
+    lifecycle_status character varying(24),
     response_code character varying(3),
     status character varying(10) DEFAULT 'SENT'::character varying NOT NULL,
     created_at timestamp without time zone DEFAULT now(),
@@ -1075,6 +1103,34 @@ CREATE TABLE public.swam_iss_transactions (
     processing_code character varying(6),
     amount bigint NOT NULL,
     currency character varying(3),
+    local_transaction_dt character varying(12),
+    settlement_date character varying(6),
+    conversion_date character varying(4),
+    expiry_date character varying(4),
+    merchant_category_code character varying(4),
+    acquirer_country_code character varying(3),
+    forwarding_country_code character varying(3),
+    pos_data_code character varying(12),
+    function_code character varying(3),
+    message_reason_code character varying(4),
+    card_sequence_number character varying(3),
+    acquirer_institution_id character varying(11),
+    forwarding_institution_id character varying(11),
+    rrn character varying(12),
+    authorization_code character varying(6),
+    terminal_id character varying(8),
+    merchant_id character varying(15),
+    merchant_name_location character varying(40),
+    settlement_amount bigint,
+    billing_amount bigint,
+    settlement_currency character varying(3),
+    billing_currency character varying(3),
+    security_control_info character varying(99),
+    original_data_elements character varying(35),
+    sender_identification character varying(999),
+    clearing_eligible boolean DEFAULT false NOT NULL,
+    clearing_amount bigint DEFAULT 0 NOT NULL,
+    lifecycle_status character varying(24),
     response_code character varying(3),
     status character varying(10) DEFAULT 'APPROVED'::character varying NOT NULL,
     created_at timestamp without time zone DEFAULT now(),
@@ -1398,10 +1454,14 @@ CREATE INDEX IF NOT EXISTS idx_results_execution ON public.results USING btree (
 CREATE UNIQUE INDEX IF NOT EXISTS roles_code_key ON public.roles USING btree (code);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_swam_acq_keys ON public.swam_acq_keys USING btree (member_group_id, key_type, status);
 CREATE INDEX IF NOT EXISTS idx_swam_acq_tx_pan ON public.swam_acq_transactions USING btree (pan);
+CREATE INDEX IF NOT EXISTS idx_swam_acq_tx_rrn ON public.swam_acq_transactions USING btree (rrn);
+CREATE INDEX IF NOT EXISTS idx_swam_acq_tx_clearing ON public.swam_acq_transactions USING btree (clearing_eligible, settlement_date);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_swam_acq_tx ON public.swam_acq_transactions USING btree (stan, transmission_dt);
 CREATE UNIQUE INDEX IF NOT EXISTS swam_cards_pan_key ON public.swam_cards USING btree (pan);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_swam_iss_keys ON public.swam_iss_keys USING btree (member_group_id, key_type, status);
 CREATE INDEX IF NOT EXISTS idx_swam_iss_tx_pan ON public.swam_iss_transactions USING btree (pan);
+CREATE INDEX IF NOT EXISTS idx_swam_iss_tx_rrn ON public.swam_iss_transactions USING btree (rrn);
+CREATE INDEX IF NOT EXISTS idx_swam_iss_tx_clearing ON public.swam_iss_transactions USING btree (clearing_eligible, settlement_date);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_swam_iss_tx ON public.swam_iss_transactions USING btree (stan, transmission_dt);
 CREATE INDEX IF NOT EXISTS idx_swam_kek_group ON public.swam_kek USING btree (member_group_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_swam_kek_group ON public.swam_kek USING btree (member_group_id);

@@ -6,6 +6,8 @@ import com.staging.sg.swam.acquirer.network.SwamMac;
 import com.staging.sg.swam.acquirer.network.SwamPin;
 import com.staging.sg.common.entity.SwamAcqTransaction;
 import com.staging.sg.common.repository.SwamAcqTransactionRepository;
+import com.staging.sg.common.iso.sid.SidMessageValidator;
+import com.staging.sg.common.iso.sid.SidTransactionPersistenceMapper;
 import org.jpos.iso.ISOMsg;
 import org.springframework.web.bind.annotation.*;
 
@@ -90,7 +92,9 @@ public class SwamNetworkController {
         ISOMsg req = auth.buildAuth1100(pan, amount, stan, client.getPackager());
         swamPin.apply(req, pin);               // pose DE52+DE53 si pin fourni
         String macSent = swamMac.apply(req);   // pose DE128 (MAC reel)
+        SidMessageValidator.validate(req);
         ISOMsg resp = client.sendAndWait(req, 10);
+        SidMessageValidator.validateResponseTo(req, resp);
         String rc = resp.hasField(39) ? resp.getString(39) : null;
 
         // Persister la transaction emise cote acquereur
@@ -105,6 +109,21 @@ public class SwamNetworkController {
             tx.setCurrency(req.hasField(49) ? req.getString(49) : null);
             tx.setResponseCode(rc);
             tx.setStatus("000".equals(rc) ? "APPROVED" : "DECLINED");
+            SidTransactionPersistenceMapper.populate(tx, req, resp);
+            if ("1420".equals(req.getMTI()) && "000".equals(rc)) {
+                txRepo.findFirstByRrnAndClearingEligibleTrueOrderByCreatedAtDesc(req.getString(37))
+                        .ifPresent(original -> {
+                            long current = original.getClearingAmount() != null
+                                    ? original.getClearingAmount() : original.getAmount();
+                            long remaining = Math.max(0L, current - Long.parseLong(amount));
+                            boolean partial = "402".equals(req.getString(24));
+                            original.setClearingAmount(remaining);
+                            original.setClearingEligible(partial && remaining > 0L);
+                            original.setLifecycleStatus(partial && remaining > 0L
+                                    ? "PARTIALLY_REVERSED" : "REVERSED");
+                            txRepo.save(original);
+                        });
+            }
             txRepo.save(tx);
         } catch (Exception e) {
             System.err.println("[SWAM-ACQ] Persistance tx KO : " + e.getMessage());
@@ -122,6 +141,91 @@ public class SwamNetworkController {
         r.put("pin_sent", pin != null);
         r.put("de128_mac_echo", resp.hasField(128) ? org.jpos.iso.ISOUtil.hexString(resp.getBytes(128)) : null);
         return r;
+    }
+
+    @PostMapping("/financial")
+    public Map<String,Object> financial(
+            @RequestParam(defaultValue = "5321962145453348") String pan,
+            @RequestParam(defaultValue = "000000010000") String amount,
+            @RequestParam(required = false) String pin) throws Exception {
+        String stan = auth.nextStan_();
+        ISOMsg request = auth.buildFinancial1200(pan, amount, stan, client.getPackager());
+        return sendTransaction("FINANCIAL", request, pin, pan, amount, "1210");
+    }
+
+    @PostMapping("/financial-advice")
+    public Map<String,Object> financialAdvice(
+            @RequestParam(defaultValue = "5321962145453348") String pan,
+            @RequestParam(defaultValue = "000000010000") String amount,
+            @RequestParam String authorizationCode,
+            @RequestParam String originalDataElements) throws Exception {
+        String stan = auth.nextStan_();
+        ISOMsg request = auth.buildFinancialAdvice1220(
+                pan, amount, stan, authorizationCode, originalDataElements, client.getPackager());
+        return sendTransaction("FINANCIAL_ADVICE", request, null, pan, amount, "1230");
+    }
+
+    @PostMapping("/reversal")
+    public Map<String,Object> reversal(
+            @RequestParam(defaultValue = "5321962145453348") String pan,
+            @RequestParam(defaultValue = "000000010000") String amount,
+            @RequestParam String rrn,
+            @RequestParam String authorizationCode,
+            @RequestParam String originalDataElements,
+            @RequestParam(defaultValue = "false") boolean partial,
+            @RequestParam(required = false) String originalAmounts) throws Exception {
+        String stan = auth.nextStan_();
+        ISOMsg request = auth.buildReversal1420(
+                pan, amount, stan, rrn, authorizationCode, originalDataElements,
+                partial, originalAmounts, client.getPackager());
+        return sendTransaction("REVERSAL", request, null, pan, amount, "1430");
+    }
+
+    private Map<String,Object> sendTransaction(
+            String type, ISOMsg req, String pin, String pan, String amount, String expectedResponseMti)
+            throws Exception {
+        client.connect();
+        swamPin.apply(req, pin);
+        String macSent = swamMac.apply(req);
+        SidMessageValidator.validate(req);
+        ISOMsg resp = client.sendAndWait(req, 10);
+        if (!expectedResponseMti.equals(resp.getMTI())) {
+            throw new IllegalStateException("Reponse SID attendue " + expectedResponseMti
+                    + ", recue " + resp.getMTI());
+        }
+        SidMessageValidator.validateResponseTo(req, resp);
+        persistTransaction(req, resp, pan, amount);
+
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("type", type);
+        result.put("mti_sent", req.getMTI());
+        result.put("stan", req.getString(11));
+        result.put("mti_received", resp.getMTI());
+        result.put("de39_action", resp.hasField(39) ? resp.getString(39) : null);
+        result.put("de38_auth", resp.hasField(38) ? resp.getString(38) : null);
+        result.put("approved", "000".equals(resp.hasField(39) ? resp.getString(39) : ""));
+        result.put("de128_mac_sent", macSent);
+        return result;
+    }
+
+    private void persistTransaction(ISOMsg req, ISOMsg resp, String pan, String amount) {
+        try {
+            String rc = resp.hasField(39) ? resp.getString(39) : null;
+            SwamAcqTransaction tx = new SwamAcqTransaction();
+            tx.setPan(pan);
+            tx.setStan(req.getString(11));
+            tx.setTransmissionDt(req.getString(7));
+            tx.setMti(req.getMTI());
+            tx.setProcessingCode(req.getString(3));
+            tx.setAmount(Long.parseLong(amount));
+            tx.setCurrency(req.getString(49));
+            tx.setResponseCode(rc);
+            tx.setStatus("000".equals(rc) ? "APPROVED" : "DECLINED");
+            SidTransactionPersistenceMapper.populate(tx, req, resp);
+            txRepo.save(tx);
+        } catch (Exception e) {
+            throw new IllegalStateException("[SWAM-ACQ] Persistance transaction SID impossible", e);
+        }
     }
 
     @GetMapping("/health")

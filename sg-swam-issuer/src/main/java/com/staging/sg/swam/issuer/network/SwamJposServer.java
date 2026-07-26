@@ -15,6 +15,9 @@ import com.staging.sg.common.iso.crypto.JposHsmService;
 import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.iso.SwamDe48;
 import com.staging.sg.common.iso.crypto.SwamMacBuilder;
+import com.staging.sg.common.iso.sid.SidMessageValidator;
+import com.staging.sg.common.iso.sid.SidValidationException;
+import com.staging.sg.common.iso.sid.SidTransactionPersistenceMapper;
 import org.springframework.beans.factory.annotation.Value;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -144,6 +147,11 @@ public class SwamJposServer {
                 if ("1804".equals(mti)) return handleNetwork(source, m);
                 if ("1814".equals(mti)) return handleNetworkResponse(m);   // accuse reception ZPK
                 if ("1100".equals(mti)) return handleAuthorization(source, m);
+                if ("1200".equals(mti)) return handleFinancial(source, m, "1210");
+                if ("1220".equals(mti) || "1221".equals(mti))
+                    return handleFinancial(source, m, "1230");
+                if ("1420".equals(mti) || "1421".equals(mti))
+                    return handleReversal(source, m);
                 log.warn("[SWAM-SRV] MTI non gere : {}", mti);
                 return false;
             } catch (Exception e) {
@@ -320,6 +328,12 @@ public class SwamJposServer {
 
         /** Logique d'autorisation (a) : debit reel. */
         private boolean handleAuthorization(ISOSource source, ISOMsg m) throws Exception {
+            try {
+                SidMessageValidator.validate(m);
+            } catch (SidValidationException e) {
+                log.warn("[SWAM-SRV] 1100 non conforme SID: {}", e.getMessage());
+                return sendFormatError(source, m, "1110");
+            }
             String pan = m.hasField(2) ? m.getString(2) : null;
             long amount = m.hasField(4) ? Long.parseLong(m.getString(4)) : 0L;
             String stan = m.hasField(11) ? m.getString(11) : "";
@@ -359,13 +373,21 @@ public class SwamJposServer {
                     responseCode = "116"; status = "DECLINED";
                     log.info("[SWAM-SRV] Solde insuffisant ({} < {}) -> DE39=116", card.getBalance(), amount);
                 } else {
-                    card.setBalance(card.getBalance() - amount);
-                    card.setUpdatedAt(java.time.LocalDateTime.now());
-                    cardRepository.save(card);
                     responseCode = "000"; status = "APPROVED";
-                    log.info("[SWAM-SRV] APPROUVE, nouveau solde={} -> DE39=000", card.getBalance());
+                    log.info("[SWAM-SRV] AUTORISATION APPROUVEE, solde disponible={} -> DE39=000", card.getBalance());
                 }
             }
+
+            ISOMsg r = new ISOMsg();
+            r.setPackager(m.getPackager());
+            r.setMTI("1110");
+            copyFields(m, r, 2,3,4,5,6,7,9,10,11,12,15,16,32,33,37,41,42,49,50,51);
+            r.set(27, "6");
+            r.set(38, authorizationCode(stan));
+            r.set(39, responseCode);
+            if (m.hasField(55)) r.set(55, m.getBytes(55));
+            poseMacOnResponse(r);
+            SidMessageValidator.validateResponseTo(m, r);
 
             try {
                 SwamIssTransaction tx = new SwamIssTransaction();
@@ -378,30 +400,199 @@ public class SwamJposServer {
                 tx.setCurrency(m.hasField(49) ? m.getString(49) : null);
                 tx.setResponseCode(responseCode);
                 tx.setStatus(status);
+                SidTransactionPersistenceMapper.populate(tx, m, r);
                 txRepository.save(tx);
             } catch (Exception e) {
                 log.error("[SWAM-SRV] Persistance tx KO : {}", e.getMessage());
             }
 
-            ISOMsg r = new ISOMsg();
-            r.setPackager(m.getPackager());
-            r.setMTI("1110");
-            if (m.hasField(2))  r.set(2,  m.getString(2));
-            if (m.hasField(3))  r.set(3,  m.getString(3));
-            if (m.hasField(4))  r.set(4,  m.getString(4));
-            r.set(7, new SimpleDateFormat("yyMMddHHmm").format(new Date()));
-            if (m.hasField(11)) r.set(11, m.getString(11));
-            if (m.hasField(12)) r.set(12, m.getString(12));
-            if (m.hasField(32)) r.set(32, m.getString(32));
-            if (m.hasField(37)) r.set(37, m.getString(37));
-            if ("000".equals(responseCode)) r.set(38, "123456");
-            r.set(39, responseCode);
-            if (m.hasField(41)) r.set(41, m.getString(41));
-            if (m.hasField(49)) r.set(49, m.getString(49));
-            poseMacOnResponse(r);
             source.send(r);
             log.info("[SWAM-SRV] Repondu 1110 DE39={}", responseCode);
             return true;
+        }
+
+        private boolean sendFormatError(ISOSource source, ISOMsg request, String responseMti)
+                throws Exception {
+            ISOMsg response = new ISOMsg();
+            response.setPackager(request.getPackager());
+            response.setMTI(responseMti);
+            copyFields(request, response, 2,3,4,5,6,7,9,10,11,12,15,16,32,33,37,41,42,49,50,51);
+            response.set(27, "6");
+            response.set(38, authorizationCode(request.hasField(11) ? request.getString(11) : "0"));
+            response.set(39, "904");
+            poseMacOnResponse(response);
+            source.send(response);
+            return true;
+        }
+
+        private boolean handleFinancial(ISOSource source, ISOMsg request, String responseMti)
+                throws Exception {
+            try {
+                SidMessageValidator.validate(request);
+            } catch (SidValidationException e) {
+                log.warn("[SWAM-SRV] {} non conforme SID: {}", request.getMTI(), e.getMessage());
+                return sendFormatError(source, request, responseMti);
+            }
+
+            String pan = request.getString(2);
+            long amount = Long.parseLong(request.getString(4));
+            String stan = request.getString(11);
+            String transmission = request.getString(7);
+
+            Optional<SwamIssTransaction> duplicate =
+                    txRepository.findByStanAndTransmissionDt(stan, transmission);
+            if (duplicate.isPresent()) {
+                SwamIssTransaction previous = duplicate.get();
+                ISOMsg response = financialResponse(
+                        request, responseMti, previous.getResponseCode(),
+                        previous.getAuthorizationCode());
+                source.send(response);
+                log.info("[SWAM-SRV] Rejeu {} idempotent STAN={}", request.getMTI(), stan);
+                return true;
+            }
+
+            String responseCode;
+            Optional<SwamCard> cardOpt = cardRepository.findByPan(pan);
+            if (cardOpt.isEmpty()) {
+                responseCode = "114";
+            } else if (!"ACTIVE".equals(cardOpt.get().getStatus())) {
+                responseCode = "062";
+            } else if (request.hasField(52) && !verifyPin(request, pan, cardOpt.get().getPin())) {
+                responseCode = "117";
+            } else if (cardOpt.get().getBalance() < amount) {
+                responseCode = "116";
+            } else {
+                SwamCard card = cardOpt.get();
+                card.setBalance(card.getBalance() - amount);
+                card.setUpdatedAt(java.time.LocalDateTime.now());
+                cardRepository.save(card);
+                responseCode = "000";
+            }
+
+            String authCode = request.hasField(38)
+                    ? request.getString(38) : authorizationCode(stan);
+            ISOMsg response = financialResponse(request, responseMti, responseCode, authCode);
+            persistIssuerTransaction(request, response, responseCode);
+            source.send(response);
+            log.info("[SWAM-SRV] Repondu {} a {} DE39={}",
+                    responseMti, request.getMTI(), responseCode);
+            return true;
+        }
+
+        private ISOMsg financialResponse(
+                ISOMsg request, String responseMti, String responseCode, String authCode)
+                throws Exception {
+            ISOMsg response = new ISOMsg();
+            response.setPackager(request.getPackager());
+            response.setMTI(responseMti);
+            copyFields(request, response,
+                    2,3,4,5,6,7,9,10,11,12,15,16,32,33,37,41,42,46,49,50,51,60);
+            if ("1210".equals(responseMti)) response.set(27, "6");
+            response.set(38, authCode);
+            response.set(39, responseCode);
+            poseMacOnResponse(response);
+            SidMessageValidator.validateResponseTo(request, response);
+            return response;
+        }
+
+        private boolean handleReversal(ISOSource source, ISOMsg request) throws Exception {
+            try {
+                SidMessageValidator.validate(request);
+            } catch (SidValidationException e) {
+                log.warn("[SWAM-SRV] {} non conforme SID: {}", request.getMTI(), e.getMessage());
+                return sendFormatError(source, request, "1430");
+            }
+
+            String stan = request.getString(11);
+            String transmission = request.getString(7);
+            Optional<SwamIssTransaction> duplicate =
+                    txRepository.findByStanAndTransmissionDt(stan, transmission);
+            if (duplicate.isPresent()) {
+                ISOMsg response = reversalResponse(
+                        request, duplicate.get().getResponseCode(),
+                        duplicate.get().getAuthorizationCode());
+                source.send(response);
+                return true;
+            }
+
+            String rrn = request.getString(37);
+            Optional<SwamIssTransaction> original =
+                    txRepository.findFirstByRrnAndClearingEligibleTrueOrderByCreatedAtDesc(rrn);
+            String responseCode = original.isPresent() ? "000" : "025";
+            String authCode = request.hasField(38)
+                    ? request.getString(38) : authorizationCode(stan);
+
+            if (original.isPresent()) {
+                SwamIssTransaction financial = original.get();
+                long reversalAmount = Long.parseLong(request.getString(4));
+                SwamCard card = cardRepository.findByPan(financial.getPan()).orElseThrow();
+                card.setBalance(card.getBalance() + reversalAmount);
+                card.setUpdatedAt(java.time.LocalDateTime.now());
+                cardRepository.save(card);
+                boolean partial = "402".equals(request.getString(24));
+                long currentClearingAmount = financial.getClearingAmount() != null
+                        ? financial.getClearingAmount() : financial.getAmount();
+                long remaining = Math.max(0L, currentClearingAmount - reversalAmount);
+                financial.setClearingAmount(remaining);
+                financial.setClearingEligible(partial && remaining > 0L);
+                financial.setLifecycleStatus(partial && remaining > 0L
+                        ? "PARTIALLY_REVERSED" : "REVERSED");
+                financial.setReversedAt(java.time.LocalDateTime.now());
+                txRepository.save(financial);
+            }
+
+            ISOMsg response = reversalResponse(request, responseCode, authCode);
+            persistIssuerTransaction(request, response, responseCode);
+            source.send(response);
+            return true;
+        }
+
+        private ISOMsg reversalResponse(ISOMsg request, String responseCode, String authCode)
+                throws Exception {
+            ISOMsg response = new ISOMsg();
+            response.setPackager(request.getPackager());
+            response.setMTI("1430");
+            copyFields(request, response,
+                    2,3,4,5,6,7,11,12,15,16,32,33,37,41,42,43,49,50,51,53);
+            response.set(38, authCode);
+            response.set(39, responseCode);
+            poseMacOnResponse(response);
+            SidMessageValidator.validateResponseTo(request, response);
+            return response;
+        }
+
+        private void persistIssuerTransaction(
+                ISOMsg request, ISOMsg response, String responseCode) throws Exception {
+            SwamIssTransaction tx = new SwamIssTransaction();
+            tx.setPan(request.getString(2));
+            tx.setStan(request.getString(11));
+            tx.setTransmissionDt(request.getString(7));
+            tx.setMti(request.getMTI());
+            tx.setProcessingCode(request.getString(3));
+            tx.setAmount(Long.parseLong(request.getString(4)));
+            tx.setCurrency(request.getString(49));
+            tx.setResponseCode(responseCode);
+            tx.setStatus("000".equals(responseCode) ? "APPROVED" : "DECLINED");
+            SidTransactionPersistenceMapper.populate(tx, request, response);
+            txRepository.save(tx);
+        }
+
+        private void copyFields(ISOMsg source, ISOMsg target, int... fields) throws ISOException {
+            for (int field : fields) {
+                if (source.hasField(field)) {
+                    if (source.getComponent(field).getValue() instanceof byte[]) {
+                        target.set(field, source.getBytes(field));
+                    } else {
+                        target.set(field, source.getString(field));
+                    }
+                }
+            }
+        }
+
+        private String authorizationCode(String stan) {
+            String digits = stan == null ? "" : stan.replaceAll("\\D", "");
+            return String.format("%6s", digits).replace(' ', '0')
+                    .substring(Math.max(0, String.format("%6s", digits).length() - 6));
         }
 
         // ====================================================================
