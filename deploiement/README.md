@@ -27,12 +27,14 @@ Installation complète depuis Git Bash :
 bash deploiement/common/database/install-full-db.sh
 ```
 
-### Transférer la base de référence vers un autre poste
+### Promouvoir une base de test de LAB/DEV vers RECETTE
 
 Le fichier de sauvegarde contient potentiellement des données sensibles. Il ne
-doit jamais être ajouté à Git. Le transférer par un canal sécurisé.
+doit jamais être ajouté à Git. Avant l'export, vérifier qu'il contient uniquement
+des données de test autorisées et assainies, puis le transférer par un canal
+sécurisé.
 
-Sur le poste qui possède la base de référence :
+Sur le poste LAB/DEV qui possède la base de référence :
 
 ```bash
 export DB_PASSWORD="<mot-de-passe-postgresql-source>"
@@ -42,7 +44,7 @@ bash deploiement/common/database/export-reference-db.sh
 Le script crée un fichier `.dump` sous `runtime/database-transfer`. Copier ce
 fichier sur le poste cible.
 
-Sur le poste cible, après avoir arrêté les services applicatifs :
+Sur le poste de RECETTE, après avoir arrêté les services applicatifs :
 
 ```bash
 export DB_PASSWORD="<mot-de-passe-postgresql-cible>"

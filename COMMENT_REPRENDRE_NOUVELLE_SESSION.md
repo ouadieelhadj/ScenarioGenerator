@@ -41,6 +41,14 @@ codex/portail-rbac-maker-checker
 Dépôt :
 https://github.com/ouadieelhadj/ScenarioGenerator.git
 
+Organisation des environnements :
+- le poste d'origine est LAB/DEV : développement, corrections et commits ;
+- ton poste est RECETTE : récupération des commits et validation fonctionnelle.
+
+Ne développe pas directement une correction en RECETTE. Si tu trouves une
+anomalie, fournis le commit testé et des traces assainies afin qu'elle soit
+reproduite et corrigée sur LAB/DEV, puis récupère le nouveau commit.
+
 Après le clone ou la mise à jour du dépôt, récupère et lis intégralement le
 fichier suivant avant toute analyse, modification ou exécution :
 COMMENT_REPRENDRE_NOUVELLE_SESSION.md
@@ -71,22 +79,62 @@ dans `deploiement/README.md` et résumée à la section 4.3 ci-dessous.
 
 Deux situations très différentes ne doivent pas être confondues.
 
-### Mode A — reprise locale complète sur un autre PC
+### Rôle des deux postes
 
-C'est le mode obligatoire pour la reprise actuelle :
+L'organisation de référence est la suivante :
+
+- **ce poste : LAB/DEV** — laboratoire, conception, développement, corrections,
+  tests techniques et création des commits ;
+- **autre poste : RECETTE** — récupération des commits validés, restauration
+  contrôlée des données de test, exécution des scénarios de recette et production
+  des rapports de validation.
+
+Le poste de recette ne doit pas servir à développer directement des corrections.
+Une anomalie trouvée en recette est reproduite et corrigée sur LAB/DEV, puis la
+correction est commitée, poussée et récupérée en recette.
+
+Les deux postes utilisent des configurations et des secrets distincts. Aucun mot
+de passe, fichier HSM, LMK, ZMK, KEK ou certificat privé de LAB/DEV ne doit être
+copié dans Git ou réutilisé implicitement en recette.
+
+### Mode A — recette locale complète sur l'autre PC
+
+C'est le mode obligatoire pour la reprise actuelle sur le poste de recette :
 
 - `sg-swam-issuer` simule le switch SWAM ;
 - `sg-swam-acquirer` représente le membre bancaire ;
 - les deux services et les modules LIS tournent sur le même poste ;
-- la configuration de référence provient du dépôt et de la base transférée ;
-- les clés utilisées sont exclusivement des clés de test injectées hors Git ;
+- le code provient exclusivement des commits poussés depuis LAB/DEV ;
+- la configuration de référence non sensible provient du dépôt ;
+- la base de recette est initialisée par un dump de test contrôlé et assaini ;
+- les clés utilisées sont exclusivement des clés de recette injectées hors Git ;
 - aucun VPN, certificat ou accès à un switch externe n'est nécessaire.
 
 Dans ce mode, il ne faut pas demander au responsable d'un switch distant son IP,
 ses clés ou une fenêtre de certification. Il faut suivre les scripts locaux de
 la section 7.
 
-### Mode B — raccordement à un véritable switch distant
+### Promotion LAB/DEV vers RECETTE
+
+Pour chaque livraison :
+
+1. terminer les modifications et tests sur LAB/DEV ;
+2. committer et pousser uniquement les fichiers du périmètre ;
+3. communiquer à la recette la branche et le hash du commit attendu ;
+4. sur RECETTE, vérifier que l'arbre Git est propre puis faire
+   `git pull --ff-only` ;
+5. transférer un dump uniquement si le schéma ou les données de référence
+   l'exigent ;
+6. sauvegarder la base de recette avant toute restauration ;
+7. injecter les secrets propres à la recette par variables ou canal sécurisé ;
+8. paramétrer et valider séparément le switch puis le membre ;
+9. compiler et exécuter la chaîne SWAM complète ;
+10. conserver les logs et résultats de recette sans les committer s'ils
+   contiennent des données sensibles ;
+11. retourner les anomalies vers LAB/DEV avec le commit testé et les traces
+    assainies.
+
+### Mode B — raccordement de recette à un véritable switch distant
 
 Ce mode n'est pas nécessaire pour valider la reprise sur un autre PC. Il ne doit
 commencer qu'après réussite du Mode A et accord explicite du responsable. Il
@@ -95,7 +143,7 @@ réseau, version des spécifications, identité membre, procédure HSM et plan d
 certification.
 
 Une cible de production ne doit jamais être configurée ou testée à partir de
-cette procédure locale.
+cette procédure de LAB/DEV ou de recette.
 
 ## 3. Branche de travail
 
@@ -139,13 +187,14 @@ git switch --track origin/codex/portail-rbac-maker-checker
 Si le dépôt est copié ailleurs, les scripts calculent automatiquement `ROOT`
 depuis leur propre emplacement.
 
-### 4.3 Remplacer la base d'un autre poste par la base de référence
+### 4.3 Initialiser ou remplacer la base de RECETTE
 
-Cette opération détruit le contenu actif de la base cible. Le script fourni crée
-d'abord une sauvegarde de sécurité et exige une confirmation explicite. Ne jamais
-committer le fichier `.dump`, qui peut contenir des données sensibles.
+Cette opération détruit le contenu actif de la base de recette. Le script fourni
+crée d'abord une sauvegarde de sécurité et exige une confirmation explicite. Le
+dump source doit contenir uniquement des données de test autorisées et assainies.
+Ne jamais committer le fichier `.dump`, qui peut contenir des données sensibles.
 
-Sur le PC possédant la base de référence :
+Sur LAB/DEV, après validation du contenu de test à promouvoir :
 
 ```bash
 cd /d/MoneyCore/ScenarioGenerator
@@ -156,7 +205,7 @@ bash deploiement/common/database/export-reference-db.sh
 Transférer de manière sécurisée le fichier créé sous
 `runtime/database-transfer` vers le nouveau poste.
 
-Sur le nouveau poste :
+Sur RECETTE :
 
 ```bash
 cd /d/MoneyCore/ScenarioGenerator
@@ -166,8 +215,8 @@ bash deploiement/common/database/replace-db-from-dump.sh \
   "/chemin/vers/scenariogenerator-reference-AAAAMMJJ-HHMMSS.dump"
 ```
 
-Le script sauvegarde la base cible sous `runtime/database-backups`, ferme ses
-connexions, la recrée puis restaure la base de référence. Après restauration,
+Le script sauvegarde la base de recette sous `runtime/database-backups`, ferme
+ses connexions, la recrée puis restaure la base de référence. Après restauration,
 reprendre à la compilation et aux tests SWAM décrits dans la section 7.
 
 ## 5. Documents à lire dans cet ordre
@@ -249,6 +298,9 @@ Les scripts sont présents dans le dépôt :
 deploiement/swam/
 ├── 01-start-issuer.sh
 ├── 02-start-member.sh
+├── 03a-bootstrap-issuer.sh
+├── 03b-bootstrap-member.sh
+├── 03c-signon-and-key-exchange.sh
 ├── 03-bootstrap-keys.sh
 ├── 04-run-purchases.sh
 ├── 05-run-lis-clearing.sh
@@ -278,7 +330,9 @@ Lancer et tester chaque étape séparément :
 ```bash
 bash deploiement/swam/01-start-issuer.sh
 bash deploiement/swam/02-start-member.sh
-bash deploiement/swam/03-bootstrap-keys.sh
+bash deploiement/swam/03a-bootstrap-issuer.sh
+bash deploiement/swam/03b-bootstrap-member.sh
+bash deploiement/swam/03c-signon-and-key-exchange.sh
 bash deploiement/swam/04-run-purchases.sh
 bash deploiement/swam/05-run-lis-clearing.sh
 bash deploiement/swam/06-stop-swam.sh
@@ -316,11 +370,29 @@ RESULTAT : SWAM FULL E2E PASSED
 
 #### `03-bootstrap-keys.sh`
 
-- lire la clé de test depuis une variable ou une saisie masquée ;
-- ne jamais stocker la clé dans Git ;
-- injecter la KEK/ZMK côté issuer et membre ;
-- lancer sign-on et échange ZPK/ZAK ;
-- vérifier la concordance des KCV.
+- appeler dans l'ordre les trois scripts unitaires ci-dessous pour l'E2E global.
+
+#### `03a-bootstrap-issuer.sh`
+
+- lire la clé de recette depuis une variable ou une saisie masquée ;
+- paramétrer uniquement le côté switch/issuer ;
+- afficher uniquement son KCV de contrôle, jamais la clé formée ou claire.
+
+#### `03b-bootstrap-member.sh`
+
+- lire séparément la clé de recette ;
+- paramétrer uniquement le côté membre/acquirer ;
+- afficher uniquement son KCV de contrôle.
+
+#### `03c-signon-and-key-exchange.sh`
+
+- lancer le sign-on seulement après validation unitaire des deux côtés ;
+- laisser le switch pousser les clés de session sur la liaison permanente ;
+- vérifier la concordance des KCV switch/membre dans la base de recette.
+
+Tout autre paramétrage doit suivre la même règle : configuration, contrôle et
+preuve côté switch ; configuration, contrôle et preuve côté membre ; puis test
+bilatéral. Une erreur d'un côté ne doit pas être masquée par le script global.
 
 #### `04-run-purchases.sh`
 

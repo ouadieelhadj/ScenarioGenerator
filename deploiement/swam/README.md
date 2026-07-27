@@ -17,11 +17,17 @@ export SWAM_E2E_KEK_CLEAR="<cle-de-test-autorisee>"
 
 bash deploiement/swam/01-start-issuer.sh
 bash deploiement/swam/02-start-member.sh
-bash deploiement/swam/03-bootstrap-keys.sh
+bash deploiement/swam/03a-bootstrap-issuer.sh
+bash deploiement/swam/03b-bootstrap-member.sh
+bash deploiement/swam/03c-signon-and-key-exchange.sh
 bash deploiement/swam/04-run-purchases.sh
 bash deploiement/swam/05-run-lis-clearing.sh
 bash deploiement/swam/06-stop-swam.sh
 ```
+
+Le bootstrap est volontairement séparé : paramétrage du switch, paramétrage du
+membre, puis seulement sign-on et échange des clés. Le script
+`03-bootstrap-keys.sh` enchaîne ces trois contrôles pour l'E2E automatisé.
 
 ## Test complet
 
