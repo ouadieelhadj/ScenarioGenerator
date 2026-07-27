@@ -421,6 +421,96 @@ canal sécurisé validé par le responsable. Tant que ces réponses et l'autoris
 de l'environnement ne sont pas obtenues, aucune tentative de connexion distante
 ne doit être faite.
 
+### 8.1 Tester notre membre avec un switch réel — scénario futur
+
+Objectif : raccorder `sg-swam-acquirer`, qui représente notre membre bancaire, à
+un véritable switch SWAM de certification ou d'homologation.
+
+Ce scénario est documenté pour ne pas perdre la démarche, mais il ne doit pas
+être exécuté pendant la reprise locale actuelle.
+
+Prérequis obligatoires :
+
+1. réussite complète du Mode A local ;
+2. autorisation écrite d'utiliser l'environnement de certification ;
+3. coordonnées réseau du switch et ouverture des flux ;
+4. version officielle du SID et mapping ISO 8583 confirmés ;
+5. identifiants membre et données de test attribués par le switch ;
+6. procédure HSM et échange de clés réalisée par les acteurs habilités ;
+7. plan de certification et contact technique côté switch ;
+8. sauvegarde de la configuration locale avant tout changement.
+
+Démarche prévue :
+
+1. créer une configuration d'environnement dédiée, sans secret dans Git ;
+2. désactiver le démarrage de notre `sg-swam-issuer` local pour ce scénario ;
+3. configurer `sg-swam-acquirer` vers le host et le port de certification ;
+4. vérifier VPN, firewall et éventuellement TLS/mTLS ;
+5. effectuer connexion, sign-on et echo test selon la procédure officielle ;
+6. réaliser l'échange de clés via le canal HSM autorisé ;
+7. exécuter le jeu de certification : achats, annulations, reversals et autres
+   opérations imposées ;
+8. rapprocher les traces ISO des deux côtés ;
+9. exécuter EOD, génération du LIS membre et intégration du LIS switch si cela
+   fait partie du périmètre de certification ;
+10. produire le rapport ou PV demandé.
+
+Critère de réussite : le switch réel accepte notre membre et le responsable
+d'homologation valide les contrôles et le PV.
+
+### 8.2 Tester notre issuer avec un membre réel — scénario futur
+
+Objectif : utiliser `sg-swam-issuer` comme switch de test et connecter un système
+membre réel ou représentatif exploité sur un autre poste.
+
+Ce scénario est lui aussi uniquement préparé. Il ne doit pas être lancé pendant
+la reprise locale actuelle.
+
+Prérequis obligatoires :
+
+1. réussite complète du Mode A local ;
+2. environnement de test isolé et autorisation des deux responsables ;
+3. IP source du membre, port d'écoute de notre issuer et règles firewall ;
+4. version SID, framing, packager et timeouts communs ;
+5. identité du membre créée dans notre base de test ;
+6. procédure d'échange de clés de test convenue, sans transmission dans Git ou
+   dans une conversation ;
+7. cartes, terminaux, montants et scénario de test convenus ;
+8. plan de retour arrière et journaux activés des deux côtés.
+
+Démarche prévue :
+
+1. sauvegarder la base et la configuration de référence ;
+2. créer l'interface et le membre dans la base de l'environnement de test ;
+3. configurer `sg-swam-issuer` pour écouter sur l'adresse et le port autorisés ;
+4. vérifier la connectivité depuis le poste du membre ;
+5. exécuter connexion, sign-on, echo test et échange de clés ;
+6. faire passer les opérations du membre vers notre issuer ;
+7. tester les messages initiés par notre issuer sur la même liaison permanente ;
+8. comparer requêtes, réponses, MAC, traces et journaux des deux systèmes ;
+9. lancer l'EOD switch et produire le LIS outgoing destiné au membre ;
+10. intégrer le LIS outgoing du membre, puis contrôler rapprochement, litiges,
+    chargebacks, représentations et comptabilité selon le périmètre convenu.
+
+Critère de réussite : le membre réel échange les messages SID et LIS attendus
+avec notre issuer, et les deux parties signent le résultat de test.
+
+### 8.3 Décision de lancement
+
+Ces deux scénarios externes sont volontairement différés. Une nouvelle session
+doit seulement les préparer ou les relire tant que le responsable n'a pas donné
+explicitement :
+
+- le scénario à lancer (`notre membre ↔ switch réel` ou
+  `notre issuer ↔ membre réel`) ;
+- l'environnement autorisé ;
+- la fenêtre de test ;
+- les contacts responsables ;
+- l'accord pour effectuer les changements réseau et les échanges HSM.
+
+En l'absence de ces éléments, rester en Mode A local et ne réaliser aucun test
+externe.
+
 ## 9. Variables globales
 
 Les valeurs communes sont définies dans :
