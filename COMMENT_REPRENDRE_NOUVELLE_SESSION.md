@@ -3,6 +3,25 @@
 Ce fichier est le point d'entrée d'une nouvelle session Codex consacrée au portail
 modulaire, au Maker/Checker et à SWAM LIS.
 
+## Priorité absolue de reprise
+
+La reprise doit se faire dans cet ordre, sans passer aux autres modules avant la
+validation complète de SWAM :
+
+```text
+1. Récupérer la dernière version du dépôt
+2. Vérifier et compiler le projet
+3. Finaliser les scripts de démarrage SWAM Issuer et SWAM Membre
+4. Finaliser le bootstrap et l'échange des clés
+5. Passer et contrôler les achats SWAM
+6. Lancer les fins de journée et le clearing LIS bilatéral
+7. Valider le scénario SWAM complet et ses non-régressions
+8. Seulement ensuite reprendre les autres modules et le portail Maker/Checker
+```
+
+L'objectif immédiat n'est donc pas de développer DMAS, Mastercard SMS ou un autre
+réseau. Il faut d'abord disposer d'une chaîne SWAM reproductible sur un nouveau PC.
+
 ## 1. Message à donner à la nouvelle session
 
 Copier ce message dans la nouvelle tâche :
@@ -63,22 +82,25 @@ depuis leur propre emplacement.
 ### Obligatoires
 
 1. `COMMENT_REPRENDRE_NOUVELLE_SESSION.md`
-2. `conceptions/frontend/CONCEPTION_PORTAIL_MODULAIRE_RBAC_MAKER_CHECKER.md`
-3. `conceptions/frontend/GUIDE_TEST_PORTAIL_MODULAIRE.md`
-4. `deploiement/README.md`
-5. `deploiement/common/runtime/platform-env.sh`
-6. `deploiement/common/runtime/start-platform.sh`
+2. `deploiement/README.md`
+3. `deploiement/common/runtime/platform-env.sh`
+4. `deploiement/common/runtime/start-platform.sh`
+5. `deploiement/swam/README.md`
+6. `deploiement/swam/swam-e2e.sh`
+7. `deploiement/swam/swam-lis-e2e.sh`
+8. `tests/swam/issuer/start-and-bootstrap.sh`
+9. `tests/swam/acquirer/start-and-bootstrap.sh`
+10. `conceptions/swam/clearing/CONCEPTION_LIS_AVANT_IMPLEMENTATION.md`
 
-### Pour continuer SWAM LIS
+### À lire après la finalisation SWAM
 
-7. `conceptions/swam/clearing/CONCEPTION_LIS_AVANT_IMPLEMENTATION.md`
-8. `deploiement/swam/README.md`
-9. `deploiement/swam/swam-lis-e2e.sh`
+11. `conceptions/frontend/CONCEPTION_PORTAIL_MODULAIRE_RBAC_MAKER_CHECKER.md`
+12. `conceptions/frontend/GUIDE_TEST_PORTAIL_MODULAIRE.md`
 
 ### Spécifications de référence
 
-10. `documents/specifications/swam/Description_Interface_Switch-SID_V3-20_05012024.pdf`
-11. `documents/specifications/swam/Local Interchange Specifications - LIS4 14-CMI.pdf`
+13. `documents/specifications/swam/Description_Interface_Switch-SID_V3-20_05012024.pdf`
+14. `documents/specifications/swam/Local Interchange Specifications - LIS4 14-CMI.pdf`
 
 Les spécifications PDF peuvent être absentes d'un clone Git si elles sont
 volumineuses ou volontairement conservées localement. Dans ce cas, demander leur
@@ -110,6 +132,7 @@ copie au responsable avant de modifier les règles métier LIS.
 
 ### Non terminé
 
+- chaîne officielle de scripts SWAM séparés, numérotés et portables ;
 - moteur Maker/Checker opérationnel complet ;
 - administration des profils multiples et des droits individuels ;
 - écrans d'administration de l'arborescence ;
@@ -124,7 +147,107 @@ copie au responsable avant de modifier les règles métier LIS.
 
 Une nouvelle session ne doit donc pas considérer que tout le portail est finalisé.
 
-## 6. Variables globales
+## 6. Chaîne de scripts SWAM à finaliser en premier
+
+La nouvelle session doit consolider les scripts existants dans
+`deploiement/swam` avec la structure cible suivante :
+
+```text
+deploiement/swam/
+├── 01-start-issuer.sh
+├── 02-start-member.sh
+├── 03-bootstrap-keys.sh
+├── 04-run-purchases.sh
+├── 05-run-lis-clearing.sh
+├── 06-stop-swam.sh
+└── swam-full-e2e.sh
+```
+
+### Responsabilité de chaque script
+
+#### `01-start-issuer.sh`
+
+- compiler si le JAR est absent ;
+- lancer `sg-swam-issuer` ;
+- utiliser l'interface `SWAM_NETWORK_1` ;
+- attendre le health check ;
+- écrire PID et log dans `runtime/swam`.
+
+#### `02-start-member.sh`
+
+- lancer `sg-swam-acquirer` ;
+- utiliser l'interface `SWAM_MEMBER_A` ;
+- conserver la liaison permanente avec le switch ;
+- attendre le health check ;
+- écrire PID et log dans `runtime/swam`.
+
+#### `03-bootstrap-keys.sh`
+
+- lire la clé de test depuis une variable ou une saisie masquée ;
+- ne jamais stocker la clé dans Git ;
+- injecter la KEK/ZMK côté issuer et membre ;
+- lancer sign-on et échange ZPK/ZAK ;
+- vérifier la concordance des KCV.
+
+#### `04-run-purchases.sh`
+
+- passer les achats membre vers issuer ;
+- passer les achats inverses sur la même liaison permanente ;
+- contrôler les réponses ISO et les écritures d'autorisation ;
+- produire un résumé succès/échec.
+
+#### `05-run-lis-clearing.sh`
+
+- lancer les EOD membre et switch ;
+- alimenter les tables de clearing ;
+- générer les deux LIS outgoing ;
+- intégrer chaque LIS du côté opposé ;
+- exécuter le rapprochement ;
+- créer un chargeback de chaque côté ;
+- générer et intégrer une représentation ;
+- vérifier l'équilibre comptable.
+
+#### `06-stop-swam.sh`
+
+- arrêter uniquement les processus démarrés par les scripts SWAM ;
+- préserver les autres services Java du poste.
+
+#### `swam-full-e2e.sh`
+
+- appeler les scripts précédents dans l'ordre ;
+- s'arrêter dès une erreur ;
+- nettoyer les processus qu'il a démarrés ;
+- afficher un bilan final unique.
+
+### Sources existantes à réutiliser
+
+Ne pas réécrire les règles métier depuis zéro. Réutiliser et découper :
+
+```text
+tests/swam/issuer/start-and-bootstrap.sh
+tests/swam/acquirer/start-and-bootstrap.sh
+deploiement/swam/swam-e2e.sh
+deploiement/swam/swam-lis-e2e.sh
+```
+
+### Critères de finalisation SWAM
+
+SWAM est considéré finalisé seulement si :
+
+- les scripts fonctionnent depuis une copie fraîche du dépôt ;
+- tous les chemins passent par les variables globales ;
+- aucun secret n'est committé ;
+- issuer et membre utilisent une liaison permanente unique ;
+- les achats passent dans les deux sens ;
+- les deux tables d'autorisation sont alimentées ;
+- les deux EOD réussissent ;
+- les LIS sortants sont générés et intégrés en croisé ;
+- chargebacks et représentation sont validés ;
+- la comptabilité est équilibrée ;
+- le scénario automatisé termine sans processus orphelin ;
+- les tests SID, LIS et frontend ne régressent pas.
+
+## 7. Variables globales
 
 Les valeurs communes sont définies dans :
 
@@ -149,7 +272,7 @@ export DB_PASSWORD="<mot-de-passe-local>"
 
 Ne jamais committer de mot de passe réel, de clé claire, de LMK, de ZMK ou de KEK.
 
-## 7. Compiler et lancer la plateforme
+## 8. Compiler et lancer la plateforme
 
 ### Compiler tous les modules
 
@@ -181,7 +304,7 @@ Les logs sont écrits dans :
 runtime/platform/logs/
 ```
 
-## 8. Lancer le frontend
+## 9. Lancer le frontend
 
 Dans un autre terminal Git Bash :
 
@@ -195,9 +318,9 @@ Puis ouvrir :
 http://localhost:4200
 ```
 
-## 9. Tests à lancer
+## 10. Tests à lancer
 
-### 9.1 Tests Maven complets
+### 10.1 Tests Maven complets
 
 ```bash
 bash deploiement/common/runtime/start-platform.sh build
@@ -217,7 +340,7 @@ Résultat attendu :
 BUILD SUCCESS
 ```
 
-### 9.2 E2E frontend Playwright
+### 10.2 E2E frontend Playwright
 
 ```bash
 export DB_PASSWORD="<mot-de-passe-postgresql>"
@@ -233,7 +356,7 @@ Résultat attendu :
 RESULTAT : E2E FRONTEND PASSED
 ```
 
-### 9.3 E2E SWAM LIS
+### 10.3 E2E SWAM LIS
 
 ```bash
 export SWAM_E2E_KEK_CLEAR="<cle-de-test-autorisee>"
@@ -248,13 +371,13 @@ RESULTAT : PASSED (36 controles)
 
 La clé ne doit jamais être inscrite dans un fichier versionné.
 
-### 9.4 E2E SWAM SID
+### 10.4 E2E SWAM SID
 
 ```bash
 bash deploiement/swam/swam-e2e.sh
 ```
 
-## 10. Contrôles avant un commit
+## 11. Contrôles avant un commit
 
 ```bash
 git status --short
@@ -284,14 +407,16 @@ git commit -m "<message précis>"
 git push origin codex/portail-rbac-maker-checker
 ```
 
-## 11. Première action recommandée pour la prochaine session
+## 12. Première action obligatoire pour la prochaine session
 
 1. vérifier `git status` et la branche ;
-2. lire la conception complète ;
-3. lancer le build global ;
-4. lancer l'E2E frontend ;
-5. implémenter la prochaine tranche verticale du Maker/Checker :
-   affectation Maker vers Checker, création d'une demande, soumission, validation,
-   rejet et interdiction d'auto-validation ;
-6. ajouter les tests backend et Playwright correspondants ;
-7. seulement ensuite poursuivre les SLA, délégations et notifications.
+2. récupérer la dernière version depuis GitHub ;
+3. lire les documents SWAM et les deux spécifications ;
+4. lancer le build global ;
+5. inventorier les scripts SWAM existants ;
+6. créer la chaîne numérotée dans `deploiement/swam` ;
+7. valider démarrage issuer, membre, clés et achats ;
+8. valider le clearing LIS complet ;
+9. relancer les tests SID, LIS et frontend ;
+10. committer et pousser la finalisation SWAM ;
+11. seulement ensuite reprendre le portail et les autres modules.
