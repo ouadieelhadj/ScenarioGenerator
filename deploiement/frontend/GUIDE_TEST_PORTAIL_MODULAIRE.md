@@ -2,6 +2,13 @@
 
 ## 1. Démarrage du frontend
 
+Pour démarrer tous les backends au préalable :
+
+```bash
+cd /d/MoneyCore/ScenarioGenerator
+bash deploiement/common/runtime/start-platform.sh start
+```
+
 Dans Git Bash :
 
 ```bash
@@ -17,11 +24,16 @@ http://localhost:4200
 
 Le backend orchestrateur doit être disponible sur `http://localhost:8080`.
 
-Compte local initial :
+`ROOT`, Java, Maven, Node et PostgreSQL sont configurés dans
+`deploiement/common/runtime/platform-env.sh` et peuvent être surchargés par des
+variables d'environnement.
 
-```text
-Utilisateur : admin
-Mot de passe : Admin123!
+Avant le test, exporter les secrets de l'environnement local :
+
+```bash
+export DB_PASSWORD="<mot-de-passe-postgresql>"
+export E2E_LOGIN="admin"
+export E2E_PASSWORD="<mot-de-passe-utilisateur>"
 ```
 
 ## 2. Test E2E navigateur automatisé

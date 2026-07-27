@@ -38,6 +38,33 @@ fichiers SQL autonomes dans leur propre répertoire.
 
 ## Runtime commun
 
+Toutes les variables globales sont centralisées dans :
+
+```text
+deploiement/common/runtime/platform-env.sh
+```
+
+Le lanceur calcule automatiquement `ROOT` depuis l'emplacement du dépôt.
+
+```bash
+bash deploiement/common/runtime/start-platform.sh start
+bash deploiement/common/runtime/start-platform.sh status
+bash deploiement/common/runtime/start-platform.sh stop
+```
+
+Pour surcharger les chemins sur un autre PC :
+
+```bash
+export ROOT=/f/ScenarioGenerator
+export JAVA_HOME_DIR=/f/MoneyCore/jdk-21.0.11
+export MAVEN_HOME=/f/MoneyCore/apache-maven-3.9.9
+export NODE_HOME=/f/MoneyCore/nodejs
+export POSTGRES_HOME=/f/MoneyCore/PostgreSQL/18
+bash deploiement/common/runtime/start-platform.sh start
+```
+
+Les anciens scripts Windows restent disponibles :
+
 ```bat
 deploiement\common\runtime\2_start-services.bat
 deploiement\common\runtime\3_scenario-e2e.bat
