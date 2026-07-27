@@ -11,8 +11,8 @@ validation complète de SWAM :
 ```text
 1. Récupérer la dernière version du dépôt
 2. Vérifier et compiler le projet
-3. Finaliser les scripts de démarrage SWAM Issuer et SWAM Membre
-4. Finaliser le bootstrap et l'échange des clés
+3. Lancer les scripts de démarrage SWAM Issuer et SWAM Membre
+4. Tester le bootstrap et l'échange des clés
 5. Passer et contrôler les achats SWAM
 6. Lancer les fins de journée et le clearing LIS bilatéral
 7. Valider le scénario SWAM complet et ses non-régressions
@@ -132,7 +132,6 @@ copie au responsable avant de modifier les règles métier LIS.
 
 ### Non terminé
 
-- chaîne officielle de scripts SWAM séparés, numérotés et portables ;
 - moteur Maker/Checker opérationnel complet ;
 - administration des profils multiples et des droits individuels ;
 - écrans d'administration de l'arborescence ;
@@ -147,10 +146,9 @@ copie au responsable avant de modifier les règles métier LIS.
 
 Une nouvelle session ne doit donc pas considérer que tout le portail est finalisé.
 
-## 6. Chaîne de scripts SWAM à finaliser en premier
+## 6. Chaîne de scripts SWAM à exécuter en premier
 
-La nouvelle session doit consolider les scripts existants dans
-`deploiement/swam` avec la structure cible suivante :
+Les scripts sont présents dans le dépôt :
 
 ```text
 deploiement/swam/
@@ -160,7 +158,47 @@ deploiement/swam/
 ├── 04-run-purchases.sh
 ├── 05-run-lis-clearing.sh
 ├── 06-stop-swam.sh
+├── lib-swam.sh
 └── swam-full-e2e.sh
+```
+
+### Processus de test détaillé
+
+Après récupération du dépôt :
+
+```bash
+cd /d/MoneyCore/ScenarioGenerator
+export DB_PASSWORD="<mot-de-passe-postgresql>"
+export SWAM_E2E_KEK_CLEAR="<cle-de-test-autorisee>"
+```
+
+Compiler les modules :
+
+```bash
+bash deploiement/common/runtime/start-platform.sh build
+```
+
+Lancer et tester chaque étape séparément :
+
+```bash
+bash deploiement/swam/01-start-issuer.sh
+bash deploiement/swam/02-start-member.sh
+bash deploiement/swam/03-bootstrap-keys.sh
+bash deploiement/swam/04-run-purchases.sh
+bash deploiement/swam/05-run-lis-clearing.sh
+bash deploiement/swam/06-stop-swam.sh
+```
+
+Ou lancer toute la chaîne :
+
+```bash
+bash deploiement/swam/swam-full-e2e.sh
+```
+
+Résultat global attendu :
+
+```text
+RESULTAT : SWAM FULL E2E PASSED
 ```
 
 ### Responsabilité de chaque script
@@ -219,9 +257,9 @@ deploiement/swam/
 - nettoyer les processus qu'il a démarrés ;
 - afficher un bilan final unique.
 
-### Sources existantes à réutiliser
+### Sources historiques conservées
 
-Ne pas réécrire les règles métier depuis zéro. Réutiliser et découper :
+Les scripts numérotés réutilisent les règles et endpoints validés par :
 
 ```text
 tests/swam/issuer/start-and-bootstrap.sh
@@ -413,10 +451,10 @@ git push origin codex/portail-rbac-maker-checker
 2. récupérer la dernière version depuis GitHub ;
 3. lire les documents SWAM et les deux spécifications ;
 4. lancer le build global ;
-5. inventorier les scripts SWAM existants ;
-6. créer la chaîne numérotée dans `deploiement/swam` ;
-7. valider démarrage issuer, membre, clés et achats ;
+5. exécuter les scripts SWAM numérotés un par un ;
+6. corriger toute erreur détectée sans contourner les contrôles ;
+7. exécuter `swam-full-e2e.sh` ;
 8. valider le clearing LIS complet ;
 9. relancer les tests SID, LIS et frontend ;
-10. committer et pousser la finalisation SWAM ;
+10. committer et pousser toute correction SWAM ;
 11. seulement ensuite reprendre le portail et les autres modules.

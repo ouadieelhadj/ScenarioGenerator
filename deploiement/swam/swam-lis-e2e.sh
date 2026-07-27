@@ -14,7 +14,7 @@ MAVEN_REPO="${MAVEN_REPO:-D:/MoneyCore/ScenarioGenerator/tmp/m2repo}"
 PSQL="${PSQL:-/d/MoneyCore/PostgreSQL/18/bin/psql.exe}"
 DB="${DB:-scenariogenerator}"
 DB_USER="${DB_USER:-postgres}"
-DB_PASSWORD="${DB_PASSWORD:-postgres123}"
+DB_PASSWORD="${DB_PASSWORD:-}"
 BUSINESS_DATE="${BUSINESS_DATE:-$(date +%F)}"
 MEMBER_CODE="${MEMBER_CODE:-000123}"
 SWITCH_CODE="${SWITCH_CODE:-000088}"
@@ -36,6 +36,7 @@ export SWAM_LIS_SWITCH_INCOMING="D:/MoneyCore/ScenarioGenerator/runtime/e2e/$E2E
 
 ok(){ echo "  [OK] $1"; PASS=$((PASS+1)); }
 die(){ echo "  [FAIL] $*" >&2; exit 1; }
+[[ -n "$DB_PASSWORD" ]] || die "DB_PASSWORD obligatoire"
 db(){ PGPASSWORD="$DB_PASSWORD" "$PSQL" -U "$DB_USER" -h localhost -d "$DB" -tAc "$1"; }
 post(){
   local url="$1"; shift
@@ -64,13 +65,18 @@ stop_port(){
   die "Port $port toujours occupe apres arret"
 }
 start_jar(){
-  local module="$1" log="$2" iface="${3:-}"; local jar
+  local module="$1" log="$2" iface="${3:-}"; local jar pid
   jar=$(find "$ROOT/$module/target" -maxdepth 1 -name '*.jar' ! -name '*.original' | head -1)
   [ -n "$jar" ] || die "JAR absent: $module"
   if [ -n "$iface" ]; then
     nohup "$JAVA" -jar "$jar" "--sg.interface=$iface" </dev/null >"$log" 2>&1 &
   else
     nohup "$JAVA" -jar "$jar" </dev/null >"$log" 2>&1 &
+  fi
+  pid=$!
+  if [ -n "${SWAM_PID_DIR:-}" ]; then
+    mkdir -p "$SWAM_PID_DIR"
+    echo "$pid" >"$SWAM_PID_DIR/$module.pid"
   fi
   disown 2>/dev/null || true
 }
