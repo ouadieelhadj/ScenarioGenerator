@@ -28,6 +28,12 @@ Ce message peut être transmis à une nouvelle session Codex ou à tout autre
 assistant, développeur ou intervenant chargé de reprendre le projet. Il ne suppose
 pas que la nouvelle session ait accès à ce PC ou à ses fichiers locaux.
 
+Pour le poste RECETTE, utiliser en priorité le message court et maintenu dans :
+
+```text
+MESSAGE_REPRISE_RECETTE.md
+```
+
 Copier uniquement le message suivant :
 
 ```text
