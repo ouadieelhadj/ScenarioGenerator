@@ -21,6 +21,9 @@
     "dmas": "DMAS payments",
     "admin": "Administration",
     "help": "Help",
+    "swamLisMember": "SWAM LIS Member",
+    "swamLisSwitch": "SWAM LIS Switch",
+    "core": "Home",
     "config": "Configuration"
   },
   "topbar": {
@@ -240,5 +243,16 @@
     "toggle": "Enable/Disable",
     "activate": "Enable",
     "deactivate": "Disable"
+  },
+  "clearing": {
+    "transactions": "Clearing transactions",
+    "files": "LIS files",
+    "reconciliation": "Reconciliation",
+    "chargebacks": "Chargebacks",
+    "eod": "End of day",
+    "accounting": "Accounting",
+    "foundationReady": "Dynamic foundation active",
+    "dynamicContext": "Shared screen loaded with module context",
+    "dynamicContextDetail": "Business lists and actions will be enabled with query APIs and fine-grained permissions."
   }
 }

@@ -4,14 +4,35 @@
       <i class="pi pi-bolt"></i>
       <span>ScenarioGenerator</span>
     </div>
-    <nav class="menu">
-      @for (item of menu(); track item.route) {
-        <a class="menu-item" [routerLink]="item.route" routerLinkActive="active">
-          <i [class]="item.icon"></i>
-          <span>{{ item.labelKey | translate }}</span>
-        </a>
-      }
-    </nav>
+    @if (modules().length) {
+      <nav class="module-menu" aria-label="Modules">
+        @for (module of modules(); track module.code) {
+          <button class="menu-item module-item"
+                  [class.active]="selectedModuleCode() === module.code"
+                  (click)="selectModule(module)">
+            <i [class]="module.icon || 'pi pi-box'"></i>
+            <span>{{ module.labelKey | translate }}</span>
+          </button>
+        }
+      </nav>
+      <nav class="menu screen-menu" aria-label="Écrans du module">
+        @for (item of dynamicScreens(); track item.id) {
+          <a class="menu-item" [routerLink]="item.route" routerLinkActive="active">
+            <i [class]="item.icon || 'pi pi-circle'"></i>
+            <span>{{ item.labelKey | translate }}</span>
+          </a>
+        }
+      </nav>
+    } @else {
+      <nav class="menu">
+        @for (item of menu(); track item.route) {
+          <a class="menu-item" [routerLink]="item.route" routerLinkActive="active">
+            <i [class]="item.icon"></i>
+            <span>{{ item.labelKey | translate }}</span>
+          </a>
+        }
+      </nav>
+    }
   </aside>
 
   <div class="main">
@@ -53,4 +74,3 @@
     </main>
   </div>
 </div>
-

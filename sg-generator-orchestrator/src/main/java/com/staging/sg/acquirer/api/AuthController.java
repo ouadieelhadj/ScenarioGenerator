@@ -12,6 +12,7 @@ import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,15 +29,18 @@ public class AuthController {
     private final PasswordEncoder passwordEncoder;
     private final JwtService      jwtService;
     private final RoleRepository  roleRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public AuthController(UserRepository userRepository,
                           RoleRepository roleRepository,
                           PasswordEncoder passwordEncoder,
-                          JwtService jwtService) {
+                          JwtService jwtService,
+                          JdbcTemplate jdbcTemplate) {
         this.userRepository  = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService      = jwtService;
         this.roleRepository  = roleRepository;
+        this.jdbcTemplate    = jdbcTemplate;
     }
 
     // POST /auth/login
@@ -61,13 +65,31 @@ public class AuthController {
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
-        List<String> permissions = roleRepository.findByCode(user.getRole())
-                .map(r -> r.getPermissions().stream().map(p -> p.getCode()).collect(Collectors.toList()))
-                .orElse(List.of());
+        List<String> permissions = resolvePermissions(user);
         String token = jwtService.generateToken(user.getLogin(), user.getRole(), permissions);
         log.info("[AUTH] Login success — login={} role={}", user.getLogin(), user.getRole());
 
         return ResponseEntity.ok(new LoginResponse(
                 token, user.getLogin(), user.getRole(), 86400000L));
+    }
+
+    private List<String> resolvePermissions(User user) {
+        try {
+            List<String> permissions = jdbcTemplate.queryForList("""
+                    SELECT DISTINCT p.code
+                      FROM user_profiles up
+                      JOIN role_permissions rp ON rp.role_id=up.role_id
+                      JOIN permissions p ON p.id=rp.permission_id
+                     WHERE up.user_id=?
+                     ORDER BY p.code
+                    """, String.class, user.getId());
+            if (!permissions.isEmpty()) return permissions;
+        } catch (org.springframework.dao.DataAccessException ignored) {
+            // Compatibilité avant application de la migration 18.
+        }
+        return roleRepository.findByCode(user.getRole())
+                .map(r -> r.getPermissions().stream().map(p -> p.getCode())
+                        .collect(Collectors.toList()))
+                .orElse(List.of());
     }
 }

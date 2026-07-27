@@ -43,6 +43,11 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dmas/dmas.component').then(m => m.DmasComponent),
       },
       {
+        path: 'modules/:moduleCode/:screen',
+        loadComponent: () => import('./features/clearing/clearing-workspace.component')
+          .then(m => m.ClearingWorkspaceComponent),
+      },
+      {
         path: 'admin',
         canActivate: [permissionGuard],
         data: { permissions: [Permission.USER_MANAGE, Permission.ROLE_MANAGE, Permission.CATALOG_MANAGE] },
@@ -70,4 +75,3 @@ export const routes: Routes = [
   },
   { path: '**', redirectTo: '' },
 ];
-

@@ -61,6 +61,7 @@ export function baseUrl(service: ServiceKey): string {
 /** Chemins des endpoints, groupes par domaine. */
 export const ENDPOINTS = {
   auth: { login: '/auth/login' },
+  me: { navigation: '/api/me/navigation' },
   campaigns: {
     base: '/api/campaigns',
     byId: (id: number) => `/api/campaigns/${id}`,

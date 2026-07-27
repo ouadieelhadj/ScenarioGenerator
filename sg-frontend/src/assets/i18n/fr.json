@@ -21,7 +21,10 @@
     "dmas": "Monétique DMAS",
     "admin": "Administration",
     "help": "Aide",
-    "config": "Configuration"
+    "config": "Configuration",
+    "swamLisMember": "SWAM LIS Membre",
+    "swamLisSwitch": "SWAM LIS Switch",
+    "core": "Accueil"
   },
   "topbar": {
     "theme": "Thème",
@@ -240,5 +243,16 @@
     "toggle": "Activer/Désactiver",
     "activate": "Activer",
     "deactivate": "Désactiver"
+  }
+  ,"clearing": {
+    "transactions": "Transactions de clearing",
+    "files": "Fichiers LIS",
+    "reconciliation": "Rapprochement",
+    "chargebacks": "Chargebacks",
+    "eod": "Fin de journée",
+    "accounting": "Comptabilisation",
+    "foundationReady": "Socle dynamique actif",
+    "dynamicContext": "Écran commun chargé avec le contexte du module",
+    "dynamicContextDetail": "Les listes et actions métier seront activées avec les API de consultation et les permissions fines."
   }
 }
