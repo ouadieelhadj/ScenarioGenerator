@@ -6,7 +6,7 @@ Dans Git Bash :
 
 ```bash
 cd /d/MoneyCore/ScenarioGenerator
-bash deploiement/start-frontend.sh
+bash deploiement/frontend/start-frontend.sh
 ```
 
 Ouvrir ensuite :
@@ -30,7 +30,7 @@ Dans Git Bash :
 
 ```bash
 cd /d/MoneyCore/ScenarioGenerator
-bash deploiement/frontend-e2e.sh
+bash deploiement/frontend/frontend-e2e.sh
 ```
 
 Le script :
