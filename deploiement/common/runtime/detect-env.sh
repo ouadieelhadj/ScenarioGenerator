@@ -59,15 +59,19 @@ find_with_where() {
 }
 
 find_on_drives() {
-  local drive name candidate
-  for drive in "${DETECT_DRIVE_ROOTS[@]}"; do
-    for name in "$@"; do
-      candidate="$(find "$drive" -maxdepth "$DETECT_MAX_DEPTH" -type f \
-        -iname "$name" -print -quit 2>/dev/null || true)"
-      [[ -n "$candidate" ]] && {
-        normalize_path "$candidate"
-        return 0
-      }
+  local drive name candidate depth
+  local -a depths=(4 6 "$DETECT_MAX_DEPTH")
+  for depth in "${depths[@]}"; do
+    (( depth <= DETECT_MAX_DEPTH )) || continue
+    for drive in "${DETECT_DRIVE_ROOTS[@]}"; do
+      for name in "$@"; do
+        candidate="$(find "$drive" -maxdepth "$depth" -type f \
+          -iname "$name" -print -quit 2>/dev/null || true)"
+        [[ -n "$candidate" ]] && {
+          normalize_path "$candidate"
+          return 0
+        }
+      done
     done
   done
   return 0
@@ -103,15 +107,6 @@ discover_tool() {
   printf '%s\n' "$candidate"
 }
 
-PSQL_FOUND="$(discover_tool PostgreSQL "${POSTGRES_HOME:-}" \
-  'bin/psql.exe bin/psql' psql.exe psql)"
-JAVA_FOUND="$(discover_tool Java "${JAVA_HOME_DIR:-${JAVA_HOME:-}}" \
-  'bin/java.exe bin/java' java.exe java)"
-MAVEN_FOUND="$(discover_tool Maven "${MAVEN_HOME:-}" \
-  'bin/mvn.cmd bin/mvn' mvn.cmd mvn)"
-NODE_FOUND="$(discover_tool Node.js "${NODE_HOME:-}" \
-  'npm.cmd bin/npm.cmd bin/npm npm' npm.cmd npm)"
-
 home_from_executable() {
   local executable="$1" parent
   [[ -n "$executable" ]] || { printf '\n'; return 0; }
@@ -120,12 +115,115 @@ home_from_executable() {
   printf '%s\n' "$parent"
 }
 
+valid_jdk_home() {
+  local home="$1" lowered java_bin version_line major
+  [[ -n "$home" ]] || return 1
+  home="$(normalize_path "$home")"
+  lowered="${home,,}"
+  if [[ "$lowered" =~ /jbr(/|$)|idea-|intellij|/plugins/ ]]; then
+    return 1
+  fi
+  [[ -f "$home/bin/java.exe" || -f "$home/bin/java" ]] || return 1
+  [[ -f "$home/bin/javac.exe" || -f "$home/bin/javac" ]] || return 1
+  java_bin="$home/bin/java.exe"
+  [[ -f "$java_bin" ]] || java_bin="$home/bin/java"
+  version_line="$("$java_bin" -version 2>&1 | head -1 || true)"
+  major="$(sed -nE 's/.*version "([0-9]+).*/\1/p' <<<"$version_line")"
+  [[ "$major" =~ ^[0-9]+$ && "$major" -ge 21 ]]
+}
+
+discover_jdk() {
+  local configured="${JAVA_HOME_DIR:-${JAVA_HOME:-}}" candidate home drive depth
+  if valid_jdk_home "$configured"; then
+    normalize_path "$configured"
+    return 0
+  fi
+
+  candidate="$(find_on_path java.exe java)"
+  home="$(home_from_executable "$candidate")"
+  if valid_jdk_home "$home"; then
+    printf '%s\n' "$home"
+    return 0
+  fi
+
+  if command -v where.exe >/dev/null 2>&1; then
+    while IFS= read -r candidate; do
+      candidate="$(normalize_path "$(tr -d '\r' <<<"$candidate")")"
+      home="$(home_from_executable "$candidate")"
+      if valid_jdk_home "$home"; then
+        printf '%s\n' "$home"
+        return 0
+      fi
+    done < <(where.exe java.exe 2>/dev/null || true)
+  fi
+
+  echo "[INFO] Recherche d'un JDK complet (java + javac)..." >&2
+  for depth in 4 6 "$DETECT_MAX_DEPTH"; do
+    (( depth <= DETECT_MAX_DEPTH )) || continue
+    for drive in "${DETECT_DRIVE_ROOTS[@]}"; do
+      while IFS= read -r candidate; do
+        home="$(dirname "$(dirname "$(normalize_path "$candidate")")")"
+        if valid_jdk_home "$home"; then
+          printf '%s\n' "$home"
+          return 0
+        fi
+      done < <(find "$drive" -maxdepth "$depth" -type f \
+        \( -iname javac.exe -o -iname javac \) -print 2>/dev/null || true)
+    done
+  done
+  return 0
+}
+
+valid_node_home() {
+  local home="$1"
+  [[ -n "$home" ]] || return 1
+  [[ -f "$home/node.exe" || -f "$home/bin/node.exe" ||
+     -f "$home/bin/node" ]] || return 1
+  [[ -f "$home/npm.cmd" || -f "$home/bin/npm.cmd" ||
+     -f "$home/bin/npm" ]] || return 1
+}
+
+discover_node_home() {
+  local configured="${NODE_HOME:-}" candidate home
+  if valid_node_home "$configured"; then
+    normalize_path "$configured"
+    return 0
+  fi
+  candidate="$(find_on_path node.exe node)"
+  [[ -n "$candidate" ]] || candidate="$(find_with_where node.exe node)"
+  home="$(home_from_executable "$candidate")"
+  if valid_node_home "$home"; then
+    printf '%s\n' "$home"
+    return 0
+  fi
+  echo "[INFO] Recherche de la racine Node.js (node + npm)..." >&2
+  candidate="$(find_on_drives node.exe node)"
+  home="$(home_from_executable "$candidate")"
+  valid_node_home "$home" && printf '%s\n' "$home"
+  return 0
+}
+
+PSQL_FOUND="$(discover_tool PostgreSQL "${POSTGRES_HOME:-}" \
+  'bin/psql.exe bin/psql' psql.exe psql)"
+JAVA_HOME_DETECTED="$(discover_jdk)"
+JAVA_FOUND=""
+[[ -z "$JAVA_HOME_DETECTED" ]] ||
+  JAVA_FOUND="$(find_from_home "$JAVA_HOME_DETECTED" bin/java.exe bin/java)"
+MAVEN_FOUND="$(discover_tool Maven "${MAVEN_HOME:-}" \
+  'bin/mvn.cmd bin/mvn' mvn.cmd mvn)"
+NODE_HOME_DETECTED="$(discover_node_home)"
+
 POSTGRES_HOME_DETECTED="$(home_from_executable "$PSQL_FOUND")"
-JAVA_HOME_DETECTED="$(home_from_executable "$JAVA_FOUND")"
 MAVEN_HOME_DETECTED="$(home_from_executable "$MAVEN_FOUND")"
-NODE_HOME_DETECTED="$(home_from_executable "$NODE_FOUND")"
 JAVA_VERSION="non détectée"
 [[ -z "$JAVA_FOUND" ]] || JAVA_VERSION="$("$JAVA_FOUND" -version 2>&1 | head -1)"
+JAVA_MAJOR="$(sed -nE 's/.*version "([0-9]+).*/\1/p' <<<"$JAVA_VERSION")"
+JAVA_SUPPORT="JDK introuvable"
+if [[ "$JAVA_MAJOR" == "21" ]]; then
+  JAVA_SUPPORT="JDK 21 de référence"
+elif [[ "$JAVA_MAJOR" =~ ^[0-9]+$ && "$JAVA_MAJOR" -gt 21 ]]; then
+  JAVA_SUPPORT="JDK récent accepté sous réserve de mvn verify"
+fi
 
 env_line() {
   local key="$1" value="$2" escaped
@@ -150,6 +248,7 @@ printf '  %-17s %s\n' ROOT "$ROOT_DETECTED"
 printf '  %-17s %s\n' POSTGRES_HOME "${POSTGRES_HOME_DETECTED:-NON TROUVÉ}"
 printf '  %-17s %s\n' JAVA_HOME_DIR "${JAVA_HOME_DETECTED:-NON TROUVÉ}"
 printf '  %-17s %s\n' JAVA_VERSION "$JAVA_VERSION"
+printf '  %-17s %s\n' JAVA_SUPPORT "$JAVA_SUPPORT"
 printf '  %-17s %s\n' MAVEN_HOME "${MAVEN_HOME_DETECTED:-NON TROUVÉ}"
 printf '  %-17s %s\n' NODE_HOME "${NODE_HOME_DETECTED:-NON TROUVÉ}"
 echo

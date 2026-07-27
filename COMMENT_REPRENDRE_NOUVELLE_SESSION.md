@@ -618,6 +618,33 @@ Ce mode est en lecture seule. Il recherche sur `C:`, `D:` et `F:` :
 
 Il n'affiche et ne recherche aucun mot de passe ou clé.
 
+Pour Java, un candidat n'est accepté que s'il contient à la fois `java` et
+`javac`. Les chemins JBR/JRE d'IntelliJ (`jbr`, `idea-*`, `IntelliJ`,
+`plugins`) sont rejetés. Une valeur `JAVA_HOME_DIR` déjà exportée reste
+prioritaire si elle désigne un vrai JDK conforme.
+
+Le projet compile avec `source=21` et `target=21` :
+
+- JDK 21 est la version de référence supportée sur LAB/DEV et RECETTE ;
+- un JDK supérieur, notamment JDK 26, est accepté provisoirement en RECETTE
+  seulement si le build Maven complet réussit ;
+- un JDK inférieur à 21 ou un simple JRE/JBR est refusé.
+
+Pour Node.js, le détecteur valide la racine contenant `node.exe` et `npm`, et ne
+retient pas un sous-répertoire de shims Corepack.
+
+La recherche générique commence par le lecteur du dépôt et progresse par
+profondeurs. Sur un poste volumineux, la limiter explicitement :
+
+```bash
+export DETECT_DRIVES="/f /d"
+export DETECT_MAX_DEPTH=7
+bash deploiement/common/runtime/detect-env.sh
+```
+
+Ces variables contrôlent uniquement la détection et ne sont pas des chemins
+applicatifs.
+
 ### 9.2 Créer la configuration locale
 
 Après vérification des chemins proposés :

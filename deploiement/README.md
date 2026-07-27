@@ -85,6 +85,20 @@ Détecter les outils et chemins du poste sans rien écrire :
 bash deploiement/common/runtime/detect-env.sh
 ```
 
+Le détecteur exige un JDK complet contenant `java` et `javac`. Il rejette les
+JBR/JRE embarqués dans IntelliJ et les chemins d'IDE. Le projet cible Java 21.
+Un JDK plus récent peut être essayé en RECETTE, mais doit être validé par un
+`mvn verify` complet.
+
+La recherche utilise d'abord les variables existantes, le `PATH` et `where.exe`,
+puis les lecteurs disponibles. Pour limiter un balayage :
+
+```bash
+export DETECT_DRIVES="/f /d"
+export DETECT_MAX_DEPTH=7
+bash deploiement/common/runtime/detect-env.sh
+```
+
 Générer la configuration locale ignorée par Git :
 
 ```bash
