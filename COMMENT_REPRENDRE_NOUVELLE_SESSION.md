@@ -57,6 +57,10 @@ périmètre. Reprends ensuite la première phase non terminée indiquée dans le
 document.
 ```
 
+Si la session travaille sur un autre poste, elle doit également déterminer si
+la base de référence a déjà été transférée. La procédure complète est décrite
+dans `deploiement/README.md` et résumée à la section 3.3 ci-dessous.
+
 ## 2. Branche de travail
 
 La branche du portail est :
@@ -99,6 +103,37 @@ git switch --track origin/codex/portail-rbac-maker-checker
 Si le dépôt est copié ailleurs, les scripts calculent automatiquement `ROOT`
 depuis leur propre emplacement.
 
+### 3.3 Remplacer la base d'un autre poste par la base de référence
+
+Cette opération détruit le contenu actif de la base cible. Le script fourni crée
+d'abord une sauvegarde de sécurité et exige une confirmation explicite. Ne jamais
+committer le fichier `.dump`, qui peut contenir des données sensibles.
+
+Sur le PC possédant la base de référence :
+
+```bash
+cd /d/MoneyCore/ScenarioGenerator
+export DB_PASSWORD="<mot-de-passe-postgresql-source>"
+bash deploiement/common/database/export-reference-db.sh
+```
+
+Transférer de manière sécurisée le fichier créé sous
+`runtime/database-transfer` vers le nouveau poste.
+
+Sur le nouveau poste :
+
+```bash
+cd /d/MoneyCore/ScenarioGenerator
+bash deploiement/common/runtime/start-platform.sh stop
+export DB_PASSWORD="<mot-de-passe-postgresql-cible>"
+bash deploiement/common/database/replace-db-from-dump.sh \
+  "/chemin/vers/scenariogenerator-reference-AAAAMMJJ-HHMMSS.dump"
+```
+
+Le script sauvegarde la base cible sous `runtime/database-backups`, ferme ses
+connexions, la recrée puis restaure la base de référence. Après restauration,
+reprendre à la compilation et aux tests SWAM décrits dans la section 6.
+
 ## 4. Documents à lire dans cet ordre
 
 ### Obligatoires
@@ -107,22 +142,24 @@ depuis leur propre emplacement.
 2. `deploiement/README.md`
 3. `deploiement/common/runtime/platform-env.sh`
 4. `deploiement/common/runtime/start-platform.sh`
-5. `deploiement/swam/README.md`
-6. `deploiement/swam/swam-e2e.sh`
-7. `deploiement/swam/swam-lis-e2e.sh`
-8. `tests/swam/issuer/start-and-bootstrap.sh`
-9. `tests/swam/acquirer/start-and-bootstrap.sh`
-10. `conceptions/swam/clearing/CONCEPTION_LIS_AVANT_IMPLEMENTATION.md`
+5. `deploiement/common/database/export-reference-db.sh`
+6. `deploiement/common/database/replace-db-from-dump.sh`
+7. `deploiement/swam/README.md`
+8. `deploiement/swam/swam-e2e.sh`
+9. `deploiement/swam/swam-lis-e2e.sh`
+10. `tests/swam/issuer/start-and-bootstrap.sh`
+11. `tests/swam/acquirer/start-and-bootstrap.sh`
+12. `conceptions/swam/clearing/CONCEPTION_LIS_AVANT_IMPLEMENTATION.md`
 
 ### À lire après la finalisation SWAM
 
-11. `conceptions/frontend/CONCEPTION_PORTAIL_MODULAIRE_RBAC_MAKER_CHECKER.md`
-12. `conceptions/frontend/GUIDE_TEST_PORTAIL_MODULAIRE.md`
+13. `conceptions/frontend/CONCEPTION_PORTAIL_MODULAIRE_RBAC_MAKER_CHECKER.md`
+14. `conceptions/frontend/GUIDE_TEST_PORTAIL_MODULAIRE.md`
 
 ### Spécifications de référence
 
-13. `documents/specifications/swam/Description_Interface_Switch-SID_V3-20_05012024.pdf`
-14. `documents/specifications/swam/Local Interchange Specifications - LIS4 14-CMI.pdf`
+15. `documents/specifications/swam/Description_Interface_Switch-SID_V3-20_05012024.pdf`
+16. `documents/specifications/swam/Local Interchange Specifications - LIS4 14-CMI.pdf`
 
 Les spécifications PDF peuvent être absentes d'un clone Git si elles sont
 volumineuses ou volontairement conservées localement. Dans ce cas, demander leur

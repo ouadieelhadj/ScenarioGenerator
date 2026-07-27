@@ -27,6 +27,39 @@ Installation complète depuis Git Bash :
 bash deploiement/common/database/install-full-db.sh
 ```
 
+### Transférer la base de référence vers un autre poste
+
+Le fichier de sauvegarde contient potentiellement des données sensibles. Il ne
+doit jamais être ajouté à Git. Le transférer par un canal sécurisé.
+
+Sur le poste qui possède la base de référence :
+
+```bash
+export DB_PASSWORD="<mot-de-passe-postgresql-source>"
+bash deploiement/common/database/export-reference-db.sh
+```
+
+Le script crée un fichier `.dump` sous `runtime/database-transfer`. Copier ce
+fichier sur le poste cible.
+
+Sur le poste cible, après avoir arrêté les services applicatifs :
+
+```bash
+export DB_PASSWORD="<mot-de-passe-postgresql-cible>"
+bash deploiement/common/database/replace-db-from-dump.sh \
+  "/chemin/vers/scenariogenerator-reference-AAAAMMJJ-HHMMSS.dump"
+```
+
+Avant toute suppression, le script :
+
+1. demande de saisir exactement `REMPLACER scenariogenerator` ;
+2. sauvegarde la base cible dans `runtime/database-backups` ;
+3. ferme ses connexions, la recrée et restaure le dump ;
+4. vérifie que les tables ont été restaurées.
+
+Les variables `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `POSTGRES_HOME`,
+`DB_TRANSFER_DIR` et `DB_BACKUP_DIR` permettent d'adapter la procédure.
+
 Création autonome :
 
 ```bash
