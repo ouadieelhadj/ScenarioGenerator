@@ -27,24 +27,29 @@ Installation complète depuis Git Bash :
 bash deploiement/common/database/install-full-db.sh
 ```
 
-### Installer la base de test versionnée en RECETTE
+### Promouvoir une base de test de LAB/DEV vers RECETTE
 
-Le dépôt contient une photographie de la base LAB/DEV composée exclusivement de
-données et clés de test autorisées :
+Le fichier de sauvegarde contient potentiellement des données sensibles. Il ne
+doit jamais être ajouté à Git. Avant l'export, vérifier qu'il contient uniquement
+des données de test autorisées et assainies, puis le transférer par un canal
+sécurisé.
 
-```text
-deploiement/common/database/scenariogenerator-recette-test.dump
+Sur le poste LAB/DEV qui possède la base de référence :
+
+```bash
+export DB_PASSWORD="<mot-de-passe-postgresql-source>"
+bash deploiement/common/database/export-reference-db.sh
 ```
 
-Elle est réservée au LAB/DEV et à la RECETTE. Elle ne doit jamais être restaurée
-en production ni alimentée avec des données ou clés réelles.
+Le script crée un fichier `.dump` sous `runtime/database-transfer`. Copier ce
+fichier sur le poste cible.
 
-Sur le poste de RECETTE, après le `git pull` et l'arrêt des services :
+Sur le poste de RECETTE, après avoir arrêté les services applicatifs :
 
 ```bash
 export DB_PASSWORD="<mot-de-passe-postgresql-cible>"
 bash deploiement/common/database/replace-db-from-dump.sh \
-  "deploiement/common/database/scenariogenerator-recette-test.dump"
+  "/chemin/vers/scenariogenerator-reference-AAAAMMJJ-HHMMSS.dump"
 ```
 
 Avant toute suppression, le script :
@@ -56,10 +61,6 @@ Avant toute suppression, le script :
 
 Les variables `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `POSTGRES_HOME`,
 `DB_TRANSFER_DIR` et `DB_BACKUP_DIR` permettent d'adapter la procédure.
-
-Pour renouveler la photographie depuis LAB/DEV, utiliser
-`export-reference-db.sh`, vérifier explicitement que toutes les données sont de
-test, puis remplacer le dump versionné dans un commit dédié.
 
 Création autonome :
 
