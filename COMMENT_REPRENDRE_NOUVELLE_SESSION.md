@@ -71,9 +71,9 @@ périmètre. Reprends ensuite la première phase non terminée indiquée dans le
 document.
 ```
 
-Si la session travaille sur un autre poste, elle doit également déterminer si
-la base de référence a déjà été transférée. La procédure complète est décrite
-dans `deploiement/README.md` et résumée à la section 4.3 ci-dessous.
+Si la session travaille sur le poste de RECETTE, la base de test est incluse
+dans le dépôt. Sa procédure de restauration est décrite dans
+`deploiement/README.md` et résumée à la section 4.3 ci-dessous.
 
 ## 2. Choisir le bon mode avant toute configuration
 
@@ -106,8 +106,8 @@ C'est le mode obligatoire pour la reprise actuelle sur le poste de recette :
 - les deux services et les modules LIS tournent sur le même poste ;
 - le code provient exclusivement des commits poussés depuis LAB/DEV ;
 - la configuration de référence non sensible provient du dépôt ;
-- la base de recette est initialisée par un dump de test contrôlé et assaini ;
-- les clés utilisées sont exclusivement des clés de recette injectées hors Git ;
+- la base de recette est initialisée par le dump de test versionné ;
+- les clés incluses sont exclusivement des clés de test autorisées ;
 - aucun VPN, certificat ou accès à un switch externe n'est nécessaire.
 
 Dans ce mode, il ne faut pas demander au responsable d'un switch distant son IP,
@@ -123,7 +123,7 @@ Pour chaque livraison :
 3. communiquer à la recette la branche et le hash du commit attendu ;
 4. sur RECETTE, vérifier que l'arbre Git est propre puis faire
    `git pull --ff-only` ;
-5. transférer un dump uniquement si le schéma ou les données de référence
+5. restaurer le dump de test versionné si le schéma ou les données de référence
    l'exigent ;
 6. sauvegarder la base de recette avant toute restauration ;
 7. injecter les secrets propres à la recette par variables ou canal sécurisé ;
@@ -190,20 +190,18 @@ depuis leur propre emplacement.
 ### 4.3 Initialiser ou remplacer la base de RECETTE
 
 Cette opération détruit le contenu actif de la base de recette. Le script fourni
-crée d'abord une sauvegarde de sécurité et exige une confirmation explicite. Le
-dump source doit contenir uniquement des données de test autorisées et assainies.
-Ne jamais committer le fichier `.dump`, qui peut contenir des données sensibles.
+crée d'abord une sauvegarde de sécurité et exige une confirmation explicite.
 
-Sur LAB/DEV, après validation du contenu de test à promouvoir :
+La photographie LAB/DEV composée exclusivement de données et clés de test
+autorisées est disponible après le `git pull` :
 
-```bash
-cd /d/MoneyCore/ScenarioGenerator
-export DB_PASSWORD="<mot-de-passe-postgresql-source>"
-bash deploiement/common/database/export-reference-db.sh
+```text
+deploiement/common/database/scenariogenerator-recette-test.dump
 ```
 
-Transférer de manière sécurisée le fichier créé sous
-`runtime/database-transfer` vers le nouveau poste.
+Ce dump est strictement réservé au LAB/DEV et à la RECETTE. Il ne doit jamais
+être restauré en production ni être remplacé par une base contenant des données
+ou clés réelles.
 
 Sur RECETTE :
 
@@ -212,7 +210,7 @@ cd /d/MoneyCore/ScenarioGenerator
 bash deploiement/common/runtime/start-platform.sh stop
 export DB_PASSWORD="<mot-de-passe-postgresql-cible>"
 bash deploiement/common/database/replace-db-from-dump.sh \
-  "/chemin/vers/scenariogenerator-reference-AAAAMMJJ-HHMMSS.dump"
+  "deploiement/common/database/scenariogenerator-recette-test.dump"
 ```
 
 Le script sauvegarde la base de recette sous `runtime/database-backups`, ferme
