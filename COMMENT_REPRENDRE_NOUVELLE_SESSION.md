@@ -22,17 +22,39 @@ validation complète de SWAM :
 L'objectif immédiat n'est donc pas de développer DMAS, Mastercard SMS ou un autre
 réseau. Il faut d'abord disposer d'une chaîne SWAM reproductible sur un nouveau PC.
 
-## 1. Message à donner à la nouvelle session
+## 1. Message de reprise à donner à toute nouvelle session
 
-Copier ce message dans la nouvelle tâche :
+Ce message peut être transmis à une nouvelle session Codex ou à tout autre
+assistant, développeur ou intervenant chargé de reprendre le projet. Il ne suppose
+pas que la nouvelle session ait accès à ce PC ou à ses fichiers locaux.
+
+Copier uniquement le message suivant :
 
 ```text
-Travaille dans le dépôt ScenarioGenerator.
-Commence par lire intégralement COMMENT_REPRENDRE_NOUVELLE_SESSION.md,
-puis les documents qu'il référence, dans l'ordre indiqué.
-Vérifie la branche et l'état Git avant toute modification.
-Ne committe jamais les fichiers locaux préexistants hors périmètre.
-Reprends ensuite la première phase non terminée du plan.
+Reprends le projet ScenarioGenerator.
+
+Tu peux ne pas avoir accès au PC ou au répertoire local utilisé par la session
+précédente. Commence donc par récupérer le dépôt depuis GitHub et par te placer
+sur la branche :
+codex/portail-rbac-maker-checker
+
+Dépôt :
+https://github.com/ouadieelhadj/ScenarioGenerator.git
+
+Après le clone ou la mise à jour du dépôt, récupère et lis intégralement le
+fichier suivant avant toute analyse, modification ou exécution :
+COMMENT_REPRENDRE_NOUVELLE_SESSION.md
+
+Ce fichier constitue la source de reprise. Suis les documents, les scripts et
+les étapes qu'il référence dans l'ordre indiqué. La priorité est de valider la
+chaîne SWAM complète : démarrage Issuer et Membre, bootstrap et échange des
+clés, achats dans les deux sens sur la liaison permanente, EOD et clearing LIS
+bilatéral.
+
+Vérifie toujours la branche et l'état Git avant toute modification. Ne supprime
+pas, ne remplace pas et ne committe pas les fichiers locaux préexistants hors
+périmètre. Reprends ensuite la première phase non terminée indiquée dans le
+document.
 ```
 
 ## 2. Branche de travail
