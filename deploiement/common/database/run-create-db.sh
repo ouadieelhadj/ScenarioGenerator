@@ -13,7 +13,7 @@ done
 
 # Recherche create-db.sql dans le repo
 SQL="$(dirname "$0")/create-db.sql"
-[ ! -f "$SQL" ] && SQL="/d/MoneyCore/ScenarioGenerator/deploiement/create-db.sql"
+[ ! -f "$SQL" ] && SQL="/d/MoneyCore/ScenarioGenerator/deploiement/common/database/create-db.sql"
 [ ! -f "$SQL" ] && { echo "create-db.sql introuvable"; exit 1; }
 
 echo "psql : $PSQL"

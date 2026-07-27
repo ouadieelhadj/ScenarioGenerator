@@ -1,104 +1,92 @@
-# Déploiement — Initialisation de la base `generatorscenario`
+# Déploiement ScenarioGenerator
 
-Procédure d'initialisation complète de la plateforme ScenarioGenerator sur une base PostgreSQL neuve, suivie du démarrage des services et d'un test de bout en bout.
+Les ressources sont organisées par module. Les scripts utilisés par plusieurs
+modules sont placés dans `common`.
 
-## Principe
-
-La base est créée **entièrement par script SQL** (structure extraite du modèle Hibernate), puis les services démarrent en `ddl-auto=validate` (ils valident le schéma sans le modifier). Cette approche est reproductible et évite les conflits liés à la création de schéma par plusieurs services.
-
-## Prérequis
-
-- PostgreSQL 18 installé (`D:\MoneyCore\PostgreSQL\18\bin`)
-- JDK 21 (`D:\MoneyCore\jdk-21.0.11`)
-- Les 3 fat JAR compilés dans `D:\MoneyCore\ScenarioGenerator\<module>\target\`
-  - `sg-dmas-acquirer-1.0.0-SNAPSHOT.jar`
-  - `sg-dmas-issuer-1.0.0-SNAPSHOT.jar`
-  - `sg-generator-orchestrator-1.0.0-SNAPSHOT.jar`
-- Superutilisateur PostgreSQL `postgres` / `postgres123`
-
-Pour compiler les JAR si nécessaire :
-```
-mvn clean package -DskipTests -pl sg-common,sg-dmas-issuer,sg-dmas-acquirer,sg-generator-orchestrator -am
+```text
+deploiement/
+├── common/
+│   ├── database/   # création, migrations et données communes
+│   └── runtime/    # démarrage et E2E transverses
+├── frontend/       # Angular, guide et E2E navigateur
+├── swam/           # migrations et E2E SWAM SID/LIS
+└── README.md
 ```
 
-## Fichiers
+## Base commune
 
-| Fichier | Rôle |
-|---------|------|
-| `structure_tables.sql` | 35 tables + contraintes FK + répartition de la propriété + droits croisés |
-| `donnees_reference.sql` | Données de référence (rôles, permissions, utilisateurs, cartes, clés, catalogues) |
-| `1_create-data_base.bat` | Crée la base, les users, exécute les 2 scripts SQL |
-| `2_start-services.bat` | Démarre les 3 services en `validate` |
-| `3_scenario-e2e.bat` | Test de bout en bout du flux monétique |
+Création Windows :
 
-## Procédure
-
-Lancer les 3 scripts dans l'ordre, depuis le dossier `deploiement`.
-
-### 1. Créer la base
-
-```
-1_create-data_base.bat structure_tables.sql donnees_reference.sql
+```bat
+deploiement\common\database\1_create-data_base.bat
 ```
 
-Ce script :
-- crée les 3 users applicatifs s'ils n'existent pas (`scenario_user`, `dmas_acquirer_user`, `dmas_issuer_user`)
-- supprime puis recrée la base `generatorscenario`
-- exécute `structure_tables.sql` (35 tables + propriété + droits)
-- exécute `donnees_reference.sql` (données de référence)
-- affiche un contrôle final (nombre de tables, users, répartition des propriétaires)
+Installation complète depuis Git Bash :
 
-Résultat attendu : 35 tables, users=3, roles=3, dmas_cards=7, et la répartition de propriété : `scenario_user`=29, `dmas_acquirer_user`=2, `dmas_issuer_user`=4.
-
-### 2. Démarrer les services
-
-```
-2_start-services.bat
+```bash
+bash deploiement/common/database/install-full-db.sh
 ```
 
-Démarre les 3 services en arrière-plan (logs dans `%TEMP%\sg_logs\`) et attend qu'ils répondent.
+Création autonome :
 
-Résultat attendu : `Services UP : acquereur=403 issuer=403 orchestrateur=200` (403 = service actif et sécurisé, 200 = ouvert).
-
-### 3. Tester la plateforme
-
-```
-3_scenario-e2e.bat
+```bash
+bash deploiement/common/database/run-create-db.sh
 ```
 
-Déroule le scénario complet : login → bootstrap KEK → sign-on issuer → key exchange PEK → achat unitaire → création de campagne → exécution TPS → suivi jusqu'à COMPLETED.
+Les scripts `build-create-db.sh` et `generate-standalone-sql.sh` régénèrent les
+fichiers SQL autonomes dans leur propre répertoire.
 
-Résultat attendu : `COMPLETED / PASSED`, transactions approuvées, tous les critères SLA respectés.
+## Runtime commun
 
-## Modèle de propriété des tables
+```bat
+deploiement\common\runtime\2_start-services.bat
+deploiement\common\runtime\3_scenario-e2e.bat
+```
 
-Chaque table appartient au user du service qui l'utilise principalement :
+## SWAM
 
-- **`scenario_user`** (orchestrateur) : 29 tables (campagnes, exécutions, RBAC, catalogues, IPM, autorisations)
-- **`dmas_acquirer_user`** : `dmas_acq_keys`, `dmas_kek`
-- **`dmas_issuer_user`** : `dmas_cards`, `dmas_iss_keys`, `dmas_transactions`, `key_store`
+E2E SID :
 
-Droits croisés sur les tables partagées :
-- `users` : accessible aux 3 services (authentification)
-- `dmas_kek` : accessible à l'issuer (propriétaire acquéreur)
-- `dmas_cards` : accessible à l'orchestrateur (lecture des cartes lors des campagnes)
+```bash
+bash deploiement/swam/swam-e2e.sh
+```
 
-## Comptes de test
+E2E LIS bilatéral :
 
-| Login | Mot de passe | Rôle |
-|-------|--------------|------|
-| admin | Admin123! | ADMIN |
-| obs1 | Test123! | OBSERVATEUR |
-| mohamed | Test123! | EXPLOITATION |
+```bash
+export SWAM_E2E_KEK_CLEAR="0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF"
+bash deploiement/swam/swam-lis-e2e.sh
+```
 
-## Dépannage
+Les migrations et cartes de test propres à SWAM sont regroupées dans
+`deploiement/swam`.
 
-- **Un service ne démarre pas (erreur de validation de schéma)** : une table ou colonne ne correspond pas. Regénérer `structure_tables.sql` depuis un modèle Hibernate à jour.
-- **`droit refusé pour la table X`** : il manque un droit croisé. Ajouter le `GRANT` correspondant dans `structure_tables.sql` (section droits croisés).
-- **`Unable to create tempDir`** : ne pas définir la variable d'environnement `TMP` (réservée par Windows pour `java.io.tmpdir`).
-- **Ports occupés** : arrêter les process java (`taskkill /IM java.exe /F`) avant de relancer.
+## Frontend
 
-## Notes
+Démarrage :
 
-- Ports utilisés : 8080 (orchestrateur REST), 8084 (acquéreur REST), 8600 (acquéreur jPOS), 8501 (issuer REST), 8500 (issuer jPOS).
-- Les scripts contiennent des chemins et mots de passe adaptés à l'environnement de test local. À externaliser pour un déploiement en recette/production.
+```bash
+bash deploiement/frontend/start-frontend.sh
+```
+
+E2E navigateur Playwright :
+
+```bash
+bash deploiement/frontend/frontend-e2e.sh
+```
+
+Guide :
+
+```text
+deploiement/frontend/GUIDE_TEST_PORTAIL_MODULAIRE.md
+```
+
+## Prérequis locaux
+
+- PostgreSQL 18 : `D:\MoneyCore\PostgreSQL\18`
+- JDK 21 : `D:\MoneyCore\jdk-21.0.11`
+- Node.js : `D:\MoneyCore\nodejs`
+- base et mots de passe locaux tels que configurés dans les scripts
+
+Ces valeurs doivent être externalisées pour les environnements de recette et de
+production.

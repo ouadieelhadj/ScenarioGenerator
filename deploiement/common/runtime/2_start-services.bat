@@ -3,7 +3,7 @@ REM =====================================================================
 REM 2_start-services.bat  (Windows)
 REM Demarre les 3 services sur generatorscenario en VALIDATE (usage normal).
 REM Les JAR sont lances en arriere-plan, logs dans %TEMP%\sg_logs.
-REM A lancer APRES 1_create-data_base.bat.
+REM A lancer APRES ..\database\1_create-data_base.bat.
 REM =====================================================================
 setlocal enabledelayedexpansion
 

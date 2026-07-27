@@ -7,15 +7,17 @@ set -euo pipefail
 # DMAS + multi-reseau v1.2.0 + SWAM v1.3.0
 #
 # Usage (depuis n'importe quel PC) :
-#   bash /chemin/vers/ScenarioGenerator/deploiement/install-full-db.sh
+#   bash /chemin/vers/ScenarioGenerator/deploiement/common/database/install-full-db.sh
 #
 # Prerequis : PostgreSQL installe ou portable, service demarre,
 #             superuser postgres / postgres123
 # ================================================================
 
-# Chemin du script -> dossier deploiement/ -> racine projet
+# Chemin du script -> deploiement/common/database
 DEPLOY="$(cd "$(dirname "$0")" && pwd)"
-ROOT="$(cd "$DEPLOY/.." && pwd)"
+DEPLOY_ROOT="$(cd "$DEPLOY/../.." && pwd)"
+ROOT="$(cd "$DEPLOY_ROOT/.." && pwd)"
+SWAM_DEPLOY="$DEPLOY_ROOT/swam"
 
 # Recherche automatique de psql
 PSQL=""
@@ -77,21 +79,21 @@ prun -v ON_ERROR_STOP=1 -d "$DBNAME" -c \
 
 run_sql() {
   echo; echo "=== $1 ==="
-  prun -v ON_ERROR_STOP=1 -d "$DBNAME" -f "$DEPLOY/$2"
+  prun -v ON_ERROR_STOP=1 -d "$DBNAME" -f "$2"
   echo "  OK."
 }
 
-run_sql "4.  Structure (35 tables DMAS)"          "structure_tables.sql"
-run_sql "5.  Donnees de reference"                "donnees_reference.sql"
-run_sql "6.  v1.2.0 : table networks"             "migration_v1.2.0_networks.sql"
-run_sql "7.  v1.2.0 : socle multi-reseau"         "migration_v1.2.0_multireseau.sql"
-run_sql "8.  v1.2.0 : grants networks"            "migration_v1.2.0_grants.sql"
-run_sql "9.  v1.2.0 : data category"              "migration_v1.2.0_data_category.sql"
-run_sql "10. v1.2.0 : direction"                  "migration_v1.2.0_direction.sql"
-run_sql "11. v1.3.0 : tables SWAM + users swam_*" "migration_v1.3.0_swam_tables.sql"
-run_sql "12. v1.3.0 : owners SWAM"                "migration_v1.3.0_swam_owners.sql"
-run_sql "13. v1.3.0 : ports SWAM dans networks"   "migration_v1.3.0_ports_swam.sql"
-run_sql "14. Cartes de test SWAM"                 "swam_cartes_test.sql"
+run_sql "4.  Structure (35 tables DMAS)"          "$DEPLOY/structure_tables.sql"
+run_sql "5.  Donnees de reference"                "$DEPLOY/donnees_reference.sql"
+run_sql "6.  v1.2.0 : table networks"             "$DEPLOY/migration_v1.2.0_networks.sql"
+run_sql "7.  v1.2.0 : socle multi-reseau"         "$DEPLOY/migration_v1.2.0_multireseau.sql"
+run_sql "8.  v1.2.0 : grants networks"            "$DEPLOY/migration_v1.2.0_grants.sql"
+run_sql "9.  v1.2.0 : data category"              "$DEPLOY/migration_v1.2.0_data_category.sql"
+run_sql "10. v1.2.0 : direction"                  "$DEPLOY/migration_v1.2.0_direction.sql"
+run_sql "11. v1.3.0 : tables SWAM + users swam_*" "$SWAM_DEPLOY/migration_v1.3.0_swam_tables.sql"
+run_sql "12. v1.3.0 : owners SWAM"                "$SWAM_DEPLOY/migration_v1.3.0_swam_owners.sql"
+run_sql "13. v1.3.0 : ports SWAM dans networks"   "$SWAM_DEPLOY/migration_v1.3.0_ports_swam.sql"
+run_sql "14. Cartes de test SWAM"                 "$SWAM_DEPLOY/swam_cartes_test.sql"
 
 echo
 echo "=== 15. Controle final ==="
@@ -110,5 +112,5 @@ echo
 echo "=================================================================="
 echo " BASE $DBNAME PRETE."
 echo " Attendu : ~41 tables, swam_cards=3, networks SWAM iso_port=8510."
-echo " Etape suivante : bash deploiement/swam-e2e.sh"
+echo " Etape suivante : bash deploiement/swam/swam-e2e.sh"
 echo "=================================================================="

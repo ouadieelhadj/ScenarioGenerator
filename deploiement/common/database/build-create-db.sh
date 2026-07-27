@@ -6,7 +6,7 @@ set -euo pipefail
 # Genere create-db.sql : script SQL 100% autonome qui recrée
 # la base scenariogenerator (schema + donnees ref + FK + index).
 # N'appelle AUCUN fichier externe ni pg_dump.
-# Usage : bash deploiement/build-create-db.sh
+# Usage : bash deploiement/common/database/build-create-db.sh
 # ================================================================
 DEPLOY="$(cd "$(dirname "$0")" && pwd)"
 OUT="$DEPLOY/create-db.sql"

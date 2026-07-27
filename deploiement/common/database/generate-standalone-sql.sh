@@ -13,7 +13,8 @@ PSQL="/d/MoneyCore/PostgreSQL/18/bin/psql.exe"
 PGDUMP="/d/MoneyCore/PostgreSQL/18/bin/pg_dump.exe"
 export PGPASSWORD="postgres123"
 PGHOST="localhost"; PGPORT="5432"; SUPER="postgres"; DB="scenariogenerator"
-OUT="/d/MoneyCore/ScenarioGenerator/deploiement/create-standalone-db.sql"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+OUT="$SCRIPT_DIR/create-standalone-db.sql"
 
 # Auto-detection
 for try in "/d/MoneyCore/PostgreSQL/18/bin/psql.exe" "/f/MoneyCore/pgsql/bin/psql.exe" "/d/MoneyCore/pgsql/bin/psql.exe"; do

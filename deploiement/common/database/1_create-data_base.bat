@@ -21,9 +21,9 @@ set "DBNAME=generatorscenario"
 set "DBPASS=postgres123"
 
 set "STRUCT=%~1"
-if "%STRUCT%"=="" set "STRUCT=structure_tables.sql"
+if "%STRUCT%"=="" set "STRUCT=%~dp0structure_tables.sql"
 set "DATA=%~2"
-if "%DATA%"=="" set "DATA=donnees_reference.sql"
+if "%DATA%"=="" set "DATA=%~dp0donnees_reference.sql"
 
 echo #####################################################################
 echo #   CREATION DE LA BASE %DBNAME% (via scripts SQL)
