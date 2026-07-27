@@ -332,3 +332,18 @@ INSERT INTO profile_navigation_grant(role_id,navigation_node_id,allowed)
 SELECT r.id,n.id,TRUE FROM roles r CROSS JOIN navigation_node n
 WHERE r.code='ADMIN'
 ON CONFLICT (role_id,navigation_node_id) DO UPDATE SET allowed=EXCLUDED.allowed;
+
+-- L'orchestrateur utilise scenario_user. Les sauvegardes restaurées peuvent
+-- réattribuer les tables existantes à postgres, les droits sont donc réaffirmés.
+GRANT SELECT,INSERT,UPDATE,DELETE ON
+    users,roles,permissions,role_permissions,
+    app_module,screen_definition,navigation_node,user_profiles,
+    profile_navigation_grant,user_navigation_override,
+    screen_action,profile_action_grant,user_action_override,
+    business_team,business_team_membership,maker_checker_assignment,
+    business_calendar,business_calendar_day,sla_policy,workflow_policy,
+    workflow_request,workflow_event,workflow_outbox,notification_event,
+    security_audit_event
+TO scenario_user;
+
+GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA public TO scenario_user;

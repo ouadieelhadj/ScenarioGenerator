@@ -26,3 +26,5 @@ Thumbs.db
 
 # Tests
 /coverage/
+/playwright-report/
+/test-results/
