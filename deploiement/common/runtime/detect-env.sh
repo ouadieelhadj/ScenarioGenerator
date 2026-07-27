@@ -14,41 +14,116 @@ WRITE_FILE=""
   WRITE_FILE="$2"
 }
 
-first_file() {
-  local pattern match
-  for pattern in "$@"; do
-    while IFS= read -r match; do
-      [[ -f "$match" ]] && { printf '%s\n' "$match"; return; }
-    done < <(compgen -G "$pattern" 2>/dev/null || true)
+normalize_path() {
+  local value="$1"
+  [[ -n "$value" ]] || { printf '\n'; return 0; }
+  cygpath -u "$value" 2>/dev/null || printf '%s\n' "$value"
+}
+
+declare -a DETECT_DRIVE_ROOTS=()
+if [[ -n "${DETECT_DRIVES:-}" ]]; then
+  read -r -a DETECT_DRIVE_ROOTS <<<"$DETECT_DRIVES"
+else
+  ROOT_DRIVE="/$(cut -d/ -f2 <<<"$ROOT_DETECTED")"
+  [[ -d "$ROOT_DRIVE" ]] && DETECT_DRIVE_ROOTS+=("$ROOT_DRIVE")
+  for letter in {c..z}; do
+    [[ -d "/$letter" && "/$letter" != "$ROOT_DRIVE" ]] &&
+      DETECT_DRIVE_ROOTS+=("/$letter")
   done
+fi
+DETECT_MAX_DEPTH="${DETECT_MAX_DEPTH:-9}"
+
+find_on_path() {
+  local candidate name
+  for name in "$@"; do
+    candidate="$(command -v "$name" 2>/dev/null || true)"
+    [[ -n "$candidate" && -f "$candidate" ]] && {
+      normalize_path "$candidate"
+      return 0
+    }
+  done
+  return 0
 }
 
-to_home() {
-  local executable="$1" suffix="$2"
-  [[ -n "$executable" ]] || return
-  printf '%s\n' "${executable%/$suffix}"
+find_with_where() {
+  local candidate name
+  command -v where.exe >/dev/null 2>&1 || return 0
+  for name in "$@"; do
+    candidate="$(where.exe "$name" 2>/dev/null | tr -d '\r' | head -1 || true)"
+    [[ -n "$candidate" && -f "$(normalize_path "$candidate")" ]] && {
+      normalize_path "$candidate"
+      return 0
+    }
+  done
+  return 0
 }
 
-PSQL_FOUND="$(first_file \
-  /c/MoneyCore/PostgreSQL/*/bin/psql.exe /d/MoneyCore/PostgreSQL/*/bin/psql.exe /f/MoneyCore/PostgreSQL/*/bin/psql.exe \
-  '/c/Program Files/PostgreSQL/*/bin/psql.exe' '/d/Program Files/PostgreSQL/*/bin/psql.exe' '/f/Program Files/PostgreSQL/*/bin/psql.exe' \
-  /c/PostgreSQL/*/bin/psql.exe /d/PostgreSQL/*/bin/psql.exe /f/PostgreSQL/*/bin/psql.exe)"
-JAVA_FOUND="$(first_file \
-  /c/MoneyCore/jdk*/bin/java.exe /d/MoneyCore/jdk*/bin/java.exe /f/MoneyCore/jdk*/bin/java.exe \
-  '/c/Program Files/Java/jdk*/bin/java.exe' '/d/Program Files/Java/jdk*/bin/java.exe' '/f/Program Files/Java/jdk*/bin/java.exe' \
-  /c/jdk*/bin/java.exe /d/jdk*/bin/java.exe /f/jdk*/bin/java.exe)"
-MAVEN_FOUND="$(first_file \
-  /c/MoneyCore/apache-maven-*/bin/mvn.cmd /d/MoneyCore/apache-maven-*/bin/mvn.cmd /f/MoneyCore/apache-maven-*/bin/mvn.cmd \
-  /c/MoneyCore/idea-*/plugins/maven/lib/maven3/bin/mvn.cmd /d/MoneyCore/idea-*/plugins/maven/lib/maven3/bin/mvn.cmd /f/MoneyCore/idea-*/plugins/maven/lib/maven3/bin/mvn.cmd \
-  '/c/Program Files/Apache/maven*/bin/mvn.cmd' '/d/Program Files/Apache/maven*/bin/mvn.cmd' '/f/Program Files/Apache/maven*/bin/mvn.cmd')"
-NODE_FOUND="$(first_file \
-  /c/MoneyCore/nodejs/npm.cmd /d/MoneyCore/nodejs/npm.cmd /f/MoneyCore/nodejs/npm.cmd \
-  '/c/Program Files/nodejs/npm.cmd' '/d/Program Files/nodejs/npm.cmd' '/f/Program Files/nodejs/npm.cmd')"
+find_on_drives() {
+  local drive name candidate
+  for drive in "${DETECT_DRIVE_ROOTS[@]}"; do
+    for name in "$@"; do
+      candidate="$(find "$drive" -maxdepth "$DETECT_MAX_DEPTH" -type f \
+        -iname "$name" -print -quit 2>/dev/null || true)"
+      [[ -n "$candidate" ]] && {
+        normalize_path "$candidate"
+        return 0
+      }
+    done
+  done
+  return 0
+}
 
-POSTGRES_HOME_DETECTED="$(to_home "$PSQL_FOUND" bin/psql.exe)"
-JAVA_HOME_DETECTED="$(to_home "$JAVA_FOUND" bin/java.exe)"
-MAVEN_HOME_DETECTED="$(to_home "$MAVEN_FOUND" bin/mvn.cmd)"
-NODE_HOME_DETECTED="$(to_home "$NODE_FOUND" npm.cmd)"
+find_from_home() {
+  local home="$1"; shift
+  local relative
+  [[ -n "$home" ]] || return 0
+  home="$(normalize_path "$home")"
+  for relative in "$@"; do
+    [[ -f "$home/$relative" ]] && {
+      printf '%s\n' "$home/$relative"
+      return 0
+    }
+  done
+  return 0
+}
+
+discover_tool() {
+  local label="$1" configured_home="$2"; shift 2
+  local home_relatives="$1"; shift
+  local candidate=""
+  local -a relatives=()
+  read -r -a relatives <<<"$home_relatives"
+  candidate="$(find_from_home "$configured_home" "${relatives[@]}")"
+  [[ -n "$candidate" ]] || candidate="$(find_on_path "$@")"
+  [[ -n "$candidate" ]] || candidate="$(find_with_where "$@")"
+  if [[ -z "$candidate" ]]; then
+    echo "[INFO] Recherche générique de $label sur les lecteurs disponibles..." >&2
+    candidate="$(find_on_drives "$@")"
+  fi
+  printf '%s\n' "$candidate"
+}
+
+PSQL_FOUND="$(discover_tool PostgreSQL "${POSTGRES_HOME:-}" \
+  'bin/psql.exe bin/psql' psql.exe psql)"
+JAVA_FOUND="$(discover_tool Java "${JAVA_HOME_DIR:-${JAVA_HOME:-}}" \
+  'bin/java.exe bin/java' java.exe java)"
+MAVEN_FOUND="$(discover_tool Maven "${MAVEN_HOME:-}" \
+  'bin/mvn.cmd bin/mvn' mvn.cmd mvn)"
+NODE_FOUND="$(discover_tool Node.js "${NODE_HOME:-}" \
+  'npm.cmd bin/npm.cmd bin/npm npm' npm.cmd npm)"
+
+home_from_executable() {
+  local executable="$1" parent
+  [[ -n "$executable" ]] || { printf '\n'; return 0; }
+  parent="$(dirname "$executable")"
+  [[ "$(basename "$parent")" != "bin" ]] || parent="$(dirname "$parent")"
+  printf '%s\n' "$parent"
+}
+
+POSTGRES_HOME_DETECTED="$(home_from_executable "$PSQL_FOUND")"
+JAVA_HOME_DETECTED="$(home_from_executable "$JAVA_FOUND")"
+MAVEN_HOME_DETECTED="$(home_from_executable "$MAVEN_FOUND")"
+NODE_HOME_DETECTED="$(home_from_executable "$NODE_FOUND")"
 JAVA_VERSION="non détectée"
 [[ -z "$JAVA_FOUND" ]] || JAVA_VERSION="$("$JAVA_FOUND" -version 2>&1 | head -1)"
 
