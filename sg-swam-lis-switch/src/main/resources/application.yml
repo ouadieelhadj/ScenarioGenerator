@@ -1,0 +1,35 @@
+server:
+  port: ${SWAM_LIS_SWITCH_HTTP_PORT:8522}
+
+spring:
+  application:
+    name: sg-swam-lis-switch
+  datasource:
+    url: ${SWAM_LIS_SWITCH_DB_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${SWAM_LIS_SWITCH_DB_USER:swam_lis_switch_user}
+    password: ${SWAM_LIS_SWITCH_DB_PASSWORD:postgres123}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    enabled: false
+
+jwt:
+  secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
+  expiration-ms: 86400000
+
+swam:
+  lis:
+    side: SWITCH
+    switch-member-id: ${SWAM_SWITCH_MEMBER_ID:000088}
+    default-member-id: ${SWAM_BANK_MEMBER_ID:TESTGRP01}
+    pan-fingerprint-salt: ${SWAM_LIS_PAN_SALT:change-me-clearing-test-salt}
+    version: "4.13"
+    switch-bank-code: ${SWAM_SWITCH_BANK_CODE:000088}
+    output-directory: ${SWAM_LIS_SWITCH_OUTPUT:./runtime/swam-lis/switch/outgoing}
+    incoming-directory: ${SWAM_LIS_SWITCH_INCOMING:./runtime/swam-lis/switch/incoming}
+    accounting:
+      settlement-account: ${SWAM_SWITCH_SETTLEMENT_ACCOUNT:SWAM_MEMBER_PAYABLE}
+      control-account: ${SWAM_SWITCH_CONTROL_ACCOUNT:SWAM_CLEARING_CONTROL}

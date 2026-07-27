@@ -17,6 +17,16 @@ public final class LisPackagerRegistry {
         for (String code : new String[] {"92", "94", "96", "98", "80"}) {
             values.put(new LisRecordKey(code, 0), new LisLogicalHeaderPackager());
         }
+        for (String code : new String[] {"93", "95", "97", "99", "81"}) {
+            values.put(new LisRecordKey(code, 0), new LisLogicalTrailerPackager());
+        }
+        for (String code : new String[] {
+                "05", "06", "07", "15", "16", "17",
+                "25", "26", "27", "35", "36", "37"
+        }) {
+            values.put(new LisRecordKey(code, 0), new LisFinancialTcr0Packager());
+            values.put(new LisRecordKey(code, 1), new LisFinancialTcr1Packager());
+        }
         this.packagers = Collections.unmodifiableMap(values);
     }
 

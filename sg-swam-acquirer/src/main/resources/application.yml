@@ -30,7 +30,7 @@ swam:
 
 dmas:
   lmk:
-    file: F:/ScenarioGenerator/keys/dmas-lmk.lmk
+    file: ${DMAS_LMK_FILE:D:/MoneyCore/ScenarioGenerator/keys/dmas-lmk.lmk}
 
 
 sg:

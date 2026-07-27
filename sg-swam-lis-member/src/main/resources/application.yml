@@ -1,0 +1,34 @@
+server:
+  port: ${SWAM_LIS_MEMBER_HTTP_PORT:8521}
+
+spring:
+  application:
+    name: sg-swam-lis-member
+  datasource:
+    url: ${SWAM_LIS_MEMBER_DB_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${SWAM_LIS_MEMBER_DB_USER:swam_lis_member_user}
+    password: ${SWAM_LIS_MEMBER_DB_PASSWORD:postgres123}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    enabled: false
+
+jwt:
+  secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
+  expiration-ms: 86400000
+
+swam:
+  lis:
+    side: MEMBER
+    bank-member-id: ${SWAM_BANK_MEMBER_ID:TESTGRP01}
+    pan-fingerprint-salt: ${SWAM_LIS_PAN_SALT:change-me-clearing-test-salt}
+    version: "4.13"
+    bank-code: ${SWAM_MEMBER_BANK_CODE:000123}
+    output-directory: ${SWAM_LIS_MEMBER_OUTPUT:./runtime/swam-lis/member/outgoing}
+    incoming-directory: ${SWAM_LIS_MEMBER_INCOMING:./runtime/swam-lis/member/incoming}
+    accounting:
+      settlement-account: ${SWAM_MEMBER_SETTLEMENT_ACCOUNT:SWAM_SETTLEMENT_RECEIVABLE}
+      control-account: ${SWAM_MEMBER_CONTROL_ACCOUNT:SWAM_CLEARING_CONTROL}

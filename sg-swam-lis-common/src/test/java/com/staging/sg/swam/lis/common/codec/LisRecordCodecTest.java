@@ -86,6 +86,35 @@ class LisRecordCodecTest {
     }
 
     @Test
+    void everyLogicalTrailerUsesPublishedPositionsAndRoundTrips() throws Exception {
+        int sequence = 20;
+        for (String code : new String[] {"93", "95", "97", "99", "81"}) {
+            byte[] packed = codec.pack(LisRecordFactory.logicalTrailer(
+                    code, sequence++, java.util.Map.of(4, 7L, 11, 3L, 22, 12L, 41, 9L)));
+            String record = new String(packed, StandardCharsets.US_ASCII);
+
+            assertEquals(256, packed.length);
+            assertEquals(code, record.substring(0, 2));
+            assertEquals("000007", record.substring(9, 15));
+            assertEquals("000003", record.substring(51, 57));
+            // LIS 4.13 places F022 at 118 and F023 at 120 despite declaring F022 n6.
+            assertEquals("12", record.substring(117, 119));
+            assertEquals("000000", record.substring(119, 125));
+            assertEquals("000009", record.substring(227, 233));
+            assertEquals(" ".repeat(23), record.substring(233));
+            assertArrayEquals(packed, codec.pack(codec.unpack(packed)));
+        }
+    }
+
+    @Test
+    void logicalTrailerRejectsCountersThatDoNotFitPublishedPositions() {
+        assertThrows(IllegalArgumentException.class,
+                () -> LisRecordFactory.logicalTrailer("99", 3, java.util.Map.of(22, 100L)));
+        assertThrows(IllegalArgumentException.class,
+                () -> LisRecordFactory.logicalTrailer("99", 3, java.util.Map.of(42, 1L)));
+    }
+
+    @Test
     void rejectsWrongPhysicalLength() {
         assertThrows(ISOException.class, () -> codec.unpack(new byte[255]));
         assertThrows(ISOException.class, () -> codec.unpack(new byte[257]));
@@ -93,9 +122,39 @@ class LisRecordCodecTest {
 
     @Test
     void rejectsUnsupportedTcTcrBeforeParsingPayload() {
-        byte[] record = "05".concat("000001").concat("0")
+        byte[] record = "49".concat("000001").concat("0")
                 .concat(" ".repeat(247)).getBytes(StandardCharsets.US_ASCII);
         assertThrows(IllegalArgumentException.class, () -> codec.unpack(record));
+    }
+
+    @Test
+    void financialTcr0AndTcr1AreExactly256BytesAndRoundTrip() throws Exception {
+        ISOMsg tcr0 = new ISOMsg();
+        String[] values0 = {
+                "05", "000010", "0", "0", "0000000001", "MERCHANT",
+                "CASABLANCA", "MAR", "5999", " ", "  ", "2", "TERM0001",
+                "1", "000", "INVOICE", "0000", "000000", " ", "1",
+                "4000001234567899", "2812", "2", "I", "00", "00000", ""
+        };
+        for (int field = 0; field < values0.length; field++) tcr0.set(field, values0[field]);
+        byte[] packed0 = codec.pack(tcr0);
+        assertEquals(256, packed0.length);
+        assertArrayEquals(packed0, codec.pack(codec.unpack(packed0)));
+
+        ISOMsg tcr1 = new ISOMsg();
+        String[] values1 = {
+                "05", "000011", "1", "230726", "654321", "2", "0",
+                "ACQ-REF-000000000000001", "00008800", " ", "2", "000000001000",
+                "00012300", " ", "2", "000000001000", "000000001000",
+                "000000000000", "230726", "230726", "   ", " ", "00", "0000",
+                "000", "000000", "620414260723", "145135", "504", "504",
+                "000000000000", "000000000000", " ", "000000000000",
+                "000000000", "000000000", "0000000", ""
+        };
+        for (int field = 0; field < values1.length; field++) tcr1.set(field, values1[field]);
+        byte[] packed1 = codec.pack(tcr1);
+        assertEquals(256, packed1.length);
+        assertArrayEquals(packed1, codec.pack(codec.unpack(packed1)));
     }
 
     @Test

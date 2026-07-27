@@ -3,6 +3,7 @@ package com.staging.sg.swam.acquirer.network;
 import com.staging.sg.common.service.SwamInterfaceService;
 import org.jpos.iso.ISOMsg;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
@@ -26,6 +27,7 @@ public class SwamAuthorization {
     @Value("${swam.sid.merchant-id:MERCHANT000001}") private String merchantId;
     @Value("${swam.sid.merchant-name-location:MONEYCORE CASABLANCA MA}") private String merchantNameLocation;
 
+    @Autowired
     public SwamAuthorization(SwamInterfaceService interfaceService) {
         this(interfaceService::get);
     }

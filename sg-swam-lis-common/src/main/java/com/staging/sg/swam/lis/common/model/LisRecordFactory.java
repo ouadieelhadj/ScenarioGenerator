@@ -53,6 +53,46 @@ public final class LisRecordFactory {
     }
 
     /**
+     * Creates a LIS logical-file trailer. Counter keys use specification field
+     * numbers 4..41 and unspecified counters are encoded as zero.
+     */
+    public static ISOMsg logicalTrailer(
+            String transactionCode, int recordSequence, java.util.Map<Integer, Long> counters) {
+        if (!java.util.Set.of("93", "95", "97", "99", "81").contains(transactionCode)) {
+            throw new IllegalArgumentException("Invalid LIS logical-trailer transaction code");
+        }
+        if (recordSequence < 1 || recordSequence > 999_999) {
+            throw new IllegalArgumentException("Invalid LIS physical record sequence");
+        }
+
+        java.util.Map<Integer, Long> safeCounters =
+                counters == null ? java.util.Map.of() : java.util.Map.copyOf(counters);
+        for (Integer field : safeCounters.keySet()) {
+            if (field < 4 || field > 41) {
+                throw new IllegalArgumentException(
+                        "Unsupported TC" + transactionCode + " counter F" + field);
+            }
+        }
+
+        ISOMsg message = new ISOMsg();
+        message.set(0, transactionCode);
+        message.set(1, "%06d".formatted(recordSequence));
+        message.set(2, "0");
+        for (int specificationField = 4; specificationField <= 41; specificationField++) {
+            int length = specificationField == 22 ? 2 : 6;
+            long value = safeCounters.getOrDefault(specificationField, 0L);
+            long maximum = length == 2 ? 99L : 999_999L;
+            if (value < 0 || value > maximum) {
+                throw new IllegalArgumentException(
+                        "TC" + transactionCode + " F" + specificationField + " exceeds n" + length);
+            }
+            message.set(specificationField - 1, ("%0" + length + "d").formatted(value));
+        }
+        message.set(41, " ".repeat(23));
+        return message;
+    }
+
+    /**
      * Creates TC91/TCR0. Counter keys use specification field numbers 5..38.
      * Unspecified counters are encoded as zero.
      */

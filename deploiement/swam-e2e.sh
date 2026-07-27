@@ -11,8 +11,10 @@ set +H
 
 ROOT="/d/MoneyCore/ScenarioGenerator"
 JAVA="/d/MoneyCore/jdk-21.0.11/bin/java.exe"
+MVN="${MVN:-mvn}"
 PSQL="/d/MoneyCore/PostgreSQL/18/bin/psql.exe"
 JAVA_HOME_DIR="/d/MoneyCore/jdk-21.0.11"
+MAVEN_REPO="${MAVEN_REPO:-D:/MoneyCore/ScenarioGenerator/tmp/m2repo}"
 
 ISS_PORT=8511 ; ISS_HEALTH="http://localhost:${ISS_PORT}/api/swam/issuer/health"
 ACQ_PORT=8094 ; ACQ_HEALTH="http://localhost:${ACQ_PORT}/api/admin/swam/health"
@@ -42,12 +44,23 @@ echo "=================================================================="
 echo " SWAM E2E — $(date '+%Y-%m-%d %H:%M:%S')"
 echo "=================================================================="
 
+# Arreter d'abord les JARs qui verrouillent target sous Windows.
+"$JAVA_HOME_DIR/bin/jps.exe" -l 2>/dev/null | \
+  grep -E 'sg-swam-(issuer|acquirer).*\.jar' | awk '{print $1}' | \
+  while read -r p; do taskkill //PID "$p" //F 2>/dev/null || true; done
+for PORT in 8510 8511 8094; do
+  for p in $(netstat -ano 2>/dev/null | grep LISTENING | grep ":$PORT" | awk '{print $NF}' | sort -u); do
+    taskkill //PID "$p" //F 2>/dev/null || true
+  done
+done
+sleep 2
+
 # ---------------------------------------------------------------
 # 1) Compilation
 # ---------------------------------------------------------------
 echo; echo "--- 1) Compilation des modules SWAM ---"
 cd "$ROOT"
-JAVA_HOME="$JAVA_HOME_DIR" mvn -q -pl sg-swam-issuer,sg-swam-acquirer -am clean package -DskipTests \
+JAVA_HOME="$JAVA_HOME_DIR" "$MVN" -q "-Dmaven.repo.local=$MAVEN_REPO" -pl sg-swam-issuer,sg-swam-acquirer -am package -DskipTests \
   && ok "Compilation" || { fail "Compilation"; exit 1; }
 
 # ---------------------------------------------------------------
@@ -65,9 +78,9 @@ sleep 2
 # 3) Demarrage des modules
 # ---------------------------------------------------------------
 start_mod() {
-  local dir="$1" health="$2" logf="$3" label="$4"
+  local dir="$1" health="$2" logf="$3" label="$4" iface="$5"
   local jar; jar="$(find "$ROOT/$dir/target" -maxdepth 1 -name "*.jar" ! -name "*.original" 2>/dev/null | head -1)"
-  nohup "$JAVA" -jar "$jar" > "$logf" 2>&1 & disown 2>/dev/null || true
+  nohup "$JAVA" -jar "$jar" "--sg.interface=$iface" > "$logf" 2>&1 & disown 2>/dev/null || true
   echo -n "  Attente $label "
   for i in $(seq 1 60); do
     curl -s -o /dev/null -w "%{http_code}" "$health" 2>/dev/null | grep -q "200" && { echo " UP"; return 0; }
@@ -77,10 +90,10 @@ start_mod() {
 }
 
 echo; echo "--- 3) Demarrage SWITCH (issuer) ---"
-start_mod "sg-swam-issuer"  "$ISS_HEALTH" "$ISS_LOG" "SWITCH"  && ok "Switch demarre" || { fail "Switch non demarre"; exit 1; }
+start_mod "sg-swam-issuer"  "$ISS_HEALTH" "$ISS_LOG" "SWITCH" "SWAM_NETWORK_1" && ok "Switch demarre" || { fail "Switch non demarre"; exit 1; }
 
 echo; echo "--- 4) Demarrage MEMBRE (acquereur) ---"
-start_mod "sg-swam-acquirer" "$ACQ_HEALTH" "$ACQ_LOG" "MEMBRE" && ok "Membre demarre" || { fail "Membre non demarre"; exit 1; }
+start_mod "sg-swam-acquirer" "$ACQ_HEALTH" "$ACQ_LOG" "MEMBRE" "SWAM_MEMBER_A" && ok "Membre demarre" || { fail "Membre non demarre"; exit 1; }
 
 # ---------------------------------------------------------------
 # 5) Bootstrap KEK (issuer + acquereur)
@@ -108,22 +121,14 @@ check_json "$R" '"success":true' "Sign-on"
 # ---------------------------------------------------------------
 # 7) Key exchange ZPK + ZAK
 # ---------------------------------------------------------------
-echo; echo "--- 7) Key exchange ZPK (811) + ZAK (899) ---"
-R=$(curl -s -X POST "$BASE/keyexchange/zpk")
-check_json "$R" '"kcv_match":true' "ZPK echange KCV match"
-check_json "$R" '"success":true' "ZPK echange success"
-KCV_ZPK=$(echo "$R" | grep -o '"kcv_computed":"[^"]*"' | cut -d'"' -f4)
-
-R=$(curl -s -X POST "$BASE/keyexchange/zak")
-check_json "$R" '"kcv_match":true' "ZAK echange KCV match"
-check_json "$R" '"success":true' "ZAK echange success"
-KCV_ZAK=$(echo "$R" | grep -o '"kcv_computed":"[^"]*"' | cut -d'"' -f4)
-
-# Verif concordance base
-ZPK_MATCH=$(db "SELECT (i.kcv=a.kcv)::text FROM swam_iss_keys i JOIN swam_acq_keys a ON i.member_group_id=a.member_group_id AND i.key_type=a.key_type WHERE i.key_type='PEK' AND i.member_group_id='$MGID' AND i.status='ACTIVE' AND a.status='ACTIVE';")
-ZAK_MATCH=$(db "SELECT (i.kcv=a.kcv)::text FROM swam_iss_keys i JOIN swam_acq_keys a ON i.member_group_id=a.member_group_id AND i.key_type=a.key_type WHERE i.key_type='MAK' AND i.member_group_id='$MGID' AND i.status='ACTIVE' AND a.status='ACTIVE';")
-[ "$ZPK_MATCH" = "t" ] || [ "$ZPK_MATCH" = "true" ] && ok "ZPK KCV concordant en base" || fail "ZPK KCV non concordant en base"
-[ "$ZAK_MATCH" = "t" ] || [ "$ZAK_MATCH" = "true" ] && ok "ZAK KCV concordant en base" || fail "ZAK KCV non concordant en base"
+echo; echo "--- 7) Reception de la ZPK poussee par le switch ---"
+ZPK_MATCH=""
+for i in $(seq 1 20); do
+  ZPK_MATCH=$(db "SELECT (i.kcv=a.kcv)::text FROM swam_iss_keys i JOIN swam_acq_keys a ON i.member_group_id=a.member_group_id AND i.key_type=a.key_type WHERE i.key_type='PEK' AND i.member_group_id='$MGID' AND i.status='ACTIVE' AND a.status='ACTIVE' LIMIT 1;")
+  { [ "$ZPK_MATCH" = "t" ] || [ "$ZPK_MATCH" = "true" ]; } && break
+  sleep 1
+done
+[ "$ZPK_MATCH" = "t" ] || [ "$ZPK_MATCH" = "true" ] && ok "ZPK poussee et KCV concordant en base" || fail "ZPK poussee absente ou KCV divergent"
 
 # ---------------------------------------------------------------
 # 8) Tests d'achat

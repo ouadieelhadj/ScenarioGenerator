@@ -1,14 +1,21 @@
 package com.staging.sg.swam.acquirer.network;
 
 import com.staging.sg.common.entity.SwamAcqKey;
+import com.staging.sg.common.entity.SwamAcqTransaction;
+import com.staging.sg.common.entity.SwamCard;
 import com.staging.sg.common.entity.SwamKek;
 import com.staging.sg.common.iso.SwamDe48;
 import com.staging.sg.common.iso.SwamPackager;
 import com.staging.sg.common.iso.SwamLengthChannel;
 import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.iso.crypto.JposHsmService;
+import com.staging.sg.common.iso.crypto.SwamMacBuilder;
+import com.staging.sg.common.iso.sid.SidMessageValidator;
+import com.staging.sg.common.iso.sid.SidTransactionPersistenceMapper;
 import com.staging.sg.common.service.SwamInterfaceService;
 import com.staging.sg.common.repository.SwamAcqKeyRepository;
+import com.staging.sg.common.repository.SwamAcqTransactionRepository;
+import com.staging.sg.common.repository.SwamCardRepository;
 import com.staging.sg.common.repository.SwamKekRepository;
 import jakarta.annotation.PreDestroy;
 import org.jpos.iso.ISOMsg;
@@ -18,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -46,6 +54,8 @@ public class SwamJposClient {
     @Autowired private JposHsmService hsm;
     @Autowired private SwamKekRepository kekRepo;
     @Autowired private SwamAcqKeyRepository acqKeyRepo;
+    @Autowired private SwamCardRepository cardRepo;
+    @Autowired private SwamAcqTransactionRepository txRepo;
 
     private final ConcurrentHashMap<String, ISOMsg> responses = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CountDownLatch> latches = new ConcurrentHashMap<>();
@@ -114,6 +124,13 @@ public class SwamJposClient {
                         continue;
                     }
 
+                    // Requête transactionnelle initiée par le switch sur la
+                    // même liaison permanente.
+                    if ("1100".equals(mti) || "1200".equals(mti)) {
+                        handleSwitchAuthorization(msg);
+                        continue;
+                    }
+
                     // ── Reponse correlee par STAN (1814, 1110, ...) ──────────
                     if (stan != null) {
                         responses.put(stan, msg);
@@ -128,6 +145,82 @@ public class SwamJposClient {
         }, "swam-client-receiver");
         receiver.setDaemon(true);
         receiver.start();
+    }
+
+    private void handleSwitchAuthorization(ISOMsg request) {
+        try {
+            SidMessageValidator.validate(request);
+            String pan = request.getString(2);
+            long amount = Long.parseLong(request.getString(4));
+            String responseCode;
+            SwamCard card = cardRepo.findByPan(pan).orElse(null);
+            if (card == null) {
+                responseCode = "114";
+            } else if (!"ACTIVE".equals(card.getStatus())) {
+                responseCode = "062";
+            } else if (card.getBalance() < amount) {
+                responseCode = "116";
+            } else {
+                card.setBalance(card.getBalance() - amount);
+                card.setUpdatedAt(java.time.LocalDateTime.now());
+                cardRepo.save(card);
+                responseCode = "000";
+            }
+
+            ISOMsg response = new ISOMsg();
+            response.setPackager(packager);
+            boolean financial = "1200".equals(request.getMTI());
+            response.setMTI(financial ? "1210" : "1110");
+            copy(request, response, 2, 3, 4, 5, 6, 7, 9, 10, 11, 12, 15, 16,
+                    18, 19, 21, 22, 24, 32, 33, 37, 41, 42, 43, 49, 50, 51, 53, 61, 124);
+            response.set(27, "6");
+            response.set(38, String.format("%06d",
+                    Long.parseLong(request.getString(11)) % 1_000_000));
+            response.set(39, responseCode);
+            poseMac(response);
+            SidMessageValidator.validateResponseTo(request, response);
+            channel.send(response);
+            persistIncomingTransaction(request, response, responseCode);
+            log.info("[SWAM-CLI] Transaction switch->membre STAN={} DE39={}",
+                    request.getString(11), responseCode);
+        } catch (Exception e) {
+            log.error("[SWAM-CLI] Traitement transaction switch->membre impossible: {}",
+                    e.getMessage(), e);
+        }
+    }
+
+    private void persistIncomingTransaction(
+            ISOMsg request, ISOMsg response, String responseCode) throws Exception {
+        SwamAcqTransaction tx = new SwamAcqTransaction();
+        tx.setPan(request.getString(2));
+        tx.setStan(request.getString(11));
+        tx.setTransmissionDt(request.getString(7));
+        tx.setMti(request.getMTI());
+        tx.setProcessingCode(request.getString(3));
+        tx.setAmount(Long.parseLong(request.getString(4)));
+        tx.setCurrency(request.getString(49));
+        tx.setResponseCode(responseCode);
+        tx.setStatus("000".equals(responseCode) ? "APPROVED" : "DECLINED");
+        SidTransactionPersistenceMapper.populate(tx, request, response);
+        txRepo.save(tx);
+    }
+
+    private void poseMac(ISOMsg message) throws Exception {
+        SwamKek kek = kekRepo.findByMemberGroupId(memberGroupId()).orElse(null);
+        if (kek == null || kek.getKekClear() == null) return;
+        byte[] full = hsm.generateMacZmk(SwamMacBuilder.build(message), kek.getKekClear());
+        message.set(128, Arrays.copyOfRange(full, 0, Math.min(4, full.length)));
+    }
+
+    private void copy(ISOMsg source, ISOMsg target, int... fields) throws Exception {
+        for (int field : fields) {
+            if (!source.hasField(field)) continue;
+            if (source.getComponent(field).getValue() instanceof byte[]) {
+                target.set(field, source.getBytes(field));
+            } else {
+                target.set(field, source.getString(field));
+            }
+        }
     }
 
     /**

@@ -30,6 +30,9 @@ import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -70,9 +73,109 @@ public class SwamJposServer {
 
     private ISOServer isoServer;
     private Thread serverThread;
+    private volatile ISOSource permanentSource;
+    private final ConcurrentHashMap<String, ISOMsg> initiatedResponses = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, CountDownLatch> initiatedLatches = new ConcurrentHashMap<>();
 
     /** Compteur STAN pour les messages spontanes du switch. */
     private final AtomicInteger stanCounter = new AtomicInteger(900000);
+
+    public ISOMsg initiatePurchase(String pan, String amount) throws Exception {
+        return initiateTransaction(pan, amount, false);
+    }
+
+    public ISOMsg initiateFinancial(String pan, String amount) throws Exception {
+        return initiateTransaction(pan, amount, true);
+    }
+
+    private ISOMsg initiateTransaction(String pan, String amount, boolean financial) throws Exception {
+        ISOSource source = permanentSource;
+        if (source == null) {
+            throw new IllegalStateException("Liaison permanente SWAM non etablie");
+        }
+        String stan = String.format("%06d", stanCounter.incrementAndGet() % 1000000);
+        Date now = new Date();
+        ISOMsg request = new ISOMsg();
+        request.setPackager(new SwamPackager());
+        request.setMTI(financial ? "1200" : "1100");
+        request.set(2, pan);
+        request.set(3, "000000");
+        request.set(4, amount);
+        if (financial) request.set(5, amount);
+        request.set(6, amount);
+        request.set(7, new SimpleDateFormat("yyMMddHHmm").format(now));
+        request.set(10, "61000000");
+        if (financial) request.set(9, "61000000");
+        request.set(11, stan);
+        request.set(12, new SimpleDateFormat("yyMMddHHmmss").format(now));
+        request.set(14, "2712");
+        request.set(15, new SimpleDateFormat("yyMMdd").format(now));
+        request.set(16, new SimpleDateFormat("MMdd").format(now));
+        request.set(18, "5411");
+        request.set(19, "504");
+        request.set(21, "504");
+        request.set(22, "P10101511004");
+        request.set(24, financial ? "200" : "100");
+        request.set(32, forwardingId());
+        request.set(33, forwardingId());
+        request.set(37, stan + "000000");
+        request.set(41, "SWITCH01");
+        request.set(42, "SWITCHMERCHANT ");
+        request.set(43, "SWAM SWITCH CASABLANCA MA");
+        request.set(49, "504");
+        if (financial) request.set(50, "504");
+        request.set(51, "504");
+        request.set(53, "0099000000");
+        request.set(61, "061012" + request.getString(22));
+        request.set(124, memberGroupId());
+        poseMac(request);
+        SidMessageValidator.validate(request);
+
+        CountDownLatch latch = new CountDownLatch(1);
+        initiatedLatches.put(stan, latch);
+        source.send(request);
+        boolean received = latch.await(10, TimeUnit.SECONDS);
+        initiatedLatches.remove(stan);
+        ISOMsg response = initiatedResponses.remove(stan);
+        if (!received || response == null) {
+            throw new IllegalStateException("Timeout transaction initiee par le switch STAN=" + stan);
+        }
+        SidMessageValidator.validateResponseTo(request, response);
+        persistOutgoingTransaction(request, response);
+        return response;
+    }
+
+    public boolean hasPermanentConnection() {
+        return permanentSource != null;
+    }
+
+    private void poseMac(ISOMsg message) {
+        try {
+            SwamKek kek = kekRepository.findByMemberGroupId(memberGroupId()).orElse(null);
+            if (kek == null || kek.getKekClear() == null) return;
+            byte[] full = hsm.generateMacZmk(SwamMacBuilder.build(message), kek.getKekClear());
+            message.set(128, macLength > 0 && macLength < full.length
+                    ? Arrays.copyOfRange(full, 0, macLength) : full);
+        } catch (Exception e) {
+            throw new IllegalStateException("Calcul MAC switch impossible", e);
+        }
+    }
+
+    private void persistOutgoingTransaction(ISOMsg request, ISOMsg response) throws Exception {
+        String responseCode = response.hasField(39) ? response.getString(39) : null;
+        SwamIssTransaction tx = new SwamIssTransaction();
+        tx.setPan(request.getString(2));
+        tx.setStan(request.getString(11));
+        tx.setTransmissionDt(request.getString(7));
+        tx.setMti(request.getMTI());
+        tx.setProcessingCode(request.getString(3));
+        tx.setAmount(Long.parseLong(request.getString(4)));
+        tx.setCurrency(request.getString(49));
+        tx.setResponseCode(responseCode);
+        tx.setStatus("000".equals(responseCode) ? "APPROVED" : "DECLINED");
+        SidTransactionPersistenceMapper.populate(tx, request, response);
+        txRepository.save(tx);
+    }
 
     public SwamJposServer(SwamInterfaceService interfaceService,
                           SwamCardRepository cardRepository,
@@ -142,8 +245,16 @@ public class SwamJposServer {
         @Override
         public boolean process(ISOSource source, ISOMsg m) {
             try {
+                permanentSource = source;
                 String mti = m.getMTI();
                 log.info("[SWAM-SRV] Recu MTI={} STAN={}", mti, m.hasField(11) ? m.getString(11) : "?");
+                if (("1110".equals(mti) || "1210".equals(mti)) && m.hasField(11)) {
+                    String stan = m.getString(11);
+                    initiatedResponses.put(stan, m);
+                    CountDownLatch latch = initiatedLatches.get(stan);
+                    if (latch != null) latch.countDown();
+                    return true;
+                }
                 if ("1804".equals(mti)) return handleNetwork(source, m);
                 if ("1814".equals(mti)) return handleNetworkResponse(m);   // accuse reception ZPK
                 if ("1100".equals(mti)) return handleAuthorization(source, m);
