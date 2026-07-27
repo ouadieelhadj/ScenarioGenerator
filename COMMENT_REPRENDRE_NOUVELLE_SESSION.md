@@ -630,6 +630,14 @@ Le fichier créé à la racine est local et ignoré par Git. Si un chemin n'a pa
 été détecté, corriger manuellement la copie de
 `deploiement/common/runtime/platform.env.example`.
 
+La même commande génère `platform-path.sh`, également ignoré par Git. Ce script
+charge la configuration locale et ajoute au `PATH` :
+
+- `$JAVA_HOME_DIR/bin` ;
+- `$MAVEN_HOME/bin` ;
+- `$NODE_HOME` ;
+- `$POSTGRES_HOME/bin`.
+
 Ne jamais ajouter `DB_PASSWORD`, une clé claire ou un autre secret dans
 `platform.env`. Même si quelqu'un y ajoute `DB_PASSWORD` par erreur,
 `platform-env.sh` refuse de le charger.
@@ -648,11 +656,13 @@ L'opérateur exécute uniquement :
 
 ```bash
 cd /f/MoneyCore/ScenarioGenerator
-source deploiement/common/runtime/platform-env.sh
+source platform-path.sh
 export DB_PASSWORD="<mot-de-passe-saisi-par-l'opérateur>"
 ```
 
 Le chemin `/f/...` est un exemple : utiliser l'emplacement réel du clone.
+`platform-path.sh` doit être chargé avec `source` pour modifier le terminal
+courant. La commande `bash platform-path.sh` ne convient pas.
 
 Ordre de priorité :
 

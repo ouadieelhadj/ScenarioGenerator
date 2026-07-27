@@ -25,6 +25,7 @@ logs/
 reports/
 platform.env
 *.platform.env
+platform-path.sh
 run-logs/
 scripts/TNR_*.txt
 sg-frontend/.angular/

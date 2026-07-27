@@ -55,7 +55,9 @@ décrit :
 - les critères de réussite et les tests différés avec systèmes réels.
 
 Les chemins de ce poste sont locaux. Ne suppose jamais qu'ils correspondent à
-ceux de LAB/DEV. Utilise platform.env avec les valeurs validées sur RECETTE.
+ceux de LAB/DEV. Utilise `platform.env` avec les valeurs validées sur RECETTE.
+La génération crée également `platform-path.sh`. Au début de chaque session,
+charge-le avec `source platform-path.sh` pour configurer le `PATH` du terminal.
 
 DB_PASSWORD et SWAM_E2E_KEK_CLEAR doivent être saisis ou exportés uniquement
 dans le terminal. Ne les écris pas dans platform.env, Git, un rapport ou une

@@ -176,4 +176,21 @@ if [[ -n "$WRITE_FILE" ]]; then
     printf '%s\n' "${ENV_LINES[@]}"
   } >"$WRITE_FILE"
   echo "[OK] Configuration locale écrite : $WRITE_FILE"
+
+  PATH_SCRIPT="$(cd "$(dirname "$WRITE_FILE")" && pwd)/platform-path.sh"
+  PLATFORM_ENV_ABSOLUTE="$(cd "$(dirname "$WRITE_FILE")" && pwd)/$(basename "$WRITE_FILE")"
+  printf -v PLATFORM_ENV_ESCAPED '%q' "$PLATFORM_ENV_ABSOLUTE"
+  printf -v LOADER_ESCAPED '%q' "$ROOT_DETECTED/deploiement/common/runtime/platform-env.sh"
+  {
+    echo "#!/usr/bin/env bash"
+    echo "# Généré localement par detect-env.sh. À charger avec :"
+    echo "#   source \"$PATH_SCRIPT\""
+    echo "export PLATFORM_ENV_FILE=$PLATFORM_ENV_ESCAPED"
+    echo "source $LOADER_ESCAPED"
+    echo 'export PATH="$NODE_HOME:$JAVA_HOME_DIR/bin:$MAVEN_HOME/bin:$POSTGRES_HOME/bin:$PATH"'
+    echo 'echo "[OK] Environnement et PATH chargés pour $ROOT"'
+  } >"$PATH_SCRIPT"
+  chmod +x "$PATH_SCRIPT"
+  echo "[OK] Script PATH local écrit : $PATH_SCRIPT"
+  echo "Charger maintenant avec : source \"$PATH_SCRIPT\""
 fi

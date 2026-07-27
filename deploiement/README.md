@@ -91,14 +91,19 @@ Générer la configuration locale ignorée par Git :
 bash deploiement/common/runtime/detect-env.sh --write platform.env
 ```
 
+Cette commande génère également `platform-path.sh`, qui charge `platform.env` et
+ajoute Java, Maven, Node.js et PostgreSQL au `PATH`.
+
 Au début de chaque session :
 
 ```bash
-source deploiement/common/runtime/platform-env.sh
+source platform-path.sh
 export DB_PASSWORD="<saisie-locale>"
 ```
 
-`platform-env.sh` charge automatiquement `platform.env`. L'ordre de priorité est
+Il faut utiliser `source` : exécuter `bash platform-path.sh` ne modifierait que le
+`PATH` d'un sous-processus. `platform-env.sh` charge automatiquement
+`platform.env`. L'ordre de priorité est
 `variables déjà définies > platform.env > valeurs par défaut`. Le mot de passe
 PostgreSQL n'est ni généré ni chargé depuis `platform.env`.
 
