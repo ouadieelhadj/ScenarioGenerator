@@ -51,6 +51,12 @@ chaîne SWAM complète : démarrage Issuer et Membre, bootstrap et échange des
 clés, achats dans les deux sens sur la liaison permanente, EOD et clearing LIS
 bilatéral.
 
+Pour cette première validation, travaille en mode LOCAL E2E : SWAM Issuer joue
+le rôle du switch et SWAM Membre joue le rôle de la banque membre sur le même
+poste. Ne demande pas les paramètres d'un switch externe et ne tente aucune
+connexion de production. Une connexion à un switch distant constitue une phase
+différente, soumise à validation explicite du responsable.
+
 Vérifie toujours la branche et l'état Git avant toute modification. Ne supprime
 pas, ne remplace pas et ne committe pas les fichiers locaux préexistants hors
 périmètre. Reprends ensuite la première phase non terminée indiquée dans le
@@ -59,9 +65,39 @@ document.
 
 Si la session travaille sur un autre poste, elle doit également déterminer si
 la base de référence a déjà été transférée. La procédure complète est décrite
-dans `deploiement/README.md` et résumée à la section 3.3 ci-dessous.
+dans `deploiement/README.md` et résumée à la section 4.3 ci-dessous.
 
-## 2. Branche de travail
+## 2. Choisir le bon mode avant toute configuration
+
+Deux situations très différentes ne doivent pas être confondues.
+
+### Mode A — reprise locale complète sur un autre PC
+
+C'est le mode obligatoire pour la reprise actuelle :
+
+- `sg-swam-issuer` simule le switch SWAM ;
+- `sg-swam-acquirer` représente le membre bancaire ;
+- les deux services et les modules LIS tournent sur le même poste ;
+- la configuration de référence provient du dépôt et de la base transférée ;
+- les clés utilisées sont exclusivement des clés de test injectées hors Git ;
+- aucun VPN, certificat ou accès à un switch externe n'est nécessaire.
+
+Dans ce mode, il ne faut pas demander au responsable d'un switch distant son IP,
+ses clés ou une fenêtre de certification. Il faut suivre les scripts locaux de
+la section 7.
+
+### Mode B — raccordement à un véritable switch distant
+
+Ce mode n'est pas nécessaire pour valider la reprise sur un autre PC. Il ne doit
+commencer qu'après réussite du Mode A et accord explicite du responsable. Il
+nécessite alors la fiche de cadrage de la section 8 : environnement autorisé,
+réseau, version des spécifications, identité membre, procédure HSM et plan de
+certification.
+
+Une cible de production ne doit jamais être configurée ou testée à partir de
+cette procédure locale.
+
+## 3. Branche de travail
 
 La branche du portail est :
 
@@ -71,9 +107,9 @@ codex/portail-rbac-maker-checker
 
 Ne pas poursuivre le portail depuis une autre branche sans fusion explicite.
 
-## 3. Récupérer la dernière version depuis GitHub
+## 4. Récupérer la dernière version depuis GitHub
 
-### 3.1 Dépôt déjà présent sur le PC
+### 4.1 Dépôt déjà présent sur le PC
 
 Dans Git Bash :
 
@@ -90,7 +126,7 @@ Si `git status --short` montre des modifications locales, ne pas les supprimer e
 ne pas lancer de reset. Les conserver, puis vérifier qu'elles ne chevauchent pas
 les fichiers à modifier.
 
-### 3.2 Premier téléchargement sur un autre PC
+### 4.2 Premier téléchargement sur un autre PC
 
 ```bash
 cd /d/MoneyCore
@@ -103,7 +139,7 @@ git switch --track origin/codex/portail-rbac-maker-checker
 Si le dépôt est copié ailleurs, les scripts calculent automatiquement `ROOT`
 depuis leur propre emplacement.
 
-### 3.3 Remplacer la base d'un autre poste par la base de référence
+### 4.3 Remplacer la base d'un autre poste par la base de référence
 
 Cette opération détruit le contenu actif de la base cible. Le script fourni crée
 d'abord une sauvegarde de sécurité et exige une confirmation explicite. Ne jamais
@@ -132,9 +168,9 @@ bash deploiement/common/database/replace-db-from-dump.sh \
 
 Le script sauvegarde la base cible sous `runtime/database-backups`, ferme ses
 connexions, la recrée puis restaure la base de référence. Après restauration,
-reprendre à la compilation et aux tests SWAM décrits dans la section 6.
+reprendre à la compilation et aux tests SWAM décrits dans la section 7.
 
-## 4. Documents à lire dans cet ordre
+## 5. Documents à lire dans cet ordre
 
 ### Obligatoires
 
@@ -165,7 +201,7 @@ Les spécifications PDF peuvent être absentes d'un clone Git si elles sont
 volumineuses ou volontairement conservées localement. Dans ce cas, demander leur
 copie au responsable avant de modifier les règles métier LIS.
 
-## 5. État actuel à connaître
+## 6. État actuel à connaître
 
 ### Terminé
 
@@ -205,7 +241,7 @@ copie au responsable avant de modifier les règles métier LIS.
 
 Une nouvelle session ne doit donc pas considérer que tout le portail est finalisé.
 
-## 6. Chaîne de scripts SWAM à exécuter en premier
+## 7. Chaîne de scripts SWAM à exécuter en premier
 
 Les scripts sont présents dans le dépôt :
 
@@ -344,7 +380,48 @@ SWAM est considéré finalisé seulement si :
 - le scénario automatisé termine sans processus orphelin ;
 - les tests SID, LIS et frontend ne régressent pas.
 
-## 7. Variables globales
+## 8. Questions réservées au raccordement d'un switch externe
+
+Cette section ne s'applique pas à la reprise locale sur un autre PC. Elle sert
+uniquement si le responsable confirme explicitement le passage au Mode B.
+
+Avant toute configuration distante, obtenir par un canal professionnel les
+informations non sensibles suivantes :
+
+1. environnement autorisé : homologation, certification, recette ou
+   préproduction ; ne jamais supposer qu'une cible est la production ;
+2. host/IP, port, VPN ou lien dédié, IP source à autoriser et règles firewall ;
+3. transport TCP, TLS ou mTLS et autorité de certification attendue ;
+4. version exacte des spécifications SID et LIS faisant foi ;
+5. framing, longueur du message, ordre des octets, keep-alive `0800`, timeouts,
+   jeu de caractères et packager ISO 8583 ;
+6. identifiants de certification : BIN/IIN, code membre, NII, terminaux et
+   acquéreurs de test ;
+7. procédure de cérémonie et d'échange des clés, rôle de chaque HSM et acteur
+   qui initie le bootstrap ;
+8. plan de certification : opérations, ordre, PAN et montants de test, fenêtres,
+   critères de validation, PV attendu et contact technique.
+
+Peuvent être versionnés :
+
+- paramètres non sensibles propres à l'environnement de certification ;
+- identifiants techniques de test autorisés ;
+- version de spécification et paramètres du packager ;
+- modèle de configuration sans valeur secrète.
+
+Ne doivent jamais être transmis dans une conversation ni ajoutés à Git :
+
+- clés, composantes ZMK/KEK/ZPK/ZAK ou LMK ;
+- mots de passe ;
+- clés privées et fichiers de certificats privés ;
+- PAN réels ou données de production.
+
+Les secrets doivent passer par la cérémonie de clés, le HSM, un coffre ou le
+canal sécurisé validé par le responsable. Tant que ces réponses et l'autorisation
+de l'environnement ne sont pas obtenues, aucune tentative de connexion distante
+ne doit être faite.
+
+## 9. Variables globales
 
 Les valeurs communes sont définies dans :
 
@@ -369,7 +446,7 @@ export DB_PASSWORD="<mot-de-passe-local>"
 
 Ne jamais committer de mot de passe réel, de clé claire, de LMK, de ZMK ou de KEK.
 
-## 8. Compiler et lancer la plateforme
+## 10. Compiler et lancer la plateforme
 
 ### Compiler tous les modules
 
@@ -401,7 +478,7 @@ Les logs sont écrits dans :
 runtime/platform/logs/
 ```
 
-## 9. Lancer le frontend
+## 11. Lancer le frontend
 
 Dans un autre terminal Git Bash :
 
@@ -415,9 +492,9 @@ Puis ouvrir :
 http://localhost:4200
 ```
 
-## 10. Tests à lancer
+## 12. Tests à lancer
 
-### 10.1 Tests Maven complets
+### 12.1 Tests Maven complets
 
 ```bash
 bash deploiement/common/runtime/start-platform.sh build
@@ -437,7 +514,7 @@ Résultat attendu :
 BUILD SUCCESS
 ```
 
-### 10.2 E2E frontend Playwright
+### 12.2 E2E frontend Playwright
 
 ```bash
 export DB_PASSWORD="<mot-de-passe-postgresql>"
@@ -453,7 +530,7 @@ Résultat attendu :
 RESULTAT : E2E FRONTEND PASSED
 ```
 
-### 10.3 E2E SWAM LIS
+### 12.3 E2E SWAM LIS
 
 ```bash
 export SWAM_E2E_KEK_CLEAR="<cle-de-test-autorisee>"
@@ -468,13 +545,13 @@ RESULTAT : PASSED (36 controles)
 
 La clé ne doit jamais être inscrite dans un fichier versionné.
 
-### 10.4 E2E SWAM SID
+### 12.4 E2E SWAM SID
 
 ```bash
 bash deploiement/swam/swam-e2e.sh
 ```
 
-## 11. Contrôles avant un commit
+## 13. Contrôles avant un commit
 
 ```bash
 git status --short
@@ -504,7 +581,7 @@ git commit -m "<message précis>"
 git push origin codex/portail-rbac-maker-checker
 ```
 
-## 12. Première action obligatoire pour la prochaine session
+## 14. Première action obligatoire pour la prochaine session
 
 1. vérifier `git status` et la branche ;
 2. récupérer la dernière version depuis GitHub ;
