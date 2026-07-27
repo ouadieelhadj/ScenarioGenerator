@@ -23,6 +23,8 @@ dmcs/
 keys/
 logs/
 reports/
+platform.env
+*.platform.env
 run-logs/
 scripts/TNR_*.txt
 sg-frontend/.angular/

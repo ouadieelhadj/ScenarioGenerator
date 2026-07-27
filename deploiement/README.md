@@ -79,6 +79,29 @@ Toutes les variables globales sont centralisées dans :
 deploiement/common/runtime/platform-env.sh
 ```
 
+Détecter les outils et chemins du poste sans rien écrire :
+
+```bash
+bash deploiement/common/runtime/detect-env.sh
+```
+
+Générer la configuration locale ignorée par Git :
+
+```bash
+bash deploiement/common/runtime/detect-env.sh --write platform.env
+```
+
+Au début de chaque session :
+
+```bash
+source deploiement/common/runtime/platform-env.sh
+export DB_PASSWORD="<saisie-locale>"
+```
+
+`platform-env.sh` charge automatiquement `platform.env`. L'ordre de priorité est
+`variables déjà définies > platform.env > valeurs par défaut`. Le mot de passe
+PostgreSQL n'est ni généré ni chargé depuis `platform.env`.
+
 Le lanceur calcule automatiquement `ROOT` depuis l'emplacement du dépôt.
 
 ```bash

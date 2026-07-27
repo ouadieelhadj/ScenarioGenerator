@@ -226,25 +226,27 @@ reprendre à la compilation et aux tests SWAM décrits dans la section 7.
 1. `COMMENT_REPRENDRE_NOUVELLE_SESSION.md`
 2. `deploiement/README.md`
 3. `deploiement/common/runtime/platform-env.sh`
-4. `deploiement/common/runtime/start-platform.sh`
-5. `deploiement/common/database/export-reference-db.sh`
-6. `deploiement/common/database/replace-db-from-dump.sh`
-7. `deploiement/swam/README.md`
-8. `deploiement/swam/swam-e2e.sh`
-9. `deploiement/swam/swam-lis-e2e.sh`
-10. `tests/swam/issuer/start-and-bootstrap.sh`
-11. `tests/swam/acquirer/start-and-bootstrap.sh`
-12. `conceptions/swam/clearing/CONCEPTION_LIS_AVANT_IMPLEMENTATION.md`
+4. `deploiement/common/runtime/detect-env.sh`
+5. `deploiement/common/runtime/platform.env.example`
+6. `deploiement/common/runtime/start-platform.sh`
+7. `deploiement/common/database/export-reference-db.sh`
+8. `deploiement/common/database/replace-db-from-dump.sh`
+9. `deploiement/swam/README.md`
+10. `deploiement/swam/swam-e2e.sh`
+11. `deploiement/swam/swam-lis-e2e.sh`
+12. `tests/swam/issuer/start-and-bootstrap.sh`
+13. `tests/swam/acquirer/start-and-bootstrap.sh`
+14. `conceptions/swam/clearing/CONCEPTION_LIS_AVANT_IMPLEMENTATION.md`
 
 ### À lire après la finalisation SWAM
 
-13. `conceptions/frontend/CONCEPTION_PORTAIL_MODULAIRE_RBAC_MAKER_CHECKER.md`
-14. `conceptions/frontend/GUIDE_TEST_PORTAIL_MODULAIRE.md`
+15. `conceptions/frontend/CONCEPTION_PORTAIL_MODULAIRE_RBAC_MAKER_CHECKER.md`
+16. `conceptions/frontend/GUIDE_TEST_PORTAIL_MODULAIRE.md`
 
 ### Spécifications de référence
 
-15. `documents/specifications/swam/Description_Interface_Switch-SID_V3-20_05012024.pdf`
-16. `documents/specifications/swam/Local Interchange Specifications - LIS4 14-CMI.pdf`
+17. `documents/specifications/swam/Description_Interface_Switch-SID_V3-20_05012024.pdf`
+18. `documents/specifications/swam/Local Interchange Specifications - LIS4 14-CMI.pdf`
 
 Les spécifications PDF peuvent être absentes d'un clone Git si elles sont
 volumineuses ou volontairement conservées localement. Dans ce cas, demander leur
@@ -591,7 +593,73 @@ Les valeurs communes sont définies dans :
 deploiement/common/runtime/platform-env.sh
 ```
 
-Elles peuvent être surchargées sans modifier les scripts :
+### 9.1 Détecter les chemins du poste
+
+Depuis Git Bash et la racine du dépôt :
+
+```bash
+bash deploiement/common/runtime/detect-env.sh
+```
+
+Ce mode est en lecture seule. Il recherche sur `C:`, `D:` et `F:` :
+
+- la racine Git du dépôt ;
+- PostgreSQL et `psql.exe` ;
+- le JDK et sa version ;
+- Maven autonome ou celui embarqué par IntelliJ ;
+- Node.js et npm ;
+- les valeurs PostgreSQL locales par défaut.
+
+Il n'affiche et ne recherche aucun mot de passe ou clé.
+
+### 9.2 Créer la configuration locale
+
+Après vérification des chemins proposés :
+
+```bash
+bash deploiement/common/runtime/detect-env.sh --write platform.env
+```
+
+Le fichier créé à la racine est local et ignoré par Git. Si un chemin n'a pas
+été détecté, corriger manuellement la copie de
+`deploiement/common/runtime/platform.env.example`.
+
+Ne jamais ajouter `DB_PASSWORD`, une clé claire ou un autre secret dans
+`platform.env`. Même si quelqu'un y ajoute `DB_PASSWORD` par erreur,
+`platform-env.sh` refuse de le charger.
+
+Pour régénérer volontairement un fichier existant :
+
+```bash
+export OVERWRITE_PLATFORM_ENV=true
+bash deploiement/common/runtime/detect-env.sh --write platform.env
+unset OVERWRITE_PLATFORM_ENV
+```
+
+### 9.3 Début de chaque session RECETTE
+
+L'opérateur exécute uniquement :
+
+```bash
+cd /f/MoneyCore/ScenarioGenerator
+source deploiement/common/runtime/platform-env.sh
+export DB_PASSWORD="<mot-de-passe-saisi-par-l'opérateur>"
+```
+
+Le chemin `/f/...` est un exemple : utiliser l'emplacement réel du clone.
+
+Ordre de priorité :
+
+1. variables déjà définies ou exportées dans le terminal ;
+2. valeurs non sensibles de `platform.env` ;
+3. valeurs par défaut de `platform-env.sh`.
+
+Le mot de passe reste limité à la session du terminal et ne doit être ni écrit
+dans un fichier ni envoyé dans une conversation.
+
+### 9.4 Valeurs disponibles
+
+Elles peuvent toujours être surchargées sans modifier les scripts :
 
 ```bash
 export ROOT=/d/MoneyCore/ScenarioGenerator
@@ -607,6 +675,23 @@ export DB_PASSWORD="<mot-de-passe-local>"
 ```
 
 Ne jamais committer de mot de passe réel, de clé claire, de LMK, de ZMK ou de KEK.
+
+### 9.5 Autorisation des clés claires de test en RECETTE
+
+Pour les seuls environnements LAB/DEV et RECETTE, l'opérateur RECETTE est
+explicitement autorisé à bootstrapper une clé **claire de test** avec
+`SWAM_E2E_KEK_CLEAR`, séparément :
+
+```bash
+bash deploiement/swam/03a-bootstrap-issuer.sh
+bash deploiement/swam/03b-bootstrap-member.sh
+bash deploiement/swam/03c-signon-and-key-exchange.sh
+```
+
+Cette autorisation est limitée aux clés synthétiques dédiées aux tests. La valeur
+doit être saisie ou exportée localement dans le terminal, ne doit jamais être
+écrite dans `platform.env`, Git, un rapport ou une conversation, et doit être
+remplacée par une cérémonie HSM pour tout raccordement réel.
 
 ## 10. Compiler et lancer la plateforme
 
