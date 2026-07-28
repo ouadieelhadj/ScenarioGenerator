@@ -47,6 +47,7 @@ décrit :
 - la séparation LAB/DEV et RECETTE ;
 - la configuration locale platform.env ;
 - la restauration du dump transféré manuellement ;
+- la vérification et le démarrage de PostgreSQL avant restauration ;
 - le démarrage unitaire du switch et du membre ;
 - le bootstrap séparé des clés claires synthétiques de test ;
 - le sign-on et la vérification des KCV ;
@@ -61,6 +62,10 @@ charge-le avec `source platform-path.sh` pour configurer le `PATH` du terminal.
 Le JDK détecté doit contenir `java` et `javac` et ne doit jamais être le JBR
 d'IntelliJ. Le bytecode cible reste Java 21. JDK 26 est accepté avec la pile de
 tests actualisée Mockito `5.23.0` / Byte Buddy `1.18.7`.
+
+Avant la restauration, `check-postgres.sh --start` teste PostgreSQL et le démarre
+si nécessaire à partir de `POSTGRES_SERVICE_NAME` ou `PGDATA` dans
+`platform.env`. Sans cible configurée, il s'arrête sans modifier la base.
 
 DB_PASSWORD et SWAM_E2E_KEK_CLEAR doivent être saisis ou exportés uniquement
 dans le terminal. Ne les écris pas dans platform.env, Git, un rapport ou une

@@ -48,9 +48,40 @@ Sur le poste de RECETTE, après avoir arrêté les services applicatifs :
 
 ```bash
 export DB_PASSWORD="<mot-de-passe-postgresql-cible>"
+bash deploiement/common/database/check-postgres.sh --start
 bash deploiement/common/database/replace-db-from-dump.sh \
   "/chemin/vers/scenariogenerator-reference-AAAAMMJJ-HHMMSS.dump"
 ```
+
+`installé` ne signifie pas `démarré`. Avec `--start`, le script vérifie d'abord
+le port puis démarre automatiquement PostgreSQL à partir de l'une des variables
+locales suivantes :
+
+```text
+POSTGRES_SERVICE_NAME=<nom-exact-du-service-Windows>
+PGDATA=<répertoire-portable-contenant-PG_VERSION>
+```
+
+Une seule des deux est nécessaire. Si aucune n'est renseignée, le script ne
+touche à rien et affiche les commandes manuelles suivantes.
+
+Service Windows, depuis PowerShell lancé en administrateur :
+
+```powershell
+Get-Service *postgre*
+Start-Service -Name <nom-du-service>
+```
+
+Installation portable, depuis Git Bash :
+
+```bash
+"$POSTGRES_HOME/bin/pg_ctl.exe" -D "<repertoire-data>" \
+  -l "<fichier-log>" start
+```
+
+Si le serveur utilise un autre port, modifier `DB_PORT` dans `platform.env`,
+recharger `source platform-path.sh`, puis relancer
+`check-postgres.sh --start`.
 
 Avant toute suppression, le script :
 

@@ -215,6 +215,12 @@ NODE_HOME_DETECTED="$(discover_node_home)"
 
 POSTGRES_HOME_DETECTED="$(home_from_executable "$PSQL_FOUND")"
 MAVEN_HOME_DETECTED="$(home_from_executable "$MAVEN_FOUND")"
+PGDATA_DETECTED="${PGDATA:-}"
+if [[ -z "$PGDATA_DETECTED" && -n "$POSTGRES_HOME_DETECTED" ]]; then
+  PG_VERSION_FILE="$(find "$POSTGRES_HOME_DETECTED" -maxdepth 4 -type f \
+    -name PG_VERSION -print -quit 2>/dev/null || true)"
+  [[ -z "$PG_VERSION_FILE" ]] || PGDATA_DETECTED="$(dirname "$PG_VERSION_FILE")"
+fi
 JAVA_VERSION="non détectée"
 [[ -z "$JAVA_FOUND" ]] || JAVA_VERSION="$("$JAVA_FOUND" -version 2>&1 | head -1)"
 JAVA_MAJOR="$(sed -nE 's/.*version "([0-9]+).*/\1/p' <<<"$JAVA_VERSION")"
@@ -237,6 +243,8 @@ declare -a ENV_LINES=(
   "$(env_line JAVA_HOME_DIR "$JAVA_HOME_DETECTED")"
   "$(env_line MAVEN_HOME "$MAVEN_HOME_DETECTED")"
   "$(env_line NODE_HOME "$NODE_HOME_DETECTED")"
+  "$(env_line PGDATA "$PGDATA_DETECTED")"
+  "$(env_line POSTGRES_SERVICE_NAME "${POSTGRES_SERVICE_NAME:-}")"
   "$(env_line DB_HOST localhost)"
   "$(env_line DB_PORT 5432)"
   "$(env_line DB_NAME scenariogenerator)"
@@ -251,6 +259,8 @@ printf '  %-17s %s\n' JAVA_VERSION "$JAVA_VERSION"
 printf '  %-17s %s\n' JAVA_SUPPORT "$JAVA_SUPPORT"
 printf '  %-17s %s\n' MAVEN_HOME "${MAVEN_HOME_DETECTED:-NON TROUVÉ}"
 printf '  %-17s %s\n' NODE_HOME "${NODE_HOME_DETECTED:-NON TROUVÉ}"
+printf '  %-17s %s\n' PGDATA "${PGDATA_DETECTED:-NON TROUVÉ}"
+printf '  %-17s %s\n' POSTGRES_SERVICE_NAME "${POSTGRES_SERVICE_NAME:-NON RENSEIGNÉ}"
 echo
 echo "Valeurs proposées :"
 printf '%s\n' "${ENV_LINES[@]}"

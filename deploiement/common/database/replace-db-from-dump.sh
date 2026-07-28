@@ -34,6 +34,9 @@ BACKUP_FILE="$BACKUP_DIR/${DB_NAME}-before-replace-$(date +%Y%m%d-%H%M%S).dump"
   exit 1
 }
 
+# Contrôle et démarrage configuré avant confirmation, sauvegarde ou suppression.
+bash "$SCRIPT_DIR/check-postgres.sh" --start
+
 echo "ATTENTION : la base cible '$DB_NAME' sur $DB_HOST:$DB_PORT sera remplacée."
 echo "Arrêter tous les services applicatifs avant de continuer."
 read -r -p "Saisir exactement 'REMPLACER $DB_NAME' : " confirmation

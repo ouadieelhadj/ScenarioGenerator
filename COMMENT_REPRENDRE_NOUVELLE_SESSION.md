@@ -217,9 +217,50 @@ Sur RECETTE :
 cd /d/MoneyCore/ScenarioGenerator
 bash deploiement/common/runtime/start-platform.sh stop
 export DB_PASSWORD="<mot-de-passe-postgresql-cible>"
+bash deploiement/common/database/check-postgres.sh --start
 bash deploiement/common/database/replace-db-from-dump.sh \
   "/chemin/vers/scenariogenerator-reference-AAAAMMJJ-HHMMSS.dump"
 ```
+
+PostgreSQL installé ne signifie pas que son serveur est démarré. Le contrôle doit
+réussir avant la restauration :
+
+```text
+[OK] PostgreSQL écoute sur <host>:<port>
+[OK] Connexion PostgreSQL authentifiée
+```
+
+Le mode `--start` tente automatiquement le démarrage si le port n'écoute pas :
+
+- avec `POSTGRES_SERVICE_NAME`, il démarre le service Windows exact via
+  PowerShell, ce qui peut demander des droits administrateur ;
+- avec `PGDATA`, il lance le PostgreSQL portable par `pg_ctl` et écrit le log
+  dans `POSTGRES_LOG`.
+
+Ces valeurs sont locales et doivent être définies dans `platform.env`. Le
+détecteur propose automatiquement `PGDATA` s'il trouve un fichier `PG_VERSION`
+sous `POSTGRES_HOME`.
+
+Si le serveur n'écoute pas, utiliser l'une des procédures suivantes.
+
+Service Windows, dans PowerShell lancé en administrateur :
+
+```powershell
+Get-Service *postgre*
+Start-Service -Name <nom-du-service>
+```
+
+Installation PostgreSQL portable, dans Git Bash :
+
+```bash
+"$POSTGRES_HOME/bin/pg_ctl.exe" -D "<repertoire-data>" \
+  -l "<fichier-log>" start
+```
+
+Le répertoire de données et le fichier de log sont propres au poste RECETTE et
+ne doivent pas être devinés. Si PostgreSQL tourne sur un autre port, corriger
+`DB_PORT` dans `platform.env`, recharger `source platform-path.sh`, puis refaire
+le contrôle.
 
 Le script sauvegarde la base de recette sous `runtime/database-backups`, ferme
 ses connexions, la recrée puis restaure la base de référence. Après restauration,
