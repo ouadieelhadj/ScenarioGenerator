@@ -625,10 +625,11 @@ prioritaire si elle désigne un vrai JDK conforme.
 
 Le projet compile avec `source=21` et `target=21` :
 
-- JDK 21 est la seule version de référence supportée sur LAB/DEV et RECETTE ;
-- JDK 26 est refusé pour cette version du projet : Mockito inline/Byte Buddy ne
-  peut pas instrumenter certaines classes pendant les tests ;
-- un JDK différent de 21 ou un simple JRE/JBR est refusé par le détecteur.
+- JDK 21 reste la version de référence et le bytecode produit reste Java 21 ;
+- JDK 26 est accepté pour exécuter le build et les tests grâce à Mockito
+  `5.23.0` et Byte Buddy `1.18.7` ;
+- un JDK complet avec `java` et `javac` est obligatoire ;
+- les JRE/JBR d'IDE restent refusés.
 
 Pour Node.js, le détecteur valide la racine contenant `node.exe` et `npm`, et ne
 retient pas un sous-répertoire de shims Corepack.
@@ -645,7 +646,7 @@ bash deploiement/common/runtime/detect-env.sh
 Ces variables contrôlent uniquement la détection et ne sont pas des chemins
 applicatifs.
 
-Si un build RECETTE a déjà échoué avec :
+Si un ancien build RECETTE a échoué avec :
 
 ```text
 Mockito cannot mock this class
@@ -653,10 +654,11 @@ Could not modify all classes
 Java : 26
 ```
 
-il ne faut pas modifier les tests ni ajouter une option expérimentale Byte Buddy.
-Installer un JDK 21 approuvé, corriger `JAVA_HOME_DIR` dans `platform.env`,
-recharger `source platform-path.sh`, vérifier `"$JAVA" -version`, puis relancer
-le build complet.
+la pile Mockito/Byte Buddy trop ancienne était en cause. Après récupération du
+commit de correction, recharger `source platform-path.sh`, vérifier
+`"$JAVA" -version`, contrôler l'arbre Maven et relancer le build complet. Ne pas
+ajouter `-Dnet.bytebuddy.experimental=true` : la version retenue prend en charge
+les JVM récentes sans ce contournement.
 
 ### 9.2 Créer la configuration locale
 

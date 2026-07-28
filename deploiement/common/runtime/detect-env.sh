@@ -129,7 +129,7 @@ valid_jdk_home() {
   [[ -f "$java_bin" ]] || java_bin="$home/bin/java"
   version_line="$("$java_bin" -version 2>&1 | head -1 || true)"
   major="$(sed -nE 's/.*version "([0-9]+).*/\1/p' <<<"$version_line")"
-  [[ "$major" == "21" ]]
+  [[ "$major" =~ ^[0-9]+$ && "$major" -ge 21 ]]
 }
 
 discover_jdk() {
@@ -221,6 +221,8 @@ JAVA_MAJOR="$(sed -nE 's/.*version "([0-9]+).*/\1/p' <<<"$JAVA_VERSION")"
 JAVA_SUPPORT="JDK introuvable"
 if [[ "$JAVA_MAJOR" == "21" ]]; then
   JAVA_SUPPORT="JDK 21 de référence"
+elif [[ "$JAVA_MAJOR" =~ ^[0-9]+$ && "$JAVA_MAJOR" -gt 21 ]]; then
+  JAVA_SUPPORT="JDK récent supporté par la pile de tests actualisée"
 fi
 
 env_line() {

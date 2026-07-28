@@ -59,8 +59,8 @@ ceux de LAB/DEV. Utilise `platform.env` avec les valeurs validées sur RECETTE.
 La génération crée également `platform-path.sh`. Au début de chaque session,
 charge-le avec `source platform-path.sh` pour configurer le `PATH` du terminal.
 Le JDK détecté doit contenir `java` et `javac` et ne doit jamais être le JBR
-d'IntelliJ. JDK 21 est la seule version supportée par la chaîne de tests actuelle.
-N'utilise pas JDK 26 : Mockito inline/Byte Buddy échoue pendant les tests.
+d'IntelliJ. Le bytecode cible reste Java 21. JDK 26 est accepté avec la pile de
+tests actualisée Mockito `5.23.0` / Byte Buddy `1.18.7`.
 
 DB_PASSWORD et SWAM_E2E_KEK_CLEAR doivent être saisis ou exportés uniquement
 dans le terminal. Ne les écris pas dans platform.env, Git, un rapport ou une

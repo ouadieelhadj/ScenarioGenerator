@@ -86,9 +86,10 @@ bash deploiement/common/runtime/detect-env.sh
 ```
 
 Le détecteur exige un JDK complet contenant `java` et `javac`. Il rejette les
-JBR/JRE embarqués dans IntelliJ et les chemins d'IDE. Le projet cible Java 21 et
-la chaîne de build/test supportée exige JDK 21. JDK 26 n'est pas accepté : Mockito
-inline/Byte Buddy échoue lors de l'instrumentation des classes.
+JBR/JRE embarqués dans IntelliJ et les chemins d'IDE. Le projet produit toujours
+du bytecode Java 21. La pile de tests a été actualisée avec Mockito `5.23.0` et
+Byte Buddy `1.18.7` pour permettre son exécution avec un JDK complet récent,
+notamment JDK 26.
 
 La recherche utilise d'abord les variables existantes, le `PATH` et `where.exe`,
 puis les lecteurs disponibles. Pour limiter un balayage :
@@ -121,15 +122,17 @@ Il faut utiliser `source` : exécuter `bash platform-path.sh` ne modifierait que
 `variables déjà définies > platform.env > valeurs par défaut`. Le mot de passe
 PostgreSQL n'est ni généré ni chargé depuis `platform.env`.
 
-Si RECETTE affiche `Mockito cannot mock this class` sous Java 26, installer un
-JDK 21 approuvé, remplacer `JAVA_HOME_DIR` dans `platform.env`, puis recharger :
+Si RECETTE affiche encore `Mockito cannot mock this class` sous Java 26, vérifier
+d'abord les dépendances réellement résolues :
 
 ```bash
-source platform-path.sh
-"$JAVA" -version
+"$MAVEN" -q dependency:tree \
+  -Dincludes=org.mockito:mockito-core,net.bytebuddy:byte-buddy,net.bytebuddy:byte-buddy-agent
 ```
 
-La version affichée doit commencer par `21` avant de relancer `mvn verify`.
+Les versions attendues sont Mockito `5.23.0` et Byte Buddy `1.18.7`. Supprimer
+uniquement le cache Maven de ces artefacts s'il contient un téléchargement
+incomplet, puis relancer `mvn verify`.
 
 Le lanceur calcule automatiquement `ROOT` depuis l'emplacement du dépôt.
 
