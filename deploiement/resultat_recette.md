@@ -85,3 +85,84 @@ supplémentaire.
 
 Aucune correction n'a été développée en RECETTE. Les anomalies sont remontées à
 LAB/DEV pour correction et re-livraison, conformément à la procédure.
+
+---
+
+## Mise à jour — suite de la reprise (2026-07-28)
+
+Commits récupérés et validés depuis le rapport initial :
+
+- `6048e11` — Correction de `replace-db-from-dump.sh` (substitution `:'db_name'`).
+  **Vérifié OK en RECETTE** : restauration réussie, `scenariogenerator: 78 tables`,
+  `[OK] Base remplacée`.
+- `4f7bca6` — Mockito 5.23.0 / Byte Buddy 1.18.7 (JDK 26). **Vérifié OK**.
+- `8e568f5` — démarrage automatique PostgreSQL. **Vérifié OK**.
+
+Build complet `start-platform.sh build` : **BUILD SUCCESS** (14 modules).
+
+## Anomalie ouverte n°2 : droits applicatifs non rejoués après restauration
+
+Commit testé : `e63d9e8`
+
+**Symptôme**
+
+Au démarrage de `sg-swam-issuer` (`01-start-issuer.sh`) :
+
+```text
+IllegalStateException: [SG-PORTS] Base injoignable — demarrage annule.
+Caused by: PSQLException: ERROR: permission denied for table swam_interface
+```
+
+L'issuer se connecte avec le rôle `swam_issuer_user`.
+
+**Diagnostic (confirmé en base restaurée)**
+
+- Les rôles applicatifs existent bien (`\du`) : `swam_issuer_user`,
+  `swam_acquirer_user`, `scenario_user`, `dmas_*`, `mc_*`.
+- Mais `\dp swam_interface` montre une colonne « Droits d'accès » VIDE :
+  aucun `GRANT` sur les tables.
+
+**Cause**
+
+`replace-db-from-dump.sh` restaure avec `pg_restore --no-owner --no-acl`
+(ce qui efface propriétaires ET privilèges), mais ne rejoue **aucun** `GRANT`
+après la restauration : le script passe directement du `pg_restore` au comptage
+des tables.
+
+À l'inverse, `install-full-db.sh` (ligne 78) rejoue bien les droits :
+
+```sql
+GRANT ALL ON SCHEMA public TO scenario_user, dmas_acquirer_user,
+  dmas_issuer_user, swam_issuer_user, swam_acquirer_user;
+```
+
+plus les grants des migrations (`migration_v1.2.0_grants.sql`).
+
+**Correctif demandé à LAB/DEV**
+
+Après le `pg_restore`, ajouter un rejeu des droits pour tous les rôles
+applicatifs, sur le schéma ET les objets existants, par exemple :
+
+```sql
+GRANT USAGE ON SCHEMA public TO <roles>;
+GRANT ALL ON ALL TABLES IN SCHEMA public TO <roles>;
+GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO <roles>;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO <roles>;
+```
+
+avec `<roles>` = `scenario_user`, `dmas_acquirer_user`, `dmas_issuer_user`,
+`mc_sms_issuer_user`, `mc_sms_acquirer_user`, `mc_dmas_member`,
+`mc_dmas_mastercard`, `swam_issuer_user`, `swam_acquirer_user`.
+
+Remarque : la liste exacte des rôles et le périmètre des droits doivent être
+confirmés par LAB/DEV selon la matrice de droits RBAC officielle du projet,
+plutôt qu'un `GRANT ALL` générique. Le rejeu doit idéalement réutiliser la
+même définition de droits que `install-full-db.sh` / `migration_v1.2.0_grants.sql`
+pour rester cohérent.
+
+**Impact**
+
+Restauration fonctionnelle mais base inexploitable par les services : la chaîne
+SWAM ne peut pas démarrer tant que les droits ne sont pas rejoués.
+
+Aucune correction développée en RECETTE.
