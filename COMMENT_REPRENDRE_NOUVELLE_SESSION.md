@@ -99,6 +99,17 @@ Le poste de recette ne doit pas servir à développer directement des correction
 Une anomalie trouvée en recette est reproduite et corrigée sur LAB/DEV, puis la
 correction est commitée, poussée et récupérée en recette.
 
+LAB/DEV et RECETTE utilisent la même branche
+`codex/portail-rbac-maker-checker`. Pour éviter les conflits :
+
+- RECETTE écrit uniquement son compte rendu dans
+  `deploiement/resultat_recette.md` ;
+- LAB/DEV écrit sa réponse dans `deploiement/reponse_labdev.md` et réalise les
+  corrections de code ;
+- chaque intervenant récupère la branche avant de commencer ;
+- avant un push, utiliser `git fetch` puis `git pull --rebase` ;
+- ne jamais effectuer de push forcé sur cette branche commune.
+
 Les deux postes utilisent des configurations et des secrets distincts. Aucun mot
 de passe, fichier HSM, LMK, ZMK, KEK ou certificat privé de LAB/DEV ne doit être
 copié dans Git ou réutilisé implicitement en recette.

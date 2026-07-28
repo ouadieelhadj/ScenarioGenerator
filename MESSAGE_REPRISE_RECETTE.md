@@ -80,4 +80,13 @@ explicite, environnement autorisé, fenêtre de test et accords réseau/HSM.
 
 Si une anomalie est détectée, communique le hash du commit testé et des traces
 assainies à LAB/DEV. Ne développe pas directement la correction en RECETTE.
+
+LAB/DEV et RECETTE travaillent sur la branche commune
+`codex/portail-rbac-maker-checker` avec la répartition suivante :
+
+- RECETTE modifie uniquement `deploiement/resultat_recette.md` ;
+- LAB/DEV modifie le code et `deploiement/reponse_labdev.md` ;
+- avant chaque modification, chacun exécute `git pull --ff-only` ;
+- avant chaque push, chacun refait `git fetch` puis `git pull --rebase` ;
+- aucun push forcé n'est autorisé sur cette branche commune.
 ```
