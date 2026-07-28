@@ -197,7 +197,7 @@ GRANT USAGE, SELECT ON SEQUENCE mc_sms_cards_id_seq TO mc_sms_issuer_user;
 INSERT INTO public.networks (
     code, name, iso_version, header_type, packager_class,
     issuer_host, issuer_iso_port,
-    acquirer_jpos_port, status
+    acquirer_jpos_port, active
 ) VALUES (
     'MASTERCARD_SMS',
     'Mastercard Single Message System',
@@ -207,5 +207,5 @@ INSERT INTO public.networks (
     'localhost',
     7001,
     8095,
-    'ACTIVE'
+    true
 ) ON CONFLICT (code) DO NOTHING;

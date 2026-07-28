@@ -27,7 +27,31 @@ Installation complète depuis Git Bash :
 bash deploiement/common/database/install-full-db.sh
 ```
 
-### Promouvoir une base de test de LAB/DEV vers RECETTE
+### Reconstruire la base RECETTE depuis les scripts SQL (méthode recommandée)
+
+La base de référence SWAM peut être recréée sans fichier dump. Le script charge
+le schéma, les données de paramétrage, SID, LIS, le portail et les droits
+applicatifs depuis les fichiers versionnés :
+
+```bash
+source deploiement/common/runtime/platform-env.sh
+export DB_PASSWORD="<mot-de-passe-postgresql-cible>"
+bash deploiement/common/database/install-full-db.sh
+```
+
+Le script démarre PostgreSQL si nécessaire, demande la confirmation
+`RECREER <DB_NAME>`, recrée la base puis vérifie les données et les droits. Pour
+tester sans toucher à la base principale :
+
+```bash
+export DB_NAME=scenariogeneratorqualif
+export DB_REPLACE_CONFIRMATION="RECREER scenariogeneratorqualif"
+bash deploiement/common/database/install-full-db.sh
+```
+
+La restauration d'un dump ci-dessous reste une solution de secours.
+
+### Promouvoir une base de test de LAB/DEV vers RECETTE par dump
 
 Le fichier de sauvegarde contient potentiellement des données sensibles. Il ne
 doit jamais être ajouté à Git. Avant l'export, vérifier qu'il contient uniquement

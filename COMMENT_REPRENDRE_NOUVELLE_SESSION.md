@@ -123,7 +123,8 @@ C'est le mode obligatoire pour la reprise actuelle sur le poste de recette :
 - les deux services et les modules LIS tournent sur le même poste ;
 - le code provient exclusivement des commits poussés depuis LAB/DEV ;
 - la configuration de référence non sensible provient du dépôt ;
-- la base de recette est initialisée par un dump de test contrôlé et assaini ;
+- la base de recette est reconstruite en priorité depuis les scripts SQL
+  versionnés ; un dump de test contrôlé et assaini reste une solution de secours ;
 - les clés utilisées sont exclusivement des clés de recette injectées hors Git ;
 - aucun VPN, certificat ou accès à un switch externe n'est nécessaire.
 
@@ -140,8 +141,8 @@ Pour chaque livraison :
 3. communiquer à la recette la branche et le hash du commit attendu ;
 4. sur RECETTE, vérifier que l'arbre Git est propre puis faire
    `git pull --ff-only` ;
-5. transférer un dump uniquement si le schéma ou les données de référence
-   l'exigent ;
+5. reconstruire la base depuis `install-full-db.sh` ; transférer un dump
+   uniquement si un état de données spécifique l'exige ;
 6. sauvegarder la base de recette avant toute restauration ;
 7. injecter les secrets propres à la recette par variables ou canal sécurisé ;
 8. paramétrer et valider séparément le switch puis le membre ;

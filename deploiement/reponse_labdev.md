@@ -104,3 +104,31 @@ scenariogenerator: <nombre> tables
 
 Après réussite, poursuivre la chaîne SWAM décrite dans
 `COMMENT_REPRENDRE_NOUVELLE_SESSION.md`.
+## 2026-07-28 — Reconstruction SQL sans dump
+
+L'anomalie de droits après restauration a conduit à remplacer le dump comme
+méthode principale de préparation de RECETTE.
+
+La commande officielle est désormais :
+
+```bash
+source deploiement/common/runtime/platform-env.sh
+export DB_PASSWORD="<mot-de-passe-postgresql-recette>"
+bash deploiement/common/database/install-full-db.sh
+```
+
+Le script recrée la base depuis les migrations versionnées, charge les données
+de paramétrage SWAM, rejoue les droits et exécute des contrôles bloquants.
+
+Validation LAB/DEV effectuée sur une seconde base isolée
+`scenariogeneratorqualif` :
+
+- reconstruction complète : OK ;
+- tables publiques : 76 ;
+- interfaces SWAM : 2 ;
+- cartes SWAM de recette : 3 ;
+- modules portail : 4 ;
+- droits `swam_issuer_user`, `swam_acquirer_user`,
+  `swam_lis_member_user` et `swam_lis_switch_user` : OK.
+
+La base principale `scenariogenerator` n'a pas été modifiée pendant ce test.

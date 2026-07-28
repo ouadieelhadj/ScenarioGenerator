@@ -1,6 +1,6 @@
 BEGIN;
 
-ALTER TABLE mc_dmas_interface
+ALTER TABLE IF EXISTS mc_dmas_interface
     ADD COLUMN IF NOT EXISTS log_file varchar(500);
 
 CREATE TABLE IF NOT EXISTS swam_interface (
@@ -49,15 +49,20 @@ ON CONFLICT (id_interface) DO UPDATE SET
  log_file=EXCLUDED.log_file,
  active=EXCLUDED.active;
 
-UPDATE mc_dmas_interface
-SET log_file = CASE id_interface
-    WHEN 'DMAS_BANK_A'
-        THEN 'D:/MoneyCore/ScenarioGenerator/logs/mc-dmas-member.log'
-    WHEN 'DMAS_MASTERCARD_1'
-        THEN 'D:/MoneyCore/ScenarioGenerator/logs/mc-dmas-mastercard.log'
-    ELSE log_file
-END
-WHERE log_file IS NULL;
+DO $$
+BEGIN
+    IF to_regclass('public.mc_dmas_interface') IS NOT NULL THEN
+        UPDATE mc_dmas_interface
+        SET log_file = CASE id_interface
+            WHEN 'DMAS_BANK_A'
+                THEN 'D:/MoneyCore/ScenarioGenerator/logs/mc-dmas-member.log'
+            WHEN 'DMAS_MASTERCARD_1'
+                THEN 'D:/MoneyCore/ScenarioGenerator/logs/mc-dmas-mastercard.log'
+            ELSE log_file
+        END
+        WHERE log_file IS NULL;
+    END IF;
+END $$;
 
 GRANT SELECT,INSERT,UPDATE,DELETE ON swam_interface
  TO swam_acquirer_user,swam_issuer_user,mc_dmas_member,mc_dmas_mastercard;
