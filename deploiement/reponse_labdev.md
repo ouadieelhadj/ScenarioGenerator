@@ -212,3 +212,74 @@ Après récupération du commit, RECETTE doit arrêter les anciens services,
 reconstruire la base avec `install-full-db.sh`, puis reprendre les scripts SWAM
 `01` à `04`. Les contrôles de reconstruction sont maintenant bloquants si la
 table partagée existe encore ou si un rôle accède aux cartes de l'autre côté.
+
+## 2026-07-28 — Réponse anomalies RECETTE n°4, 4bis et 5
+
+### n°4 — HTTP 403 sur le clearing LIS
+
+La politique de sécurité LIS existait dans le module commun, mais les
+applications membre et switch scannaient globalement `com.staging.sg`. Cette
+combinaison rendait la chaîne de sécurité dépendante des configurations
+présentes dans le classpath du poste.
+
+Correction :
+
+- une configuration de sécurité explicite appartient désormais à chaque
+  application LIS ;
+- `/api/clearing/**` est autorisé sans authentification uniquement pour le
+  Mode A LAB/RECETTE interne ;
+- tous les autres chemins sont refusés ;
+- le scan Spring de chaque application est restreint à son côté LIS, au commun
+  LIS et à sa configuration de persistance.
+
+Validation HTTP sans token :
+
+- EOD membre et switch : HTTP `202` ;
+- génération outgoing membre et switch : HTTP `200` ;
+- aucune réponse `403`.
+
+Cette ouverture ne définit pas la sécurité de production. L'authentification
+RBAC devra être portée par le portail ou la passerelle interne lors de son
+raccordement.
+
+### n°4bis — Chemins LIS codés sur `D:/`
+
+Les quatre chemins outgoing/incoming sont maintenant construits depuis :
+
+```text
+$ROOT/runtime/e2e/<identifiant-execution>
+```
+
+Sous Git Bash, `cygpath -m` les convertit au format du lecteur réel. Les
+variables `SWAM_LIS_*_OUTPUT` et `SWAM_LIS_*_INCOMING` restent surchargeables.
+Les chemins Java, Maven, PostgreSQL, la base, l'hôte et le port proviennent
+également de `platform-env.sh`.
+
+### n°5 — Arrêt incomplet des services
+
+`06-stop-swam.sh` :
+
+1. traite les fichiers PID lorsqu'ils existent ;
+2. recherche ensuite les PID réellement à l'écoute sur les ports SID/LIS ;
+3. termine chaque arbre de processus une seule fois avec `taskkill /T /F` ;
+4. attend globalement la libération des ports ;
+5. retourne un code d'échec et liste chaque port encore occupé.
+
+Un test avec fichiers PID volontairement absents a arrêté avec succès :
+
+- un serveur temporaire sur le port `19091` ;
+- deux vrais services Java LIS sur `18521` et `18522` ;
+- les quatre services Java du scénario complet sur les ports isolés.
+
+Si un service a été démarré avec des droits Windows supérieurs, le script
+signale maintenant clairement l'échec et demande d'être relancé depuis un
+terminal disposant des droits nécessaires.
+
+### Validation globale LAB/DEV
+
+- tests Maven ciblés LIS : `BUILD SUCCESS`, 31 tests ;
+- génération LIS membre et switch sans authentification : réussie ;
+- scénario `05-run-lis-clearing.sh` sur base
+  `scenariogeneratorqualif` : `PASSED (30 contrôles)` ;
+- achats dans les deux sens, EOD, outgoing/incoming, chargebacks,
+  représentation et comptabilisation équilibrée : réussis.

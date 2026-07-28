@@ -6,14 +6,13 @@ set +H
 # Route A: member acquirer -> switch issuer
 # Route B: switch -> member on the very same permanent SID connection.
 
-ROOT="${ROOT:-/d/MoneyCore/ScenarioGenerator}"
-MVN="${MVN:-mvn}"
-JAVA="${JAVA:-/d/MoneyCore/jdk-21.0.11/bin/java.exe}"
-JAVA_HOME_DIR="${JAVA_HOME_DIR:-/d/MoneyCore/jdk-21.0.11}"
-MAVEN_REPO="${MAVEN_REPO:-D:/MoneyCore/ScenarioGenerator/tmp/m2repo}"
-PSQL="${PSQL:-/d/MoneyCore/PostgreSQL/18/bin/psql.exe}"
-DB="${DB:-scenariogenerator}"
-DB_USER="${DB_USER:-postgres}"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+# shellcheck source=lib-swam.sh
+source "$SCRIPT_DIR/lib-swam.sh"
+
+MVN="${MVN:-$MAVEN}"
+MAVEN_REPO="${MAVEN_REPO:-$ROOT/tmp/m2repo}"
+DB="${DB:-$DB_NAME}"
 DB_PASSWORD="${DB_PASSWORD:-}"
 BUSINESS_DATE="${BUSINESS_DATE:-$(date +%F)}"
 MEMBER_CODE="${MEMBER_CODE:-000123}"
@@ -27,17 +26,22 @@ MEMBER_PAN="${SWAM_MEMBER_CARD_PAN:-5321962145453355}"
 SWITCH_PAN="${SWAM_SWITCH_CARD_PAN:-5321962145453348}"
 KEK_CLEAR="${SWAM_E2E_KEK_CLEAR:-}"
 RUN_SID_BOOTSTRAP="${RUN_SID_BOOTSTRAP:-true}"
+MANAGE_LIS_SERVICES="${SWAM_LIS_MANAGE_SERVICES:-true}"
 PASS=0
 E2E_RUN_ID="${E2E_RUN_ID:-$(date +%Y%m%d%H%M%S)}"
-export SWAM_LIS_MEMBER_OUTPUT="D:/MoneyCore/ScenarioGenerator/runtime/e2e/$E2E_RUN_ID/member/outgoing"
-export SWAM_LIS_MEMBER_INCOMING="D:/MoneyCore/ScenarioGenerator/runtime/e2e/$E2E_RUN_ID/member/incoming"
-export SWAM_LIS_SWITCH_OUTPUT="D:/MoneyCore/ScenarioGenerator/runtime/e2e/$E2E_RUN_ID/switch/outgoing"
-export SWAM_LIS_SWITCH_INCOMING="D:/MoneyCore/ScenarioGenerator/runtime/e2e/$E2E_RUN_ID/switch/incoming"
+E2E_RUNTIME="${SWAM_E2E_RUNTIME:-$ROOT/runtime/e2e/$E2E_RUN_ID}"
+if command -v cygpath >/dev/null 2>&1; then
+  E2E_RUNTIME="$(cygpath -m "$E2E_RUNTIME")"
+fi
+export SWAM_LIS_MEMBER_OUTPUT="${SWAM_LIS_MEMBER_OUTPUT:-$E2E_RUNTIME/member/outgoing}"
+export SWAM_LIS_MEMBER_INCOMING="${SWAM_LIS_MEMBER_INCOMING:-$E2E_RUNTIME/member/incoming}"
+export SWAM_LIS_SWITCH_OUTPUT="${SWAM_LIS_SWITCH_OUTPUT:-$E2E_RUNTIME/switch/outgoing}"
+export SWAM_LIS_SWITCH_INCOMING="${SWAM_LIS_SWITCH_INCOMING:-$E2E_RUNTIME/switch/incoming}"
 
 ok(){ echo "  [OK] $1"; PASS=$((PASS+1)); }
 die(){ echo "  [FAIL] $*" >&2; exit 1; }
 [[ -n "$DB_PASSWORD" ]] || die "DB_PASSWORD obligatoire"
-db(){ PGPASSWORD="$DB_PASSWORD" "$PSQL" -U "$DB_USER" -h localhost -d "$DB" -tAc "$1"; }
+db(){ PGPASSWORD="$DB_PASSWORD" "$PSQL" -U "$DB_USER" -h "$DB_HOST" -p "$DB_PORT" -d "$DB" -tAc "$1"; }
 post(){
   local url="$1"; shift
   local response
@@ -103,8 +107,9 @@ export JAVA_HOME="$JAVA_HOME_DIR"
 
 if [ "$RUN_SID_BOOTSTRAP" = true ]; then
   [ -n "$KEK_CLEAR" ] || die "SWAM_E2E_KEK_CLEAR obligatoire pour le bootstrap des cles"
-  PGPASSWORD="$DB_PASSWORD" "$PSQL" -v ON_ERROR_STOP=1 -U "$DB_USER" -h localhost \
-    -d "$DB" -f "$ROOT/sql/16b_swam_sid_clearing_fields.sql" >/dev/null
+  PGPASSWORD="$DB_PASSWORD" "$PSQL" -v ON_ERROR_STOP=1 -U "$DB_USER" \
+    -h "$DB_HOST" -p "$DB_PORT" -d "$DB" \
+    -f "$ROOT/sql/16b_swam_sid_clearing_fields.sql" >/dev/null
   ok "Migration journaux SID pour clearing"
   stop_port 8510
   stop_port 8511
@@ -147,17 +152,21 @@ json_has "$(curl -fsS "$SWITCH_PURCHASE_BASE/connection")" \
   '"mode":"SINGLE_PERMANENT_BIDIRECTIONAL"' "Liaison SID unique bidirectionnelle"
 purchase_five "$SWITCH_PURCHASE_BASE" "$MEMBER_PAN" "switch vers membre"
 
-PGPASSWORD="$DB_PASSWORD" "$PSQL" -v ON_ERROR_STOP=1 -U "$DB_USER" -h localhost \
-  -d "$DB" -f "$ROOT/sql/17_swam_lis_clearing.sql" >/dev/null
+PGPASSWORD="$DB_PASSWORD" "$PSQL" -v ON_ERROR_STOP=1 -U "$DB_USER" \
+  -h "$DB_HOST" -p "$DB_PORT" -d "$DB" \
+  -f "$ROOT/sql/17_swam_lis_clearing.sql" >/dev/null
 ok "Schema clearing installe"
 db "TRUNCATE TABLE member_lis_business_day, switch_lis_business_day RESTART IDENTITY CASCADE;" >/dev/null
 ok "Donnees clearing E2E reinitialisees"
 
-"$MVN" -q "-Dmaven.repo.local=$MAVEN_REPO" -pl sg-swam-lis-member,sg-swam-lis-switch -am package -DskipTests
-stop_port "${SWAM_LIS_MEMBER_HTTP_PORT:-8521}"
-stop_port "${SWAM_LIS_SWITCH_HTTP_PORT:-8522}"
-start_jar sg-swam-lis-member /tmp/swam-lis-member.log
-start_jar sg-swam-lis-switch /tmp/swam-lis-switch.log
+if [[ "$MANAGE_LIS_SERVICES" == "true" ]]; then
+  "$MVN" -q "-Dmaven.repo.local=$MAVEN_REPO" \
+    -pl sg-swam-lis-member,sg-swam-lis-switch -am package -DskipTests
+  stop_port "${SWAM_LIS_MEMBER_HTTP_PORT:-8521}"
+  stop_port "${SWAM_LIS_SWITCH_HTTP_PORT:-8522}"
+  start_jar sg-swam-lis-member /tmp/swam-lis-member.log
+  start_jar sg-swam-lis-switch /tmp/swam-lis-switch.log
+fi
 wait_up "$MEMBER_LIS/api/clearing/health" "LIS membre"
 wait_up "$SWITCH_LIS/api/clearing/health" "LIS switch"
 

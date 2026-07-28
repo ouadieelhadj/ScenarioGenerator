@@ -38,3 +38,28 @@ bash deploiement/swam/swam-full-e2e.sh
 ```
 
 Les PID et logs des scripts numérotés sont placés dans `runtime/swam`.
+
+Les fichiers LIS E2E sont créés sous
+`$ROOT/runtime/e2e/<identifiant-execution>`. Le chemin est converti avec
+`cygpath` sous Git Bash : un dépôt installé sur `F:` produit donc des chemins
+`F:/...`, sans valeur `D:/` codée dans le script.
+
+`06-stop-swam.sh` utilise d'abord les PID enregistrés, puis contrôle les ports
+SID et LIS (`8510`, `8511`, `8094`, `8521`, `8522` par défaut). Il échoue si un
+port reste occupé. Dans ce cas, le relancer depuis un terminal disposant des
+mêmes droits Windows que ceux utilisés pour démarrer les services.
+
+Pour un contrôle isolé, la liste des ports peut être remplacée :
+
+```bash
+export SWAM_STOP_PORTS="18510 18511 18094 18521 18522"
+bash deploiement/swam/06-stop-swam.sh
+```
+
+Le scénario LIS peut réutiliser des services LIS déjà lancés, notamment pour
+une qualification sur des ports isolés :
+
+```bash
+export SWAM_LIS_MANAGE_SERVICES=false
+bash deploiement/swam/05-run-lis-clearing.sh
+```

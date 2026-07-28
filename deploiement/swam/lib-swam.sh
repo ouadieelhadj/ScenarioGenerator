@@ -28,6 +28,45 @@ swam_pid_alive() {
     tr -d '\r' | grep -q "\"$1\""
 }
 
+swam_listening_pids() {
+  local port="$1"
+  netstat -ano 2>/dev/null |
+    awk -v suffix=":$port" \
+      '$2 ~ suffix"$" && $4=="LISTENING" {print $5}' |
+    tr -d '\r' | sort -u
+}
+
+swam_port_is_listening() {
+  [[ -n "$(swam_listening_pids "$1")" ]]
+}
+
+swam_stop_pid() {
+  local pid="$1" label="${2:-processus SWAM}" known_alive="${3:-false}"
+  [[ "$pid" =~ ^[0-9]+$ ]] || return 1
+  if taskkill.exe //T //F //PID "$pid" >/dev/null 2>&1; then
+    echo "[STOP] $label PID=$pid"
+    return 0
+  fi
+  if [[ "$known_alive" != "true" ]] && ! swam_pid_alive "$pid"; then
+    return 0
+  fi
+  echo "[WARN] Impossible d'arreter $label PID=$pid" >&2
+  return 1
+}
+
+swam_stop_port() {
+  local port="$1" pid
+  for pid in $(swam_listening_pids "$port"); do
+    swam_stop_pid "$pid" "port $port" || true
+  done
+  for _ in $(seq 1 20); do
+    swam_port_is_listening "$port" || return 0
+    sleep 1
+  done
+  echo "[FAIL] Port SWAM toujours occupe apres arret : $port" >&2
+  return 1
+}
+
 swam_build_module() {
   "$MAVEN" -f "$ROOT/pom.xml" -pl "$1" -am package -DskipTests \
     -Dmaven.repo.local="$MAVEN_REPO"
