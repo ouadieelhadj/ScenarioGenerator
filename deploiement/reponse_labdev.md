@@ -132,3 +132,40 @@ Validation LAB/DEV effectuée sur une seconde base isolée
   `swam_lis_member_user` et `swam_lis_switch_user` : OK.
 
 La base principale `scenariogenerator` n'a pas été modifiée pendant ce test.
+## 2026-07-28 — Séparation JPA par propriétaire métier
+
+L'anomalie `missing table [mc_dmas_cards]` au démarrage de SWAM Issuer est
+corrigée à la source.
+
+Cause : les applications scannaient globalement toutes les entités et tous les
+repositories de `sg-common`. Hibernate SWAM validait donc aussi les tables
+Mastercard et DMAS.
+
+Correction :
+
+- suppression des scans JPA globaux dans toutes les applications ;
+- configurations explicites dans
+  `com.staging.sg.common.persistence`, activées par
+  `sg.persistence.module` ;
+- séparation SWAM Issuer/Membre, LIS Membre/Switch, DMCS, Mastercard DMAS,
+  Mastercard SMS et orchestrateur ;
+- aucun filtrage par préfixe de table ;
+- validation Hibernate conservée sur les seules entités appartenant au module.
+
+Validations LAB/DEV :
+
+- compilation des 14 modules : `BUILD SUCCESS` ;
+- tests Maven complets : `BUILD SUCCESS` ;
+- tests d'architecture de séparation : 4/4 réussis ;
+- contexte orchestrateur : démarrage réussi avec 18 repositories explicitement
+  autorisés ;
+- SWAM Issuer contre `scenariogeneratorqualif` sans table `mc_dmas_*` :
+  initialisation JPA réussie, 6 repositories seulement ;
+- démarrages SWAM Issuer, Membre, LIS Membre et LIS Switch : réussis ;
+- échange de clés et achats bilatéraux : réussis ;
+- clearing LIS : chargebacks et représentation présents ;
+- comptabilisation : 22 écritures côté membre et 22 côté switch, soldes nuls.
+
+La matrice est documentée dans :
+
+`deploiement/common/PERSISTENCE_MODULE_OWNERSHIP.md`.

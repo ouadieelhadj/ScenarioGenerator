@@ -88,3 +88,6 @@ management:
 logging:
   file:
     name: D:/MoneyCore/ScenarioGenerator/logs/GeneratorOrchestrator.log
+sg:
+  persistence:
+    module: ORCHESTRATOR

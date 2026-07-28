@@ -44,6 +44,8 @@ logging:
     name: F:/ScenarioGenerator/logs/mc-dmas-member.log
 
 sg:
+  persistence:
+    module: MC_DMAS_MEMBER
   network:
     code: DMAS
     role: ACQUIRER

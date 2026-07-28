@@ -34,6 +34,8 @@ dmas:
 
 
 sg:
+  persistence:
+    module: SWAM_ACQUIRER
   network:
     code: SWAM
     role: ACQUIRER

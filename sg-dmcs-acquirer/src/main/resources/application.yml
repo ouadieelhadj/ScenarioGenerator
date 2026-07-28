@@ -40,3 +40,6 @@ logging:
 
   liquibase:
     enabled: false
+sg:
+  persistence:
+    module: DMCS_ACQUIRER

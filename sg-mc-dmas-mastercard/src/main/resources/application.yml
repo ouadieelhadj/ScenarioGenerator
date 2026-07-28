@@ -44,6 +44,8 @@ logging:
     name: F:/ScenarioGenerator/logs/mc-dmas-mastercard.log
 
 sg:
+  persistence:
+    module: MC_DMAS_MASTERCARD
   network:
     code: DMAS
     role: ISSUER

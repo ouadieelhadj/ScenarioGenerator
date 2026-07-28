@@ -38,6 +38,8 @@ logging:
     com.staging.sg: DEBUG
 
 sg:
+  persistence:
+    module: SWAM_ISSUER
   network:
     code: SWAM
     role: ISSUER

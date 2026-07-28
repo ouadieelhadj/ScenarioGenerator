@@ -20,6 +20,10 @@ jwt:
   secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
   expiration-ms: 86400000
 
+sg:
+  persistence:
+    module: SWAM_LIS_SWITCH
+
 swam:
   lis:
     side: SWITCH
