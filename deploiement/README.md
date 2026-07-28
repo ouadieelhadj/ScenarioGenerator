@@ -86,9 +86,9 @@ bash deploiement/common/runtime/detect-env.sh
 ```
 
 Le détecteur exige un JDK complet contenant `java` et `javac`. Il rejette les
-JBR/JRE embarqués dans IntelliJ et les chemins d'IDE. Le projet cible Java 21.
-Un JDK plus récent peut être essayé en RECETTE, mais doit être validé par un
-`mvn verify` complet.
+JBR/JRE embarqués dans IntelliJ et les chemins d'IDE. Le projet cible Java 21 et
+la chaîne de build/test supportée exige JDK 21. JDK 26 n'est pas accepté : Mockito
+inline/Byte Buddy échoue lors de l'instrumentation des classes.
 
 La recherche utilise d'abord les variables existantes, le `PATH` et `where.exe`,
 puis les lecteurs disponibles. Pour limiter un balayage :
@@ -120,6 +120,16 @@ Il faut utiliser `source` : exécuter `bash platform-path.sh` ne modifierait que
 `platform.env`. L'ordre de priorité est
 `variables déjà définies > platform.env > valeurs par défaut`. Le mot de passe
 PostgreSQL n'est ni généré ni chargé depuis `platform.env`.
+
+Si RECETTE affiche `Mockito cannot mock this class` sous Java 26, installer un
+JDK 21 approuvé, remplacer `JAVA_HOME_DIR` dans `platform.env`, puis recharger :
+
+```bash
+source platform-path.sh
+"$JAVA" -version
+```
+
+La version affichée doit commencer par `21` avant de relancer `mvn verify`.
 
 Le lanceur calcule automatiquement `ROOT` depuis l'emplacement du dépôt.
 

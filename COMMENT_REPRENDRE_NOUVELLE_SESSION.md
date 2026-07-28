@@ -625,10 +625,10 @@ prioritaire si elle désigne un vrai JDK conforme.
 
 Le projet compile avec `source=21` et `target=21` :
 
-- JDK 21 est la version de référence supportée sur LAB/DEV et RECETTE ;
-- un JDK supérieur, notamment JDK 26, est accepté provisoirement en RECETTE
-  seulement si le build Maven complet réussit ;
-- un JDK inférieur à 21 ou un simple JRE/JBR est refusé.
+- JDK 21 est la seule version de référence supportée sur LAB/DEV et RECETTE ;
+- JDK 26 est refusé pour cette version du projet : Mockito inline/Byte Buddy ne
+  peut pas instrumenter certaines classes pendant les tests ;
+- un JDK différent de 21 ou un simple JRE/JBR est refusé par le détecteur.
 
 Pour Node.js, le détecteur valide la racine contenant `node.exe` et `npm`, et ne
 retient pas un sous-répertoire de shims Corepack.
@@ -644,6 +644,19 @@ bash deploiement/common/runtime/detect-env.sh
 
 Ces variables contrôlent uniquement la détection et ne sont pas des chemins
 applicatifs.
+
+Si un build RECETTE a déjà échoué avec :
+
+```text
+Mockito cannot mock this class
+Could not modify all classes
+Java : 26
+```
+
+il ne faut pas modifier les tests ni ajouter une option expérimentale Byte Buddy.
+Installer un JDK 21 approuvé, corriger `JAVA_HOME_DIR` dans `platform.env`,
+recharger `source platform-path.sh`, vérifier `"$JAVA" -version`, puis relancer
+le build complet.
 
 ### 9.2 Créer la configuration locale
 
