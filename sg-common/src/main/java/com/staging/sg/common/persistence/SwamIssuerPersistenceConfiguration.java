@@ -1,7 +1,7 @@
 package com.staging.sg.common.persistence;
 
 import com.staging.sg.common.entity.NetworkRef;
-import com.staging.sg.common.entity.SwamCard;
+import com.staging.sg.common.entity.SwamIssuerCard;
 import com.staging.sg.common.entity.SwamInterface;
 import com.staging.sg.common.entity.SwamIssKey;
 import com.staging.sg.common.entity.SwamIssTransaction;
@@ -23,7 +23,7 @@ import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
         excludeFilters = @ComponentScan.Filter(
                 type = FilterType.REGEX,
                 pattern = "com\\.staging\\.sg\\.common\\.repository\\."
-                        + "(?!(NetworkRepository|SwamCardRepository|SwamInterfaceRepository|"
+                        + "(?!(NetworkRepository|SwamIssuerCardRepository|SwamInterfaceRepository|"
                         + "SwamIssKeyRepository|SwamIssTransactionRepository|SwamKekRepository)$).*"),
         considerNestedRepositories = true)
 public class SwamIssuerPersistenceConfiguration {
@@ -32,7 +32,7 @@ public class SwamIssuerPersistenceConfiguration {
     PersistenceManagedTypes swamIssuerManagedTypes() {
         return PersistenceManagedTypes.of(
                 NetworkRef.class.getName(),
-                SwamCard.class.getName(),
+                SwamIssuerCard.class.getName(),
                 SwamInterface.class.getName(),
                 SwamIssKey.class.getName(),
                 SwamIssTransaction.class.getName(),

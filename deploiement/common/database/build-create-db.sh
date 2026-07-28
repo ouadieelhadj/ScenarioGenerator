@@ -212,7 +212,7 @@ REF_TABLES = [
     "networks","roles","permissions","role_permissions","users",
     "bin_range","iso_field_catalog","message_types","campaigns","tests",
     "dmas_cards","dmas_kek","dmas_acq_keys","dmas_iss_keys",
-    "swam_cards","swam_kek",
+    "issuer_swam_cards","acquirer_swam_cards","swam_kek",
 ]
 w("-- 5. Donnees de reference")
 for tbl in REF_TABLES:
@@ -294,10 +294,11 @@ w("")
 # --- Controle ---
 w("-- 9. Controle final")
 w("SELECT 'tables total'   AS objet, count(*)::text AS n FROM pg_tables WHERE schemaname='public'")
-w("UNION ALL SELECT 'swam_*',        count(*)::text FROM pg_tables WHERE tablename LIKE 'swam%'")
+w("UNION ALL SELECT 'tables SWAM',    count(*)::text FROM pg_tables WHERE tablename LIKE '%swam%'")
 w("UNION ALL SELECT 'users (app)',   count(*)::text FROM users")
 w("UNION ALL SELECT 'dmas_cards',    count(*)::text FROM dmas_cards")
-w("UNION ALL SELECT 'swam_cards',    count(*)::text FROM swam_cards")
+w("UNION ALL SELECT 'issuer_swam_cards', count(*)::text FROM issuer_swam_cards")
+w("UNION ALL SELECT 'acquirer_swam_cards', count(*)::text FROM acquirer_swam_cards")
 w("UNION ALL SELECT 'networks SWAM', COALESCE(issuer_iso_port::text,'NULL') FROM networks WHERE code='SWAM'")
 w("ORDER BY objet;")
 

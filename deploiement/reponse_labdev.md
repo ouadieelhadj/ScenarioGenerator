@@ -169,3 +169,46 @@ Validations LAB/DEV :
 La matrice est documentée dans :
 
 `deploiement/common/PERSISTENCE_MODULE_OWNERSHIP.md`.
+
+## 2026-07-28 — Cartes SWAM séparées entre membre et switch
+
+L'anomalie RECETTE `permission denied for table swam_cards` n'est pas corrigée
+par un droit `UPDATE` supplémentaire sur la table partagée. Cette table ne
+respectait pas la propriété métier attendue.
+
+Décision d'architecture appliquée :
+
+- `issuer_swam_cards` appartient exclusivement à `swam_issuer_user` ;
+- `acquirer_swam_cards` appartient exclusivement à `swam_acquirer_user` ;
+- `sg-swam-issuer` utilise `SwamIssuerCardRepository` ;
+- `sg-swam-acquirer` utilise `SwamAcquirerCardRepository` ;
+- l'ancienne table partagée `swam_cards` est supprimée par la migration ;
+- aucun des deux rôles ne peut lire ou modifier la table de l'autre.
+
+La migration
+`deploiement/swam/migration_v1.5.0_swam_cards_by_owner.sql` conserve les
+anciennes cartes lors d'une mise à niveau, puis sépare définitivement les deux
+jeux. Sur une reconstruction neuve, `swam_cartes_test.sql` installe trois cartes
+switch et trois cartes membre avec des PAN distincts.
+
+Validations LAB/DEV sur `scenariogeneratorqualif` :
+
+- reconstruction complète depuis les scripts SQL : OK, 77 tables ;
+- `issuer_swam_cards` : 3 cartes, propriétaire `swam_issuer_user` ;
+- `acquirer_swam_cards` : 3 cartes, propriétaire `swam_acquirer_user` ;
+- table `swam_cards` : absente ;
+- droits croisés de lecture : absents ;
+- bootstrap KEK des deux côtés : KCV `F6EE59` ;
+- sign-on et échange des clés de session : OK ;
+- cinq achats membre vers issuer : approuvés ;
+- cinq achats issuer vers membre : approuvés ;
+- solde issuer : `100000 -> 94985` dans `issuer_swam_cards` uniquement ;
+- solde membre : `100000 -> 94985` dans `acquirer_swam_cards` uniquement ;
+- PAN membre envoyé à l'issuer : refus DE39 `114` ;
+- PAN issuer envoyé au membre : refus DE39 `114` ;
+- tests Maven complets des 14 modules : `BUILD SUCCESS`.
+
+Après récupération du commit, RECETTE doit arrêter les anciens services,
+reconstruire la base avec `install-full-db.sh`, puis reprendre les scripts SWAM
+`01` à `04`. Les contrôles de reconstruction sont maintenant bloquants si la
+table partagée existe encore ou si un rôle accède aux cartes de l'autre côté.

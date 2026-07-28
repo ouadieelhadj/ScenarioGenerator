@@ -2,7 +2,7 @@ package com.staging.sg.swam.acquirer.network;
 
 import com.staging.sg.common.entity.SwamAcqKey;
 import com.staging.sg.common.entity.SwamAcqTransaction;
-import com.staging.sg.common.entity.SwamCard;
+import com.staging.sg.common.entity.SwamAcquirerCard;
 import com.staging.sg.common.entity.SwamKek;
 import com.staging.sg.common.iso.SwamDe48;
 import com.staging.sg.common.iso.SwamPackager;
@@ -15,7 +15,7 @@ import com.staging.sg.common.iso.sid.SidTransactionPersistenceMapper;
 import com.staging.sg.common.service.SwamInterfaceService;
 import com.staging.sg.common.repository.SwamAcqKeyRepository;
 import com.staging.sg.common.repository.SwamAcqTransactionRepository;
-import com.staging.sg.common.repository.SwamCardRepository;
+import com.staging.sg.common.repository.SwamAcquirerCardRepository;
 import com.staging.sg.common.repository.SwamKekRepository;
 import jakarta.annotation.PreDestroy;
 import org.jpos.iso.ISOMsg;
@@ -54,7 +54,7 @@ public class SwamJposClient {
     @Autowired private JposHsmService hsm;
     @Autowired private SwamKekRepository kekRepo;
     @Autowired private SwamAcqKeyRepository acqKeyRepo;
-    @Autowired private SwamCardRepository cardRepo;
+    @Autowired private SwamAcquirerCardRepository cardRepo;
     @Autowired private SwamAcqTransactionRepository txRepo;
 
     private final ConcurrentHashMap<String, ISOMsg> responses = new ConcurrentHashMap<>();
@@ -153,7 +153,7 @@ public class SwamJposClient {
             String pan = request.getString(2);
             long amount = Long.parseLong(request.getString(4));
             String responseCode;
-            SwamCard card = cardRepo.findByPan(pan).orElse(null);
+            SwamAcquirerCard card = cardRepo.findByPan(pan).orElse(null);
             if (card == null) {
                 responseCode = "114";
             } else if (!"ACTIVE".equals(card.getStatus())) {

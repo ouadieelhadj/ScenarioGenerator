@@ -16,7 +16,9 @@ class PersistenceOwnershipConfigurationTest {
                 .swamIssuerManagedTypes().getManagedClassNames();
 
         assertTrue(names.stream().anyMatch(name -> name.endsWith(".SwamIssTransaction")));
+        assertTrue(names.stream().anyMatch(name -> name.endsWith(".SwamIssuerCard")));
         assertTrue(names.stream().anyMatch(name -> name.endsWith(".SwamInterface")));
+        assertFalse(names.stream().anyMatch(name -> name.endsWith(".SwamAcquirerCard")));
         assertFalse(names.stream().anyMatch(name -> name.contains(".McDmas")));
         assertFalse(names.stream().anyMatch(name -> name.contains(".McSms")));
         assertFalse(names.stream().anyMatch(name -> name.endsWith(".SwamAcqTransaction")));
@@ -28,7 +30,9 @@ class PersistenceOwnershipConfigurationTest {
                 .swamAcquirerManagedTypes().getManagedClassNames();
 
         assertTrue(names.stream().anyMatch(name -> name.endsWith(".SwamAcqTransaction")));
+        assertTrue(names.stream().anyMatch(name -> name.endsWith(".SwamAcquirerCard")));
         assertFalse(names.stream().anyMatch(name -> name.endsWith(".SwamIssTransaction")));
+        assertFalse(names.stream().anyMatch(name -> name.endsWith(".SwamIssuerCard")));
         assertFalse(names.stream().anyMatch(name -> name.contains(".McDmas")));
     }
 

@@ -1,11 +1,11 @@
 package com.staging.sg.swam.issuer.network;
 
-import com.staging.sg.common.entity.SwamCard;
+import com.staging.sg.common.entity.SwamIssuerCard;
 import com.staging.sg.common.entity.SwamIssTransaction;
 import com.staging.sg.common.iso.SwamPackager;
 import com.staging.sg.common.iso.SwamLengthChannel;
 import com.staging.sg.common.service.SwamInterfaceService;
-import com.staging.sg.common.repository.SwamCardRepository;
+import com.staging.sg.common.repository.SwamIssuerCardRepository;
 import com.staging.sg.common.repository.SwamIssTransactionRepository;
 import com.staging.sg.common.entity.SwamKek;
 import com.staging.sg.common.entity.SwamIssKey;
@@ -57,7 +57,7 @@ public class SwamJposServer {
 
     private static final Logger log = LoggerFactory.getLogger(SwamJposServer.class);
     private final SwamInterfaceService interfaceService;
-    private final SwamCardRepository cardRepository;
+    private final SwamIssuerCardRepository cardRepository;
     private final SwamIssTransactionRepository txRepository;
     private final SwamKekRepository kekRepository;
     private final SwamIssKeyRepository issKeyRepository;
@@ -178,7 +178,7 @@ public class SwamJposServer {
     }
 
     public SwamJposServer(SwamInterfaceService interfaceService,
-                          SwamCardRepository cardRepository,
+                          SwamIssuerCardRepository cardRepository,
                           SwamIssTransactionRepository txRepository,
                           SwamKekRepository kekRepository,
                           SwamIssKeyRepository issKeyRepository,
@@ -468,12 +468,12 @@ public class SwamJposServer {
             String responseCode;
             String status;
 
-            Optional<SwamCard> opt = (pan != null) ? cardRepository.findByPan(pan) : Optional.empty();
+            Optional<SwamIssuerCard> opt = (pan != null) ? cardRepository.findByPan(pan) : Optional.empty();
             if (opt.isEmpty()) {
                 responseCode = "114"; status = "DECLINED";
                 log.info("[SWAM-SRV] Carte inconnue -> DE39=114");
             } else {
-                SwamCard card = opt.get();
+                SwamIssuerCard card = opt.get();
                 if (!"ACTIVE".equals(card.getStatus())) {
                     responseCode = "062"; status = "DECLINED";
                     log.info("[SWAM-SRV] Carte inactive ({}) -> DE39=062", card.getStatus());
@@ -563,7 +563,7 @@ public class SwamJposServer {
             }
 
             String responseCode;
-            Optional<SwamCard> cardOpt = cardRepository.findByPan(pan);
+            Optional<SwamIssuerCard> cardOpt = cardRepository.findByPan(pan);
             if (cardOpt.isEmpty()) {
                 responseCode = "114";
             } else if (!"ACTIVE".equals(cardOpt.get().getStatus())) {
@@ -573,7 +573,7 @@ public class SwamJposServer {
             } else if (cardOpt.get().getBalance() < amount) {
                 responseCode = "116";
             } else {
-                SwamCard card = cardOpt.get();
+                SwamIssuerCard card = cardOpt.get();
                 card.setBalance(card.getBalance() - amount);
                 card.setUpdatedAt(java.time.LocalDateTime.now());
                 cardRepository.save(card);
@@ -636,7 +636,7 @@ public class SwamJposServer {
             if (original.isPresent()) {
                 SwamIssTransaction financial = original.get();
                 long reversalAmount = Long.parseLong(request.getString(4));
-                SwamCard card = cardRepository.findByPan(financial.getPan()).orElseThrow();
+                SwamIssuerCard card = cardRepository.findByPan(financial.getPan()).orElseThrow();
                 card.setBalance(card.getBalance() + reversalAmount);
                 card.setUpdatedAt(java.time.LocalDateTime.now());
                 cardRepository.save(card);

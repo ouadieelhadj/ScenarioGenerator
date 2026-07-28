@@ -134,12 +134,12 @@ done
 # 8) Tests d'achat
 # ---------------------------------------------------------------
 echo; echo "--- 8) Achat SANS PIN (doit etre approuve) ---"
-BAL0=$(db "SELECT balance FROM swam_cards WHERE pan='$PAN_OK';")
+BAL0=$(db "SELECT balance FROM issuer_swam_cards WHERE pan='$PAN_OK';")
 R=$(curl -s -X POST "$BASE/purchase?pan=$PAN_OK&amount=000000010000")
 check_json "$R" '"approved":true'     "Achat sans PIN approuve"
 check_json "$R" '"de39_action":"000"' "Achat sans PIN DE39=000"
 check_json "$R" '"pin_sent":false'    "Achat sans PIN pin_sent=false"
-BAL1=$(db "SELECT balance FROM swam_cards WHERE pan='$PAN_OK';")
+BAL1=$(db "SELECT balance FROM issuer_swam_cards WHERE pan='$PAN_OK';")
 [ "$BAL1" = "$((BAL0-10000))" ] && ok "Solde debite (${BAL0}->${BAL1})" || fail "Solde incorrect (attendu $((BAL0-10000)) recu $BAL1)"
 
 echo; echo "--- 9) Achat avec PIN CORRECT (doit etre approuve) ---"
@@ -147,14 +147,14 @@ R=$(curl -s -X POST "$BASE/purchase?pan=$PAN_OK&amount=000000010000&pin=$PIN_OK"
 check_json "$R" '"approved":true'     "Achat PIN correct approuve"
 check_json "$R" '"de39_action":"000"' "Achat PIN correct DE39=000"
 check_json "$R" '"pin_sent":true'     "Achat PIN correct pin_sent=true"
-BAL2=$(db "SELECT balance FROM swam_cards WHERE pan='$PAN_OK';")
+BAL2=$(db "SELECT balance FROM issuer_swam_cards WHERE pan='$PAN_OK';")
 [ "$BAL2" = "$((BAL1-10000))" ] && ok "Solde debite (${BAL1}->${BAL2})" || fail "Solde incorrect"
 
 echo; echo "--- 10) Achat avec PIN INCORRECT (doit renvoyer DE39=117) ---"
 R=$(curl -s -X POST "$BASE/purchase?pan=$PAN_OK&amount=000000010000&pin=$PIN_BAD")
 check_json "$R" '"approved":false'    "Achat PIN incorrect refuse"
 check_json "$R" '"de39_action":"117"' "Achat PIN incorrect DE39=117"
-BAL3=$(db "SELECT balance FROM swam_cards WHERE pan='$PAN_OK';")
+BAL3=$(db "SELECT balance FROM issuer_swam_cards WHERE pan='$PAN_OK';")
 [ "$BAL3" = "$BAL2" ] && ok "Solde inchange apres PIN KO" || fail "Solde modifie malgre PIN KO"
 
 echo; echo "--- 11) Achat FONDS INSUFFISANTS (doit renvoyer DE39=116) ---"

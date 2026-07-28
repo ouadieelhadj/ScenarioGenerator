@@ -28,11 +28,13 @@ TO swam_issuer_user, swam_acquirer_user;
 GRANT SELECT ON networks TO swam_issuer_user, swam_acquirer_user;
 GRANT SELECT, INSERT, UPDATE ON swam_kek
 TO swam_issuer_user, swam_acquirer_user;
-GRANT SELECT, INSERT, UPDATE ON swam_iss_keys, swam_iss_transactions, swam_cards
+GRANT SELECT, INSERT, UPDATE ON swam_iss_keys, swam_iss_transactions, issuer_swam_cards
 TO swam_issuer_user;
-GRANT SELECT, INSERT, UPDATE ON swam_acq_keys, swam_acq_transactions
+GRANT SELECT, INSERT, UPDATE ON swam_acq_keys, swam_acq_transactions, acquirer_swam_cards
 TO swam_acquirer_user;
-GRANT SELECT ON swam_cards TO swam_acquirer_user;
+
+REVOKE ALL ON issuer_swam_cards FROM swam_acquirer_user;
+REVOKE ALL ON acquirer_swam_cards FROM swam_issuer_user;
 
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO
     scenario_user,

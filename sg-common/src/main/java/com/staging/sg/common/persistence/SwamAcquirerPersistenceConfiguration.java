@@ -3,7 +3,7 @@ package com.staging.sg.common.persistence;
 import com.staging.sg.common.entity.NetworkRef;
 import com.staging.sg.common.entity.SwamAcqKey;
 import com.staging.sg.common.entity.SwamAcqTransaction;
-import com.staging.sg.common.entity.SwamCard;
+import com.staging.sg.common.entity.SwamAcquirerCard;
 import com.staging.sg.common.entity.SwamInterface;
 import com.staging.sg.common.entity.SwamKek;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -22,13 +22,13 @@ import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
                 type = FilterType.REGEX,
                 pattern = "com\\.staging\\.sg\\.common\\.repository\\."
                         + "(?!(NetworkRepository|SwamAcqKeyRepository|SwamAcqTransactionRepository|"
-                        + "SwamCardRepository|SwamInterfaceRepository|SwamKekRepository)$).*"))
+                        + "SwamAcquirerCardRepository|SwamInterfaceRepository|SwamKekRepository)$).*"))
 public class SwamAcquirerPersistenceConfiguration {
     @Bean
     PersistenceManagedTypes swamAcquirerManagedTypes() {
         return PersistenceManagedTypes.of(
                 NetworkRef.class.getName(), SwamAcqKey.class.getName(),
-                SwamAcqTransaction.class.getName(), SwamCard.class.getName(),
+                SwamAcqTransaction.class.getName(), SwamAcquirerCard.class.getName(),
                 SwamInterface.class.getName(), SwamKek.class.getName());
     }
 }

@@ -116,6 +116,7 @@ run_sql "Ports SWAM"                               "$ROOT/deploiement/swam/migra
 run_sql "Interfaces et journaux SWAM"              "$ROOT/deploiement/swam/migration_v1.4.0_swam_interfaces_logs.sql"
 run_sql "Champs transactionnels SWAM SID"          "$ROOT/deploiement/swam/migration_v1.4.0_swam_sid_transactions.sql"
 run_sql "Champs SID requis par le clearing"        "$ROOT/sql/16b_swam_sid_clearing_fields.sql"
+run_sql "Cartes SWAM separees membre et switch"    "$ROOT/deploiement/swam/migration_v1.5.0_swam_cards_by_owner.sql"
 run_sql "Clearing SWAM LIS"                        "$ROOT/sql/17_swam_lis_clearing.sql"
 run_sql "Portail RBAC et Maker Checker"             "$ROOT/sql/18_portal_rbac_workflow.sql"
 run_sql "Cartes SWAM de recette"                   "$ROOT/deploiement/swam/swam_cartes_test.sql"
@@ -128,7 +129,9 @@ FROM pg_tables WHERE schemaname='public'
 UNION ALL
 SELECT 'interfaces_swam', count(*)::text FROM swam_interface
 UNION ALL
-SELECT 'cartes_swam', count(*)::text FROM swam_cards
+SELECT 'cartes_swam_issuer', count(*)::text FROM issuer_swam_cards
+UNION ALL
+SELECT 'cartes_swam_acquirer', count(*)::text FROM acquirer_swam_cards
 UNION ALL
 SELECT 'modules_portail', count(*)::text FROM app_module
 ORDER BY controle;
@@ -146,6 +149,21 @@ BEGIN
   END IF;
   IF NOT has_table_privilege('swam_lis_switch_user', 'public.switch_lis_file', 'SELECT') THEN
     RAISE EXCEPTION 'swam_lis_switch_user ne peut pas lire switch_lis_file';
+  END IF;
+  IF to_regclass('public.swam_cards') IS NOT NULL THEN
+    RAISE EXCEPTION 'la table partagee swam_cards ne doit plus exister';
+  END IF;
+  IF NOT has_table_privilege('swam_issuer_user', 'public.issuer_swam_cards', 'UPDATE') THEN
+    RAISE EXCEPTION 'swam_issuer_user ne peut pas mettre a jour ses cartes';
+  END IF;
+  IF has_table_privilege('swam_issuer_user', 'public.acquirer_swam_cards', 'SELECT') THEN
+    RAISE EXCEPTION 'swam_issuer_user ne doit pas lire les cartes du membre';
+  END IF;
+  IF NOT has_table_privilege('swam_acquirer_user', 'public.acquirer_swam_cards', 'UPDATE') THEN
+    RAISE EXCEPTION 'swam_acquirer_user ne peut pas mettre a jour ses cartes';
+  END IF;
+  IF has_table_privilege('swam_acquirer_user', 'public.issuer_swam_cards', 'SELECT') THEN
+    RAISE EXCEPTION 'swam_acquirer_user ne doit pas lire les cartes du switch';
   END IF;
 END $$;
 SQL

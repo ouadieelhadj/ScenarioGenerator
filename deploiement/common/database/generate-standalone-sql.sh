@@ -98,7 +98,8 @@ REF_TABLES=(
   "campaigns"
   "tests"
   "dmas_cards"
-  "swam_cards"
+  "issuer_swam_cards"
+  "acquirer_swam_cards"
   "dmas_kek"
   "dmas_acq_keys"
   "dmas_iss_keys"
@@ -119,11 +120,6 @@ for tbl in "${REF_TABLES[@]}"; do
     echo "    -> $tbl (vide, skip)"
   fi
 done
-
-# Cartes SWAM avec données de test (toujours inclure même si vide)
-echo "    -> swam_cards (cartes de test SWAM)"
-pd --data-only --schema=public --no-owner --no-acl --table="public.swam_cards" "$DB" \
-  | grep -v "^--" | grep -v "^SET\|^SELECT\|^$" >> "$OUT" 2>/dev/null || true
 
 echo "  Données OK."
 
@@ -149,9 +145,10 @@ cat >> "$OUT" << 'SQL'
 
 -- Controle final
 SELECT 'tables total'      AS objet, count(*)::text AS n FROM pg_tables WHERE schemaname='public'
-UNION ALL SELECT 'tables swam_*',    count(*)::text FROM pg_tables WHERE tablename LIKE 'swam%'
+UNION ALL SELECT 'tables SWAM',      count(*)::text FROM pg_tables WHERE tablename LIKE '%swam%'
 UNION ALL SELECT 'users (app)',      count(*)::text FROM users
-UNION ALL SELECT 'swam_cards',       count(*)::text FROM swam_cards
+UNION ALL SELECT 'issuer_swam_cards', count(*)::text FROM issuer_swam_cards
+UNION ALL SELECT 'acquirer_swam_cards', count(*)::text FROM acquirer_swam_cards
 UNION ALL SELECT 'networks SWAM',    COALESCE(issuer_iso_port::text,'NULL') FROM networks WHERE code='SWAM'
 ORDER BY objet;
 SQL

@@ -24,6 +24,19 @@ configuration de `com.staging.sg.common.persistence` qui fournit :
 | `DMCS_ISSUER` | `sg-dmcs-issuer` | émetteur DMCS |
 | `ORCHESTRATOR` | `sg-generator-orchestrator` | orchestrateur / `scenario_user` |
 
+## Cartes SWAM
+
+Les cartes ne sont pas un référentiel partagé entre le membre et le switch :
+
+| Application | Entité | Table | Propriétaire SQL |
+|---|---|---|---|
+| `sg-swam-issuer` | `SwamIssuerCard` | `issuer_swam_cards` | `swam_issuer_user` |
+| `sg-swam-acquirer` | `SwamAcquirerCard` | `acquirer_swam_cards` | `swam_acquirer_user` |
+
+Chaque rôle dispose des droits de lecture/écriture uniquement sur sa table. Un
+achat membre vers switch débite `issuer_swam_cards`. Un achat switch vers
+membre débite `acquirer_swam_cards`.
+
 ## Règles
 
 - Une application ne doit pas ajouter `@EntityScan("com.staging.sg.common.entity")`.
