@@ -39,7 +39,10 @@ bash "$SCRIPT_DIR/check-postgres.sh" --start
 
 echo "ATTENTION : la base cible '$DB_NAME' sur $DB_HOST:$DB_PORT sera remplacée."
 echo "Arrêter tous les services applicatifs avant de continuer."
-read -r -p "Saisir exactement 'REMPLACER $DB_NAME' : " confirmation
+confirmation="${DB_REPLACE_CONFIRMATION:-}"
+if [[ -z "$confirmation" ]]; then
+  read -r -p "Saisir exactement 'REMPLACER $DB_NAME' : " confirmation
+fi
 [[ "$confirmation" == "REMPLACER $DB_NAME" ]] || {
   echo "[ANNULÉ] Confirmation incorrecte."
   exit 1
@@ -50,8 +53,7 @@ database_exists="$(
   PGPASSWORD="$DB_PASSWORD" "$PSQL" \
     --host="$DB_HOST" --port="$DB_PORT" --username="$DB_USER" \
     --dbname=postgres --tuples-only --no-align \
-    --command="SELECT 1 FROM pg_database WHERE datname = :'db_name'" \
-    --set=db_name="$DB_NAME"
+    --command="SELECT 1 FROM pg_database WHERE datname = '$DB_NAME'"
 )"
 
 if [[ "$database_exists" == "1" ]]; then
@@ -64,14 +66,13 @@ fi
 
 PGPASSWORD="$DB_PASSWORD" "$PSQL" \
   --host="$DB_HOST" --port="$DB_PORT" --username="$DB_USER" \
-  --dbname=postgres --set=ON_ERROR_STOP=1 \
-  --set=db_name="$DB_NAME" <<'SQL'
+  --dbname=postgres --set=ON_ERROR_STOP=1 <<SQL
 SELECT pg_terminate_backend(pid)
 FROM pg_stat_activity
-WHERE datname = :'db_name'
+WHERE datname = '$DB_NAME'
   AND pid <> pg_backend_pid();
-SELECT format('DROP DATABASE IF EXISTS %I', :'db_name') \gexec
-SELECT format('CREATE DATABASE %I', :'db_name') \gexec
+DROP DATABASE IF EXISTS "$DB_NAME";
+CREATE DATABASE "$DB_NAME";
 SQL
 
 PGPASSWORD="$DB_PASSWORD" "$PG_RESTORE" \
