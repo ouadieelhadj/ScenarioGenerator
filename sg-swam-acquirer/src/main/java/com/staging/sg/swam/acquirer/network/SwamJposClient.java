@@ -56,6 +56,7 @@ public class SwamJposClient {
     @Autowired private SwamAcqKeyRepository acqKeyRepo;
     @Autowired private SwamAcquirerCardRepository cardRepo;
     @Autowired private SwamAcqTransactionRepository txRepo;
+    @Autowired private SwamMac swamMac;
 
     private final ConcurrentHashMap<String, ISOMsg> responses = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, CountDownLatch> latches = new ConcurrentHashMap<>();
@@ -309,8 +310,15 @@ public class SwamJposClient {
         if (req.hasField(11)) ack.set(11, req.getString(11));
         if (req.hasField(24)) ack.set(24, req.getString(24));
         ack.set(39, de39);
+        swamMac.apply(ack);
+        if (!ack.hasField(128)) {
+            throw new IllegalStateException(
+                    "ACK reseau 1814/" + ack.getString(24)
+                            + " sans DE128: envoi interdit");
+        }
         channel.send(ack);
-        log.info("[SWAM-CLI] Accuse reception envoye : 1814 DE39={}", de39);
+        log.info("[SWAM-CLI] Accuse reception envoye : 1814 DE39={} DE128={}",
+                de39, ack.hasField(128) ? "present" : "absent");
     }
 
     /** Envoie un message et attend la reponse correlee par STAN (timeout en secondes). */
