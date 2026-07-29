@@ -15,15 +15,31 @@ https://github.com/ouadieelhadj/ScenarioGenerator.git
 Branche :
 codex/portail-rbac-maker-checker
 
-Commence par récupérer la dernière version de cette branche sans supprimer les
-éventuelles modifications locales :
+État de la reprise au 29 juillet 2026 :
+
+- la dernière version a déjà été récupérée sur le poste RECETTE ;
+- le commit présent et testé doit être :
+  `29a17b6 — Fix MAC on SWAM network acknowledgements` ;
+- le test d'interopérabilité Way4 a déjà été exécuté avec cette version ;
+- les logs de notre membre SWAM sont disponibles sur le poste RECETTE ;
+- la commande et le résultat M6 du calcul de MAC côté SWAM sont également
+  disponibles pour comparaison.
+
+Ne refais pas automatiquement un pull. Commence par vérifier l'état local sans
+supprimer ni écraser les éventuelles données de recette :
 
 cd /f/MoneyCore/ScenarioGenerator
 git status --short
-git fetch origin
-git switch codex/portail-rbac-maker-checker
-git pull --ff-only origin codex/portail-rbac-maker-checker
-git log -5 --oneline --decorate
+git branch --show-current
+git rev-parse --short HEAD
+git log -3 --oneline --decorate
+
+Le résultat attendu est la branche
+`codex/portail-rbac-maker-checker` au commit `29a17b6`.
+
+Si, et seulement si, le poste n'est pas sur ce commit, arrête l'analyse et
+signale l'écart avant toute récupération de version. Ne mélange pas les traces
+du test déjà exécuté avec une autre version du code.
 
 Si le dépôt n'existe pas encore :
 
@@ -38,8 +54,49 @@ configuration, restauration, compilation ou exécution :
 
 1. MESSAGE_REPRISE_RECETTE.md
 2. COMMENT_REPRENDRE_NOUVELLE_SESSION.md
-3. deploiement/README.md
-4. deploiement/swam/README.md
+3. SESSION_RESUME.md, en particulier les sections 20 à 22
+4. documents/SESSION_RESUME.md, en privilégiant les sections les plus récentes
+   sur l'interop Way4, le MAC SWAM et la commande Thales M6
+5. deploiement/README.md
+6. deploiement/swam/README.md
+
+Priorité actuelle : analyser le test Way4 déjà effectué avec `29a17b6`.
+
+Le correctif présent dans `SwamJposClient.sendAck()` :
+
+- appelle `swamMac.apply(ack)` avant `channel.send(ack)` ;
+- exige DE128 sur les ACK réseau ;
+- interdit l'envoi si le MAC n'a pas pu être généré.
+
+Le test à analyser porte sur :
+
+- `1804/811` reçu puis `1814/811` émis ;
+- `1804/899` reçu puis `1814/899` émis.
+
+À partir des logs du membre et du calcul M6 côté SWAM :
+
+1. corrèle les messages avec DE11/STAN et les horodatages ;
+2. vérifie MTI, DE24, DE39, la présence et la longueur de DE128 ;
+3. reconstitue le buffer MAC exact utilisé par le membre ;
+4. compare le MAC membre, le MAC M6 et les quatre octets placés dans DE128 ;
+5. confirme, sans afficher les clés, la clé utilisée pour 811 et pour 899 ;
+6. distingue une absence de DE128, une mauvaise clé, un buffer différent, un
+   problème de bitmap/encodage ou un rejet Way4.
+
+Produis un verdict séparé pour `1814/811` et `1814/899` :
+`CONFORME`, `NON CONFORME` ou `NON CONCLUANT`.
+
+Présente les résultats sous la forme :
+
+Message | STAN | DE39 | DE128 présent | MAC membre | MAC M6 | clé utilisée | verdict
+
+Ne modifie pas le code avant d'avoir comparé les traces réelles et le résultat
+M6. En cas d'écart, fournis le premier octet ou champ divergent, la cause
+démontrée, le correctif minimal et le scénario exact à retester.
+
+Le `1804/802` reste un sujet séparé. Le chemin générique peut produire un
+`1814/802` MACé, mais aucun traitement fonctionnel de sign-off ou de
+déconnexion ne doit être inventé sans confirmation de l'équipe SWAM.
 
 COMMENT_REPRENDRE_NOUVELLE_SESSION.md est la source officielle et détaillée. Il
 décrit :
