@@ -34,7 +34,8 @@ règle/champ DMAS
 ## 2. État confirmé
 
 - Branche : `codex/portail-rbac-maker-checker`.
-- Les changements DMCS/DMAS sont encore non commités.
+- Premier jalon publié : commit `4d8336d`, tag
+  `ValidationDmcsDmasFirst`, branche poussée sur `origin`.
 - Le socle DMC séparé est développé :
   - module `sg-dmcs-common` ;
   - packager jPOS ISO 8583:1993 ;
@@ -62,7 +63,9 @@ règle/champ DMAS
   - `git diff --check` : OK ;
   - build Maven ciblé des 7 modules : `BUILD SUCCESS` ;
   - après l'incrément reversal/advice : 19 tests réussis, 0 échec ;
-  - après la factory de litige sortant : 23 tests réussis, 0 échec.
+  - après la factory de litige sortant : 23 tests réussis, 0 échec ;
+  - après les endpoints et fichiers de litige complets : build ciblé réussi,
+    26 tests réussis, 0 échec.
 
 ## 3. Scripts de livraison déjà présents
 
@@ -106,8 +109,8 @@ uniquement les quatre modules identifiés par PID, ligne de commande et port.
   - [x] modèle enrichi pour DE5, DE9, DE25, DE30, DE50 et DE95 ;
   - [x] lien parent prévu par `parent_transaction_id` ;
   - [x] contrôles de cycle, montant, motif, DE31, DE95 et PDS 0148/0149 ;
-  - [ ] services propriétaires et endpoints sortants ;
-  - [ ] création des fichiers avec header/trailer et numérotation DE71 ;
+  - [x] services propriétaires et endpoints sortants ;
+  - [x] création des fichiers avec header/trailer et numérotation DE71 ;
   - [ ] tests E2E bilatéraux.
 - [ ] Finaliser reconciliation, frais, change et settlement :
   - [ ] messages de reconciliation `1644` ;
@@ -221,8 +224,17 @@ Résultat du premier incrément chargeback/seconde présentation :
 - une génération sans DE31 réel ou sans DE95 réel est rejetée ;
 - la migration V7 est rétrocompatible avec les tables déjà créées grâce aux
   `ADD COLUMN IF NOT EXISTS` ;
-- les services propriétaires, les endpoints et le fichier IPM complet de
-  litige restent à développer avant de cocher ce bloc.
+- endpoint issuer
+  `POST /api/dmcs/disputes/first-chargebacks` ajouté pour `1442/450|453` ;
+- endpoint acquirer
+  `POST /api/dmcs/disputes/second-presentments` ajouté pour `1240/205|282` ;
+- chaque service exige une transaction parente du bon cycle, persiste le lien
+  `parent_transaction_id` et construit un fichier RDW complet
+  `1644/697 -> litige -> 1644/695` avec DE71 et totaux contrôlés ;
+- DE31 provient obligatoirement du parent réel et DE95 est fourni ou hérité :
+  aucune référence n'est synthétisée ;
+- build Maven ciblé des quatre modules : OK, 26 tests réussis, 0 échec ;
+- l'E2E bilatéral connecté de ce cycle reste à exécuter.
 
 ## 6. Secrets et données sensibles
 

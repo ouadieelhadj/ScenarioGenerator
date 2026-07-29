@@ -19,7 +19,7 @@
 Thumbs.db
 dmas_context_dump.txt
 dmas_net_dump.txt
-dmcs/
+/dmcs/
 keys/
 logs/
 reports/
