@@ -1,9 +1,12 @@
 package com.staging.sg.mc.dmas.member.network;
 
 import com.staging.sg.common.entity.McDmasMemberKey;
+import com.staging.sg.common.entity.McDmasMemberTransaction;
 import com.staging.sg.common.iso.McDmasNetworkUtil;
 import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.repository.McDmasMemberKeyRepository;
+import com.staging.sg.common.repository.McDmasMemberTransactionRepository;
+import com.staging.sg.common.service.McDmasAuthorizationJournalMapper;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOUtil;
 import org.slf4j.Logger;
@@ -12,6 +15,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -33,6 +37,7 @@ public class McDmasAdvice {
     private final McDmasNetworkUtil net;
     private final HsmService hsm;
     private final McDmasMemberKeyRepository acqKeyRepo;
+    private final McDmasMemberTransactionRepository transactionRepo;
 
     @Value("${dmas.issuer-host:localhost}") private String issuerHost;
     @Value("${dmas.issuer-port:8500}")      private int    issuerPort;
@@ -42,8 +47,13 @@ public class McDmasAdvice {
     @Value("${dmas.default-currency:840}")  private String defaultCurrency;
     @Value("${dmas.default-mcc:5999}")      private String defaultMcc;
 
-    public McDmasAdvice(McDmasNetworkUtil net, HsmService hsm, McDmasMemberKeyRepository acqKeyRepo) {
-        this.net = net; this.hsm = hsm; this.acqKeyRepo = acqKeyRepo;
+    public McDmasAdvice(McDmasNetworkUtil net, HsmService hsm,
+                        McDmasMemberKeyRepository acqKeyRepo,
+                        McDmasMemberTransactionRepository transactionRepo) {
+        this.net = net;
+        this.hsm = hsm;
+        this.acqKeyRepo = acqKeyRepo;
+        this.transactionRepo = transactionRepo;
     }
 
     /** Advice simple : notification d'une transaction offline. */
@@ -110,9 +120,11 @@ public class McDmasAdvice {
         if (de90 != null) log.info("[DMAS-ADV] DE90 Original (preauth)= {} (STAN orig={})", de90, originalStan);
 
         String reqHex = ISOUtil.hexString(msg.pack());
+        LocalDateTime requestAt = LocalDateTime.now();
         ISOMsg resp = net.sendAndReceive(msg, issuerHost, issuerPort, timeoutSeconds);
         String rc = net.safeGet(resp, 39);
         boolean ok = "00".equals(rc);
+        persistAdvice(msg, resp, requestAt, LocalDateTime.now());
 
         log.info("[DMAS-ADV] <- 0130 DE39={} ok={} (DE48 sub15 echo={})", rc, ok, net.safeGet(resp, 48));
 
@@ -128,6 +140,23 @@ public class McDmasAdvice {
         r.put("request_hex", reqHex);
         r.put("response_hex", ISOUtil.hexString(resp.pack()));
         return r;
+    }
+
+    private void persistAdvice(ISOMsg request, ISOMsg response,
+                               LocalDateTime requestAt, LocalDateTime responseAt)
+            throws Exception {
+        String stan = net.safeGet(request, 11);
+        String transmissionDatetime = net.safeGet(request, 7);
+        McDmasMemberTransaction transaction = transactionRepo
+                .findByBankCodeAndStanAndTransmissionDatetime(
+                        acquirerId, stan, transmissionDatetime)
+                .orElseGet(McDmasMemberTransaction::new);
+        McDmasAuthorizationJournalMapper.populate(
+                transaction, request, response, acquirerId, memberGroup,
+                requestAt, responseAt);
+        transactionRepo.save(transaction);
+        log.info("[DMAS-ADV] Journal membre enregistre STAN={} DE39={} clearingEligible={}",
+                stan, net.safeGet(response, 39), transaction.isClearingEligible());
     }
 
     private String buildPosData(String sf7) {

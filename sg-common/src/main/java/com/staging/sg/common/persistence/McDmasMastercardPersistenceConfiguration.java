@@ -5,8 +5,9 @@ import com.staging.sg.common.entity.McDmasCard;
 import com.staging.sg.common.entity.McDmasInterface;
 import com.staging.sg.common.entity.McDmasKek;
 import com.staging.sg.common.entity.McDmasMastercardKey;
+import com.staging.sg.common.entity.McDmasIssuerTransaction;
 import com.staging.sg.common.entity.McDmasTransaction;
-import com.staging.sg.common.entity.User;
+import com.staging.sg.common.entity.ModuleUser;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -24,14 +25,16 @@ import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
                 pattern = "com\\.staging\\.sg\\.common\\.repository\\."
                         + "(?!(KeyStoreRepository|McDmasCardRepository|McDmasInterfaceRepository|"
                         + "McDmasKekRepository|McDmasMastercardKeyRepository|"
-                        + "McDmasTransactionRepository|UserRepository)$).*"))
+                        + "McDmasIssuerTransactionRepository|McDmasTransactionRepository|"
+                        + "ModuleUserRepository)$).*"))
 public class McDmasMastercardPersistenceConfiguration {
     @Bean
     PersistenceManagedTypes mcDmasMastercardManagedTypes() {
         return PersistenceManagedTypes.of(
                 KeyStore.class.getName(), McDmasCard.class.getName(),
                 McDmasInterface.class.getName(), McDmasKek.class.getName(),
-                McDmasMastercardKey.class.getName(), McDmasTransaction.class.getName(),
-                User.class.getName());
+                McDmasMastercardKey.class.getName(), McDmasIssuerTransaction.class.getName(),
+                McDmasTransaction.class.getName(),
+                ModuleUser.class.getName());
     }
 }

@@ -2,6 +2,9 @@ package com.staging.sg.common.persistence;
 
 import com.staging.sg.common.entity.IssIpmFile;
 import com.staging.sg.common.entity.IssIpmRecord;
+import com.staging.sg.common.entity.DmcsIssuerClearingTransaction;
+import com.staging.sg.common.entity.McDmasIssuerTransaction;
+import com.staging.sg.common.entity.IpmProcessingLog;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -15,13 +18,18 @@ import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
 @EnableJpaRepositories(
         basePackages = "com.staging.sg.common.repository",
         excludeFilters = @ComponentScan.Filter(
-                type = FilterType.REGEX,
-                pattern = "com\\.staging\\.sg\\.common\\.repository\\."
-                        + "(?!(IssIpmFileRepository|IssIpmRecordRepository)$).*"))
+                        type = FilterType.REGEX,
+                        pattern = "com\\.staging\\.sg\\.common\\.repository\\."
+                        + "(?!(IssIpmFileRepository|IssIpmRecordRepository|"
+                        + "DmcsIssuerClearingTransactionRepository|IpmProcessingLogRepository|"
+                        + "McDmasIssuerTransactionRepository)$).*"))
 public class DmcsIssuerPersistenceConfiguration {
     @Bean
     PersistenceManagedTypes dmcsIssuerManagedTypes() {
         return PersistenceManagedTypes.of(
-                IssIpmFile.class.getName(), IssIpmRecord.class.getName());
+                IssIpmFile.class.getName(), IssIpmRecord.class.getName(),
+                DmcsIssuerClearingTransaction.class.getName(),
+                IpmProcessingLog.class.getName(),
+                McDmasIssuerTransaction.class.getName());
     }
 }

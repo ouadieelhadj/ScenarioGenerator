@@ -3,6 +3,10 @@
 Les ressources sont organisées par module. Les scripts utilisés par plusieurs
 modules sont placés dans `common`.
 
+La livraison Mastercard DMAS/DMC est documentée dans
+`mastercard/dmas-dmc/README.md`. Elle couvre les autorisations DMAS des deux
+côtés, les journaux propriétaires, le clearing DMCS et son E2E portable.
+
 ```text
 deploiement/
 ├── common/

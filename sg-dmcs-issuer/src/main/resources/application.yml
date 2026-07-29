@@ -6,9 +6,9 @@ spring:
   application:
     name: sg-dmcs-issuer
   datasource:
-    url: jdbc:postgresql://localhost:5432/scenariogenerator
-    username: scenario_user
-    password: postgres123
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${DMCS_ISSUER_DB_USER:dmas_issuer_user}
+    password: ${DMCS_ISSUER_DB_PASSWORD:postgres123}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -24,7 +24,12 @@ spring:
   liquibase:
     enabled: false
 dmcs:
-  base-dir: D:/MoneyCore/ScenarioGenerator/dmcs
+  security:
+    user: ${DMCS_BASIC_USER:admin}
+    password: ${DMCS_BASIC_PASSWORD:Admin123!}
+  legacy:
+    enabled: false
+  base-dir: ${DMCS_ISSUER_BASE_DIR:${user.dir}/runtime/dmcs/issuer}
   file-id-prefix: MC
 mc:
   issuer:
@@ -35,7 +40,7 @@ logging:
   level:
     com.staging.sg: INFO
   file:
-    name: D:/MoneyCore/ScenarioGenerator/logs/dmcs-issuer.log
+    name: ${DMCS_ISSUER_LOG_FILE:${user.dir}/runtime/dmas-dmc/logs/sg-dmcs-issuer.log}
 sg:
   persistence:
     module: DMCS_ISSUER

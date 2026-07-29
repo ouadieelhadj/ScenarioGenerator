@@ -2,9 +2,9 @@ spring:
   application:
     name: sg-mc-dmas-member
   datasource:
-    url: jdbc:postgresql://localhost:5432/scenariogenerator
-    username: mc_dmas_member
-    password: postgres123
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${MC_DMAS_MEMBER_DB_USER:mc_dmas_member}
+    password: ${MC_DMAS_MEMBER_DB_PASSWORD:postgres123}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -20,7 +20,7 @@ dmas:
     max-concurrent-tests: 1
   issuer-host: localhost
   lmk:
-    file: F:/ScenarioGenerator/keys/dmas-lmk-acq.lmk
+    file: ${DMAS_MEMBER_LMK_FILE:${user.dir}/keys/dmas-lmk-acq.lmk}
     rebuild: false
   mac:
     fields: "4,11,37,41,42"
@@ -41,7 +41,7 @@ management:
 
 logging:
   file:
-    name: F:/ScenarioGenerator/logs/mc-dmas-member.log
+    name: ${DMAS_MEMBER_LOG_FILE:${user.dir}/runtime/dmas-dmc/logs/sg-mc-dmas-member.log}
 
 sg:
   persistence:

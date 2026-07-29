@@ -3,6 +3,7 @@ package com.staging.sg.mc.dmas.mastercard.network;
 import com.staging.sg.common.entity.McDmasCard;
 import com.staging.sg.common.entity.McDmasKek;
 import com.staging.sg.common.entity.McDmasMastercardKey;
+import com.staging.sg.common.entity.McDmasIssuerTransaction;
 import com.staging.sg.common.entity.McDmasTransaction;
 import com.staging.sg.common.iso.McDmasNetworkUtil;
 import com.staging.sg.common.iso.crypto.HsmService;
@@ -11,7 +12,9 @@ import com.staging.sg.common.repository.KeyStoreRepository;
 import com.staging.sg.common.repository.McDmasCardRepository;
 import com.staging.sg.common.repository.McDmasKekRepository;
 import com.staging.sg.common.repository.McDmasMastercardKeyRepository;
+import com.staging.sg.common.repository.McDmasIssuerTransactionRepository;
 import com.staging.sg.common.repository.McDmasTransactionRepository;
+import com.staging.sg.common.service.McDmasAuthorizationJournalMapper;
 import com.staging.sg.common.service.McDmasInterfaceService;
 import org.jpos.iso.ISOException;
 import org.jpos.iso.ISOMsg;
@@ -55,6 +58,7 @@ public class McDmasMastercardHandler {
     private final McDmasMastercardKeyRepository issKeyRepo;
     private final McDmasCardRepository cardRepo;
     private final McDmasTransactionRepository txRepo;
+    private final McDmasIssuerTransactionRepository authorizationJournalRepo;
 
     private final McDmasInterfaceService iface;
     private final com.staging.sg.mc.dmas.mastercard.emv.McDmasEmvValidator emvValidator;
@@ -79,6 +83,7 @@ public class McDmasMastercardHandler {
                                    McDmasMastercardKeyRepository issKeyRepo,
                                    McDmasCardRepository cardRepo,
                                    McDmasTransactionRepository txRepo,
+                                   McDmasIssuerTransactionRepository authorizationJournalRepo,
                                    McDmasInterfaceService iface,
                                    com.staging.sg.mc.dmas.mastercard.emv.McDmasEmvValidator emvValidator) {
         this.net = net;
@@ -88,6 +93,7 @@ public class McDmasMastercardHandler {
         this.issKeyRepo = issKeyRepo;
         this.cardRepo = cardRepo;
         this.txRepo = txRepo;
+        this.authorizationJournalRepo = authorizationJournalRepo;
         this.iface = iface;
         this.emvValidator = emvValidator;
     }
@@ -198,6 +204,7 @@ public class McDmasMastercardHandler {
      * Construit la reponse 0110 : decision metier + echo des DE d'origine.
      */
     public ISOMsg buildAuthResponse(ISOMsg request) throws ISOException {
+        java.time.LocalDateTime requestAt = java.time.LocalDateTime.now();
         java.util.Map<String,Object> emvResult = validateDe55IfPresent(request);
         msgCount.incrementAndGet();
         String pan     = net.safeGet(request, 2);
@@ -263,8 +270,29 @@ public class McDmasMastercardHandler {
             }
         }
 
+        persistAuthorizationJournal(request, resp, requestAt, java.time.LocalDateTime.now());
         log.info("[DMAS-ISS] 0110 construit DE39={} ({})", rc, rcLabel(rc));
         return resp;
+    }
+
+    private void persistAuthorizationJournal(
+            ISOMsg request,
+            ISOMsg response,
+            java.time.LocalDateTime requestAt,
+            java.time.LocalDateTime responseAt) throws ISOException {
+        String bankCode = net.safeGet(request, 32);
+        String stan = net.safeGet(request, 11);
+        String transmissionDatetime = net.safeGet(request, 7);
+        McDmasIssuerTransaction transaction = authorizationJournalRepo
+                .findByBankCodeAndStanAndTransmissionDatetime(
+                        bankCode, stan, transmissionDatetime)
+                .orElseGet(McDmasIssuerTransaction::new);
+        McDmasAuthorizationJournalMapper.populate(
+                transaction, request, response, bankCode, memberGroup(request),
+                requestAt, responseAt);
+        authorizationJournalRepo.save(transaction);
+        log.info("[DMAS-ISS] Journal issuer enregistre STAN={} DE39={} clearingEligible={}",
+                stan, net.safeGet(response, 39), transaction.isClearingEligible());
     }
 
     /** Moteur de decision : retourne le response code DE39. */
@@ -386,6 +414,9 @@ public class McDmasMastercardHandler {
         if (request.hasField(11)) resp.set(11, request.getString(11));
         if (request.hasField(90)) resp.set(90, request.getString(90));
         resp.set(39, rc);
+        if ("00".equals(rc)) {
+            markAuthorizationJournalReversed(pan, de90);
+        }
         log.info("[DMAS-ISS] 0410 construit DE39={} ({})", rc, rcLabel(rc));
         return resp;
     }
@@ -474,6 +505,11 @@ public class McDmasMastercardHandler {
         if (request.hasField(48)) resp.set(48, request.getString(48));
         if (request.hasField(90)) resp.set(90, request.getString(90));
         resp.set(39, rc);
+        if ("00".equals(rc)) {
+            persistAuthorizationJournal(
+                    request, resp, java.time.LocalDateTime.now(),
+                    java.time.LocalDateTime.now());
+        }
         log.info("[DMAS-ISS] 0130 construit DE39={} ({})", rc, rcLabel(rc));
         return resp;
     }
@@ -481,6 +517,17 @@ public class McDmasMastercardHandler {
     /** Advice simple : enregistre et debite la transaction offline. */
     private String doAdvice(String pan, String amountS, ISOMsg request) {
         try {
+            String stan = net.safeGet(request, 11);
+            String dt   = net.safeGet(request, 7);
+            McDmasTransaction existing = txRepo
+                    .findByStanAndTransmissionDt(stan, dt)
+                    .orElse(null);
+            if (existing != null && "APPROVED".equals(existing.getStatus())) {
+                log.info("[DMAS-ISS] Advice deja traite STAN={} DE7={} -> 00",
+                        stan, dt);
+                return "00";
+            }
+
             McDmasCard card = cardRepo.findByPan(pan).orElse(null);
             if (card == null) {
                 log.info("[DMAS-ISS] Advice : carte introuvable -> 14");
@@ -491,10 +538,8 @@ public class McDmasMastercardHandler {
             card.setBalance(card.getBalance() - amount);
             cardRepo.save(card);
 
-            String stan = net.safeGet(request, 11);
-            String dt   = net.safeGet(request, 7);
-            McDmasTransaction tx = txRepo.findByStanAndTransmissionDt(stan, dt)
-                    .orElseGet(McDmasTransaction::new);
+            McDmasTransaction tx = existing != null
+                    ? existing : new McDmasTransaction();
             tx.setPan(pan);
             tx.setStan(stan);
             tx.setTransmissionDt(dt);
@@ -592,8 +637,32 @@ public class McDmasMastercardHandler {
         if (request.hasField(60)) resp.set(60, request.getString(60));
         if (request.hasField(90)) resp.set(90, request.getString(90));
         resp.set(39, rc);
+        if ("00".equals(rc)) {
+            markAuthorizationJournalReversed(pan, de90);
+        }
         log.info("[DMAS-ISS] 0430 construit DE39={} ({})", rc, rcLabel(rc));
         return resp;
+    }
+
+    private void markAuthorizationJournalReversed(String pan, String de90) {
+        try {
+            var original = McDmasAuthorizationJournalMapper.parseOriginalDataElements(de90);
+            authorizationJournalRepo.findByPanAndStanAndTransmissionDatetime(
+                            pan, original.stan(), original.transmissionDatetime())
+                    .ifPresent(transaction -> {
+                        transaction.setReversed(true);
+                        transaction.setClearingEligible(false);
+                        if (transaction.getReversedAt() == null) {
+                            transaction.setReversedAt(java.time.LocalDateTime.now());
+                        }
+                        transaction.setUpdatedAt(java.time.LocalDateTime.now());
+                        authorizationJournalRepo.save(transaction);
+                        log.info("[DMAS-ISS] Journal issuer annule STAN={} DE7={}",
+                                original.stan(), original.transmissionDatetime());
+                    });
+        } catch (IllegalArgumentException e) {
+            log.warn("[DMAS-ISS] Journal issuer non annule : {}", e.getMessage());
+        }
     }
 
     // ====================================================================

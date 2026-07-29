@@ -23,6 +23,7 @@
         <module>sg-generator-orchestrator</module>
         <module>sg-dmcs-issuer</module>
         <module>sg-dmcs-acquirer</module>
+        <module>sg-dmcs-common</module>
         <module>sg-mc-dmas-member</module>
         <module>sg-mc-dmas-mastercard</module>
         <module>sg-swam-issuer</module>
@@ -54,6 +55,11 @@
             <dependency>
                 <groupId>com.staging</groupId>
                 <artifactId>sg-swam-lis-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.staging</groupId>
+                <artifactId>sg-dmcs-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

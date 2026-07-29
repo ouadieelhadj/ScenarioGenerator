@@ -3,8 +3,8 @@ package com.staging.sg.mc.dmas.member.api;
 import com.staging.sg.common.JwtService;
 import com.staging.sg.common.dto.LoginRequest;
 import com.staging.sg.common.dto.LoginResponse;
-import com.staging.sg.common.entity.User;
-import com.staging.sg.common.repository.UserRepository;
+import com.staging.sg.common.entity.ModuleUser;
+import com.staging.sg.common.repository.ModuleUserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -20,11 +20,11 @@ public class AuthController {
 
     private static final Logger log = LoggerFactory.getLogger(AuthController.class);
 
-    private final UserRepository  userRepository;
+    private final ModuleUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService      jwtService;
 
-    public AuthController(UserRepository userRepository,
+    public AuthController(ModuleUserRepository userRepository,
                           PasswordEncoder passwordEncoder,
                           JwtService jwtService) {
         this.userRepository  = userRepository;
@@ -34,7 +34,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
-        User user = userRepository.findByLogin(req.getLogin())
+        ModuleUser user = userRepository.findByLogin(req.getLogin())
                 .orElse(null);
 
         if (user == null || !passwordEncoder.matches(req.getPassword(), user.getPassword())) {

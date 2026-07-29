@@ -1,9 +1,13 @@
 package com.staging.sg.mc.dmas.member.network;
 
 import com.staging.sg.common.entity.McDmasMemberKey;
+import com.staging.sg.common.entity.McDmasMemberTransaction;
 import com.staging.sg.common.iso.McDmasNetworkUtil;
 import com.staging.sg.common.iso.crypto.HsmService;
 import com.staging.sg.common.repository.McDmasMemberKeyRepository;
+import com.staging.sg.common.repository.McDmasMemberTransactionRepository;
+import com.staging.sg.common.service.McDmasAuthorizationJournalMapper;
+import org.jpos.iso.ISOException;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOUtil;
 import org.slf4j.Logger;
@@ -12,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -31,6 +36,7 @@ public class McDmasAuthorization {
     private final McDmasNetworkUtil net;
     private final HsmService hsm;
     private final McDmasMemberKeyRepository acqKeyRepo;
+    private final McDmasMemberTransactionRepository transactionRepo;
     private final McDmasMemberClient jposServer;
     private final com.staging.sg.common.emv.McDmasEmv emv;
     private final com.staging.sg.common.repository.McDmasCardRepository cardRepo;
@@ -42,14 +48,18 @@ public class McDmasAuthorization {
     @Value("${dmas.acquirer-id:022905}")    private String acquirerId;
     @Value("${dmas.default-currency:504}")  private String defaultCurrency;
     @Value("${dmas.default-mcc:5999}")      private String defaultMcc;
+    @Value("${dmas.default-merchant-name-location:TEST MERCHANT CASABLANCA MA}")
+    private String defaultMerchantNameLocation;
 
     public McDmasAuthorization(McDmasNetworkUtil net, HsmService hsm, McDmasMemberKeyRepository acqKeyRepo,
+                               McDmasMemberTransactionRepository transactionRepo,
                                McDmasMemberClient jposServer,
                                com.staging.sg.common.emv.McDmasEmv emv,
                                com.staging.sg.common.repository.McDmasCardRepository cardRepo) {
         this.net = net;
         this.hsm = hsm;
         this.acqKeyRepo = acqKeyRepo;
+        this.transactionRepo = transactionRepo;
         this.jposServer = jposServer;
         this.emv = emv;
         this.cardRepo = cardRepo;
@@ -101,7 +111,9 @@ public class McDmasAuthorization {
         String de61 = buildPosData(type.de61sf7);
 
         String stan = net.generateStan();
-        String dtUtc = new SimpleDateFormat("MMddHHmmss").format(new Date());
+        Date now = new Date();
+        String dtUtc = new SimpleDateFormat("MMddHHmmss").format(now);
+        LocalDateTime requestAt = LocalDateTime.now();
 
         ISOMsg msg = new ISOMsg();
         msg.setPackager(net.getPackager());
@@ -111,12 +123,16 @@ public class McDmasAuthorization {
         msg.set(4,  amount);
         msg.set(7,  dtUtc);
         msg.set(11, stan);
+        msg.set(12, new SimpleDateFormat("HHmmss").format(now));
+        msg.set(13, new SimpleDateFormat("MMdd").format(now));
         msg.set(18, defaultMcc);
         msg.set(22, "052");
         msg.set(23, "000");   // Card Sequence Number (PSN) — requis pour la derivation ICC                 // POS entry mode : 051 = chip
         msg.set(32, acquirerId);
+        msg.set(37, generateRrn());
         if (terminalId != null) msg.set(41, terminalId);
         if (acceptorId != null) msg.set(42, acceptorId);
+        msg.set(43, defaultMerchantNameLocation);
         msg.set(49, defaultCurrency);
         msg.set(61, de61);
         msg.set(48, buildDe48(entryMode));
@@ -163,6 +179,7 @@ public class McDmasAuthorization {
         }
         String rc = net.safeGet(resp, 39);
         boolean approved = "00".equals(rc);
+        persistAuthorization(msg, resp, requestAt, LocalDateTime.now());
 
         log.info("[DMAS-AUTH] <- 0110 DE39={} approved={}", rc, approved);
 
@@ -310,8 +327,30 @@ public class McDmasAuthorization {
 
     private String buildPosData(String sf7) {
         // Structure POS Data alignee sur le membre reel (accepte par le simulateur).
-        // 21 positions ; sf7 (POS Transaction Status) laisse tel quel par defaut.
-        return "000001000030050420100";
+        // 21 positions ; sf7 porte le POS Transaction Status.
+        StringBuilder value = new StringBuilder("000001000030050420100");
+        value.setCharAt(6, (sf7 == null || sf7.isEmpty()) ? '0' : sf7.charAt(0));
+        return value.toString();
+    }
+
+    private void persistAuthorization(ISOMsg request, ISOMsg response,
+                                      LocalDateTime requestAt, LocalDateTime responseAt)
+            throws ISOException {
+        String stan = net.safeGet(request, 11);
+        String transmissionDatetime = net.safeGet(request, 7);
+        McDmasMemberTransaction transaction = transactionRepo
+                .findByBankCodeAndStanAndTransmissionDatetime(
+                        acquirerId, stan, transmissionDatetime)
+                .orElseGet(McDmasMemberTransaction::new);
+        McDmasAuthorizationJournalMapper.populate(
+                transaction, request, response, acquirerId, memberGroup, requestAt, responseAt);
+        transactionRepo.save(transaction);
+        log.info("[DMAS-AUTH] Journal membre enregistre STAN={} DE39={} clearingEligible={}",
+                stan, net.safeGet(response, 39), transaction.isClearingEligible());
+    }
+
+    private String generateRrn() {
+        return String.format("%012d", System.currentTimeMillis() % 1_000_000_000_000L);
     }
 
     private String maskPan(String pan) {

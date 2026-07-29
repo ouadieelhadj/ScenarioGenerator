@@ -7,9 +7,9 @@ spring:
   application:
     name: sg-dmcs-acquirer
   datasource:
-    url: jdbc:postgresql://localhost:5432/scenariogenerator
-    username: scenario_user
-    password: postgres123
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${DMCS_ACQUIRER_DB_USER:dmas_acquirer_user}
+    password: ${DMCS_ACQUIRER_DB_PASSWORD:postgres123}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -24,7 +24,12 @@ spring:
       password: Admin123!
 
 dmcs:
-  base-dir: D:/MoneyCore/ScenarioGenerator/dmcs
+  security:
+    user: ${DMCS_BASIC_USER:admin}
+    password: ${DMCS_BASIC_PASSWORD:Admin123!}
+  legacy:
+    enabled: false
+  base-dir: ${DMCS_ACQUIRER_BASE_DIR:${user.dir}/runtime/dmcs/acquirer}
   file-id-prefix: MC
 
 mc:
@@ -36,7 +41,7 @@ logging:
   level:
     com.staging.sg: INFO
   file:
-    name: D:/MoneyCore/ScenarioGenerator/logs/dmcs-acquirer.log
+    name: ${DMCS_ACQUIRER_LOG_FILE:${user.dir}/runtime/dmas-dmc/logs/sg-dmcs-acquirer.log}
 
   liquibase:
     enabled: false

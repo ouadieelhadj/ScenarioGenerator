@@ -2,9 +2,9 @@ spring:
   application:
     name: sg-mc-dmas-mastercard
   datasource:
-    url: jdbc:postgresql://localhost:5432/scenariogenerator
-    username: mc_dmas_mastercard
-    password: postgres123
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${MC_DMAS_MASTERCARD_DB_USER:mc_dmas_mastercard}
+    password: ${MC_DMAS_MASTERCARD_DB_PASSWORD:postgres123}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
@@ -23,7 +23,7 @@ dmas:
     echo-interval-ms: 5000
   member-group-id: TESTGRP01
   lmk:
-    file: F:/ScenarioGenerator/keys/dmas-lmk-iss.lmk
+    file: ${DMAS_MASTERCARD_LMK_FILE:${user.dir}/keys/dmas-lmk-iss.lmk}
     rebuild: false
   mac:
     fields: "4,11,37,41,42"
@@ -41,7 +41,7 @@ management:
 
 logging:
   file:
-    name: F:/ScenarioGenerator/logs/mc-dmas-mastercard.log
+    name: ${DMAS_MASTERCARD_LOG_FILE:${user.dir}/runtime/dmas-dmc/logs/sg-mc-dmas-mastercard.log}
 
 sg:
   persistence:

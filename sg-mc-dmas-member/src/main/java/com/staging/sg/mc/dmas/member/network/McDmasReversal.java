@@ -1,6 +1,8 @@
 package com.staging.sg.mc.dmas.member.network;
 
 import com.staging.sg.common.iso.McDmasNetworkUtil;
+import com.staging.sg.common.repository.McDmasMemberTransactionRepository;
+import com.staging.sg.common.service.McDmasAuthorizationJournalMapper;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOUtil;
 import org.slf4j.Logger;
@@ -26,6 +28,7 @@ public class McDmasReversal {
     private static final Logger log = LoggerFactory.getLogger(McDmasReversal.class);
 
     private final McDmasNetworkUtil net;
+    private final McDmasMemberTransactionRepository transactionRepo;
 
     @Value("${dmas.issuer-host:localhost}") private String issuerHost;
     @Value("${dmas.issuer-port:8500}")      private int    issuerPort;
@@ -34,8 +37,10 @@ public class McDmasReversal {
     @Value("${dmas.default-currency:840}")  private String defaultCurrency;
     @Value("${dmas.default-mcc:5999}")      private String defaultMcc;
 
-    public McDmasReversal(McDmasNetworkUtil net) {
+    public McDmasReversal(McDmasNetworkUtil net,
+                          McDmasMemberTransactionRepository transactionRepo) {
         this.net = net;
+        this.transactionRepo = transactionRepo;
     }
 
     /**
@@ -83,6 +88,9 @@ public class McDmasReversal {
         ISOMsg resp = net.sendAndReceive(msg, issuerHost, issuerPort, timeoutSeconds);
         String rc = net.safeGet(resp, 39);
         boolean ok = "00".equals(rc);
+        if (ok) {
+            markOriginalReversed(pan, de90);
+        }
 
         log.info("[DMAS-REV] <- 0410 DE39={} ok={}", rc, ok);
 
@@ -133,6 +141,9 @@ public class McDmasReversal {
         ISOMsg resp = net.sendAndReceive(msg, issuerHost, issuerPort, timeoutSeconds);
         String rc = net.safeGet(resp, 39);
         boolean ok = "00".equals(rc);
+        if (ok) {
+            markOriginalReversed(pan, de90);
+        }
 
         log.info("[DMAS-REV] <- 0430 DE39={} ok={}", rc, ok);
 
@@ -147,6 +158,23 @@ public class McDmasReversal {
         r.put("request_hex", reqHex);
         r.put("response_hex", ISOUtil.hexString(resp.pack()));
         return r;
+    }
+
+    private void markOriginalReversed(String pan, String de90) {
+        var original = McDmasAuthorizationJournalMapper.parseOriginalDataElements(de90);
+        transactionRepo.findByPanAndStanAndTransmissionDatetime(
+                        pan, original.stan(), original.transmissionDatetime())
+                .ifPresent(transaction -> {
+                    transaction.setReversed(true);
+                    transaction.setClearingEligible(false);
+                    if (transaction.getReversedAt() == null) {
+                        transaction.setReversedAt(java.time.LocalDateTime.now());
+                    }
+                    transaction.setUpdatedAt(java.time.LocalDateTime.now());
+                    transactionRepo.save(transaction);
+                    log.info("[DMAS-REV] Journal membre annule STAN={} DE7={}",
+                            original.stan(), original.transmissionDatetime());
+                });
     }
 
     /** DE90 = [MTI 4][STAN 6][DT 10][DE32 11][DE33 11] = 42 chiffres, right-justified leading zeros. */

@@ -83,10 +83,10 @@ BEGIN
     CREATE ROLE swam_acquirer_user LOGIN PASSWORD 'postgres123';
   END IF;
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='mc_dmas_member') THEN
-    CREATE ROLE mc_dmas_member LOGIN PASSWORD 'member_pass';
+    CREATE ROLE mc_dmas_member LOGIN PASSWORD 'postgres123';
   END IF;
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname='mc_dmas_mastercard') THEN
-    CREATE ROLE mc_dmas_mastercard LOGIN PASSWORD 'mastercard_pass';
+    CREATE ROLE mc_dmas_mastercard LOGIN PASSWORD 'postgres123';
   END IF;
 END $$;
 SQL
@@ -118,6 +118,8 @@ run_sql "Champs transactionnels SWAM SID"          "$ROOT/deploiement/swam/migra
 run_sql "Champs SID requis par le clearing"        "$ROOT/sql/16b_swam_sid_clearing_fields.sql"
 run_sql "Cartes SWAM separees membre et switch"    "$ROOT/deploiement/swam/migration_v1.5.0_swam_cards_by_owner.sql"
 run_sql "Clearing SWAM LIS"                        "$ROOT/sql/17_swam_lis_clearing.sql"
+run_sql "Journaux autorisation DMAS pour DMC"      "$ROOT/sql/mastercard/V6__separate_dmas_authorization_journals.sql"
+run_sql "Transactions clearing DMC separees"       "$ROOT/sql/mastercard/V7__dmc_clearing_transactions.sql"
 run_sql "Portail RBAC et Maker Checker"             "$ROOT/sql/18_portal_rbac_workflow.sql"
 run_sql "Cartes SWAM de recette"                   "$ROOT/deploiement/swam/swam_cartes_test.sql"
 run_sql "Droits applicatifs finaux"                "$DATABASE_DIR/application-grants.sql"
@@ -132,6 +134,14 @@ UNION ALL
 SELECT 'cartes_swam_issuer', count(*)::text FROM issuer_swam_cards
 UNION ALL
 SELECT 'cartes_swam_acquirer', count(*)::text FROM acquirer_swam_cards
+UNION ALL
+SELECT 'journaux_dmas_membre', count(*)::text FROM mc_dmas_member_transactions
+UNION ALL
+SELECT 'journaux_dmas_issuer', count(*)::text FROM mc_dmas_issuer_transactions
+UNION ALL
+SELECT 'clearing_dmc_acquirer', count(*)::text FROM dmcs_acquirer_clearing_transactions
+UNION ALL
+SELECT 'clearing_dmc_issuer', count(*)::text FROM dmcs_issuer_clearing_transactions
 UNION ALL
 SELECT 'modules_portail', count(*)::text FROM app_module
 ORDER BY controle;
@@ -164,6 +174,30 @@ BEGIN
   END IF;
   IF has_table_privilege('swam_acquirer_user', 'public.issuer_swam_cards', 'SELECT') THEN
     RAISE EXCEPTION 'swam_acquirer_user ne doit pas lire les cartes du switch';
+  END IF;
+  IF NOT has_table_privilege(
+      'dmas_acquirer_user', 'public.mc_dmas_member_transactions', 'SELECT') THEN
+    RAISE EXCEPTION 'DMCS acquirer ne peut pas lire son journal DMAS membre';
+  END IF;
+  IF has_table_privilege(
+      'dmas_acquirer_user', 'public.mc_dmas_issuer_transactions', 'SELECT') THEN
+    RAISE EXCEPTION 'DMCS acquirer ne doit pas lire le journal DMAS issuer';
+  END IF;
+  IF NOT has_table_privilege(
+      'dmas_issuer_user', 'public.mc_dmas_issuer_transactions', 'SELECT') THEN
+    RAISE EXCEPTION 'DMCS issuer ne peut pas lire son journal DMAS issuer';
+  END IF;
+  IF has_table_privilege(
+      'dmas_issuer_user', 'public.mc_dmas_member_transactions', 'SELECT') THEN
+    RAISE EXCEPTION 'DMCS issuer ne doit pas lire le journal DMAS membre';
+  END IF;
+  IF NOT has_table_privilege(
+      'dmas_acquirer_user', 'public.dmcs_acquirer_clearing_transactions', 'UPDATE') THEN
+    RAISE EXCEPTION 'DMCS acquirer ne possede pas sa table de clearing';
+  END IF;
+  IF NOT has_table_privilege(
+      'dmas_issuer_user', 'public.dmcs_issuer_clearing_transactions', 'UPDATE') THEN
+    RAISE EXCEPTION 'DMCS issuer ne possede pas sa table de clearing';
   END IF;
 END $$;
 SQL

@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -22,6 +23,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/dmcs")
+@ConditionalOnProperty(name = "dmcs.legacy.enabled", havingValue = "true")
 public class DmcsAcquirerController {
 
     private static final Logger log =

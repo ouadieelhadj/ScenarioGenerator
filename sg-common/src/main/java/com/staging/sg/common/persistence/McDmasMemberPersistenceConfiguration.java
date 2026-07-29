@@ -4,7 +4,8 @@ import com.staging.sg.common.entity.KeyStore;
 import com.staging.sg.common.entity.McDmasInterface;
 import com.staging.sg.common.entity.McDmasKek;
 import com.staging.sg.common.entity.McDmasMemberKey;
-import com.staging.sg.common.entity.User;
+import com.staging.sg.common.entity.McDmasMemberTransaction;
+import com.staging.sg.common.entity.ModuleUser;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -21,13 +22,15 @@ import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
                 type = FilterType.REGEX,
                 pattern = "com\\.staging\\.sg\\.common\\.repository\\."
                         + "(?!(KeyStoreRepository|McDmasInterfaceRepository|McDmasKekRepository|"
-                        + "McDmasMemberKeyRepository|UserRepository)$).*"))
+                        + "McDmasMemberKeyRepository|McDmasMemberTransactionRepository|"
+                        + "ModuleUserRepository)$).*"))
 public class McDmasMemberPersistenceConfiguration {
     @Bean
     PersistenceManagedTypes mcDmasMemberManagedTypes() {
         return PersistenceManagedTypes.of(
                 KeyStore.class.getName(), McDmasInterface.class.getName(),
                 McDmasKek.class.getName(), McDmasMemberKey.class.getName(),
-                User.class.getName());
+                McDmasMemberTransaction.class.getName(),
+                ModuleUser.class.getName());
     }
 }

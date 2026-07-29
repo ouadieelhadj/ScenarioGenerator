@@ -13,6 +13,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 @EnableWebSecurity
@@ -32,10 +33,13 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService(PasswordEncoder encoder) {
+    public UserDetailsService userDetailsService(
+            PasswordEncoder encoder,
+            @Value("${dmcs.security.user:admin}") String username,
+            @Value("${dmcs.security.password:Admin123!}") String password) {
         UserDetails admin = User.builder()
-                .username("admin")
-                .password(encoder.encode("Admin123!"))
+                .username(username)
+                .password(encoder.encode(password))
                 .roles("ADMIN")
                 .build();
         return new InMemoryUserDetailsManager(admin);
