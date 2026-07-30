@@ -7,7 +7,8 @@
 - `WayPosServer` : jalon Basic+Extended/local/securite termine et teste.
 - `wayPosSimulator` : client jPOS, echange dynamique de cles et scenarios
   financiers/EOD implementes et testes.
-- Harnais E2E connecte prepare sous `tests/waypos/` ; son execution reelle
+- Harnais E2E connecte prepare sous `tests/waypos/`, avec une variante
+  PowerShell et une variante Git Bash equivalentes ; son execution reelle
   attend le chargement controle des secrets et vecteurs de recette.
 - Choix technique impose : implementation ISO avec jPOS.
 - Le chantier DMCS/DMAS reste sauvegarde separement dans `REPRISE_DMCS_DMAS.md`.
@@ -775,6 +776,15 @@ serveur doit conserver sa representation sous le LMK WayPos.
   composantes, retrouve respectivement les KCV `51C71D` et `95B446`, puis
   importe avec succes une TAK sous TAMK et une TPK sous TPMK via ANSI X9.17.
   La reference passe a 129 tests sans echec.
+- 2026-07-30 : variante Git Bash du harnais ajoutee dans
+  `tests/waypos/Invoke-WayPosE2E.sh`. Elle reprend les memes variables,
+  controles, appels REST, criteres MAC/key change et scenarios que la
+  variante PowerShell. `bash -n` reussi et precontrole lance sous Git Bash :
+  arret fail-closed avant transaction sur variables de recette absentes.
+- 2026-07-30 : guide operateur RECETTE ajoute dans
+  `tests/waypos/INSTRUCTIONS_RECETTE_DU_REPO_A_LA_FINALISATION.md`.
+  Il couvre recuperation Git, prerequis, 129 tests, build, demarrage,
+  choix PowerShell/Git Bash, E2E, diagnostic et verdict final assaini.
 - 2026-07-30 : catalogue Basic/Extended precise et couvert par une matrice
   parametree de 34 operations. Cashback, utility payment, cash by code,
   refund, credit, credit voucher, purchase return et cash to card ne sont
@@ -791,12 +801,14 @@ serveur doit conserver sa representation sous le LMK WayPos.
   mouvement de fonds tant que leurs services reels ne sont pas raccordes.
 - Point exact de reprise du jalon 5 :
   1. charger les variables reelles enumerees dans
-     `tests/waypos/Invoke-WayPosE2E.ps1`, sans les commiter ;
+     `tests/waypos/Invoke-WayPosE2E.ps1` ou
+     `tests/waypos/Invoke-WayPosE2E.sh`, sans les commiter ;
   2. demarrer PostgreSQL, WayPosServer et wayPosSimulator avec le meme
      environnement ;
-  3. executer le harnais avec `powershell.exe -NoProfile
+  3. executer le harnais soit avec `powershell.exe -NoProfile
      -ExecutionPolicy Bypass -File
-     .\tests\waypos\Invoke-WayPosE2E.ps1` ;
+     .\tests\waypos\Invoke-WayPosE2E.ps1`, soit depuis Git Bash avec
+     `./tests/waypos/Invoke-WayPosE2E.sh` ;
   4. conserver les resultats et corriger tout ecart reel avant de cloturer
      le jalon 5 ;
   5. si les secrets ne sont toujours pas disponibles, poursuivre les

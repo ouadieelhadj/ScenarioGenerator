@@ -109,7 +109,9 @@ La source de reprise de ce chantier reste `REPRISE_DMCS_DMAS.md`.
 ## Ecarts prioritaires restants
 
 1. **P0 - E2E reel WayPos** : charger les cles, carte, PIN block et quatre
-   ARQC/ATC reels, puis executer `tests/waypos/Invoke-WayPosE2E.ps1`.
+   ARQC/ATC reels, puis executer `tests/waypos/Invoke-WayPosE2E.ps1` ou sa
+   variante fonctionnellement equivalente
+   `tests/waypos/Invoke-WayPosE2E.sh`.
 2. **P1 - Operations specialisees Basic** : mini statement, cash by code,
    DCC, OTP, instalment et e-receipt.
 3. **P1 - Operations specialisees Extended** : loyalty, utility et bill

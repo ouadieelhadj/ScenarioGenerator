@@ -39,6 +39,10 @@ La derniere demande explicite de l'utilisateur determine le chantier actif.
 - Le jalon 5 est en cours : bootstrap TAK/TPK sous LMK et harnais connecte
   termines. La non-regression de reference atteint 129 tests sans echec,
   dont le bootstrap ANSI X9.17 sous TAMK/TPMK triple longueur.
+  Le harnais existe en PowerShell et en Git Bash sous `tests/waypos/` ;
+  les deux variantes ont le meme contrat fonctionnel et de securite.
+  Le guide operateur complet est
+  `tests/waypos/INSTRUCTIONS_RECETTE_DU_REPO_A_LA_FINALISATION.md`.
   L'E2E reel attend les secrets et quatre vecteurs ARQC/ATC de recette ;
   ne jamais les remplacer par des valeurs fictives. Relire `POS_REPRISE.md`
   pour le point exact.
