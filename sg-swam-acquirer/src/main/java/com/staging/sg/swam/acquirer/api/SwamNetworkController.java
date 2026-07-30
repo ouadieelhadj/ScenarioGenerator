@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import com.staging.sg.common.routing.RoutingTransactionRequest;
 
 /**
  * Pilotage SWAM cote Membre : gestion reseau (sign-on/echo/sign-off) + achat unitaire.
@@ -203,9 +204,76 @@ public class SwamNetworkController {
         result.put("mti_received", resp.getMTI());
         result.put("de39_action", resp.hasField(39) ? resp.getString(39) : null);
         result.put("de38_auth", resp.hasField(38) ? resp.getString(38) : null);
+        result.put("de55_response_hex", resp.hasField(55)
+                ? org.jpos.iso.ISOUtil.hexString(resp.getBytes(55)) : null);
         result.put("approved", "000".equals(resp.hasField(39) ? resp.getString(39) : ""));
         result.put("de128_mac_sent", macSent);
         return result;
+    }
+
+    public Map<String,Object> sendRouted(RoutingTransactionRequest routed) throws Exception {
+        if (routed.pinBlockHex() != null
+                && (routed.attributes() == null
+                || !"SWAM_MEMBER".equals(routed.attributes().get("pinBlockKeyDomain")))) {
+            throw new IllegalArgumentException(
+                    "PIN block is not in the SWAM PEK domain");
+        }
+        String stan = auth.nextStan_();
+        String operation = routed.operation() == null ? "" : routed.operation();
+        ISOMsg request;
+        String expected;
+        if ("REVERSAL".equals(operation)) {
+            request = auth.buildReversal1420(
+                    routed.pan(), routed.amount(), stan, routed.rrn(),
+                    attribute(routed, "authorizationCode", ""),
+                    attribute(routed, "originalDataElements", ""),
+                    Boolean.parseBoolean(attribute(routed, "partial", "false")),
+                    attribute(routed, "originalAmounts", null), client.getPackager());
+            expected = "1430";
+        } else if ("ADVICE".equals(operation) || "CAPTURE".equals(operation)) {
+            request = auth.buildFinancialAdvice1220(
+                    routed.pan(), routed.amount(), stan,
+                    attribute(routed, "authorizationCode", ""),
+                    attribute(routed, "originalDataElements", ""), client.getPackager());
+            expected = "1230";
+        } else if ("DEBIT".equals(operation) || "CREDIT".equals(operation)) {
+            request = auth.buildFinancial1200(
+                    routed.pan(), routed.amount(), stan, client.getPackager());
+            expected = "1210";
+        } else {
+            request = auth.buildAuth1100(
+                    routed.pan(), routed.amount(), stan, client.getPackager());
+            expected = "1110";
+        }
+        if (routed.pinBlockHex() != null) {
+            request.set(52, org.jpos.iso.ISOUtil.hex2byte(routed.pinBlockHex()));
+            request.set(53, "0201000000");
+        }
+        if (routed.processingCode() != null) request.set(3, routed.processingCode());
+        if (routed.expiry() != null) request.set(14, routed.expiry());
+        if (routed.attributes() != null
+                && routed.attributes().get("entryMode") != null) {
+            request.set(22, routed.attributes().get("entryMode"));
+        }
+        if (routed.attributes() != null
+                && routed.attributes().get("conditionCode") != null) {
+            request.set(25, routed.attributes().get("conditionCode"));
+        }
+        if (routed.rrn() != null) request.set(37, routed.rrn());
+        if (routed.terminalId() != null) request.set(41, routed.terminalId());
+        if (routed.merchantId() != null) request.set(42, routed.merchantId());
+        if (routed.currency() != null) request.set(49, routed.currency());
+        if (routed.emvDataHex() != null) {
+            request.set(55, org.jpos.iso.ISOUtil.hex2byte(routed.emvDataHex()));
+        }
+        return sendTransaction(operation, request, null,
+                routed.pan(), routed.amount(), expected);
+    }
+
+    private static String attribute(
+            RoutingTransactionRequest request, String name, String fallback) {
+        return request.attributes() == null
+                ? fallback : request.attributes().getOrDefault(name, fallback);
     }
 
     private void persistTransaction(ISOMsg req, ISOMsg resp, String pan, String amount) {

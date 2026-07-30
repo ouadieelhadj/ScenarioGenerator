@@ -49,14 +49,15 @@ public class SwamMac {
     public String apply(ISOMsg m) throws Exception {
         byte[] input = SwamMacBuilder.build(m);
         byte[] full;
+        String mti = m.getMTI();
+        String function = m.hasField(24) ? m.getString(24) : null;
+        boolean zmkMandatory = "1804".equals(mti) || "1814".equals(mti);
 
-        // Si la ZAK (MAK) a ete recue et importee, on MACe avec ELLE (cle dediee
-        // au MAC). Sinon (avant l'echange de cles), on retombe sur la ZMK.
         SwamAcqKey mak = acqKeyRepo
                 .findByMemberGroupIdAndKeyTypeAndStatus(MGID, "MAK", "ACTIVE")
                 .orElse(null);
 
-        if (mak != null && mak.getKeyUnderLmk() != null) {
+        if (!zmkMandatory && mak != null && mak.getKeyUnderLmk() != null) {
             full = hsm.generateMac(input, mak.getKeyUnderLmk(), mak.getKcv(), mak.getKeyLength());
             log.info("[SWAM-MAC] MAC avec ZAK (MAK, KCV={})", mak.getKcv());
         } else {
@@ -66,7 +67,8 @@ public class SwamMac {
                 return null;
             }
             full = hsm.generateMacZmk(input, kek.getKekClear());
-            log.info("[SWAM-MAC] MAC avec ZMK (pas encore de ZAK)");
+            log.info("[SWAM-MAC] MAC avec ZMK (MTI={} DE24={})",
+                    mti, function);
         }
 
         byte[] mac = (macLength > 0 && macLength < full.length)

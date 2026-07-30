@@ -33,6 +33,8 @@
         <module>sg-swam-lis-switch</module>
         <module>sg-mc-sms-acquirer</module>
         <module>sg-mc-sms-issuer</module>
+        <module>sg-way-pos-server</module>
+        <module>sg-way-pos-simulator</module>
     </modules>
 
     <properties>

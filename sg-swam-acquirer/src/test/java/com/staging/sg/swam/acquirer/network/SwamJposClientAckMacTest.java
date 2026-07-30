@@ -73,7 +73,11 @@ class SwamJposClientAckMacTest {
         ISOMsg request = new ISOMsg();
         request.setMTI("1804");
         request.set(11, "123456");
+        request.set(12, "260729151123");
         request.set(24, functionCode);
+        request.set(33, "300853");
+        request.set(37, "621015260729");
+        request.set(48, "P10007XABCDEF");
 
         ReflectionTestUtils.invokeMethod(client, "sendAck", request, "800");
 
@@ -85,6 +89,10 @@ class SwamJposClientAckMacTest {
         assertEquals("1814", ack.getMTI());
         assertEquals(functionCode, ack.getString(24));
         assertEquals("800", ack.getString(39));
+        assertEquals("260729151123", ack.getString(12));
+        assertEquals("300853", ack.getString(33));
+        assertEquals("621015260729", ack.getString(37));
+        assertEquals("P10007XABCDEF", ack.getString(48));
         assertTrue(ack.hasField(128));
         assertArrayEquals(expectedMac, ack.getBytes(128));
     }

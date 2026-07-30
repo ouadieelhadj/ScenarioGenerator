@@ -95,36 +95,31 @@ public class McDmasEmv {
     // ==================================================================
 
     public EmvResult build(EmvInput in) throws Exception {
-        // 1. MDK claire, en memoire uniquement
-        byte[] mdk = mdkClear(in);
+        byte[] mdk = null, icc = null, sk = null;
+        try {
+            mdk = mdkClear(in);
+            icc = deriveIcc(mdk, in.pan, in.psn);
+            sk = deriveSessionKey(icc, in.atc, unpredictable(in));
+            byte[] cdol = buildCdol1(in);
+            byte[] arqc = retailMac(sk, cdol);
+            String arqcHex = ISOUtil.hexString(arqc).toUpperCase();
+            traceArqc("MEMBRE", in, icc, sk, cdol, arqcHex);
+            byte[] de55 = assembleDe55(in, arqcHex);
 
-        // 2. cle ICC (EMV Option A)
-        byte[] icc = deriveIcc(mdk, in.pan, in.psn);
-
-        // 3. cle de session (EMV CSK)
-        byte[] sk = deriveSessionKey(icc, in.atc, unpredictable(in));
-
-        // 4. donnees CDOL1 et ARQC
-        byte[] cdol = buildCdol1(in);
-        byte[] arqc = retailMac(sk, cdol);
-        String arqcHex = ISOUtil.hexString(arqc).toUpperCase();
-
-        // 5. assemblage du DE55
-        traceArqc("MEMBRE", in, icc, sk, cdol, arqcHex);
-        byte[] de55 = assembleDe55(in, arqcHex);
-
-        EmvResult r = new EmvResult();
-        r.arqc          = arqcHex;
-        r.de55          = de55;
-        r.de55Hex       = ISOUtil.hexString(de55).toUpperCase();
-        r.iccKeyKcv     = kcv3(icc);
-        r.sessionKeyKcv = kcv3(sk);
-
-        log.info("[EMV] ARQC={} ATC={} PAN=***{} (iccKcv={} skKcv={})",
-                arqcHex, in.atc,
-                in.pan.length() >= 4 ? in.pan.substring(in.pan.length()-4) : in.pan,
-                r.iccKeyKcv, r.sessionKeyKcv);
-        return r;
+            EmvResult r = new EmvResult();
+            r.arqc          = arqcHex;
+            r.de55          = de55;
+            r.de55Hex       = ISOUtil.hexString(de55).toUpperCase();
+            r.iccKeyKcv     = kcv3(icc);
+            r.sessionKeyKcv = kcv3(sk);
+            log.info("[EMV] ARQC={} ATC={} PAN=***{} (iccKcv={} skKcv={})",
+                    arqcHex, in.atc,
+                    in.pan.length() >= 4 ? in.pan.substring(in.pan.length()-4) : in.pan,
+                    r.iccKeyKcv, r.sessionKeyKcv);
+            return r;
+        } finally {
+            wipe(mdk); wipe(icc); wipe(sk);
+        }
     }
 
     /**
@@ -132,14 +127,19 @@ public class McDmasEmv {
      * Meme derivation que build(), sans reassembler le DE55.
      */
     public String recomputeArqc(EmvInput in) throws Exception {
-        byte[] mdk = mdkClear(in);
-        byte[] icc = deriveIcc(mdk, in.pan, in.psn);
-        byte[] sk  = deriveSessionKey(icc, in.atc, unpredictable(in));
-        byte[] cdol = buildCdol1(in);
-        byte[] arqc = retailMac(sk, cdol);
-        String arqcHex = ISOUtil.hexString(arqc).toUpperCase();
-        traceArqc("RESEAU", in, icc, sk, cdol, arqcHex);
-        return arqcHex;
+        byte[] mdk = null, icc = null, sk = null;
+        try {
+            mdk = mdkClear(in);
+            icc = deriveIcc(mdk, in.pan, in.psn);
+            sk  = deriveSessionKey(icc, in.atc, unpredictable(in));
+            byte[] cdol = buildCdol1(in);
+            byte[] arqc = retailMac(sk, cdol);
+            String arqcHex = ISOUtil.hexString(arqc).toUpperCase();
+            traceArqc("RESEAU", in, icc, sk, cdol, arqcHex);
+            return arqcHex;
+        } finally {
+            wipe(mdk); wipe(icc); wipe(sk);
+        }
     }
 
     // ==================================================================
@@ -183,21 +183,27 @@ public class McDmasEmv {
      * chez le reseau observe.
      */
     public String computeArpc(EmvInput in, String arqcHex, String arcHex) throws Exception {
-        byte[] mdk = mdkClear(in);
-        byte[] icc = deriveIcc(mdk, in.pan, in.psn);
+        byte[] mdk = null, icc = null;
+        try {
+            mdk = mdkClear(in);
+            icc = deriveIcc(mdk, in.pan, in.psn);
+            byte[] arqc = ISOUtil.hex2byte(arqcHex);
+            byte[] arc  = new byte[8];
+            byte[] a    = ISOUtil.hex2byte(arcHex);
+            System.arraycopy(a, 0, arc, 0, Math.min(a.length, 8));
+            byte[] x = new byte[8];
+            for (int i = 0; i < 8; i++) x[i] = (byte) (arqc[i] ^ arc[i]);
+            byte[] arpc = tdesEcb(icc, x, Cipher.ENCRYPT_MODE);
+            String hex = ISOUtil.hexString(arpc).toUpperCase();
+            log.info("[EMV] ARPC={} (ARQC={} ARC={})", hex, arqcHex, arcHex);
+            return hex;
+        } finally {
+            wipe(mdk); wipe(icc);
+        }
+    }
 
-        byte[] arqc = ISOUtil.hex2byte(arqcHex);
-        byte[] arc  = new byte[8];
-        byte[] a    = ISOUtil.hex2byte(arcHex);
-        System.arraycopy(a, 0, arc, 0, Math.min(a.length, 8));
-
-        byte[] x = new byte[8];
-        for (int i = 0; i < 8; i++) x[i] = (byte) (arqc[i] ^ arc[i]);
-
-        byte[] arpc = tdesEcb(icc, x, Cipher.ENCRYPT_MODE);
-        String hex = ISOUtil.hexString(arpc).toUpperCase();
-        log.info("[EMV] ARPC={} (ARQC={} ARC={})", hex, arqcHex, arcHex);
-        return hex;
+    private static void wipe(byte[] value) {
+        if (value != null) java.util.Arrays.fill(value, (byte) 0);
     }
 
     private byte[] oddParity(byte[] in) {

@@ -306,9 +306,13 @@ public class SwamJposClient {
         ISOMsg ack = new ISOMsg();
         ack.setPackager(packager);
         ack.setMTI("1814");
-        ack.set(7, new SimpleDateFormat("MMddHHmmss").format(new Date()));
+        ack.set(7, new SimpleDateFormat("yyMMddHHmm").format(new Date()));
         if (req.hasField(11)) ack.set(11, req.getString(11));
+        if (req.hasField(12)) ack.set(12, req.getString(12));
         if (req.hasField(24)) ack.set(24, req.getString(24));
+        if (req.hasField(33)) ack.set(33, req.getString(33));
+        if (req.hasField(37)) ack.set(37, req.getString(37));
+        if (req.hasField(48)) ack.set(48, req.getString(48));
         ack.set(39, de39);
         swamMac.apply(ack);
         if (!ack.hasField(128)) {

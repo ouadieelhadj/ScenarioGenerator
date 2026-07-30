@@ -138,6 +138,30 @@ explicite, environnement autorisé, fenêtre de test et accords réseau/HSM.
 Si une anomalie est détectée, communique le hash du commit testé et des traces
 assainies à LAB/DEV. Ne développe pas directement la correction en RECETTE.
 
+Vecteur local de controle M6 valide le 29 juillet 2026 :
+
+- la capture correspond au message entrant `1804/899`, STAN `580401` ;
+- commande : `M6|0|0|01|1|003|U<ZMK sous LMK>|0061|<buffer>` ;
+- `0061` hexadecimal = 97 octets ;
+- le buffer contient les DE bruts, avec prefixes LLVAR/LLLVAR, sans MTI,
+  bitmap ni DE128 ;
+- les deux composantes ZMK donnent par XOR une ZMK de KCV `F6EE59` ;
+- calcul local ISO 9797 Algorithme 1, 3DES-CBC, IV nul, padding Method 1 :
+  `MAC8=8CA9A2A02BD2AA01`, donc `DE128=8CA9A2A0`.
+- la TAK fraiche recue dans `P10`, dechiffree localement sous cette ZMK, a le
+  KCV `09C354` ; sur le meme buffer elle donne
+  `MAC8=1D150C9951CD1117`, donc `DE128=1D150C99` ;
+- le `DE128=E47C1B48` recu dans le `1804/899` ne correspond donc ni au calcul
+  ZMK ni au calcul TAK fraiche sur ce buffer exact.
+
+La valeur `U...` visible dans la capture est la meme ZMK chiffree sous la LMK
+du HSM SWAM ; ce n'est pas sa valeur claire. Le retour `M7` SWAM doit donc
+produire `8CA9A2A0` sur ce buffer exact. Si le resultat differe, relever le
+retour M7 complet assaini et verifier en priorite la cle sous LMK, la longueur
+`0061`, puis le premier octet divergent du buffer. Pour expliquer le MAC
+entrant `E47C1B48`, demander aussi le KCV de la TAK effectivement utilisee par
+le switch emetteur, sans demander ni transmettre sa valeur claire.
+
 LAB/DEV et RECETTE travaillent sur la branche commune
 `codex/portail-rbac-maker-checker` avec la répartition suivante :
 

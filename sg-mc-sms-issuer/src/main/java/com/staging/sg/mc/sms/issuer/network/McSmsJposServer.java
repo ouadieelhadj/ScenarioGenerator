@@ -61,6 +61,7 @@ public class McSmsJposServer {
     private final NetworkRepository networkRepository;
 
     @Autowired private McSmsIssKeyExchange keyExchange;
+    @Autowired private McSmsAuthorizationProcessor authorizationProcessor;
 
     private ISOServer isoServer;
     private Thread serverThread;
@@ -125,6 +126,7 @@ public class McSmsJposServer {
                 if ("0800".equals(mti)) return handleNetwork(source, m);
                 if ("0810".equals(mti)) return handleNetworkResponse(m);
                 if ("0200".equals(mti)) return handleAuthorization(source, m);
+                if ("0400".equals(mti) || "0420".equals(mti)) return handleReversal(source, m);
 
                 log.warn("[MC-SRV] MTI non gere : {}", mti);
                 return false;
@@ -223,7 +225,7 @@ public class McSmsJposServer {
 
         /** 0200 -> 0210. A implementer. */
         private boolean handleAuthorization(ISOSource source, ISOMsg m) throws Exception {
-            log.warn("[MC-SRV] 0200 recu — autorisation pas encore implementee");
+            McSmsAuthorizationProcessor.Decision decision = authorizationProcessor.process(m);
             ISOMsg r = new ISOMsg();
             r.setPackager(m.getPackager());
             r.setMTI("0210");
@@ -234,7 +236,26 @@ public class McSmsJposServer {
             if (m.hasField(11)) r.set(11, m.getString(11));
             if (m.hasField(33)) r.set(33, m.getString(33));
             if (m.hasField(37)) r.set(37, m.getString(37));
-            r.set(39, RC_SYSTEM_ERROR);
+            if (m.hasField(41)) r.set(41, m.getString(41));
+            if (m.hasField(49)) r.set(49, m.getString(49));
+            r.set(39, decision.responseCode());
+            if (decision.authorizationCode() != null) r.set(38, decision.authorizationCode());
+            source.send(r);
+            return true;
+        }
+
+        private boolean handleReversal(ISOSource source, ISOMsg m) throws Exception {
+            McSmsAuthorizationProcessor.Decision decision = authorizationProcessor.reverse(m);
+            ISOMsg r = new ISOMsg();
+            r.setPackager(m.getPackager());
+            r.setMTI("0420".equals(m.getMTI()) ? "0430" : "0410");
+            if (m.hasField(2)) r.set(2, m.getString(2));
+            if (m.hasField(3)) r.set(3, m.getString(3));
+            if (m.hasField(4)) r.set(4, m.getString(4));
+            if (m.hasField(7)) r.set(7, m.getString(7));
+            if (m.hasField(11)) r.set(11, m.getString(11));
+            if (m.hasField(37)) r.set(37, m.getString(37));
+            r.set(39, decision.responseCode());
             source.send(r);
             return true;
         }

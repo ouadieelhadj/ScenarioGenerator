@@ -81,7 +81,7 @@ public class JposHsmService implements HsmService {
 
     // keyLength jPOS : 128 = double (16o), 192 = triple (24o)
     private short jposLen(int keyLengthBytes) {
-        return (short) (keyLengthBytes >= 24 ? 192 : 128);
+        return (short) (keyLengthBytes >= 24 ? 192 : keyLengthBytes >= 16 ? 128 : 64);
     }
 
     private String thalesType(String keyType) {
@@ -95,7 +95,9 @@ public class JposHsmService implements HsmService {
     private String smType(String keyType) {
         return switch (keyType) {
             case "PEK" -> SMAdapter.TYPE_ZPK;
+            case "TPK" -> SMAdapter.TYPE_TPK;
             case "MAK" -> SMAdapter.TYPE_ZAK;
+            case "PVK" -> SMAdapter.TYPE_PVK;
             default    -> SMAdapter.TYPE_ZMK;
         };
     }
@@ -246,10 +248,98 @@ public class JposHsmService implements HsmService {
         return pin;
     }
 
+    /**
+     * Translates an ISO-0 PIN block from a terminal TPK to a destination
+     * network PEK entirely inside the HSM boundary. No clear PIN is returned
+     * to application code.
+     */
+    public byte[] translatePinBlock(
+            byte[] pinBlockUnderTpk, String pan,
+            String tpkUnderLmkHex, String tpkKcv, int tpkLength,
+            String pekUnderLmkHex, String pekKcv, int pekLength) throws Exception {
+        String pan12 = extractPan12(pan);
+        SecureDESKey tpk = rebuildKey("TPK", tpkUnderLmkHex, tpkKcv, tpkLength);
+        SecureDESKey pek = rebuildKey("PEK", pekUnderLmkHex, pekKcv, pekLength);
+        EncryptedPIN underTpk =
+                new EncryptedPIN(pinBlockUnderTpk, SMAdapter.FORMAT00, pan12, true);
+        EncryptedPIN underLmk = sm.importPIN(underTpk, tpk);
+        EncryptedPIN underPek = sm.exportPIN(underLmk, pek, SMAdapter.FORMAT00);
+        byte[] translated = underPek.getPINBlock();
+        log.info("[HSM] translatePinBlock ISO-0 pan=***{} source=TPK target=PEK blockLen={}",
+                pan.length() >= 4 ? pan.substring(pan.length() - 4) : pan,
+                translated.length);
+        return translated;
+    }
+
+    /** Verifies a Visa PVV without returning the clear PIN to application code. */
+    public boolean verifyPinPvv(
+            byte[] pinBlockUnderTpk, String pan,
+            String tpkUnderLmkHex, String tpkKcv, int tpkLength,
+            String pvkAUnderLmkHex, String pvkAKcv,
+            String pvkBUnderLmkHex, String pvkBKcv,
+            int pvki, String expectedPvv) throws Exception {
+        String pan12 = extractPan12(pan);
+        SecureDESKey tpk = rebuildKey("TPK", tpkUnderLmkHex, tpkKcv, tpkLength);
+        SecureDESKey pvkA = rebuildKey("PVK", pvkAUnderLmkHex, pvkAKcv, 8);
+        SecureDESKey pvkB = rebuildKey("PVK", pvkBUnderLmkHex, pvkBKcv, 8);
+        EncryptedPIN underTpk =
+                new EncryptedPIN(pinBlockUnderTpk, SMAdapter.FORMAT00, pan12, true);
+        boolean verified = sm.verifyPVV(
+                underTpk, tpk, pvkA, pvkB, pvki, expectedPvv);
+        log.info("[HSM] verifyPinPvv pan=***{} verified={}",
+                pan.length() >= 4 ? pan.substring(pan.length() - 4) : pan,
+                verified);
+        return verified;
+    }
+
+    /** Test/provisioning helper: creates an ISO-0 block under a terminal TPK. */
+    public byte[] encryptPinBlockUnderTpk(
+            String pin, String pan, String tpkUnderLmkHex,
+            String kcv, int keyLenBytes) throws Exception {
+        SecureDESKey tpk = rebuildKey("TPK", tpkUnderLmkHex, kcv, keyLenBytes);
+        String pan12 = extractPan12(pan);
+        EncryptedPIN underLmk = sm.encryptPIN(pin, pan12, true);
+        return sm.exportPIN(underLmk, tpk, SMAdapter.FORMAT00).getPINBlock();
+    }
+
+    /** Calculates a Visa PVV inside the HSM boundary for controlled provisioning. */
+    public String calculatePinPvv(
+            byte[] pinBlockUnderTpk, String pan,
+            String tpkUnderLmkHex, String tpkKcv, int tpkLength,
+            String pvkAUnderLmkHex, String pvkAKcv,
+            String pvkBUnderLmkHex, String pvkBKcv,
+            int pvki) throws Exception {
+        String pan12 = extractPan12(pan);
+        SecureDESKey tpk = rebuildKey("TPK", tpkUnderLmkHex, tpkKcv, tpkLength);
+        SecureDESKey pvkA = rebuildKey("PVK", pvkAUnderLmkHex, pvkAKcv, 8);
+        SecureDESKey pvkB = rebuildKey("PVK", pvkBUnderLmkHex, pvkBKcv, 8);
+        EncryptedPIN underTpk =
+                new EncryptedPIN(pinBlockUnderTpk, SMAdapter.FORMAT00, pan12, true);
+        return sm.calculatePVV(underTpk, tpk, pvkA, pvkB, pvki);
+    }
+
     /** Reconstruit un SecureDESKey (sous LMK local) depuis hex + KCV. */
     private SecureDESKey rebuildKey(String keyType, String underLmkHex, String kcv, int keyLenBytes) {
         short len = jposLen(keyLenBytes);
         return new SecureDESKey(len, smType(keyType), underLmkHex, kcv);
+    }
+
+    /**
+     * Validates key metadata inside the HSM boundary without exposing the
+     * clear key. The supplied value must already be encrypted under this
+     * server's LMK.
+     */
+    public boolean validateKeyUnderLmk(
+            String keyType, String underLmkHex, String expectedKcv,
+            int keyLenBytes) throws Exception {
+        SecureDESKey key = rebuildKey(
+                keyType, underLmkHex, expectedKcv, keyLenBytes);
+        byte[] generated = sm.generateKeyCheckValue(key);
+        String actualKcv = ISOUtil.hexString(generated)
+                .substring(0, 6).toUpperCase();
+        byte[] actual = ISOUtil.hex2byte(actualKcv);
+        byte[] expected = ISOUtil.hex2byte(expectedKcv.toUpperCase());
+        return java.security.MessageDigest.isEqual(actual, expected);
     }
 
     @Override
@@ -370,60 +460,46 @@ public class JposHsmService implements HsmService {
     }
     // ========================================================================
     //  MAC SWAM REEL — VALIDE PAR WAY4 (RC[0]) le 14/07/2026
-    //  - cle     : la ZMK EN CLAIR, utilisee comme ZAK (16 octets)
-    //  - algo    : ANSI X9.19 = ISO 9797-1 Algorithme 3 (retail MAC)
-    //  - padding : ISO 9797 Padding Method 1 = zeros (zeroPad)
-    //  - donnee  : MTI + bitmap (bit128 ON) + DEs, sans la valeur du MAC
+    //  - cle     : TAK/ZMK double longueur (scheme U, key type 003)
+    //  - algo    : ISO 9797-1 Algorithme 1 en 3DES-CBC (M6 algorithm 01)
+    //  - padding : ISO 9797 Padding Method 1 = zeros
+    //  - donnee  : DEs bruts construits par SwamMacBuilder
     //  - DE128   : les 4 PREMIERS octets du MAC
     // ========================================================================
 
     /**
-     * MAC ANSI X9.19 (ISO 9797-1 Algorithme 3, "retail MAC"), padding Method 1 (zeros).
+     * Reproduit la commande M6 :
+     * {@code M6|0|0|01|1|003|U<key>|<length>|<buffer>}.
      *
-     * VALIDE PAR LE MEMBRE REEL WAY4 le 14/07/2026 : Verify MAC Rs RC[0] VerifRC[0].
-     *
-     * Conforme aux logs Way4 :
-     *   macAlgorithm      = ANSI_X9_19
-     *   bufferPaddingMode = ISO_9797_PADDING_METHOD_1
-     *   key               = ZAK (= la ZMK cote SWAM, 16 octets)
-     *
-     * Cle 16 octets (double longueur K1||K2) :
-     *   - CBC-DES avec K1 sur TOUS les blocs
-     *   - sur le DERNIER bloc uniquement : DES-decrypt K2 puis DES-encrypt K1
-     * Cle 8 octets : X9.19 degenere en DES-CBC-MAC simple (K1==K2).
+     * La cle double longueur K1||K2 est developpee en K1||K2||K1, puis le
+     * buffer est chiffre en 3DES-CBC avec IV nul et padding zero. Le MAC est
+     * le dernier bloc chiffre.
      *
      * Retourne 8 octets. L'appelant tronque a swam.mac.length (4) pour DE128.
      */
     public byte[] generateMacZmk(byte[] data, String zmkClearHex) throws Exception {
         byte[] zmk = ISOUtil.hex2byte(zmkClearHex);
-        byte[] k1, k2;
-        if (zmk.length == 16 || zmk.length == 24) {
-            k1 = java.util.Arrays.copyOfRange(zmk, 0, 8);
-            k2 = java.util.Arrays.copyOfRange(zmk, 8, 16);
+        final byte[] key24;
+        if (zmk.length == 16) {
+            key24 = concat(zmk, java.util.Arrays.copyOfRange(zmk, 0, 8));
+        } else if (zmk.length == 24) {
+            key24 = zmk;
         } else if (zmk.length == 8) {
-            k1 = zmk; k2 = zmk;
+            key24 = concat(concat(zmk, zmk), zmk);
         } else {
             throw new IllegalArgumentException("ZMK attendue 8/16/24 octets, recue " + zmk.length);
         }
 
         byte[] padded = zeroPad(data);
+        Cipher cipher = Cipher.getInstance("DESede/CBC/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE,
+                new SecretKeySpec(key24, "DESede"),
+                new javax.crypto.spec.IvParameterSpec(new byte[8]));
+        byte[] encrypted = cipher.doFinal(padded);
+        byte[] mac = java.util.Arrays.copyOfRange(
+                encrypted, encrypted.length - 8, encrypted.length);
 
-        Cipher desK1 = Cipher.getInstance("DES/CBC/NoPadding");
-        desK1.init(Cipher.ENCRYPT_MODE,
-                   new SecretKeySpec(k1, "DES"),
-                   new javax.crypto.spec.IvParameterSpec(new byte[8]));
-        byte[] all  = desK1.doFinal(padded);
-        byte[] last = java.util.Arrays.copyOfRange(all, all.length - 8, all.length);
-
-        Cipher decK2 = Cipher.getInstance("DES/ECB/NoPadding");
-        decK2.init(Cipher.DECRYPT_MODE, new SecretKeySpec(k2, "DES"));
-        byte[] tmp = decK2.doFinal(last);
-
-        Cipher encK1 = Cipher.getInstance("DES/ECB/NoPadding");
-        encK1.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(k1, "DES"));
-        byte[] mac = encK1.doFinal(tmp);
-
-        log.info("[HSM] generateMacZmk (X9.19 / ISO9797-3, cle {}o) dataLen={} padded={} mac8={} mac4={}",
+        log.info("[HSM] generateMacZmk (M6 Alg01 / 3DES-CBC, cle {}o) dataLen={} padded={} mac8={} mac4={}",
                 zmk.length, data.length, padded.length,
                 ISOUtil.hexString(mac),
                 ISOUtil.hexString(java.util.Arrays.copyOfRange(mac, 0, 4)));
@@ -498,5 +574,21 @@ public class JposHsmService implements HsmService {
             clear = t;
         }
         return clear;
+    }
+
+    /**
+     * Computes OpenWay POS DE64 while keeping LMK handling inside the HSM
+     * boundary. A production Thales adapter can replace this method without
+     * exposing the TAK to callers.
+     */
+    public byte[] generateWayPosMac(
+            byte[] data, String takUnderLmkHex, String kcv, int keyLenBytes,
+            WayPosMac.DataMode mode) throws Exception {
+        byte[] clear = exposeClearKey("TAK", takUnderLmkHex, kcv, keyLenBytes);
+        try {
+            return WayPosMac.calculate(clear, data, mode);
+        } finally {
+            java.util.Arrays.fill(clear, (byte) 0);
+        }
     }
 }

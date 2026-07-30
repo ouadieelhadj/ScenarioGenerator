@@ -198,6 +198,65 @@ public class McDmasAuthorization {
         return r;
     }
 
+    /**
+     * Routing entry point for a PIN block already translated by WayPosServer
+     * into the active DMAS PEK domain. No clear PIN crosses the REST boundary.
+     */
+    public Map<String,Object> sendRoutedAuthorization(
+            String typeStr, String pan, String amount, byte[] pinBlockUnderPek,
+            String emvDataHex, String terminalId, String acceptorId) throws Exception {
+        return sendRoutedAuthorization(
+                typeStr, "0100", null, pan, null, amount, null,
+                pinBlockUnderPek, emvDataHex, terminalId, acceptorId,
+                null, null, null);
+    }
+
+    public Map<String,Object> sendRoutedAuthorization(
+            String typeStr, String sourceMti, String processingCode,
+            String pan, String expiry, String amount, String currency,
+            byte[] pinBlockUnderPek, String emvDataHex,
+            String terminalId, String acceptorId,
+            String entryMode, String conditionCode, String rrn) throws Exception {
+        TxType type = TxType.from(typeStr);
+        String stan = net.generateStan();
+        String mti = sourceMti != null && sourceMti.startsWith("02")
+                ? "0200" : "0100";
+        ISOMsg msg = buildAuth0100(mti, pan, amount, "CARD_PRESENT", stan);
+        msg.set(3, processingCode != null
+                ? processingCode : type.de3sf1 + "0000");
+        msg.set(61, buildPosData(type.de61sf7));
+        if (expiry != null) msg.set(14, expiry);
+        if (entryMode != null) msg.set(22, entryMode);
+        if (conditionCode != null) msg.set(25, conditionCode);
+        if (rrn != null) msg.set(37, rrn);
+        if (terminalId != null) msg.set(41, terminalId);
+        if (acceptorId != null) msg.set(42, acceptorId);
+        if (currency != null) msg.set(49, currency);
+        if (pinBlockUnderPek != null) msg.set(52, pinBlockUnderPek);
+        if (emvDataHex != null) msg.set(55, ISOUtil.hex2byte(emvDataHex));
+
+        LocalDateTime started = LocalDateTime.now();
+        ISOMsg resp = jposServer.pushAndWait(msg, timeoutSeconds);
+        String rc = net.safeGet(resp, 39);
+        persistAuthorization(msg, resp, started, LocalDateTime.now());
+
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("transport", "jpos");
+        result.put("type", type.name());
+        result.put("mti_response", resp.getMTI());
+        result.put("de003_processing_code", msg.getString(3));
+        result.put("de004_amount", amount);
+        result.put("de011_stan", stan);
+        result.put("de039_response_code", rc);
+        result.put("de038_authorization_code",
+                resp.hasField(38) ? resp.getString(38) : null);
+        result.put("de055_response_hex",
+                resp.hasField(55) ? ISOUtil.hexString(resp.getBytes(55)) : null);
+        result.put("approved", "00".equals(rc));
+        result.put("pin_included", msg.hasField(52));
+        return result;
+    }
+
     /** Construit le DE61 POS Data avec le sf7 (POS Transaction Status) à la bonne position. */
     /**
      * Construit un 0100 minimal pour le LOAD TEST (pas de PIN, STAN fourni par l'appelant

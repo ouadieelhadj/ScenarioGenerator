@@ -1,0 +1,35 @@
+server:
+  port: ${WAY_POS_REST_PORT:8530}
+
+spring:
+  application:
+    name: WayPosServer
+  datasource:
+    url: ${WAY_POS_DB_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${WAY_POS_DB_USER:way_pos_user}
+    password: ${WAY_POS_DB_PASSWORD:postgres123}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    enabled: false
+
+way-pos:
+  iso-port: ${WAY_POS_ISO_PORT:8531}
+  t1-seconds: ${WAY_POS_T1_SECONDS:55}
+  pan-pepper: ${WAY_POS_PAN_PEPPER:change-me-in-production}
+  outbox-key-hex: ${WAY_POS_OUTBOX_KEY_HEX:}
+  connectors:
+    DMAS_MEMBER: ${WAY_POS_DMAS_URL:http://localhost:8084}
+    SWAM_MEMBER: ${WAY_POS_SWAM_URL:http://localhost:8094}
+    MASTERCARD_SMS: ${WAY_POS_MC_SMS_URL:http://localhost:8095}
+
+dmas:
+  lmk:
+    file: ${WAY_POS_LMK_FILE:${user.dir}/keys/way-pos.lmk}
+    rebuild: ${WAY_POS_LMK_REBUILD:false}
+
+logging:
+  file:
+    name: ${WAY_POS_LOG_FILE:${user.dir}/runtime/way-pos/logs/way-pos-server.log}

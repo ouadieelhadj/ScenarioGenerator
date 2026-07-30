@@ -5,70 +5,70 @@ import org.jpos.iso.ISOUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+
 /**
- * Construit la donnee a MACer pour SWAM (HPS PowerCARD), conforme au vrai membre Way4.
+ * Construit le buffer de la commande Thales M6 observé en recette SWAM.
  *
- * REGLE REELLE (verifiee octet par octet sur les logs Way4 "Prepared MAC Data") :
- *
- *   [ MTI (4o ASCII) ] [ bitmap primaire+secondaire (16o binaire) ] [ DEs sauf DE128 ]
- *
- *   POINT CRITIQUE : le BIT 128 reste ALLUME dans le bitmap (et donc le bit 1,
- *   qui signale la presence du bitmap secondaire), mais la VALEUR du champ DE128
- *   est ABSENTE du corps.
- *
- *   Exemple Way4 (key push 1804/811) :
- *     bitmap = 82300180880100000000000000000001
- *              ^^ bit1 ON (bitmap secondaire)        ^^ bit128 ON
- *     corps  = 2607141111...P16033X9C0EE219...   (pas de MAC a la fin)
- *
- * PIEGE EVITE : un simple msg.unset(128) eteint AUSSI le bit 128 du bitmap,
- * jPOS n'emet alors plus le bitmap secondaire -> bitmap de 8 octets au lieu de 16,
- * et premier octet 0x02 au lieu de 0x82. On perdait 8 octets et le MAC etait faux.
- *
- * SOLUTION : on packe le message AVEC un DE128 factice (4 octets a zero), ce qui
- * garantit le bon bitmap, puis on retire les 8 derniers octets ASCII (la valeur
- * hex du DE128 factice, IFA_BINARY(4) = 8 caracteres sur le fil).
- *
- * Le header PowerCARD (11 octets) reste exclu d'office : il est gere par
- * SwamLengthChannel et n'entre pas dans le pack jPOS.
+ * <p>Le buffer contient uniquement les valeurs des DE présents, dans leur
+ * ordre numérique. Le MTI, les bitmaps, le header PowerCARD et DE128 sont
+ * exclus. Les préfixes ASCII LLVAR/LLLVAR sont conservés pour les messages
+ * autres que le sign-on 1804/801, conformément aux vecteurs M6 validés.</p>
  */
 public final class SwamMacBuilder {
+    private static final Logger log =
+            LoggerFactory.getLogger(SwamMacBuilder.class);
 
-    private static final Logger log = LoggerFactory.getLogger(SwamMacBuilder.class);
+    private SwamMacBuilder() {
+    }
 
-    /** Taille du DE128 sur le fil : IFA_BINARY(4) => 8 caracteres ASCII hex. */
-    private static final int DE128_WIRE_LEN = 8;
-
-    private SwamMacBuilder() {}
-
-    /**
-     * @param msg le message ISO (SwamPackager deja positionne)
-     * @return les octets a MACer : MTI + bitmap (bit 128 ON) + DEs, sans la valeur du MAC
-     */
-    public static byte[] build(ISOMsg msg) throws Exception {
-        // 1. Copie defensive : on ne touche jamais au message d'origine.
-        ISOMsg copy = (ISOMsg) msg.clone();
-        copy.setPackager(msg.getPackager());
-
-        // 2. Forcer un DE128 factice a ZERO : le bit 128 reste allume dans le bitmap,
-        //    donc le bitmap secondaire est emis (16 octets, premier octet 0x8x).
-        copy.set(128, new byte[]{0, 0, 0, 0});
-
-        // 3. Packer : MTI + bitmap(16) + DEs + DE128 factice (8 car. ASCII "00000000")
-        byte[] packed = copy.pack();
-
-        if (packed.length <= DE128_WIRE_LEN) {
-            log.warn("[SWAM-MAC] pack trop court ({} octets) -> input MAC vide", packed.length);
-            return new byte[0];
+    public static byte[] build(ISOMsg message) throws Exception {
+        boolean withPrefixes = !isSignOn(message);
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        for (int field = 2; field <= 127; field++) {
+            if (!message.hasField(field)) {
+                continue;
+            }
+            String value = message.getString(field);
+            if (value == null) {
+                continue;
+            }
+            byte[] bytes = value.getBytes(StandardCharsets.ISO_8859_1);
+            if (withPrefixes) {
+                if (isLllvar(field)) {
+                    output.write("%03d".formatted(bytes.length)
+                            .getBytes(StandardCharsets.US_ASCII));
+                } else if (isLlvar(field)) {
+                    output.write("%02d".formatted(bytes.length)
+                            .getBytes(StandardCharsets.US_ASCII));
+                }
+            }
+            output.write(bytes);
         }
-
-        // 4. Retirer les 8 derniers octets (la valeur du DE128 factice).
-        //    Le BITMAP, lui, garde le bit 128 allume. C'est exactement ce que MACe Way4.
-        byte[] input = new byte[packed.length - DE128_WIRE_LEN];
-        System.arraycopy(packed, 0, input, 0, input.length);
-
-        log.info("[SWAM-MAC] MAC input : packedLen={} inputLen={} inputHex={}",
-                packed.length, input.length, ISOUtil.hexString(input));
+        byte[] input = output.toByteArray();
+        log.info("[SWAM-MAC] M6 input : prefixes={} inputLen={} inputHex={}",
+                withPrefixes, input.length, ISOUtil.hexString(input));
         return input;
+    }
+
+    private static boolean isSignOn(ISOMsg message) throws Exception {
+        return "1804".equals(message.getMTI())
+                && "801".equals(message.getString(24));
+    }
+
+    private static boolean isLlvar(int field) {
+        return switch (field) {
+            case 2, 32, 33, 35, 43, 45, 53, 56, 93, 94, 100, 101,
+                    102, 103 -> true;
+            default -> false;
+        };
+    }
+
+    private static boolean isLllvar(int field) {
+        return switch (field) {
+            case 46, 48, 54, 55, 60, 61, 62, 123, 127 -> true;
+            default -> false;
+        };
     }
 }
