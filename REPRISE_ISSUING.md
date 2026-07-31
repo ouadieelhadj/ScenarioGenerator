@@ -355,3 +355,48 @@ Premier travail non terminé :
    connecté ;
 3. compléter les mappings réseau advice/reversal et le rejeu ARPC ;
 4. exécuter l'E2E ServerPOS, SWAM et DMAS contre le processus Issuing réel.
+
+### Jalon du 2026-07-31 - E2E interne multi-canal et EMV CVN10
+
+- Nouveau module de test `sg-issuing-internal-e2e`, rattache au reacteur
+  Maven racine.
+- ServerPOS route `00000`, SWAM Issuer et DMAS Mastercard passent par leurs
+  adaptateurs reels, le client Issuing commun et un echange JSON/REST HTTP
+  reel sur boucle locale.
+- Le moteur `IssuerDecisionService` reel traite les trois autorisations.
+  Seuls les repositories, l'annuaire de configuration et le financement
+  sont doubles en memoire pour ne pas dependre de PostgreSQL ni de services
+  externes.
+- Le repeat ServerPOS rend le meme code d'autorisation, porte
+  `replayed=true` et ne debite pas une seconde fois.
+- Le moteur M/Chip 4 CVN10 existant est exerce de bout en bout : calcul et
+  verification ARQC, controle anti-rejeu ATC, calcul ARPC et tag 91.
+- Le LMK est temporaire et la MDK est aleatoire pendant le test ; aucune cle
+  statique de recette n'est ajoutee au depot.
+- Verification du code et de l'historique : CVN10 est implemente. CVN01
+  n'est pas present dans le code suivi et les documents historiques le
+  signalent explicitement comme non implemente ; aucune commande ni regle
+  cryptographique fictive n'a ete ajoutee.
+
+Validation :
+
+- `sg-common` : 66 tests ;
+- `sg-mc-dmas-mastercard` : 1 test ;
+- `sg-swam-issuer` : 1 test ;
+- `sg-card-issuing` : 28 tests ;
+- `sg-way-pos-server` : 34 tests ;
+- `sg-issuing-internal-e2e` : 2 tests ;
+- total : 132 tests, 0 echec, 0 erreur, 0 ignore ;
+- `BUILD SUCCESS` le 2026-07-31 a 11:36:35 +01:00.
+
+Premier travail non termine :
+
+1. appliquer V5/V6 et executer le meme parcours avec PostgreSQL et les
+   processus Issuing, ServerPOS, SWAM et DMAS separes ;
+2. raccorder le profil payShield et les cles de recette sans exposer les
+   commandes, reponses ou cles sensibles ;
+3. raccorder au coeur Issuing la persistance protegee et le rejeu identique
+   de l'ARPC deja disponible dans le flux EMV local WayPos CVN10 ;
+4. implementer CVN01 uniquement a partir de la regle et de vecteurs valides.
+
+Processus restant : aucun processus Maven ou service lance par ce jalon.

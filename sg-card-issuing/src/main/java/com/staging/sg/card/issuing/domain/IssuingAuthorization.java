@@ -79,7 +79,9 @@ public class IssuingAuthorization {
                         "replayed", Boolean.toString(replayed)));
     }
     public UUID id(){return id;} public String issuerId(){return issuerId;}
+    public String callerId(){return callerId;}
     public String transactionId(){return transactionId;}
+    public String idempotencyKey(){return idempotencyKey;}
     public UUID paymentIdentifierId(){return paymentIdentifierId;}
     public long amountMinor(){return amountMinor;} public String currency(){return currency;}
     public long approvedAmountMinor(){return approvedAmountMinor;}

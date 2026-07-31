@@ -320,3 +320,15 @@ Lire ce fichier, puis :
   restent propriétaires du module DMAS.
 - Un test d'adaptateur DMAS passe sans échec. Les advices/reversals et l'E2E
   bilatéral connecté restent non terminés.
+
+## E2E interne Issuing du 2026-07-31
+
+- L'adaptateur reel `sg-mc-dmas-mastercard` est maintenant exerce avec
+  ServerPOS et SWAM dans `sg-issuing-internal-e2e` jusqu'au moteur de decision
+  Issuing, via JSON/REST HTTP sur boucle locale.
+- Le moteur M/Chip 4 CVN10 partage est valide pour ARQC et ARPC tag 91 dans
+  le meme jalon. Le code suivi ne contient pas d'implementation CVN01.
+- Non-regression dependante : 132 tests, 0 echec, `BUILD SUCCESS` le
+  2026-07-31 a 11:36:35 +01:00.
+- Restent hors de cette preuve interne : PostgreSQL, processus separes,
+  session reseau DMAS, payShield reel, advice/reversal et EOD bilateral.

@@ -49,3 +49,15 @@ n'apparaît pendant environ deux minutes.
   de SWAM ; aucune indisponibilité Issuing n'est convertie en approbation.
 - Un test d'adaptateur SWAM passe sans échec. L'E2E SWAM connecté reste à
   exécuter.
+
+## E2E interne Issuing du 2026-07-31
+
+- L'adaptateur reel `sg-swam-issuer` est exerce avec ServerPOS et DMAS dans
+  `sg-issuing-internal-e2e` jusqu'au moteur de decision Issuing, via un appel
+  JSON/REST HTTP reel sur boucle locale.
+- La preuve couvre aussi le repeat idempotent ServerPOS et le moteur EMV
+  partage CVN10 ARQC/ARPC ; elle ne modifie pas le chantier SWAM LIS.
+- Non-regression dependante : 132 tests, 0 echec, `BUILD SUCCESS` le
+  2026-07-31 a 11:36:35 +01:00.
+- L'E2E SWAM avec PostgreSQL, processus separes et liaison reseau reste a
+  executer.

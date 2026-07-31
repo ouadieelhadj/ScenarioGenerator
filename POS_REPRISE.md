@@ -826,3 +826,20 @@ serveur doit conserver sa representation sous le LMK WayPos.
 - Les 34 tests `sg-way-pos-server` passaient avec ce raccordement lors de la
   validation finale. Les 15 tests du simulateur passent aussi ; l'E2E
   connecté du jalon 5 reste non exécuté.
+
+## E2E interne Issuing du 2026-07-31
+
+- `sg-issuing-internal-e2e` exerce la route ServerPOS `00000` jusqu'au moteur
+  de decision Issuing par un appel JSON/REST HTTP reel sur boucle locale.
+- Un repeat identique restitue le meme code d'autorisation avec
+  `replayed=true` et sans second debit.
+- Le test EMV reutilise le moteur M/Chip 4 CVN10 deja present dans
+  `sg-common` et le flux local WayPos : ARQC verifie, ATC memorise, repeat ATC
+  refuse et ARPC restitue en tag 91.
+- Cette preuve est interne et sans PostgreSQL/processus separes ; elle ne
+  remplace pas le harnais connecte du jalon 5 avec les secrets de recette.
+- Non-regression dependante : 132 tests, 0 echec, `BUILD SUCCESS` le
+  2026-07-31 a 11:36:35 +01:00.
+- Le code suivi contient CVN10, pas CVN01. Le premier travail restant cote
+  Issuing/WayPos est le raccordement protege de l'ARPC CVN10 au coeur Issuing,
+  puis l'E2E connecte PostgreSQL/processus/payShield.
