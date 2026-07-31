@@ -60,8 +60,10 @@ public class PaymentIdentifier {
     }
 
     public UUID id() { return id; }
+    public String issuerId() { return issuerId; }
     public UUID instrumentId() { return instrumentId; }
     public PaymentIdentifierType identifierType() { return identifierType; }
+    public String vaultReference() { return vaultReference; }
     public String maskedValue() { return maskedValue; }
     public PaymentIdentifierStatus status() { return status; }
 }

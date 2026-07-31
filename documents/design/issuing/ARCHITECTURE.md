@@ -82,6 +82,12 @@ instancies a partir des valeurs en base.
 - `GET /api/issuing/v1/capabilities`
 - `GET /api/issuing/v1/health`
 
+Les decisions terminales sont journalisees dans `issuing_authorization` et
+une chronologie append-only dans `issuing_authorization_event`. Les holds et
+compteurs de limites ont des tables propres. Les indisponibilites HSM, coffre
+PAN et Core Banking restent retryables et ne peuvent jamais etre converties
+en approbation locale.
+
 Chaque commande porte :
 
 - `schemaVersion` ;

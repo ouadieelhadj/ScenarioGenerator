@@ -229,6 +229,37 @@ Premier travail non termine apres ce jalon :
 3. definir les ports HSM/Core Banking sans approbation de repli ;
 4. implementer le moteur issuer et le validateur pre-clearing.
 
+### Jalon du 2026-07-31 - journal d'autorisation et ports
+
+- Journal durable `issuing_authorization` avec unicite par transaction et
+  idempotence `(issuer, caller, idempotency_key)`.
+- Empreinte differente sous la meme cle d'idempotence refusee.
+- Evenements de decision append-only dans `issuing_authorization_event`.
+- Structures SQL ajoutees pour `issuing_authorization_hold` et
+  `issuing_limit_counter`.
+- Ports definis : `PaymentIdentifierResolutionPort`,
+  `FundingAuthorizationPort` et `CardSecurityPort`.
+- Les implementations par defaut Core Banking et HSM retournent
+  `UNAVAILABLE`; la resolution coffre echoue explicitement.
+- Aucun PAN clair, PIN block, cryptogramme ou secret n'est ajoute au journal.
+- Migration append-only :
+  `sql/issuing/V4__create_authorization_journal.sql`.
+
+Validation du jalon :
+
+- `sg-common` : 65 tests, 0 echec, 0 erreur ;
+- `sg-card-issuing` : 20 tests, 0 echec, 0 erreur ;
+- total : 85 tests sans echec ;
+- `BUILD SUCCESS` le 2026-07-31 a 09:31:06 +01:00.
+
+Premier travail non termine :
+
+1. implementer l'orchestrateur de decision issuer sur le journal et les
+   ports, avec controle carte/contrat/produit ;
+2. ne persister une approbation qu'apres confirmation Core Banking reelle ;
+3. implementer le validateur pre-clearing en lecture seule ;
+4. raccorder les adaptateurs reels a leurs configurations actives en base.
+
 ## Processus
 
 Aucun processus Maven lancé par cette session ne reste actif.
