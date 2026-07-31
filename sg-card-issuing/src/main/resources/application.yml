@@ -1,0 +1,20 @@
+server:
+  port: ${CARD_ISSUING_REST_PORT:8540}
+
+spring:
+  application:
+    name: sg-card-issuing
+  datasource:
+    url: ${CARD_ISSUING_DB_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${CARD_ISSUING_DB_USER:card_issuing_user}
+    password: ${CARD_ISSUING_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    enabled: false
+
+logging:
+  file:
+    name: ${CARD_ISSUING_LOG_FILE:${user.dir}/runtime/card-issuing/logs/card-issuing.log}

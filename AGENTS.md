@@ -9,6 +9,7 @@ Avant toute analyse, modification, test, commit ou push :
 
 1. Lire entierement le document de reprise du chantier demande :
    - WayPosServer / wayPosSimulator : `POS_REPRISE.md` ;
+   - module cartes et issuing : `REPRISE_ISSUING.md` ;
    - DMCS / DMAS : `REPRISE_DMCS_DMAS.md` ;
    - SWAM LIS : `SESSION_REPRISE_SWAM_LIS.md` ;
    - contexte historique general : `SESSION_RESUME.md`, uniquement si les
