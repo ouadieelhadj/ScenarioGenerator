@@ -6,13 +6,19 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.persistence.Version;
 
 import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "issuing_card_instrument")
+@Table(name = "issuing_card_instrument",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_issuing_instrument_idempotency",
+                columnNames = {
+                        "issuer_id", "issued_by", "issuance_idempotency_key"
+                }))
 public class CardInstrument {
     @Id
     private UUID id;
@@ -27,6 +33,14 @@ public class CardInstrument {
     private String maskedPan;
     @Column(name = "expiry_yymm", nullable = false, length = 4)
     private String expiryYymm;
+    @Column(name = "issued_by", nullable = false, length = 64, updatable = false)
+    private String issuedBy;
+    @Column(name = "issuance_idempotency_key", nullable = false, length = 128,
+            updatable = false)
+    private String issuanceIdempotencyKey;
+    @Column(name = "issuance_fingerprint", nullable = false, length = 64,
+            updatable = false)
+    private String issuanceFingerprint;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private CardInstrumentStatus status;
@@ -42,11 +56,15 @@ public class CardInstrument {
 
     public static CardInstrument inactive(
             String issuerId, UUID contractId, String panVaultReference,
-            String maskedPan, String expiryYymm) {
+            String maskedPan, String expiryYymm, String issuedBy,
+            String idempotencyKey, String fingerprint) {
         if (issuerId == null || issuerId.isBlank() || contractId == null
                 || panVaultReference == null || panVaultReference.isBlank()
                 || maskedPan == null || !maskedPan.matches("\\d{6}\\*+\\d{4}")
-                || expiryYymm == null || !expiryYymm.matches("\\d{4}")) {
+                || expiryYymm == null || !expiryYymm.matches("\\d{4}")
+                || issuedBy == null || issuedBy.isBlank()
+                || idempotencyKey == null || idempotencyKey.isBlank()
+                || fingerprint == null || fingerprint.isBlank()) {
             throw new IllegalArgumentException("Invalid protected card instrument");
         }
         CardInstrument value = new CardInstrument();
@@ -56,6 +74,9 @@ public class CardInstrument {
         value.panVaultReference = panVaultReference;
         value.maskedPan = maskedPan;
         value.expiryYymm = expiryYymm;
+        value.issuedBy = issuedBy;
+        value.issuanceIdempotencyKey = idempotencyKey;
+        value.issuanceFingerprint = fingerprint;
         value.status = CardInstrumentStatus.INACTIVE;
         value.createdAt = Instant.now();
         value.updatedAt = value.createdAt;
@@ -82,10 +103,15 @@ public class CardInstrument {
         updatedAt = Instant.now();
     }
 
+    public boolean issuanceMatches(String fingerprint) {
+        return issuanceFingerprint.equals(fingerprint);
+    }
+
     public UUID id() { return id; }
     public String issuerId() { return issuerId; }
     public UUID contractId() { return contractId; }
     public String maskedPan() { return maskedPan; }
     public String expiryYymm() { return expiryYymm; }
     public CardInstrumentStatus status() { return status; }
+    public String panVaultReference() { return panVaultReference; }
 }

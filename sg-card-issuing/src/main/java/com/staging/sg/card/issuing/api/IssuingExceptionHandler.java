@@ -1,5 +1,6 @@
 package com.staging.sg.card.issuing.api;
 
+import com.staging.sg.card.issuing.port.PanVaultUnavailableException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -15,6 +16,11 @@ public class IssuingExceptionHandler {
     @ExceptionHandler(IllegalStateException.class)
     public ProblemDetail conflict(IllegalStateException exception) {
         return problem(HttpStatus.CONFLICT, exception.getMessage());
+    }
+
+    @ExceptionHandler(PanVaultUnavailableException.class)
+    public ProblemDetail unavailable(PanVaultUnavailableException exception) {
+        return problem(HttpStatus.SERVICE_UNAVAILABLE, exception.getMessage());
     }
 
     private static ProblemDetail problem(HttpStatus status, String detail) {

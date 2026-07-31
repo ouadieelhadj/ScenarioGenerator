@@ -36,7 +36,8 @@ class CardLifecycleTest {
     void instrumentCannotActivateAgainstInactiveContract() {
         CardInstrument instrument = CardInstrument.inactive(
                 "ISSUER-1", UUID.randomUUID(), "vault-ref-1",
-                "532196******3348", "2912");
+                "532196******3348", "2912", "maker-1",
+                "idem-card", "fingerprint");
 
         assertThrows(IllegalStateException.class,
                 () -> instrument.activate(CardContractStatus.SUSPENDED));

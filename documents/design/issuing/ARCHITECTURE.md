@@ -101,6 +101,14 @@ initiale.
 Une implémentation indisponible ne doit jamais être remplacée par une
 approbation de démonstration.
 
+Le premier parcours d'émission virtuelle applique ce principe : le cœur
+transmet au coffre uniquement les références issuer/contrat/produit et les
+identifiants de corrélation/idempotence. Le coffre renvoie une référence
+opaque, un masque et une expiration. L'appel externe est hors transaction SQL,
+puis l'instrument, son `payment_identifier` et l'événement outbox sont
+persistés atomiquement. Sans adaptateur de coffre réel, le parcours retourne
+une indisponibilité explicite.
+
 ## Décisions encore ouvertes
 
 - propriétaire du solde et du ledger entre issuing et Core Banking ;

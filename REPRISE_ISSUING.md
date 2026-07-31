@@ -7,7 +7,8 @@
 - Document d'autorité :
   `E:/Way4-Knowledge-Base/03_Guides/Issuing/CADRAGE_MODULE_CARTES_ET_EMISSION_MONETIQUE.md`,
   version 0.3, lu intégralement avant développement.
-- Aucun commit ni push du code issuing n'a encore été demandé ou réalisé.
+- Premier incrément publié au commit `005c95e`
+  (`Add card issuing foundation`).
 
 ## Décisions utilisateur
 
@@ -65,6 +66,26 @@
   - création, approbation et activation produit ;
   - création, soumission et approbation contrat.
 
+### Émission virtuelle sécurisée
+
+- Port `PanVaultPort` ajouté ; le cœur ne reçoit qu'une référence opaque de
+  coffre, un PAN masqué et une date d'expiration.
+- L'API métier n'accepte aucun PAN clair pour l'émission.
+- Endpoint :
+  `POST /api/admin/issuing/v1/contracts/{id}/cards/virtual`.
+- Un contrat et son produit doivent être actifs avant l'appel au coffre.
+- L'appel externe au coffre PAN est exécuté sans transaction SQL ouverte.
+- La réservation coffre utilise la même clé d'idempotence que l'émission.
+- L'instrument, le `payment_identifier` et l'événement `CardRequested` sont
+  ensuite persistés atomiquement.
+- Un rejeu retourne le même instrument sans rappeler le coffre.
+- Même clé d'idempotence avec un autre contrat : conflit.
+- La représentation `ProtectedPan` expurge la référence de coffre.
+- En l'absence d'adaptateur réel, le port retourne explicitement HTTP 503 ;
+  aucune génération locale ou fictive de PAN n'est utilisée.
+- Migration append-only :
+  `sql/issuing/V2__create_payment_identifier_and_issuance.sql`.
+
 ## Sécurité
 
 - Aucun PAN clair, PIN block, cryptogramme ou secret HSM n'est persisté dans
@@ -88,8 +109,8 @@ D:\MoneyCore\idea-2026.1.3.win\plugins\maven\lib\maven3\bin\mvn.cmd
 Résultat final du 2026-07-31 :
 
 - `sg-common` : 65 tests, 0 échec, 0 erreur ;
-- `sg-card-issuing` : 6 tests, 0 échec, 0 erreur ;
-- total : 71 tests sans échec ;
+- `sg-card-issuing` : 11 tests, 0 échec, 0 erreur ;
+- total : 76 tests sans échec ;
 - `BUILD SUCCESS` ;
 - `git diff --check` réussi.
 
@@ -108,10 +129,9 @@ Résultat final du 2026-07-31 :
 
 ## Premier travail non terminé
 
-1. Ajouter le port `PanVaultPort` et le parcours d'émission d'une carte
-   virtuelle à partir d'un contrat actif, sans accepter de PAN clair dans
-   l'API métier.
-2. Ajouter les tables `payment_identifier`, `authorization`,
+1. Raccorder une implémentation réelle de `PanVaultPort` au coffre choisi et
+   exécuter le parcours contre cette dépendance.
+2. Ajouter les tables `authorization`,
    `authorization_event`, `authorization_hold`, `limit_counter` et le
    registre d'idempotence financier durable.
 3. Définir et raccorder `FundingAuthorizationPort` au propriétaire réel du
@@ -132,6 +152,7 @@ Résultat final du 2026-07-31 :
 - `sg-common/src/test/java/com/staging/sg/common/issuing/`
 - `sg-card-issuing/`
 - `sql/issuing/V1__create_card_issuing_foundation.sql`
+- `sql/issuing/V2__create_payment_identifier_and_issuance.sql`
 
 ## Processus
 
