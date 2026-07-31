@@ -8,7 +8,7 @@ CREATE TABLE issuing_authorization (
     correlation_id VARCHAR(128) NOT NULL,
     idempotency_key VARCHAR(128) NOT NULL,
     request_fingerprint VARCHAR(64) NOT NULL,
-    payment_identifier_id UUID NOT NULL,
+    payment_identifier_id UUID,
     operation VARCHAR(32) NOT NULL,
     original_transaction_id VARCHAR(128),
     amount_minor BIGINT NOT NULL,

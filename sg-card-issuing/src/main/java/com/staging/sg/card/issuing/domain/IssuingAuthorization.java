@@ -24,7 +24,7 @@ public class IssuingAuthorization {
     @Column(name="correlation_id",nullable=false,length=128,updatable=false) private String correlationId;
     @Column(name="idempotency_key",nullable=false,length=128,updatable=false) private String idempotencyKey;
     @Column(name="request_fingerprint",nullable=false,length=64,updatable=false) private String requestFingerprint;
-    @Column(name="payment_identifier_id",nullable=false,updatable=false) private UUID paymentIdentifierId;
+    @Column(name="payment_identifier_id",updatable=false) private UUID paymentIdentifierId;
     @Enumerated(EnumType.STRING) @Column(nullable=false,length=32,updatable=false) private IssuingOperation operation;
     @Column(name="original_transaction_id",length=128,updatable=false) private String originalTransactionId;
     @Column(name="amount_minor",nullable=false,updatable=false) private long amountMinor;
@@ -50,8 +50,7 @@ public class IssuingAuthorization {
             boolean retryable) {
         if (blank(issuerId) || blank(callerId) || blank(transactionId)
                 || blank(correlationId) || blank(idempotencyKey)
-                || blank(fingerprint) || paymentIdentifierId == null
-                || operation == null || amountMinor < 0 || currency == null
+                || blank(fingerprint) || operation == null || amountMinor < 0 || currency == null
                 || !currency.matches("\\d{3}") || status == null
                 || blank(responseCode) || approvedAmountMinor < 0
                 || approvedAmountMinor > amountMinor) {
@@ -83,6 +82,7 @@ public class IssuingAuthorization {
     public String transactionId(){return transactionId;}
     public UUID paymentIdentifierId(){return paymentIdentifierId;}
     public long amountMinor(){return amountMinor;} public String currency(){return currency;}
+    public long approvedAmountMinor(){return approvedAmountMinor;}
     public IssuingDecisionStatus status(){return status;}
     public String authorizationCode(){return authorizationCode;}
     public String internalResponseCode(){return internalResponseCode;}

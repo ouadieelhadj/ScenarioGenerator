@@ -260,6 +260,42 @@ Premier travail non termine :
 3. implementer le validateur pre-clearing en lecture seule ;
 4. raccorder les adaptateurs reels a leurs configurations actives en base.
 
+### Jalon du 2026-07-31 - moteur issuer et pre-clearing
+
+- `IssuerDecisionService` remplace le bean fail-closed initial.
+- Resolution de l'identifiant par coffre puis controles successifs :
+  instrument actif, expiration, contrat actif, produit actif, devise et
+  service autorise.
+- PIN/EMV delegues exclusivement a `CardSecurityPort`.
+- Autorisation et transaction financiere deleguees a
+  `FundingAuthorizationPort`.
+- Une approbation n'est journalisee qu'apres reponse positive du financement.
+- Une dependance indisponible retourne `UNKNOWN`, retryable, sans approbation
+  locale ni mutation financiere fictive.
+- L'idempotence restitue une decision terminale deja journalisee et refuse
+  une meme cle avec une empreinte differente.
+- Le traitement EMV reste volontairement indisponible tant que l'ARPC
+  protege ne peut pas etre restitue identiquement lors d'un rejeu.
+- `PreClearingValidationService` compare en lecture seule identifiant,
+  statut, montant approuve, devise et code d'autorisation.
+- Le pre-clearing ne contacte ni HSM ni Core Banking et porte toujours
+  `financialMutationPerformed=false`.
+
+Validation finale :
+
+- `sg-common` : 65 tests, 0 echec, 0 erreur ;
+- `sg-card-issuing` : 23 tests, 0 echec, 0 erreur ;
+- total : 88 tests sans echec ;
+- `BUILD SUCCESS` le 2026-07-31 a 09:47:59 +01:00.
+
+Blocages externes restants :
+
+1. protocoles, endpoints actifs en base et acces reels du coffre PAN, HSM et
+   Core Banking ;
+2. format protege/persistable de la reponse EMV ARPC et des issuer scripts ;
+3. specifications de mapping des adaptateurs ServerPOS, SWAM et DMAS ;
+4. environnement E2E et donnees de recette reelles.
+
 ## Processus
 
 Aucun processus Maven lancé par cette session ne reste actif.

@@ -6,12 +6,10 @@ import com.staging.sg.common.issuing.IssuingDecisionStatus;
 import com.staging.sg.common.issuing.PreClearingValidationRequest;
 import com.staging.sg.common.issuing.PreClearingValidationResponse;
 import com.staging.sg.common.issuing.PreClearingVerdict;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
 
-@Service
 public class FailClosedIssuingService
         implements IssuerAuthorizationUseCase, PreClearingValidationUseCase {
 

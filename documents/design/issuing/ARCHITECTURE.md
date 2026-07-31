@@ -88,6 +88,16 @@ compteurs de limites ont des tables propres. Les indisponibilites HSM, coffre
 PAN et Core Banking restent retryables et ne peuvent jamais etre converties
 en approbation locale.
 
+Le moteur de decision resout d'abord l'identifiant opaque, puis controle
+instrument, expiration, contrat, produit, devise et service. Il appelle le
+HSM uniquement lorsque le message transporte des donnees de securite et le
+Core Banking uniquement apres tous les controles locaux. Une decision
+positive est journalisee seulement apres confirmation du financement.
+
+Le validateur pre-clearing relit la decision et compare identifiant, statut,
+montant approuve, devise et code d'autorisation. Il n'appelle aucun port
+financier et ne modifie jamais holds, compteurs ou ledger.
+
 Chaque commande porte :
 
 - `schemaVersion` ;
