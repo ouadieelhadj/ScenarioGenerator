@@ -18,3 +18,8 @@ spring:
 logging:
   file:
     name: ${CARD_ISSUING_LOG_FILE:${user.dir}/runtime/card-issuing/logs/card-issuing.log}
+
+issuing:
+  core-banking:
+    sandbox:
+      enabled: ${CARD_ISSUING_CORE_BANKING_SANDBOX_ENABLED:false}

@@ -2,6 +2,7 @@ package com.staging.sg.card.issuing.service;
 
 import com.staging.sg.card.issuing.domain.PaymentIdentifierStatus;
 import com.staging.sg.card.issuing.port.PaymentIdentifierResolutionPort;
+import com.staging.sg.card.issuing.port.PaymentIdentifierNotFoundException;
 import com.staging.sg.card.issuing.repository.IssuingAuthorizationRepository;
 import com.staging.sg.card.issuing.repository.PaymentIdentifierRepository;
 import com.staging.sg.common.issuing.*;
@@ -46,13 +47,15 @@ public class PreClearingValidationService
             var resolved=resolver.resolve(request.issuerId(),
                     request.paymentIdentifierType(),request.paymentIdentifier());
             var identifier=identifiers
-                    .findByIssuerIdAndIdentifierTypeAndVaultReferenceAndStatus(
-                            request.issuerId(),request.paymentIdentifierType(),
+                    .findByIssuerIdAndVaultReferenceAndStatus(
+                            request.issuerId(),
                             resolved.vaultReference(),PaymentIdentifierStatus.ACTIVE);
             if(identifier.isEmpty() || authorization.get().paymentIdentifierId()==null
                     || !identifier.get().id().equals(
                             authorization.get().paymentIdentifierId()))
                 mismatches.add("PAYMENT_IDENTIFIER");
+        } catch(PaymentIdentifierNotFoundException notFound) {
+            mismatches.add("PAYMENT_IDENTIFIER");
         } catch(RuntimeException unavailable) {
             return response(request,PreClearingVerdict.REVIEW_REQUIRED,
                     List.of("IDENTIFIER_RESOLUTION_UNAVAILABLE"));

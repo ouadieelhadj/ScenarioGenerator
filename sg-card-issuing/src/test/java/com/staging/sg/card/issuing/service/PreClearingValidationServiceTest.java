@@ -32,8 +32,8 @@ class PreClearingValidationServiceTest {
                 .thenReturn(Optional.of(authorization));
         when(resolver.resolve(any(),any(),any())).thenReturn(
                 new PaymentIdentifierResolutionPort.ResolvedPaymentIdentifier("vault-ref"));
-        when(identifiers.findByIssuerIdAndIdentifierTypeAndVaultReferenceAndStatus(
-                any(),any(),any(),any())).thenReturn(Optional.of(identifier));
+        when(identifiers.findByIssuerIdAndVaultReferenceAndStatus(
+                any(),any(),any())).thenReturn(Optional.of(identifier));
         var service=new PreClearingValidationService(
                 authorizations,resolver,identifiers);
 

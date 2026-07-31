@@ -50,10 +50,13 @@ public class IssuerDecisionService implements IssuerAuthorizationUseCase {
             var resolved=resolver.resolve(request.issuerId(),
                     request.paymentIdentifierType(),request.paymentIdentifier());
             identifier=identifiers
-                    .findByIssuerIdAndIdentifierTypeAndVaultReferenceAndStatus(
-                            request.issuerId(),request.paymentIdentifierType(),
+                    .findByIssuerIdAndVaultReferenceAndStatus(
+                            request.issuerId(),
                             resolved.vaultReference(),PaymentIdentifierStatus.ACTIVE)
                     .orElse(null);
+        } catch (PaymentIdentifierNotFoundException notFound) {
+            return terminal(request,fingerprint,null,
+                    IssuingDecisionStatus.DECLINED,"CARD_NOT_FOUND",null,0);
         } catch (RuntimeException unavailable) {
             return transientUnknown(request,"IDENTIFIER_RESOLUTION_UNAVAILABLE");
         }

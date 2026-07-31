@@ -93,6 +93,19 @@ public class CardManagementController {
                 id, issuerId, callerId, idempotencyKey, correlationId);
     }
 
+    @PostMapping("/contracts/{id}/cards")
+    public CardInstrumentRepresentation registerCard(
+            @PathVariable UUID id,
+            @RequestHeader("X-Issuer-ID") String issuerId,
+            @RequestHeader("X-Caller-ID") String callerId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestHeader("X-Correlation-ID") String correlationId,
+            @RequestBody RegisterCardRequest request) {
+        return issuance.register(
+                id, issuerId, callerId, idempotencyKey, correlationId,
+                request.pan(), request.expiryYymm());
+    }
+
     @PostMapping("/interfaces")
     public IssuingInterfaceRepresentation createInterface(
             @RequestHeader("X-Caller-ID") String callerId,

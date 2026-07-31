@@ -118,8 +118,10 @@ initiale.
 - PIN block opaque et traduit vers le domaine de clé issuer avant contrôle ;
 - PAN jamais journalisé ; les `toString()` des contrats sont expurgés ;
 - CVV2/CVC2/CAV2 jamais persisté après l'autorisation ;
-- PAN persistant uniquement dans un coffre approuvé ou sous forme de
-  référence, masque et empreinte non réversible ;
+- décision projet du 2026-07-31 : PAN clair persisté dans la table propriétaire
+  Issuing, avec token opaque aléatoire en bijection un-à-un et masque ;
+- l'accès au PAN clair est limité au module Issuing et il reste exclu des
+  journaux, événements, erreurs et contrats de réponse ;
 - refus fermé si le HSM, le Core Banking ou une règle obligatoire n'est pas
   raccordé ;
 - mTLS et identité de service exigés entre adaptateurs et issuing.
@@ -136,13 +138,12 @@ initiale.
 Une implémentation indisponible ne doit jamais être remplacée par une
 approbation de démonstration.
 
-Le premier parcours d'émission virtuelle applique ce principe : le cœur
-transmet au coffre uniquement les références issuer/contrat/produit et les
-identifiants de corrélation/idempotence. Le coffre renvoie une référence
-opaque, un masque et une expiration. L'appel externe est hors transaction SQL,
-puis l'instrument, son `payment_identifier` et l'événement outbox sont
-persistés atomiquement. Sans adaptateur de coffre réel, le parcours retourne
-une indisponibilité explicite.
+Deux parcours coexistent. Le parcours historique d'émission virtuelle délègue
+la génération au `PanVaultPort`. Le parcours d'enregistrement décidé le
+2026-07-31 reçoit un PAN clair, génère un token opaque aléatoire, calcule le
+masque puis persiste atomiquement l'instrument, le couple PAN/token et
+l'événement outbox. Les contraintes uniques par émetteur garantissent la
+bijection entre PAN et token. Aucun des deux parcours ne journalise le PAN.
 
 ## Décisions encore ouvertes
 

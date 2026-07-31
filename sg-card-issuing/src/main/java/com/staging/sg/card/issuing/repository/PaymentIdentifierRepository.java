@@ -15,4 +15,12 @@ public interface PaymentIdentifierRepository
     findByIssuerIdAndIdentifierTypeAndVaultReferenceAndStatus(
             String issuerId, PaymentIdentifierType identifierType,
             String vaultReference, PaymentIdentifierStatus status);
+
+    Optional<PaymentIdentifier> findByIssuerIdAndPanClearAndStatus(
+            String issuerId, String panClear, PaymentIdentifierStatus status);
+
+    Optional<PaymentIdentifier> findByIssuerIdAndVaultReferenceAndStatus(
+            String issuerId, String tokenValue, PaymentIdentifierStatus status);
+
+    boolean existsByVaultReference(String tokenValue);
 }

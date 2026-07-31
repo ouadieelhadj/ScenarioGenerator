@@ -310,3 +310,13 @@ Lire ce fichier, puis :
 3. vérifier si un processus de build ou un module DMAS/DMCS tourne encore ;
 4. reprendre à la première case non cochée de la section 4 ;
 5. mettre à jour ce fichier avant de terminer la session.
+
+## Raccordement Issuing du 2026-07-31
+
+- `sg-mc-dmas-mastercard` délègue maintenant la décision d'autorisation au
+  cœur `sg-card-issuing`.
+- La cible REST est l'endpoint actif `DMAS` du registre Issuing en base.
+- Le protocole EBCDIC/ISO, les contrôles de session/MAC et le journal DMAS
+  restent propriétaires du module DMAS.
+- Un test d'adaptateur DMAS passe sans échec. Les advices/reversals et l'E2E
+  bilatéral connecté restent non terminés.

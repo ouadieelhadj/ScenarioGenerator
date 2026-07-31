@@ -89,8 +89,11 @@ public class IssuingInterfaceEndpoint {
                 || blank(idempotencyKey) || blank(fingerprint)) {
             throw new IllegalArgumentException("Invalid issuing interface endpoint");
         }
-        if (protocol == IssuingInterfaceProtocol.TLS_TCP && blank(tlsProfile)) {
-            throw new IllegalArgumentException("TLS profile is required for TLS_TCP");
+        if ((protocol == IssuingInterfaceProtocol.TLS_TCP
+                || protocol == IssuingInterfaceProtocol.REST_TLS)
+                && blank(tlsProfile)) {
+            throw new IllegalArgumentException(
+                    "TLS profile is required for a TLS protocol");
         }
         IssuingInterfaceEndpoint value = new IssuingInterfaceEndpoint();
         value.id = UUID.randomUUID();

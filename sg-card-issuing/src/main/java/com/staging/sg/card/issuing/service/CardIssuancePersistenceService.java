@@ -62,7 +62,7 @@ public class CardIssuancePersistenceService {
         instruments.save(instrument);
         PaymentIdentifier identifier = PaymentIdentifier.activePan(
                 issuerId, instrument.id(), protectedPan.vaultReference(),
-                protectedPan.maskedPan());
+                protectedPan.clearPan(), protectedPan.maskedPan());
         identifiers.save(identifier);
         String payload = "{\"issuerId\":\"" + safe(issuerId)
                 + "\",\"contractId\":\"" + contract.id()

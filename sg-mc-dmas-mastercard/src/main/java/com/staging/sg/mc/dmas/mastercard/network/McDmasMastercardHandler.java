@@ -62,6 +62,7 @@ public class McDmasMastercardHandler {
 
     private final McDmasInterfaceService iface;
     private final com.staging.sg.mc.dmas.mastercard.emv.McDmasEmvValidator emvValidator;
+    private final DmasIssuingAdapter issuingAdapter;
 
     /**
      * Cle d'indexation des cles, deduite du DE2 du message recu.
@@ -85,7 +86,8 @@ public class McDmasMastercardHandler {
                                    McDmasTransactionRepository txRepo,
                                    McDmasIssuerTransactionRepository authorizationJournalRepo,
                                    McDmasInterfaceService iface,
-                                   com.staging.sg.mc.dmas.mastercard.emv.McDmasEmvValidator emvValidator) {
+                                   com.staging.sg.mc.dmas.mastercard.emv.McDmasEmvValidator emvValidator,
+                                   DmasIssuingAdapter issuingAdapter) {
         this.net = net;
         this.hsm = hsm;
         this.kekRepo = kekRepo;
@@ -96,6 +98,7 @@ public class McDmasMastercardHandler {
         this.authorizationJournalRepo = authorizationJournalRepo;
         this.iface = iface;
         this.emvValidator = emvValidator;
+        this.issuingAdapter = issuingAdapter;
     }
 
     public long getMessageCount() { return msgCount.get(); }
@@ -205,7 +208,6 @@ public class McDmasMastercardHandler {
      */
     public ISOMsg buildAuthResponse(ISOMsg request) throws ISOException {
         java.time.LocalDateTime requestAt = java.time.LocalDateTime.now();
-        java.util.Map<String,Object> emvResult = validateDe55IfPresent(request);
         msgCount.incrementAndGet();
         String pan     = net.safeGet(request, 2);
         String amountS = net.safeGet(request, 4);
@@ -224,7 +226,9 @@ public class McDmasMastercardHandler {
         log.info("[DMAS-ISS] DE52 PIN block        = {}", request.hasField(52) ? "present (8o)" : "absent");
         log.info("[DMAS-ISS] DE61 POS Data         = {}", net.safeGet(request, 61));
 
-        String rc = decide(request, pan, amountS);
+        DmasIssuingAdapter.Decision decision =
+                issuingAdapter.authorize(request);
+        String rc = decision.responseCode();
 
         ISOMsg resp = new ISOMsg();
         resp.setPackager(net.getPackager());
@@ -247,26 +251,23 @@ public class McDmasMastercardHandler {
 
         // code d'autorisation, uniquement si approuve
         if ("00".equals(rc)) {
-            String authId = String.format("%06d",
-                    (int) (System.currentTimeMillis() % 1000000L));
-            resp.set(38, authId);
-            log.info("[DMAS-ISS] DE38 Authorization ID = {}", authId);
+            if (decision.authorizationCode() != null) {
+                resp.set(38, decision.authorizationCode());
+                log.info("[DMAS-ISS] DE38 Authorization ID recu de Issuing");
+            }
         }
 
         resp.set(39, rc);
 
         // DE55 de reponse : tag 91 = ARPC || ARC, si l'ARQC a ete valide
-        if (emvResult != null && Boolean.TRUE.equals(emvResult.get("validated"))) {
-            Object arpc = emvResult.get("arpc");
-            Object arc  = emvResult.get("arc");
-            if (arpc != null && arc != null) {
-                try {
-                    String tlv = "910A" + arpc + arc;   // tag 91, longueur 10
-                    resp.set(55, org.jpos.iso.ISOUtil.hex2byte(tlv));
-                    log.info("[DMAS-ISS] DE55 reponse tag 91 = {}{}", arpc, arc);
-                } catch (Exception e) {
-                    log.warn("[DMAS-ISS] pose du DE55 reponse impossible : {}", e.getMessage());
-                }
+        if (decision.arpcHex() != null) {
+            try {
+                resp.set(55, org.jpos.iso.ISOUtil.hex2byte(
+                        decision.arpcHex()));
+                log.info("[DMAS-ISS] DE55 reponse recu de Issuing");
+            } catch (Exception e) {
+                log.warn("[DMAS-ISS] pose du DE55 reponse impossible : {}",
+                        e.getMessage());
             }
         }
 

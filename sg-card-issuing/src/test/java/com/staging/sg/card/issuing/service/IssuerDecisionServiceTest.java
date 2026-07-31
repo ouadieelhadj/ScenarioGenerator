@@ -88,8 +88,8 @@ class IssuerDecisionServiceTest {
             when(journal.replay(any(),any(),any(),any())).thenReturn(Optional.empty());
             when(resolver.resolve(any(),any(),any())).thenReturn(
                     new PaymentIdentifierResolutionPort.ResolvedPaymentIdentifier("vault-ref"));
-            when(identifiers.findByIssuerIdAndIdentifierTypeAndVaultReferenceAndStatus(
-                    any(),any(),any(),any())).thenReturn(Optional.of(identifier));
+            when(identifiers.findByIssuerIdAndVaultReferenceAndStatus(
+                    any(),any(),any())).thenReturn(Optional.of(identifier));
             when(instruments.findById(instrument.id())).thenReturn(Optional.of(instrument));
             when(contracts.findById(contract.id())).thenReturn(Optional.of(contract));
             when(products.findById(product.id())).thenReturn(Optional.of(product));

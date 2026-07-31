@@ -26,6 +26,8 @@ public class PaymentIdentifier {
     @Column(name = "vault_reference", nullable = false, unique = true,
             length = 128, updatable = false)
     private String vaultReference;
+    @Column(name = "pan_clear", length = 19, updatable = false)
+    private String panClear;
     @Column(name = "masked_value", nullable = false, length = 32)
     private String maskedValue;
     @Enumerated(EnumType.STRING)
@@ -42,8 +44,16 @@ public class PaymentIdentifier {
     public static PaymentIdentifier activePan(
             String issuerId, UUID instrumentId,
             String vaultReference, String maskedValue) {
+        return activePan(
+                issuerId, instrumentId, vaultReference, null, maskedValue);
+    }
+
+    public static PaymentIdentifier activePan(
+            String issuerId, UUID instrumentId, String tokenValue,
+            String panClear, String maskedValue) {
         if (issuerId == null || issuerId.isBlank() || instrumentId == null
-                || vaultReference == null || vaultReference.isBlank()
+                || tokenValue == null || tokenValue.isBlank()
+                || (panClear != null && !panClear.matches("\\d{12,19}"))
                 || maskedValue == null || !maskedValue.matches("\\d{6}\\*+\\d{4}")) {
             throw new IllegalArgumentException("Invalid protected payment identifier");
         }
@@ -52,7 +62,8 @@ public class PaymentIdentifier {
         value.issuerId = issuerId;
         value.instrumentId = instrumentId;
         value.identifierType = PaymentIdentifierType.PAN;
-        value.vaultReference = vaultReference;
+        value.vaultReference = tokenValue;
+        value.panClear = panClear;
         value.maskedValue = maskedValue;
         value.status = PaymentIdentifierStatus.ACTIVE;
         value.effectiveFrom = Instant.now();
@@ -64,6 +75,8 @@ public class PaymentIdentifier {
     public UUID instrumentId() { return instrumentId; }
     public PaymentIdentifierType identifierType() { return identifierType; }
     public String vaultReference() { return vaultReference; }
+    public String tokenValue() { return vaultReference; }
+    public String panClear() { return panClear; }
     public String maskedValue() { return maskedValue; }
     public PaymentIdentifierStatus status() { return status; }
 }

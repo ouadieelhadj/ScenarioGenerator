@@ -62,6 +62,7 @@ public class SwamJposServer {
     private final SwamKekRepository kekRepository;
     private final SwamIssKeyRepository issKeyRepository;
     private final JposHsmService hsm;
+    private final SwamIssuingAdapter issuingAdapter;
 
     /** Longueur du DE128 en octets. 4 = mode HPS reel (doit matcher SwamPackager). */
     @Value("${swam.mac.length:4}")        private int macLength;
@@ -182,13 +183,15 @@ public class SwamJposServer {
                           SwamIssTransactionRepository txRepository,
                           SwamKekRepository kekRepository,
                           SwamIssKeyRepository issKeyRepository,
-                          JposHsmService hsm) {
+                          JposHsmService hsm,
+                          SwamIssuingAdapter issuingAdapter) {
         this.interfaceService = interfaceService;
         this.cardRepository = cardRepository;
         this.txRepository = txRepository;
         this.kekRepository = kekRepository;
         this.issKeyRepository = issKeyRepository;
         this.hsm = hsm;
+        this.issuingAdapter = issuingAdapter;
     }
 
     private int resolvePort() {
@@ -465,38 +468,23 @@ public class SwamJposServer {
                 return true;
             }
 
-            String responseCode;
-            String status;
-
-            Optional<SwamIssuerCard> opt = (pan != null) ? cardRepository.findByPan(pan) : Optional.empty();
-            if (opt.isEmpty()) {
-                responseCode = "114"; status = "DECLINED";
-                log.info("[SWAM-SRV] Carte inconnue -> DE39=114");
-            } else {
-                SwamIssuerCard card = opt.get();
-                if (!"ACTIVE".equals(card.getStatus())) {
-                    responseCode = "062"; status = "DECLINED";
-                    log.info("[SWAM-SRV] Carte inactive ({}) -> DE39=062", card.getStatus());
-                } else if (m.hasField(52) && !verifyPin(m, pan, card.getPin())) {
-                    responseCode = "117"; status = "DECLINED";
-                    log.info("[SWAM-SRV] PIN incorrect -> DE39=117");
-                } else if (card.getBalance() < amount) {
-                    responseCode = "116"; status = "DECLINED";
-                    log.info("[SWAM-SRV] Solde insuffisant ({} < {}) -> DE39=116", card.getBalance(), amount);
-                } else {
-                    responseCode = "000"; status = "APPROVED";
-                    log.info("[SWAM-SRV] AUTORISATION APPROUVEE, solde disponible={} -> DE39=000", card.getBalance());
-                }
-            }
+            SwamIssuingAdapter.Decision decision =
+                    issuingAdapter.authorize(m);
+            String responseCode = decision.responseCode();
+            String status = decision.status();
 
             ISOMsg r = new ISOMsg();
             r.setPackager(m.getPackager());
             r.setMTI("1110");
             copyFields(m, r, 2,3,4,5,6,7,9,10,11,12,15,16,32,33,37,41,42,49,50,51);
             r.set(27, "6");
-            r.set(38, authorizationCode(stan));
+            if (decision.authorizationCode() != null) {
+                r.set(38, decision.authorizationCode());
+            }
             r.set(39, responseCode);
-            if (m.hasField(55)) r.set(55, m.getBytes(55));
+            if (decision.arpcHex() != null) {
+                r.set(55, ISOUtil.hex2byte(decision.arpcHex()));
+            }
             poseMacOnResponse(r);
             SidMessageValidator.validateResponseTo(m, r);
 

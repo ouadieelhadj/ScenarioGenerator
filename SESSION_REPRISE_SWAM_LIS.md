@@ -39,3 +39,13 @@ Les nombreux messages PostgreSQL `NOTICE` indiquant que les colonnes existent d�
 sont normaux. Ils ne constituent pas des erreurs. Il faut laisser le script continuer
 jusqu'au résultat final ou diagnostiquer le prochain service si aucune nouvelle ligne
 n'apparaît pendant environ deux minutes.
+
+## Raccordement Issuing du 2026-07-31
+
+- `sg-swam-issuer` délègue maintenant les messages d'autorisation/financiers
+  au cœur `sg-card-issuing`.
+- La cible REST est l'endpoint actif `SWAM` du registre Issuing en base.
+- Le dialecte ISO, la MAC et le mapping des codes restent la responsabilité
+  de SWAM ; aucune indisponibilité Issuing n'est convertie en approbation.
+- Un test d'adaptateur SWAM passe sans échec. L'E2E SWAM connecté reste à
+  exécuter.

@@ -50,8 +50,9 @@
 - Produit carte versionné avec états `DRAFT -> APPROVED -> ACTIVE`.
 - Contrat carte avec parcours maker-checker
   `DRAFT -> PENDING_APPROVAL -> ACTIVE`.
-- Instrument carte ne stockant qu'une référence de coffre PAN, un PAN masqué
-  et la date d'expiration.
+- Instrument carte relié à un identifiant de paiement contenant le PAN clair,
+  un token opaque unique, le PAN masqué et la date d'expiration, conformément
+  à la décision explicite du propriétaire du projet du 2026-07-31.
 - Activation d'un instrument interdite si le contrat n'est pas actif.
 - Transactional outbox créée pour les événements produit/contrat.
 - Création produit et contrat idempotente :
@@ -68,9 +69,9 @@
 
 ### Émission virtuelle sécurisée
 
-- Port `PanVaultPort` ajouté ; le cœur ne reçoit qu'une référence opaque de
-  coffre, un PAN masqué et une date d'expiration.
-- L'API métier n'accepte aucun PAN clair pour l'émission.
+- Port historique `PanVaultPort` conservé pour le parcours de génération
+  externe ; un second parcours d'enregistrement accepte le PAN clair décidé
+  par le propriétaire et génère localement un token opaque aléatoire.
 - Endpoint :
   `POST /api/admin/issuing/v1/contracts/{id}/cards/virtual`.
 - Un contrat et son produit doivent être actifs avant l'appel au coffre.
@@ -88,8 +89,10 @@
 
 ## Sécurité
 
-- Aucun PAN clair, PIN block, cryptogramme ou secret HSM n'est persisté dans
-  les nouvelles tables.
+- Le PAN clair est persisté dans `issuing_payment_identifier.pan_clear` selon
+  la décision explicite du propriétaire. Il n'est jamais écrit dans les logs,
+  événements outbox ou représentations `toString()`.
+- PIN block, cryptogramme et secret HSM ne sont jamais persistés en clair.
 - Aucun PIN/EMV/solde réel n'est simulé.
 - Les dépendances non raccordées provoquent un refus fermé ou un état
   indisponible explicite.
@@ -299,3 +302,56 @@ Blocages externes restants :
 ## Processus
 
 Aucun processus Maven lancé par cette session ne reste actif.
+
+### Jalon du 2026-07-31 - PAN/token, adaptateurs et Core Banking
+
+- Décision utilisateur appliquée : conservation du PAN clair dans la base
+  propriétaire Issuing, sans journalisation.
+- Token opaque `pan_tok_*` généré aléatoirement et relié bijectivement au PAN
+  par deux contraintes uniques par émetteur.
+- Résolution d'une carte par PAN ou par token vers le même identifiant interne.
+- Endpoint d'enregistrement :
+  `POST /api/admin/issuing/v1/contracts/{id}/cards`.
+- Migration append-only :
+  `sql/issuing/V5__add_clear_pan_token_mapping.sql`.
+- Client Issuing REST commun piloté par `issuing_interface_endpoint`.
+- La route locale ServerPOS `00000`, SWAM Issuer et DMAS Mastercard délèguent
+  maintenant leur décision au module `sg-card-issuing`. Une indisponibilité
+  ne produit jamais d'approbation locale.
+- Adaptateur Core Banking JSON/REST piloté par l'endpoint actif en base,
+  avec contrôle strict de corrélation et délais configurés.
+- Sandbox Core Banking persistant et idempotent, activable uniquement par
+  `CARD_ISSUING_CORE_BANKING_SANDBOX_ENABLED=true`.
+- Migration append-only :
+  `sql/issuing/V6__create_core_banking_sandbox.sql`.
+- Transport HSM payShield TCP/TLS ajouté avec framing `BINARY_2_BE` ou
+  `ASCII_4` et taille maximale issus de `parameters_json`. Le contenu des
+  commandes et réponses n'est pas journalisé.
+- Les codes et champs PIN/ARQC payShield ne sont pas inventés : leur profil
+  applicatif reste à charger depuis le guide Core Host Commands correspondant
+  au modèle et au firmware HSM retenus.
+
+Validation finale du jalon :
+
+- `sg-common` : 66 tests sans échec ;
+- `sg-mc-dmas-member` : 3 tests sans échec ;
+- `sg-mc-dmas-mastercard` : 1 test sans échec ;
+- `sg-swam-issuer` : 1 test sans échec ;
+- `sg-swam-acquirer` : 11 tests sans échec ;
+- `sg-mc-sms-acquirer` : 3 tests sans échec ;
+- `sg-card-issuing` : 28 tests sans échec ;
+- `sg-way-pos-server` : 34 tests sans échec ;
+- `sg-way-pos-simulator` : 15 tests sans échec ;
+- total : 162 tests sans échec ; `sg-mc-sms-issuer` compile sans test propre.
+- Le passage agrégé a atteint le timeout dans le dernier module après
+  validation de tous les précédents ; le simulateur a ensuite été relancé
+  avec `-am` et a terminé en `BUILD SUCCESS`.
+
+Premier travail non terminé :
+
+1. terminer et valider le profil applicatif HSM PIN/ARQC à partir du guide
+   payShield autorisé et des métadonnées de carte (PVV/clé EMV) ;
+2. exécuter les migrations V5/V6 sur PostgreSQL puis tester le sandbox REST
+   connecté ;
+3. compléter les mappings réseau advice/reversal et le rejeu ARPC ;
+4. exécuter l'E2E ServerPOS, SWAM et DMAS contre le processus Issuing réel.

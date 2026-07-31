@@ -814,3 +814,15 @@ serveur doit conserver sa representation sous le LMK WayPos.
   5. si les secrets ne sont toujours pas disponibles, poursuivre les
      ecarts P1 de `documents/design/waypos/VALIDATION_MATRIX.md`, en
      commencant par les operations Basic specialisees.
+
+## Raccordement Issuing du 2026-07-31
+
+- La route locale `00000` de `WayPosServer` délègue maintenant la décision au
+  module `sg-card-issuing` via le client REST commun.
+- L'hôte, le port, le chemin et les timeouts sont lus depuis
+  `issuing_interface_endpoint` pour le type `SERVER_POS`.
+- Une indisponibilité Issuing retourne un résultat `UNKNOWN/91` retryable ;
+  aucune approbation locale de repli n'est produite.
+- Les 34 tests `sg-way-pos-server` passaient avec ce raccordement lors de la
+  validation finale. Les 15 tests du simulateur passent aussi ; l'E2E
+  connecté du jalon 5 reste non exécuté.

@@ -11,6 +11,7 @@ import com.staging.sg.card.issuing.repository.CardContractRepository;
 import com.staging.sg.card.issuing.repository.CardInstrumentRepository;
 import com.staging.sg.card.issuing.repository.CardProductRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.UUID;
 
@@ -21,6 +22,7 @@ public class CardIssuanceService {
     private final CardInstrumentRepository instruments;
     private final PanVaultPort panVault;
     private final CardIssuancePersistenceService persistence;
+    private PanTokenService tokens;
 
     public CardIssuanceService(
             CardContractRepository contracts,
@@ -33,6 +35,11 @@ public class CardIssuanceService {
         this.instruments = instruments;
         this.panVault = panVault;
         this.persistence = persistence;
+    }
+
+    @Autowired
+    void setPanTokenService(PanTokenService tokens) {
+        this.tokens = tokens;
     }
 
     public CardInstrumentRepresentation issueVirtual(
@@ -78,5 +85,54 @@ public class CardIssuanceService {
         return persistence.persist(
                 contractId, issuerId, callerId, idempotencyKey,
                 correlationId, fingerprint, protectedPan);
+    }
+
+    public CardInstrumentRepresentation register(
+            UUID contractId, String issuerId, String callerId,
+            String idempotencyKey, String correlationId,
+            String clearPan, String expiryYymm) {
+        String maskedPan = PanTokenService.mask(clearPan);
+        if (expiryYymm == null || !expiryYymm.matches("\\d{4}")) {
+            throw new IllegalArgumentException("Expiry must use YYMM");
+        }
+        String fingerprint = CommandFingerprint.of(
+                issuerId, contractId, "REGISTER_CARD", clearPan, expiryYymm);
+        var existing = instruments
+                .findByIssuerIdAndIssuedByAndIssuanceIdempotencyKey(
+                        issuerId, callerId, idempotencyKey);
+        if (existing.isPresent()) {
+            if (!existing.get().issuanceMatches(fingerprint)) {
+                throw new IllegalStateException(
+                        "Idempotency key already used for another card issuance");
+            }
+            return persistence.persist(
+                    contractId, issuerId, callerId, idempotencyKey,
+                    correlationId, fingerprint,
+                    new ProtectedPan(
+                            existing.get().panVaultReference(),
+                            existing.get().maskedPan(),
+                            existing.get().expiryYymm()));
+        }
+        CardContract contract = contracts.findById(contractId)
+                .filter(value -> value.issuerId().equals(issuerId))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Unknown card contract"));
+        if (contract.status() != CardContractStatus.ACTIVE) {
+            throw new IllegalStateException(
+                    "A card can only be registered on an active contract");
+        }
+        products.findById(contract.productId())
+                .filter(CardProduct::isActive)
+                .filter(value -> value.issuerId().equals(issuerId))
+                .orElseThrow(() -> new IllegalStateException(
+                        "The card product is no longer active"));
+        if (tokens == null) {
+            throw new IllegalStateException("PAN token service is unavailable");
+        }
+        return persistence.persist(
+                contractId, issuerId, callerId, idempotencyKey,
+                correlationId, fingerprint,
+                new ProtectedPan(
+                        tokens.newToken(), clearPan, maskedPan, expiryYymm));
     }
 }

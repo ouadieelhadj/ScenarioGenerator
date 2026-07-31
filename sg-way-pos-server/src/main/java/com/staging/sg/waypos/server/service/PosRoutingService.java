@@ -3,6 +3,7 @@ package com.staging.sg.waypos.server.service;
 import com.staging.sg.common.routing.RoutingTransactionRequest;
 import com.staging.sg.common.routing.RoutingTransactionResponse;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import com.staging.sg.waypos.server.repository.PosTerminalProfileRepository;
 
 @Service
@@ -14,6 +15,7 @@ public class PosRoutingService {
     private final WayPosPinTranslationService pinTranslation;
     private final PosTerminalProfileRepository terminals;
     private final PosRecoveryService recovery;
+    private Issuing00000Connector issuing;
 
     public PosRoutingService(
             PosRouteResolver routes, Internal00000Service internal,
@@ -28,6 +30,11 @@ public class PosRoutingService {
         this.pinTranslation = pinTranslation;
         this.terminals = terminals;
         this.recovery = recovery;
+    }
+
+    @Autowired
+    void setIssuingConnector(Issuing00000Connector issuing) {
+        this.issuing = issuing;
     }
 
     public RoutingTransactionResponse process(RoutingTransactionRequest request) {
@@ -53,7 +60,9 @@ public class PosRoutingService {
             response = RoutingTransactionResponse.decline(
                     request.transactionId(), "92", null);
         } else if ("00000".equals(route)) {
-            response = internal.process(request);
+            response = issuing == null
+                    ? internal.process(request)
+                    : issuing.process(request);
         } else {
             try {
                 response = network.send(route, pinTranslation.translate(route, request));
