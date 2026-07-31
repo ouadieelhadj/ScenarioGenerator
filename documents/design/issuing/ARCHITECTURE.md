@@ -56,6 +56,25 @@ Pré-clearing ------> contrat de validation ----------+       +--> Core Banking
 Le cœur issuing ne dépend d'aucune classe jPOS ni d'aucun dialecte réseau.
 Les contrats partagés résident dans `sg-common`.
 
+## Registre des interfaces
+
+Les adresses d'interfaces ne sont pas codees en dur. Elles sont versionnees
+en base par `(issuerId, interfaceType)` pour ServerPOS, SWAM, DMAS,
+pre-clearing, HSM, Core Banking, coffre PAN et bus d'evenements.
+
+Chaque version suit `DRAFT -> APPROVED -> ACTIVE` avec maker-checker. Une
+seule version peut etre active par emetteur et type d'interface ; activer une
+nouvelle version desactive atomiquement la precedente. Le registre contient
+direction, protocole, hote, port, chemin, timeouts, profil TLS et parametres
+non secrets. Les credentials sont conserves dans un coffre externe et seule
+leur reference est stockee. L'absence de configuration active provoque un
+echec ferme.
+
+Le port HTTP de bootstrap et la connexion a la base restent necessairement
+des parametres de demarrage : ils doivent etre connus avant que l'application
+puisse lire le registre. Les listeners metier supplementaires, eux, sont
+instancies a partir des valeurs en base.
+
 ## Contrats initiaux
 
 - `POST /api/issuing/v1/authorizations`

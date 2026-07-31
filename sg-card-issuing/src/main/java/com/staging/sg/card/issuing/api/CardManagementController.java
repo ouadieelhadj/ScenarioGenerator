@@ -3,6 +3,7 @@ package com.staging.sg.card.issuing.api;
 import com.staging.sg.card.issuing.service.CardContractService;
 import com.staging.sg.card.issuing.service.CardIssuanceService;
 import com.staging.sg.card.issuing.service.CardProductService;
+import com.staging.sg.card.issuing.service.IssuingInterfaceService;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -18,13 +19,15 @@ public class CardManagementController {
     private final CardProductService products;
     private final CardContractService contracts;
     private final CardIssuanceService issuance;
+    private final IssuingInterfaceService interfaces;
 
     public CardManagementController(
             CardProductService products, CardContractService contracts,
-            CardIssuanceService issuance) {
+            CardIssuanceService issuance, IssuingInterfaceService interfaces) {
         this.products = products;
         this.contracts = contracts;
         this.issuance = issuance;
+        this.interfaces = interfaces;
     }
 
     @PostMapping("/products")
@@ -88,5 +91,40 @@ public class CardManagementController {
             @RequestHeader("X-Correlation-ID") String correlationId) {
         return issuance.issueVirtual(
                 id, issuerId, callerId, idempotencyKey, correlationId);
+    }
+
+    @PostMapping("/interfaces")
+    public IssuingInterfaceRepresentation createInterface(
+            @RequestHeader("X-Caller-ID") String callerId,
+            @RequestHeader("Idempotency-Key") String idempotencyKey,
+            @RequestHeader("X-Correlation-ID") String correlationId,
+            @RequestBody CreateIssuingInterfaceRequest request) {
+        return interfaces.create(
+                request, callerId, idempotencyKey, correlationId);
+    }
+
+    @PostMapping("/interfaces/{id}/approve")
+    public IssuingInterfaceRepresentation approveInterface(
+            @PathVariable UUID id,
+            @RequestHeader("X-Issuer-ID") String issuerId,
+            @RequestHeader("X-Caller-ID") String approver,
+            @RequestHeader("X-Correlation-ID") String correlationId) {
+        return interfaces.approve(id, issuerId, approver, correlationId);
+    }
+
+    @PostMapping("/interfaces/{id}/activate")
+    public IssuingInterfaceRepresentation activateInterface(
+            @PathVariable UUID id,
+            @RequestHeader("X-Issuer-ID") String issuerId,
+            @RequestHeader("X-Correlation-ID") String correlationId) {
+        return interfaces.activate(id, issuerId, correlationId);
+    }
+
+    @PostMapping("/interfaces/{id}/disable")
+    public IssuingInterfaceRepresentation disableInterface(
+            @PathVariable UUID id,
+            @RequestHeader("X-Issuer-ID") String issuerId,
+            @RequestHeader("X-Correlation-ID") String correlationId) {
+        return interfaces.disable(id, issuerId, correlationId);
     }
 }

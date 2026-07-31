@@ -154,6 +154,81 @@ Résultat final du 2026-07-31 :
 - `sql/issuing/V1__create_card_issuing_foundation.sql`
 - `sql/issuing/V2__create_payment_identifier_and_issuance.sql`
 
+## Pause du 2026-07-31 - parametrage des interfaces en base
+
+Travail interrompu immediatement a la demande de l'utilisateur, avant test,
+commit ou push.
+
+Exigence ajoutee :
+
+- tous les ports/interfaces Issuing doivent etre parametres en base par
+  emetteur : ServerPOS, SWAM, DMAS, pre-clearing, HSM, Core Banking, coffre
+  PAN et bus d'evenements ;
+- la configuration comprend direction, protocole, hote, port, chemin,
+  timeouts, profil TLS et parametres non secrets ;
+- les secrets ne sont jamais stockes en clair : seule une reference de
+  coffre peut etre conservee ;
+- une configuration absente ou inactive doit provoquer un echec ferme.
+
+Modifications locales non testees et non commitees :
+
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/api/CardManagementController.java`
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/api/CreateIssuingInterfaceRequest.java`
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/api/IssuingInterfaceRepresentation.java`
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/domain/IssuingInterfaceDirection.java`
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/domain/IssuingInterfaceEndpoint.java`
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/domain/IssuingInterfaceProtocol.java`
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/domain/IssuingInterfaceStatus.java`
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/domain/IssuingInterfaceType.java`
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/repository/IssuingInterfaceEndpointRepository.java`
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/service/IssuingEndpointResolver.java`
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/service/IssuingInterfaceService.java`
+
+Premier travail a la reprise :
+
+1. relire et verifier ces modifications locales ;
+2. ajouter la migration SQL append-only du registre d'interfaces ;
+3. ajouter les tests du cycle draft/approval/activation, de l'idempotence,
+   du remplacement de version active et du fail-closed ;
+4. brancher chaque adaptateur sortant sur `IssuingEndpointResolver` ;
+5. reprendre ensuite le journal d'autorisation et le moteur de decision.
+
+Aucun test n'avait ete execute avant la reprise. Les fichiers non suivis hors
+Issuing sont restes intacts.
+
+## Reprise du 2026-07-31 - registre d'interfaces valide
+
+- Registre versionne par emetteur et type d'interface ajoute.
+- Types couverts : ServerPOS, SWAM, DMAS, pre-clearing, HSM, Core Banking,
+  coffre PAN et bus d'evenements.
+- Cycle maker-checker `DRAFT -> APPROVED -> ACTIVE`, avec desactivation.
+- Une seule version active par `(issuer_id, interface_type)`.
+- Hote, port, protocole, chemin, timeouts, TLS et parametres non secrets sont
+  stockes en base.
+- Les champs de parametres portant un nom de secret sont refuses ; seule une
+  `secret_reference` expurgee est admise.
+- L'absence de configuration active provoque un echec ferme via
+  `IssuingEndpointResolver`.
+- Migration append-only :
+  `sql/issuing/V3__create_issuing_interface_registry.sql`.
+- API d'administration :
+  creation, approbation, activation et desactivation sous
+  `/api/admin/issuing/v1/interfaces`.
+
+Validation :
+
+- `sg-common` : 65 tests, 0 echec, 0 erreur ;
+- `sg-card-issuing` : 17 tests, 0 echec, 0 erreur ;
+- total : 82 tests sans echec ;
+- `BUILD SUCCESS` le 2026-07-31 a 09:17:52 +01:00.
+
+Premier travail non termine apres ce jalon :
+
+1. brancher les adaptateurs sortants reels sur `IssuingEndpointResolver` ;
+2. ajouter le journal durable d'autorisation et son idempotence financiere ;
+3. definir les ports HSM/Core Banking sans approbation de repli ;
+4. implementer le moteur issuer et le validateur pre-clearing.
+
 ## Processus
 
 Aucun processus Maven lancé par cette session ne reste actif.
