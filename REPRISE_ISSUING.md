@@ -400,3 +400,113 @@ Premier travail non termine :
 4. implementer CVN01 uniquement a partir de la regle et de vecteurs valides.
 
 Processus restant : aucun processus Maven ou service lance par ce jalon.
+
+### Reprise du 2026-07-31 - harnais connecte Git Bash
+
+- L'interruption precedente a ete analysee. Les journaux confirment que
+  PostgreSQL, Issuing, WayPosServer, SWAM Issuer et DMAS Mastercard avaient
+  demarre, puis que la JVM WayPosServer s'est arretee sur une insuffisance de
+  memoire native. Aucune transaction E2E connectee n'avait ete executee.
+- Quatre scripts de recette sont prepares sous `tests/issuing/` : installation
+  DB idempotente, demarrage, arret et provisionnement fonctionnel.
+- Le lanceur borne par defaut chaque JVM a 256 Mio de heap et 192 Mio de
+  metaspace. La limite reste surchargeable par l'environnement de recette.
+- Les endpoints HTTP ouverts pour le harnais utilisent exclusivement le profil
+  Spring `connected-e2e` et sont lies a `127.0.0.1`. Le demarrage normal ne
+  charge pas les configurations `permitAll`.
+- L'arret controle maintenant que le PID appartient au module attendu avant
+  d'envoyer `taskkill`. Les anciens PID devenus invalides ont ete nettoyes ;
+  aucun service de ce harnais ne reste actif.
+- Les scripts initialisent `/usr/bin` avant leur premiere commande, ce qui les
+  rend executables dans Git Bash et via un appel explicite a `bash.exe`.
+- La migration n'impose plus le nom de base `scenariogenerator` dans le
+  `GRANT CONNECT` ; elle utilise `DB_NAME` avec echappement d'identifiant psql.
+
+Validation de cette reprise :
+
+- `bash -n` reussi pour les quatre scripts ;
+- precontroles fail-closed verifies : absence de mot de passe DB, secret
+  Issuing/WayPos ou PAN de recette => arret avant lancement ou transaction ;
+- tests Maven : 66 `sg-common`, 29 `sg-card-issuing` et 34
+  `sg-way-pos-server`, soit 129 tests sans echec, `BUILD SUCCESS` ;
+- packaging hors ligne reussi pour Issuing, WayPosServer, SWAM Issuer et DMAS
+  Mastercard, ainsi que leurs dependances, `BUILD SUCCESS` ;
+- `git diff --check` reussi ;
+- aucun commit ni push effectue.
+
+Premier travail non termine :
+
+1. recharger dans la session de recette les mots de passe dedies, le pepper,
+   la cle outbox et le PAN/expiration de recette, sans les commiter ;
+2. relancer l'installation idempotente, les quatre services et le
+   provisionnement multi-canal ;
+3. ajouter/executer le pilote transactionnel connecte : le repertoire contient
+   actuellement le provisionnement mais pas encore un script qui injecte et
+   verifie les transactions ServerPOS, SWAM et DMAS ;
+4. conserver les preuves et ne cloturer l'E2E qu'apres les transactions reelles.
+
+Fichiers modifies pendant cette reprise :
+
+- `tests/issuing/README.md` ;
+- `tests/issuing/install-issuing-db.sh` ;
+- `tests/issuing/start-connected-services.sh` ;
+- `tests/issuing/stop-connected-services.sh` ;
+- `tests/issuing/provision-connected-e2e.sh` ;
+- `sg-card-issuing/src/main/java/com/staging/sg/card/issuing/config/SecurityConfig.java` ;
+- `sg-way-pos-server/src/main/java/com/staging/sg/waypos/server/config/SecurityConfig.java` ;
+- `REPRISE_ISSUING.md` et `POS_REPRISE.md`.
+
+Ajout de configuration apres reprise :
+
+- modele versionne `tests/issuing/connected-e2e.env.example` regroupant toutes
+  les variables minimales ;
+- fichier de travail local
+  `runtime/issuing-connected-e2e/connected-e2e.env`, explicitement ignore par
+  Git ;
+- chargement automatique de ce fichier par les scripts DB, demarrage et
+  provisionnement, avec surcharge possible via `ISSUING_E2E_CONFIG_FILE` ;
+- les valeurs sensibles restent volontairement vides tant qu'elles ne sont pas
+  rechargees depuis leur source autorisee ; aucun secret fictif n'est persiste ;
+- `bash -n`, `git check-ignore` et `git diff --check` reussis.
+
+Validation connectee complementaire :
+
+- autorisation utilisateur explicite de renseigner les valeurs locales de test
+  sans redemander confirmation a chaque campagne ;
+- les trois roles `postgres`, `card_issuing_user` et `way_pos_user`
+  s'authentifient avec la convention locale existante ;
+- une carte sandbox active existe pour BANK1, SWAM 300853 et DMAS 002202 ;
+- pepper et cle outbox propres a cette recette generes aleatoirement et ecrits
+  uniquement dans le fichier `runtime` ignore ;
+- installation DB reexecutee : V1 a V6 presentes, 12 tables, proprietaire
+  `card_issuing_user` ;
+- Issuing, WayPosServer, SWAM Issuer et DMAS Mastercard demarres ;
+- provisionnement multi-canal reussi pour BANK1, 300853 et 002202 ;
+- le controle DMAS du lanceur utilise desormais une reponse HTTP bornee plutot
+  que l'attente de port qui avait bloque le premier passage ;
+- le guide operateur RECETTE impose desormais le fichier local unique, sa
+  modification manuelle en cas de changement et son exclusion de Git ;
+- services encore actifs a la fin de cette reprise : Issuing 8540,
+  WayPosServer 8530/8531, SWAM Issuer 8511/8510 et DMAS Mastercard 8501/8500.
+
+Premier travail non termine : ajouter puis executer le pilote transactionnel
+connecte ServerPOS/SWAM/DMAS ; le demarrage et le provisionnement seuls ne
+constituent pas encore la preuve E2E financiere finale.
+
+### Verification du developpement Issuing du 2026-07-31 a 15:41
+
+- Reactor relance jusqu'a `sg-issuing-internal-e2e` avec le Maven embarque et
+  le cache local hors ligne : `BUILD SUCCESS`.
+- Resultat : 135 tests, 0 echec, 0 erreur, 0 ignore : 68 `sg-common`,
+  1 DMAS Mastercard, 1 SWAM Issuer, 29 `sg-card-issuing`, 34 WayPosServer et
+  2 E2E internes multi-canal.
+- `git diff --check` reussi sur le perimetre Issuing.
+- La modification locale d'activation de carte compile et son test passe.
+  Point de revue restant : l'endpoint exige `X-Correlation-ID` mais ne le
+  transmet pas au service et aucune preuve d'audit de cette transition n'est
+  encore presente.
+- Le repertoire `tests/issuing/` ne contient toujours pas le pilote qui
+  injecte et verifie les transactions connectees ServerPOS/SWAM/DMAS.
+- Verdict : developpement interne coherent et non-regression validee, mais
+  recette connectee finale non terminee. Aucun service n'a ete redemarre pour
+  cette verification et aucun commit/push n'a ete effectue.
