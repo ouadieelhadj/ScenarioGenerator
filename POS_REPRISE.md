@@ -1010,3 +1010,32 @@ Etat runtime au moment de la demande de sauvegarde utilisateur :
   `bootstrap-rki-test.sh`, `start-pos-simulator.sh`, `rki-exchange.sh`,
   `rki-sign-confirm.sh`, `tail-waypos-logs.sh` et `stop-waypos.sh`.
 - Aucun commit ni push effectue.
+
+## Verification et sauvegarde Git du 2026-08-02
+
+- Reprise WayPos effectuee apres lecture complete du present document,
+  controle de `git status`, de l'historique recent et des taches Codex :
+  aucune autre tache agente concurrente n'etait active sur le depot.
+- Aucun processus n'ecoutait sur les ports WayPos `8530`, `8531` et `8532`.
+- La configuration locale ignoree par Git contient tous les prerequis du
+  parcours RKI et le fichier LMK reference existe. Aucune valeur n'a ete
+  affichee ni ajoutee au depot.
+- Le harnais financier complet reste fail-closed : 34 variables de recette
+  reelles sont absentes, dont les cles sous LMK, la carte/PIN et les quatre
+  vecteurs EMV ARQC/ATC distincts. Aucune valeur fictive n'a ete creee.
+- Les tests ServerPOS et le RKI n'ont pas ete relances : l'utilisateur a
+  confirme que cette validation etait deja terminee. La validation syntaxique
+  Git Bash des scripts WayPos, Issuing et Way4 a reussi avec `bash -n`.
+- Developpements sauvegardes dans les commits locaux suivants :
+  - `be85ac3 feat(waypos): add connected RKI workflow` ;
+  - `6d8c8f6 test(issuing): add connected environment harness` ;
+  - `ae36465 docs(swam): update LIS session resume` ;
+  - `6d49a7f docs(way4): add merchant contract loading kit`.
+- Le commit 3DS local `c9e6e4c` reste egalement en attente de push.
+- Les fichiers de cles LMK/ZMK, sauvegardes PostgreSQL, specifications
+  proprietaires, traces, caches et repertoires temporaires ont ete exclus des
+  commits.
+- Aucun push n'a ete effectue.
+- Premier travail WayPos non termine : E2E financier reel
+  PIN/ARQC/ARPC-repeat/reversal/advice/reconciliation-EOD, uniquement apres
+  fourniture des vrais elements de recette.
