@@ -3,13 +3,17 @@ package com.staging.sg.waypos.server.config;
 import com.staging.sg.common.iso.WayPosPackager;
 import com.staging.sg.common.iso.crypto.JposHsmService;
 import com.staging.sg.common.emv.McDmasEmv;
+import com.staging.sg.common.issuing.client.DatabaseIssuingClient;
+import com.staging.sg.common.issuing.client.IssuingEndpointDirectory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Import;
 import org.springframework.web.client.RestClient;
 
 @Configuration
 @EnableConfigurationProperties(WayPosProperties.class)
+@Import({DatabaseIssuingClient.class, IssuingEndpointDirectory.class})
 public class WayPosConfiguration {
     @Bean
     WayPosPackager wayPosPackager() {

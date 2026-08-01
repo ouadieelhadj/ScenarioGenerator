@@ -83,6 +83,19 @@ public class WayPosSimulatorController {
         }
     }
 
+    @PostMapping("/key-change/confirm")
+    public ResponseEntity<?> confirmKeyChange() {
+        try {
+            return ResponseEntity.ok(client.confirmKeyStatuses());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getClass().getSimpleName()
+                            + ": " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/health")
     public Map<String, Object> health() {
         return Map.of("status", "UP", "module", "wayPosSimulator");

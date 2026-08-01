@@ -5,6 +5,7 @@ import com.staging.sg.common.iso.WayPosKeyExchangeCodec;
 import com.staging.sg.common.iso.WayPosPackager;
 import com.staging.sg.common.iso.crypto.WayPosMac;
 import com.staging.sg.waypos.simulator.api.SimulatorKeyChangeResponse;
+import com.staging.sg.waypos.simulator.api.SimulatorKeyConfirmationResponse;
 import com.staging.sg.waypos.simulator.api.SimulatorTransactionRequest;
 import com.staging.sg.waypos.simulator.api.SimulatorTransactionResponse;
 import com.staging.sg.waypos.simulator.config.SimulatorProperties;
@@ -135,6 +136,20 @@ public class WayPosSimulatorClient {
                 confirmation != null,
                 confirmation == null ? null : confirmation.responseCode(),
                 confirmation != null && confirmation.macVerified());
+    }
+
+    public SimulatorKeyConfirmationResponse confirmKeyStatuses() throws Exception {
+        List<WayPosKeyExchangeCodec.KeyStatus> statuses = keyStore.statuses();
+        if (statuses.isEmpty()) {
+            throw new IllegalStateException(
+                    "No imported key status is available for confirmation");
+        }
+        Exchange confirmation = exchangeKeys();
+        boolean confirmed = "00".equals(confirmation.responseCode())
+                && confirmation.macVerified();
+        return new SimulatorKeyConfirmationResponse(
+                confirmation.responseCode(), confirmation.macVerified(),
+                List.copyOf(statuses), confirmed);
     }
 
     ISOMsg build(SimulatorTransactionRequest input, String stan) throws Exception {

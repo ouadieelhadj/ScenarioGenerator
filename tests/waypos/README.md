@@ -158,3 +158,48 @@ connected E2E result.
 
 The final `SUCCESS` message is emitted only after all four scenarios complete.
 If the script stops earlier, the E2E RECETTE result remains not validated.
+
+## Git Bash pas à pas : ServerPOS, simulateur et RKI
+
+Les scripts de `tests/waypos/gitbash/` permettent de tester séparément chaque
+étape, tout en chargeant par défaut
+`runtime/issuing-connected-e2e/connected-e2e.env` :
+
+```bash
+bash ./tests/waypos/gitbash/start-serverpos.sh
+bash ./tests/waypos/gitbash/bootstrap-rki-test.sh
+bash ./tests/waypos/gitbash/start-pos-simulator.sh
+bash ./tests/waypos/gitbash/rki-exchange.sh
+bash ./tests/waypos/gitbash/rki-sign-confirm.sh
+```
+
+Suivi simultané des deux journaux dans un autre terminal Git Bash :
+
+```bash
+bash ./tests/waypos/gitbash/tail-waypos-logs.sh
+```
+
+Dans ce parcours, le « sign » est la confirmation de l'échange RKI :
+
+- `bootstrap-rki-test.sh` active la TAK initiale sous la LMK locale et génère
+  une TAK sous TAMK ainsi qu'une TPK sous TPMK, sans retourner les clés ;
+- `rki-exchange.sh` envoie le premier `0800/960000`, vérifie le MAC et importe
+  TAK/TPK sous les clés maîtres TAMK/TPMK ;
+- `rki-sign-confirm.sh` envoie le second `0800/960000` avec les statuts des
+  clés importées et exige une réponse `00` avec MAC valide.
+
+Le simulateur accepte simultanément `WAY_POS_TAMK_HEX` et
+`WAY_POS_TPMK_HEX`. `WAY_POS_TAK_HEX` reste également obligatoire : c'est la
+TAK initiale cohérente avec le profil du terminal ServerPOS, utilisée pour
+protéger la première demande RKI. Les scripts s'arrêtent avant connexion si
+elle est absente ; ils ne la remplacent jamais par une valeur inventée.
+
+Arrêt des deux processus :
+
+```bash
+bash ./tests/waypos/gitbash/stop-waypos.sh
+```
+
+Les sorties console sont conservées dans `runtime/way-pos-gitbash/logs/` et
+les PID dans `runtime/way-pos-gitbash/pids/`. Aucune clé claire n'est affichée
+par les scripts.

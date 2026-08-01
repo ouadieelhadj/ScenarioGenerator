@@ -57,6 +57,35 @@ class SimulatorKeyStoreTest {
                 "AABBCCDDEEFF00112233445566778899");
     }
 
+    @Test
+    void importsTakAndTpkInOneExchangeWithSeparateTamkAndTpmk() throws Exception {
+        String tamkHex = "D9B1FBA811BCABB895AB7E9A195BE23E91EAEC5716A24732";
+        String tpmkHex = "55C22E97E01D280F02F0641E0444C71F6AED406C41242D60";
+        String takHex = "112233445566778899AABBCCDDEEFF00";
+        String tpkHex = "AABBCCDDEEFF00112233445566778899";
+        SimulatorProperties properties = new SimulatorProperties(
+                "localhost", 8531, 55, "TERM0001", "MERCHANT0000001",
+                "504", "BIN", "00112233445566778899AABBCCDDEEFF",
+                "00", "TMK", "", "BINARY", "ECB",
+                "01", tamkHex, "02", tpmkHex);
+        SimulatorKeyStore store = new SimulatorKeyStore(properties);
+
+        var statuses = store.importBlocks(List.of(
+                new WayPosKeyExchangeCodec.KeyBlock(
+                        "11", "TAK", kcv(ISOUtil.hex2byte(takHex)), "T",
+                        "01", "TAMK", encryptUnderMaster(
+                        ISOUtil.hex2byte(tamkHex), ISOUtil.hex2byte(takHex))),
+                new WayPosKeyExchangeCodec.KeyBlock(
+                        "12", "TPK", kcv(ISOUtil.hex2byte(tpkHex)), "T",
+                        "02", "TPMK", encryptUnderMaster(
+                        ISOUtil.hex2byte(tpmkHex), ISOUtil.hex2byte(tpkHex)))));
+
+        assertEquals(List.of(
+                new WayPosKeyExchangeCodec.KeyStatus("11", "0", "TAK"),
+                new WayPosKeyExchangeCodec.KeyStatus("12", "0", "TPK")), statuses);
+        assertArrayEquals(ISOUtil.hex2byte(takHex), store.activeTak());
+    }
+
     private static void assertWorkingKeyImport(
             String masterHex, String masterType, String workingType,
             String keyId, String workingKeyHex) throws Exception {

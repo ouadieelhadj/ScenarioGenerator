@@ -175,6 +175,48 @@ Contrôler sans afficher le mot de passe :
 Ne pas relancer une migration destructive sur une base partagée sans
 validation de l'administrateur.
 
+### 5.4 Configuration connectée Issuing / ServerPOS / SWAM / DMAS
+
+La RECETTE conserve un document local unique de configuration :
+
+```text
+runtime/issuing-connected-e2e/connected-e2e.env
+```
+
+Lors de la première installation, le créer depuis le modèle versionné :
+
+```bash
+mkdir -p runtime/issuing-connected-e2e
+cp tests/issuing/connected-e2e.env.example \
+  runtime/issuing-connected-e2e/connected-e2e.env
+```
+
+Règles d'exploitation :
+
+1. le modèle versionné contient les noms et les valeurs non sensibles ;
+2. la copie `runtime` contient les valeurs propres à la machine RECETTE ;
+3. les scripts DB, démarrage et provisionnement chargent cette copie
+   automatiquement ;
+4. si une information change, modifier manuellement uniquement la copie
+   locale avant le prochain test ;
+5. ne jamais committer, afficher dans un compte rendu ou transmettre cette
+   copie renseignée ;
+6. vérifier sa présence et ses droits d'accès avant chaque campagne.
+
+Procédure connectée :
+
+```bash
+bash tests/issuing/install-issuing-db.sh
+bash tests/issuing/start-connected-services.sh
+bash tests/issuing/provision-connected-e2e.sh
+```
+
+Arrêt contrôlé :
+
+```bash
+bash tests/issuing/stop-connected-services.sh
+```
+
 ## 6. Charger l'environnement contrôlé
 
 Les 43 variables obligatoires sont définies dans les deux scripts. Elles

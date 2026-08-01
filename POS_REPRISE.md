@@ -843,3 +843,170 @@ serveur doit conserver sa representation sous le LMK WayPos.
 - Le code suivi contient CVN10, pas CVN01. Le premier travail restant cote
   Issuing/WayPos est le raccordement protege de l'ARPC CVN10 au coeur Issuing,
   puis l'E2E connecte PostgreSQL/processus/payShield.
+
+## Reprise du harnais Issuing/WayPos du 2026-07-31
+
+- L'ancien lancement connecte avait demarre Issuing et WayPosServer sur
+  PostgreSQL, puis WayPosServer a subi un arret JVM par manque de memoire
+  native. Cet arret n'est pas un echec fonctionnel ISO, et aucune transaction
+  E2E n'avait encore ete executee.
+- Le lanceur Git Bash `tests/issuing/start-connected-services.sh` borne
+  maintenant les JVM et active un profil HTTP local `connected-e2e` lie a
+  `127.0.0.1`.
+- Les 66 tests communs, 29 tests Issuing et 34 tests WayPosServer passent, soit
+  129 tests sans echec. Le packaging des quatre services connectes reussit.
+- Les secrets et la carte de recette ne sont pas charges dans la nouvelle
+  session. Les scripts s'arretent correctement avant lancement/transaction ;
+  aucune valeur fictive n'a ete introduite.
+- Premier travail restant : recharger les variables reelles, demarrer les
+  services, provisionner les trois emetteurs, puis ajouter et executer le pilote
+  transactionnel ServerPOS/SWAM/DMAS. L'E2E connecte reste non execute.
+- La configuration minimale est maintenant centralisee dans le modele
+  `tests/issuing/connected-e2e.env.example`. Sa copie locale sous
+  `runtime/issuing-connected-e2e/connected-e2e.env` est ignoree par Git et
+  chargee automatiquement par le harnais.
+- La copie locale est renseignee pour l'environnement de test avec accord
+  explicite de l'utilisateur. Issuing, WayPosServer, SWAM Issuer et DMAS
+  Mastercard demarrent, et le provisionnement BANK1/300853/002202 reussit.
+  Les services restent actifs. Le pilote de transactions financieres connecte
+  reste le premier travail non termine ; l'E2E financier n'est pas encore
+  revendique.
+
+## Test connecte wayPosSimulator vers WayPosServer du 2026-07-31
+
+- Non-regression relancee sur `sg-common`, `sg-way-pos-server` et
+  `sg-way-pos-simulator` : 117 tests, 0 echec, `BUILD SUCCESS` a
+  16:03:10 +01:00.
+- Packaging hors ligne des deux applications : `BUILD SUCCESS` a
+  16:06:11 +01:00.
+- Defaut de demarrage reproduit sur le JAR simulateur sans option :
+  l'auto-configuration DataSource/Liquibase est active alors que le simulateur
+  ne possede ni datasource ni driver. Le test a continue avec les exclusions
+  Spring passees uniquement en ligne de commande ; le code n'a pas ete modifie.
+- WayPosServer REST/ISO et wayPosSimulator REST ont demarre respectivement sur
+  `8530/8531` et `8532`.
+- Premier echange avant provisionnement : `0800/930000 -> 0810`, RC03
+  `Unknown or disabled terminal`, comportement fail-closed attendu.
+- Terminal local de test `TERM0001` / marchand `MERCHANT0000001` provisionne
+  avec MAC non requis pour ne pas inventer de cle cryptographique absente.
+- Echange connecte valide : `0800/930000 -> 0810`, RC00, batch `000001`,
+  correlation STAN preservee, temps observe 43 ms.
+- Cette preuve valide TCP, framing jPOS, packager, correlation et traitement
+  systeme Simulator/ServerPOS. Elle ne valide pas encore le flux financier,
+  le MAC, le PIN, ARQC/ARPC ni le key change reel.
+- Les deux processus Java ont ete arretes apres le test ; ports `8530`, `8531`
+  et `8532` liberes. Aucun commit ni push effectue.
+- Premier travail non termine : corriger l'auto-configuration du simulateur,
+  ajouter un test de demarrage du contexte sans datasource, puis executer le
+  flux financier connecte avec les vecteurs cryptographiques de recette.
+
+## Scripts Git Bash ServerPOS / simulateur / RKI du 2026-07-31
+
+- Ajout d'un parcours operateur separe dans `tests/waypos/gitbash/` :
+  demarrage ServerPOS, demarrage simulateur, premier `0800/960000` d'echange
+  RKI, second `0800/960000` de sign/confirmation, puis arret controle.
+- Le sign demande par l'utilisateur est traite comme la confirmation des
+  statuts de cles importees, et non comme un `0800/930000` de sign-on.
+- Le simulateur accepte maintenant simultanement une TAMK et une TPMK de
+  recette avec leurs identifiants distincts. La compatibilite avec l'ancienne
+  configuration a cle maitre unique est conservee.
+- L'auto-configuration DataSource/JPA/Liquibase inutile au simulateur est
+  exclue dans le code. Un profil REST local `connected-e2e`, lie a
+  `127.0.0.1`, permet les appels curl du harnais.
+- Nouvel endpoint `POST /api/simulator/v1/key-change/confirm` : il refuse la
+  confirmation sans statuts importes et envoie exactement une demande de
+  confirmation MACee lorsqu'un premier echange a reussi.
+- La configuration locale ignoree par Git contient maintenant la LMK WayPos,
+  l'identite TPE et les TAMK/TPMK de test fournies. `WAY_POS_TAK_HEX` reste
+  vide : la TAK initiale coherente avec le profil ServerPOS n'a pas ete
+  fournie et n'a pas ete remplacee par une valeur fictive.
+- Validation syntaxique des six scripts : `bash -n`, succes.
+- Test reel du script ServerPOS : REST `8530` et ISO `8531` demarres, base
+  connectee et LMK WayPos correcte chargee. Le script d'arret a ensuite
+  libere `8530`, `8531` et `8532`.
+- Test fail-closed du demarrage simulateur : arret attendu avant connexion sur
+  `Variable requise absente: WAY_POS_TAK_HEX`.
+- Non-regression agregee : 136 tests, 0 echec, `BUILD SUCCESS` a
+  16:43:33 +01:00. Packaging ServerPOS/simulateur : `BUILD SUCCESS` a
+  16:35:00 +01:00.
+- Aucun processus reste actif. Aucun commit ni push effectue.
+- Premier travail non termine : renseigner la TAK initiale et provisionner le
+  meme profil terminal cote ServerPOS, puis executer les deux scripts RKI et
+  obtenir RC00 avec MAC valide pour l'echange et sa confirmation.
+
+## Validation RKI Git Bash connectee du 2026-07-31
+
+- Ajout de `bootstrap-rki-test.sh` et d'un endpoint strictement limite au
+  profil `connected-e2e`, active uniquement par
+  `WAY_POS_LOCAL_TEST_BOOTSTRAP_ENABLED=true`.
+- Ajout de `tail-waypos-logs.sh` pour suivre simultanement les consoles
+  ServerPOS et simulateur avec `tail -f`.
+- Le bootstrap ne recoit et ne retourne aucune cle par REST. Il charge la TAK
+  initiale de test sous la LMK WayPos, genere une TAK sous TAMK et une TPK sous
+  TPMK dans la frontiere HSM, puis place les deux cles en attente.
+- Configuration locale completee avec la TAK de test autorisee. Les TAMK et
+  TPMK fournies restent les cles maitres de transport, jamais de production.
+- Tests communs + ServerPOS executes avant packaging : 102 tests, 0 echec.
+  Le packaging standard a ete bloque par l'ancien Java utilisateur gardant le
+  JAR ouvert ; un JAR Spring Boot classe `bootstrap` a ete produit avec succes
+  sans supprimer le processus par contournement.
+- Chaine connectee executee avec succes : bootstrap accepte, ServerPOS
+  `8530/8531`, simulateur `8532`, premier `0800/960000` RC00 et MAC valide,
+  TAK/TPK importees, second `0800/960000` de sign/confirmation RC00 et MAC
+  valide.
+- Verification base apres le sign : TAK `ACTIVE`, TPK `ACTIVE`, profil
+  `TERM0001` avec TAK/TPK presentes sous LMK.
+- Bootstrap rendu repetable : chaque execution genere de nouveaux identifiants
+  de lot TAK/TPK et conserve l'historique des cles precedemment confirmees.
+- Apres cette adaptation, non-regression commune + ServerPOS relancee :
+  102 tests, 0 echec ; packaging classe `bootstrap2` reussi a 17:09:34.
+- Les ports `8530`, `8531` et `8532` sont libres apres l'arret. Deux processus
+  Java lances depuis des sessions Git Bash distinctes restent visibles sans
+  ecoute reseau car Windows refuse leur terminaison inter-session ; fermer les
+  terminaux parents ou executer `stop-waypos.sh` depuis la session proprietaire.
+- Premier travail non termine : aucun pour le parcours RKI local. Le prochain
+  jalon reste l'E2E financier PIN/ARQC/ARPC avec les vecteurs de recette.
+
+## Sauvegarde explicite de session du 2026-07-31 a 17:15
+
+Etat runtime au moment de la demande de sauvegarde utilisateur :
+
+- ServerPOS deja actif : REST `8530` retourne HTTP 200 ; ISO utilise `8531`.
+- POS Simulator deja actif : REST `8532` retourne HTTP 200.
+- Ne pas relancer `start-serverpos.sh`, `bootstrap-rki-test.sh` ou
+  `start-pos-simulator.sh` dans cet etat.
+- Le profil `TERM0001` a ete realigne sur la derniere TAK confirmee afin de
+  rester coherent avec la TAK presente en memoire du simulateur actif.
+- Le lot local TAK/TPK existant a ete remis explicitement en attente pour la
+  reprise : base verifiee avec `TAK:PENDING` et `TPK:PENDING`.
+- Premier travail non termine exact : executer, depuis Git Bash :
+
+  ```bash
+  bash ./tests/waypos/gitbash/rki-exchange.sh
+  bash ./tests/waypos/gitbash/rki-sign-confirm.sh
+  ```
+
+- Pour suivre les deux services depuis un second Git Bash :
+
+  ```bash
+  bash ./tests/waypos/gitbash/tail-waypos-logs.sh
+  ```
+
+- La version ServerPOS actuellement en memoire precede l'amelioration du
+  bootstrap repetable. La version corrigee est deja compilee dans
+  `sg-way-pos-server/target/sg-way-pos-server-1.0.0-SNAPSHOT-bootstrap2.jar` ;
+  `start-serverpos.sh` la choisira automatiquement au prochain vrai demarrage.
+- Au prochain demarrage complet, utiliser l'ordre suivant : stop, start
+  ServerPOS, bootstrap, start simulateur, RKI exchange, RKI sign/confirm.
+- Les processus Java actifs ont ete crees dans des sessions Git Bash
+  distinctes. Windows peut refuser leur arret depuis une autre session ;
+  lancer `stop-waypos.sh` depuis le terminal proprietaire ou fermer les
+  terminaux parents.
+- Derniers tests apres le bootstrap repetable : 68 tests `sg-common` et
+  34 tests ServerPOS, soit 102 tests sans echec, `BUILD SUCCESS` a 17:09:10.
+  Le parcours connecte complet precedent avait deja obtenu RC00/MAC valide
+  pour l'echange et le sign/confirmation.
+- Scripts Git Bash presents : `_common.sh`, `start-serverpos.sh`,
+  `bootstrap-rki-test.sh`, `start-pos-simulator.sh`, `rki-exchange.sh`,
+  `rki-sign-confirm.sh`, `tail-waypos-logs.sh` et `stop-waypos.sh`.
+- Aucun commit ni push effectue.

@@ -17,5 +17,9 @@ way-pos-simulator:
   master-key-id: ${WAY_POS_MASTER_KEY_ID:00}
   master-key-type: ${WAY_POS_MASTER_KEY_TYPE:TMK}
   master-key-hex: ${WAY_POS_MASTER_KEY_HEX:}
+  tamk-id: ${WAY_POS_TAMK_ID:${WAY_POS_MASTER_KEY_ID:00}}
+  tamk-hex: ${WAY_POS_TAMK_HEX:}
+  tpmk-id: ${WAY_POS_TPMK_ID:${WAY_POS_MASTER_KEY_ID:00}}
+  tpmk-hex: ${WAY_POS_TPMK_HEX:}
   ansi-x917-block-encoding: ${WAY_POS_X917_BLOCK_ENCODING:BINARY}
   ansi-x917-cipher-mode: ${WAY_POS_X917_CIPHER_MODE:ECB}

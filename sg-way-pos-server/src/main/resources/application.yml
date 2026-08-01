@@ -18,6 +18,7 @@ spring:
 way-pos:
   iso-port: ${WAY_POS_ISO_PORT:8531}
   t1-seconds: ${WAY_POS_T1_SECONDS:55}
+  local-test-bootstrap-enabled: ${WAY_POS_LOCAL_TEST_BOOTSTRAP_ENABLED:false}
   pan-pepper: ${WAY_POS_PAN_PEPPER:change-me-in-production}
   outbox-key-hex: ${WAY_POS_OUTBOX_KEY_HEX:}
   connectors:

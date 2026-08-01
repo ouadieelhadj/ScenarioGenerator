@@ -80,11 +80,11 @@ public class SimulatorKeyStore {
     }
 
     private byte[] unwrap(WayPosKeyExchangeCodec.KeyBlock block) throws Exception {
-        if (!properties.masterKeyId().equals(block.masterKeyId())
-                || !properties.masterKeyType().equals(block.masterKeyType())) {
+        MasterKey masterKey = masterKey(block.masterKeyType());
+        if (!masterKey.id().equals(block.masterKeyId())) {
             throw new IllegalArgumentException("Unknown master key reference");
         }
-        if (!validKeyHex(properties.masterKeyHex())) {
+        if (!validKeyHex(masterKey.hex())) {
             throw new IllegalStateException("A real terminal master key is required");
         }
         byte[] wrapped = block.ansiX917Block();
@@ -93,7 +93,7 @@ public class SimulatorKeyStore {
         } else if (!"BINARY".equalsIgnoreCase(properties.ansiX917BlockEncoding())) {
             throw new IllegalArgumentException("Unsupported ANSI X9.17 block encoding");
         }
-        byte[] master = ISOUtil.hex2byte(properties.masterKeyHex());
+        byte[] master = ISOUtil.hex2byte(masterKey.hex());
         try {
             byte[] key24 = expandDesEde(master);
             String mode = defaultValue(properties.ansiX917CipherMode(), "ECB").toUpperCase();
@@ -123,6 +123,25 @@ public class SimulatorKeyStore {
         } finally {
             Arrays.fill(master, (byte) 0);
         }
+    }
+
+    private MasterKey masterKey(String type) {
+        if ("TAMK".equalsIgnoreCase(type)
+                && validKeyHex(properties.tamkHex())) {
+            return new MasterKey(
+                    defaultValue(properties.tamkId(), properties.masterKeyId()),
+                    properties.tamkHex());
+        }
+        if ("TPMK".equalsIgnoreCase(type)
+                && validKeyHex(properties.tpmkHex())) {
+            return new MasterKey(
+                    defaultValue(properties.tpmkId(), properties.masterKeyId()),
+                    properties.tpmkHex());
+        }
+        if (type != null && type.equalsIgnoreCase(properties.masterKeyType())) {
+            return new MasterKey(properties.masterKeyId(), properties.masterKeyHex());
+        }
+        throw new IllegalArgumentException("Unknown master key type");
     }
 
     private static void verifyKcv(byte[] key, String expected) throws Exception {
@@ -174,4 +193,6 @@ public class SimulatorKeyStore {
     private static String defaultValue(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
     }
+
+    private record MasterKey(String id, String hex) {}
 }
