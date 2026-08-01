@@ -17,20 +17,21 @@ import org.springframework.web.client.RestClient;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Map;
+import java.util.HashMap;
 
 @Component
 public class HttpEcommerceNetworkAdapter implements EcommerceNetworkPort {
-    private final boolean dmasEnabled;
+    private final boolean cardNetworkGatewayEnabled;
     private final boolean swamEnabled;
     private final boolean localIssuingEnabled;
     private final String localIssuerId;
-    private final RestClient dmas;
+    private final RestClient cardNetworkGateway;
     private final RestClient swam;
     private final RestClient localIssuing;
 
     public HttpEcommerceNetworkAdapter(
-            @Value("${acquiring.network.dmas.enabled:false}") boolean dmasEnabled,
-            @Value("${acquiring.network.dmas.base-url:http://127.0.0.1:8084}") String dmasUrl,
+            @Value("${acquiring.network.card-gateway.enabled:false}") boolean cardNetworkGatewayEnabled,
+            @Value("${acquiring.network.card-gateway.base-url:http://127.0.0.1:8563}") String cardNetworkGatewayUrl,
             @Value("${acquiring.network.swam.enabled:false}") boolean swamEnabled,
             @Value("${acquiring.network.swam.base-url:http://127.0.0.1:8094}") String swamUrl,
             @Value("${acquiring.issuing.enabled:false}") boolean localIssuingEnabled,
@@ -38,7 +39,7 @@ public class HttpEcommerceNetworkAdapter implements EcommerceNetworkPort {
             @Value("${acquiring.issuing.issuer-id:}") String localIssuerId,
             @Value("${acquiring.network.connect-timeout-ms:1000}") int connectTimeoutMs,
             @Value("${acquiring.network.read-timeout-ms:15000}") int readTimeoutMs) {
-        this.dmasEnabled = dmasEnabled;
+        this.cardNetworkGatewayEnabled = cardNetworkGatewayEnabled;
         this.swamEnabled = swamEnabled;
         this.localIssuingEnabled = localIssuingEnabled;
         this.localIssuerId = localIssuerId;
@@ -46,7 +47,8 @@ public class HttpEcommerceNetworkAdapter implements EcommerceNetworkPort {
                 HttpClient.newBuilder()
                         .connectTimeout(Duration.ofMillis(connectTimeoutMs)).build());
         factory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
-        this.dmas = RestClient.builder().baseUrl(dmasUrl).requestFactory(factory).build();
+        this.cardNetworkGateway = RestClient.builder().baseUrl(cardNetworkGatewayUrl)
+                .requestFactory(factory).build();
         this.swam = RestClient.builder().baseUrl(swamUrl).requestFactory(factory).build();
         this.localIssuing = RestClient.builder().baseUrl(localIssuingUrl)
                 .requestFactory(factory).build();
@@ -58,10 +60,9 @@ public class HttpEcommerceNetworkAdapter implements EcommerceNetworkPort {
             return authorizeLocally(command);
         }
         RestClient client = switch (command.route()) {
-            case DMAS_MASTERCARD -> enabled(dmasEnabled, dmas, "DMAS Mastercard");
+            case DMAS_MASTERCARD, VISA -> enabled(cardNetworkGatewayEnabled,
+                    cardNetworkGateway, "Visa/Mastercard gateway");
             case SWAM -> enabled(swamEnabled, swam, "SWAM");
-            case VISA -> throw new EcommerceNetworkException(
-                    "Visa ecommerce routing is not implemented");
             case AUTO -> throw new EcommerceNetworkException(
                     "AUTO route must be resolved before authorization");
             case LOCAL_ISSUING -> throw new IllegalStateException("unreachable");
@@ -73,9 +74,7 @@ public class HttpEcommerceNetworkAdapter implements EcommerceNetworkPort {
                 "%012d".formatted(command.amountMinor()), command.currency(),
                 command.stan(), command.rrn(), command.terminalId(),
                 command.merchantId(), null, null, null,
-                Map.of("entryMode", "010", "conditionCode", "59",
-                        "channel", "ECOMMERCE", "cardPresent", "false",
-                        "authenticationStatus", command.authenticationStatus().name()));
+                networkAttributes(command));
         try {
             RoutingTransactionResponse response = client.post()
                     .uri("/api/routing/v1/transactions")
@@ -111,9 +110,7 @@ public class HttpEcommerceNetworkAdapter implements EcommerceNetworkPort {
                 command.pan(), command.amountMinor(), command.currency(), null,
                 command.terminalId(), command.merchantId(), null, "504", false,
                 true, null, null, null,
-                Map.of("channel", "ECOMMERCE", "cardPresent", "false",
-                        "authenticationStatus",
-                        command.authenticationStatus().name()));
+                localAttributes(command));
         try {
             IssuingAuthorizationResponse response = localIssuing.post()
                     .uri("/authorizations")
@@ -140,5 +137,37 @@ public class HttpEcommerceNetworkAdapter implements EcommerceNetworkPort {
 
     private static String sourceMti(EcommerceNetworkRoute route) {
         return route == EcommerceNetworkRoute.SWAM ? "1100" : "0100";
+    }
+
+    private static Map<String, String> networkAttributes(EcommerceNetworkCommand command) {
+        Map<String, String> values = baseAttributes(command);
+        values.put("entryMode", "010");
+        values.put("conditionCode", "59");
+        if (command.route() == EcommerceNetworkRoute.DMAS_MASTERCARD) {
+            values.put("cardProgram", "MASTERCARD");
+        } else if (command.route() == EcommerceNetworkRoute.VISA) {
+            values.put("cardProgram", "VISA");
+        }
+        return Map.copyOf(values);
+    }
+
+    private static Map<String, String> localAttributes(EcommerceNetworkCommand command) {
+        return Map.copyOf(baseAttributes(command));
+    }
+
+    private static Map<String, String> baseAttributes(EcommerceNetworkCommand command) {
+        Map<String, String> values = new HashMap<>();
+        values.put("channel", "ECOMMERCE");
+        values.put("cardPresent", "false");
+        values.put("authenticationStatus", command.authenticationStatus().name());
+        put(values, "eci", command.eci());
+        put(values, "authenticationValue", command.authenticationValue());
+        put(values, "directoryServerTransactionId",
+                command.directoryServerTransactionId());
+        return values;
+    }
+
+    private static void put(Map<String, String> target, String name, String value) {
+        if (value != null && !value.isBlank()) target.put(name, value);
     }
 }

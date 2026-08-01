@@ -3,6 +3,7 @@ package com.staging.sg.acquiring.service;
 import com.staging.sg.acquiring.domain.*;
 import com.staging.sg.acquiring.port.EcommerceNetworkCommand;
 import com.staging.sg.acquiring.port.EcommerceNetworkPort;
+import com.staging.sg.acquiring.port.EcommerceAuthenticationVerificationPort;
 import com.staging.sg.acquiring.repository.*;
 import com.staging.sg.common.ecommerce.*;
 import com.staging.sg.common.issuing.PaymentIdentifierType;
@@ -45,20 +46,34 @@ class EcommerceTransactionServiceTest {
     }
 
     @Test
-    void refuses3dsDataUntilThe3dsModuleExists() {
+    void forwardsValidated3dsEvidenceToTheFinancialRoute() {
         Fixture fixture = new Fixture();
+        when(fixture.network.authorize(any())).thenReturn(
+                new RoutingTransactionResponse("TX-1", "APPROVED", "00", "00",
+                        "654321", "DMAS_MEMBER", "000000001000", null,
+                        false, Map.of("network", "DMAS")));
+        String dsTransId = UUID.randomUUID().toString();
         EcommercePurchaseRequest request = new EcommercePurchaseRequest(
                 "1.0", "TX-1", "CORR-1", "IDEM-1", "ACQTEST",
                 fixture.profile.id(), "ORDER-1", 1000, "504",
                 PaymentIdentifierType.PAN, "5321962145453348", "2912",
                 EcommerceNetworkRoute.DMAS_MASTERCARD,
                 EcommerceAuthenticationStatus.AUTHENTICATED,
-                "05", "CAVV", "DS-1");
+                "02", "sandbox-authentication-value", dsTransId);
 
-        assertThatThrownBy(() -> fixture.service.purchase(request))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("3DS");
-        verifyNoInteractions(fixture.network);
+        EcommercePurchaseResponse response = fixture.service.purchase(request);
+
+        assertThat(response.status()).isEqualTo("APPROVED");
+        ArgumentCaptor<EcommerceNetworkCommand> command =
+                ArgumentCaptor.forClass(EcommerceNetworkCommand.class);
+        verify(fixture.network).authorize(command.capture());
+        assertThat(command.getValue().authenticationStatus())
+                .isEqualTo(EcommerceAuthenticationStatus.AUTHENTICATED);
+        assertThat(command.getValue().eci()).isEqualTo("02");
+        assertThat(command.getValue().authenticationValue())
+                .isEqualTo("sandbox-authentication-value");
+        assertThat(command.getValue().directoryServerTransactionId())
+                .isEqualTo(dsTransId);
     }
 
     private static final class Fixture {
@@ -70,6 +85,8 @@ class EcommerceTransactionServiceTest {
         final AcquiringOutboxEventRepository outbox = mock(AcquiringOutboxEventRepository.class);
         final EcommerceNetworkPort network = mock(EcommerceNetworkPort.class);
         final EcommerceRouteResolver routes = mock(EcommerceRouteResolver.class);
+        final EcommerceAuthenticationVerificationPort authenticationVerifier =
+                mock(EcommerceAuthenticationVerificationPort.class);
         final EcommerceStore store;
         final AcquiringContract contract;
         final EcommerceAcceptanceProfile profile;
@@ -103,8 +120,10 @@ class EcommerceTransactionServiceTest {
             when(transactions.save(any())).thenAnswer(call -> call.getArgument(0));
             when(outbox.save(any())).thenAnswer(call -> call.getArgument(0));
             when(routes.resolve(any(), any())).thenAnswer(call -> call.getArgument(1));
+            when(authenticationVerifier.verifyAndConsume(any())).thenReturn(true);
             service = new EcommerceTransactionService(profiles, stores, contracts,
-                    details, transactions, outbox, network, routes);
+                    details, transactions, outbox, network, routes,
+                    authenticationVerifier);
         }
 
         EcommercePurchaseRequest request(EcommerceAuthenticationStatus status,

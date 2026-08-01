@@ -4,6 +4,7 @@ import com.staging.sg.acquiring.domain.*;
 import com.staging.sg.acquiring.port.EcommerceNetworkCommand;
 import com.staging.sg.acquiring.port.EcommerceNetworkException;
 import com.staging.sg.acquiring.port.EcommerceNetworkPort;
+import com.staging.sg.acquiring.port.EcommerceAuthenticationVerificationPort;
 import com.staging.sg.acquiring.repository.*;
 import com.staging.sg.common.contract.PaymentContractStatus;
 import com.staging.sg.common.contract.PaymentContractType;
@@ -25,13 +26,15 @@ public class EcommerceTransactionService {
     private final AcquiringOutboxEventRepository outbox;
     private final EcommerceNetworkPort network;
     private final EcommerceRouteResolver routes;
+    private final EcommerceAuthenticationVerificationPort authenticationVerifier;
 
     public EcommerceTransactionService(EcommerceAcceptanceProfileRepository profiles,
             EcommerceStoreRepository stores, AcquiringContractRepository contracts,
             AcquiringContractDetailRepository details,
             EcommerceTransactionRepository transactions,
             AcquiringOutboxEventRepository outbox, EcommerceNetworkPort network,
-            EcommerceRouteResolver routes) {
+            EcommerceRouteResolver routes,
+            EcommerceAuthenticationVerificationPort authenticationVerifier) {
         this.profiles = profiles;
         this.stores = stores;
         this.contracts = contracts;
@@ -40,6 +43,7 @@ public class EcommerceTransactionService {
         this.outbox = outbox;
         this.network = network;
         this.routes = routes;
+        this.authenticationVerifier = authenticationVerifier;
     }
 
     public EcommercePurchaseResponse purchase(EcommercePurchaseRequest request) {
@@ -92,6 +96,11 @@ public class EcommerceTransactionService {
             EcommerceAcceptanceProfile profile, AcquiringContractDetail detail,
             EcommerceTransaction transaction, boolean replay) {
         try {
+            if (request.authenticationStatus() == EcommerceAuthenticationStatus.AUTHENTICATED
+                    && !authenticationVerifier.verifyAndConsume(request)) {
+                throw new IllegalStateException(
+                        "3DS evidence verification or replay protection failed");
+            }
             RoutingTransactionResponse result = network.authorize(
                     new EcommerceNetworkCommand(request.transactionId(),
                             request.correlationId(), request.idempotencyKey(),
@@ -99,7 +108,8 @@ public class EcommerceTransactionService {
                             request.amountMinor(), request.currency(), transaction.stan(),
                             transaction.rrn(), profile.logicalTerminalId(),
                             detail.merchantAcceptorId(), resolvedRoute,
-                            request.authenticationStatus()));
+                            request.authenticationStatus(), request.eci(),
+                            request.cavv(), request.directoryServerTransactionId()));
             transaction.decide(result);
             transactions.save(transaction);
             outbox.save(AcquiringOutboxEvent.pending("EcommerceTransaction",
@@ -157,14 +167,20 @@ public class EcommerceTransactionService {
                 || request.networkRoute() == null || request.authenticationStatus() == null) {
             throw new IllegalArgumentException("Invalid ecommerce purchase request");
         }
-        if (request.networkRoute() == EcommerceNetworkRoute.VISA) {
-            throw new IllegalStateException("Visa ecommerce routing is not implemented");
+        if (request.authenticationStatus() == EcommerceAuthenticationStatus.NOT_PERFORMED) {
+            if (request.eci() != null || request.cavv() != null
+                    || request.directoryServerTransactionId() != null) {
+                throw new IllegalStateException(
+                        "3DS evidence is inconsistent with NOT_PERFORMED");
+            }
+            return;
         }
-        if (request.authenticationStatus() != EcommerceAuthenticationStatus.NOT_PERFORMED
-                || request.eci() != null || request.cavv() != null
-                || request.directoryServerTransactionId() != null) {
+        if (request.authenticationStatus() != EcommerceAuthenticationStatus.AUTHENTICATED
+                || request.eci() == null || !request.eci().matches("(?:01|02|05|06)")
+                || blank(request.cavv()) || request.cavv().length() < 20
+                || !isUuid(request.directoryServerTransactionId())) {
             throw new IllegalStateException(
-                    "3DS data is not accepted until the 3DS module is implemented");
+                    "A successful 3DS authentication requires valid ECI, evidence and DS identifier");
         }
     }
 
@@ -174,10 +190,20 @@ public class EcommerceTransactionService {
                 request.acquirerId(), request.profileId(), request.merchantOrderId(),
                 request.amountMinor(), request.currency(), request.paymentIdentifierType(),
                 request.paymentIdentifier(), request.expiry(), resolvedRoute,
-                request.authenticationStatus());
+                request.authenticationStatus(), request.eci(), request.cavv(),
+                request.directoryServerTransactionId());
     }
 
     private static boolean blank(String value) {
         return value == null || value.isBlank();
+    }
+
+    private static boolean isUuid(String value) {
+        try {
+            java.util.UUID.fromString(value);
+            return true;
+        } catch (RuntimeException e) {
+            return false;
+        }
     }
 }

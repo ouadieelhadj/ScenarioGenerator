@@ -19,14 +19,16 @@ LOG_DIR="$RUNTIME/logs"
 PID_DIR="$RUNTIME/pids"
 ISSUING_URL="${CARD_ISSUING_BASE_URL:-http://127.0.0.1:8540}"
 ACQUIRING_URL="${ACQUIRING_BASE_URL:-http://127.0.0.1:8550}"
-SIMULATOR_URL="${ECOMMERCE_SIMULATOR_BASE_URL:-http://127.0.0.1:8551}"
+SIMULATOR_URL="${MERCHANT_SITE_SIMULATOR_BASE_URL:-http://127.0.0.1:8551}"
+THREE_DS_MEMBER_URL="${THREE_DS_MEMBER_BASE_URL:-http://127.0.0.1:8560}"
+THREE_DS_NETWORK_URL="${THREE_DS_NETWORK_BASE_URL:-http://127.0.0.1:8561}"
+CARD_GATEWAY_URL="${CARD_NETWORK_GATEWAY_BASE_URL:-http://127.0.0.1:8563}"
 ROUTE="${ECOMMERCE_ROUTE:-${1:-LOCAL_ISSUING}}"
 mkdir -p "$LOG_DIR" "$PID_DIR"
 
 case "$ROUTE" in
-  LOCAL_ISSUING|SWAM|DMAS_MASTERCARD) ;;
-  VISA) printf '[ECOM E2E] ERREUR - Visa sera ajoute dans un jalon ulterieur.\n' >&2; exit 1 ;;
-  *) printf '[ECOM E2E] ERREUR - Route attendue: LOCAL_ISSUING, SWAM ou DMAS_MASTERCARD.\n' >&2; exit 1 ;;
+  LOCAL_ISSUING|SWAM|DMAS_MASTERCARD|VISA) ;;
+  *) printf '[ECOM E2E] ERREUR - Route inconnue: %s.\n' "$ROUTE" >&2; exit 1 ;;
 esac
 
 fail() { printf '[ECOM E2E] ERREUR - %s\n' "$*" >&2; exit 1; }
@@ -35,7 +37,7 @@ require_command() { command -v "$1" >/dev/null 2>&1 || fail "Commande absente: $
 
 wait_http() {
   local url="$1" label="$2"
-  for _ in $(seq 1 90); do
+  for _ in $(seq 1 "${ECOMMERCE_E2E_STARTUP_TIMEOUT_SECONDS:-240}"); do
     curl -fsS --connect-timeout 2 --max-time 3 "$url" >/dev/null 2>&1 && {
       printf '[ECOM E2E] UP - %s\n' "$label"
       return 0

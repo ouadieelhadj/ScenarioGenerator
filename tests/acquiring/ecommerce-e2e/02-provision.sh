@@ -129,4 +129,4 @@ if [[ -z "$profile_id" ]]; then
   profile_id="$(json_field id)"
 fi
 printf '%s\n' "$profile_id" >"$RUNTIME/profile-id"
-printf '[ECOM E2E] Profil %s et route BIN %s prets. 3DS=NOT_PERFORMED.\n' "$profile_id" "$ROUTE"
+printf '[ECOM E2E] Profil %s et route BIN %s prets.\n' "$profile_id" "$ROUTE"

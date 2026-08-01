@@ -37,7 +37,10 @@
         <module>sg-acquiring</module>
         <module>sg-way-pos-server</module>
         <module>sg-way-pos-simulator</module>
-        <module>sg-ecommerce-simulator</module>
+        <module>sg-merchant-site-simulator</module>
+        <module>sg-3ds-member</module>
+        <module>sg-3ds-network-simulator</module>
+        <module>sg-visa-mastercard-gateway-simulator</module>
         <module>sg-issuing-internal-e2e</module>
     </modules>
 

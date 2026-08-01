@@ -1,0 +1,21 @@
+server:
+  port: ${THREE_DS_NETWORK_REST_PORT:8561}
+
+spring:
+  application:
+    name: sg-3ds-network-simulator
+
+three-ds:
+  member:
+    base-url: ${THREE_DS_MEMBER_BASE_URL:http://127.0.0.1:8560}
+  merchant-site:
+    base-url: ${THREE_DS_MERCHANT_SITE_BASE_URL:http://127.0.0.1:8551}
+  network:
+    base-url: ${THREE_DS_NETWORK_BASE_URL:http://127.0.0.1:8561}
+  sandbox:
+    hmac-key: ${THREE_DS_NETWORK_SANDBOX_HMAC_KEY:}
+    challenge-otp: ${THREE_DS_SANDBOX_CHALLENGE_OTP:}
+
+logging:
+  file:
+    name: ${THREE_DS_NETWORK_LOG_FILE:${user.dir}/runtime/3ds/logs/network.log}

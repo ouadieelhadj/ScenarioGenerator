@@ -13,6 +13,7 @@ Avant toute analyse, modification, test, commit ou push :
    - acquisition TPE et e-commerce : `REPRISE_ACQUIRING.md` ;
    - DMCS / DMAS : `REPRISE_DMCS_DMAS.md` ;
    - SWAM LIS : `SESSION_REPRISE_SWAM_LIS.md` ;
+   - module 3DS et e-commerce authentifie : `REPRISE_3DS.md` ;
    - contexte historique general : `SESSION_RESUME.md`, uniquement si les
      documents specialises ne suffisent pas.
 2. Executer en lecture seule :
@@ -54,6 +55,10 @@ La derniere demande explicite de l'utilisateur determine le chantier actif.
   `ValidationDmcsDmasFirst`. Relire `REPRISE_DMCS_DMAS.md` avant toute reprise.
 - Le projet documentaire Way4 Knowledge Base se trouve dans
   `E:\Way4-Knowledge-Base` et ne doit pas etre confondu avec le code WayPos.
+- Le socle 3DS sandbox est termine : trois E2E (frictionless national,
+  challenge national et challenge international) passent avec RC=00 et
+  verification anti-rejeu. Relire `REPRISE_3DS.md`. Le moteur financier Visa
+  off-us reste volontairement absent et ferme.
 
 ## Protection du travail existant
 

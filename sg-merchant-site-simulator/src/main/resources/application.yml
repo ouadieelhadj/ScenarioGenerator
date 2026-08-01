@@ -1,0 +1,19 @@
+server:
+  port: ${ECOMMERCE_SIMULATOR_REST_PORT:8551}
+
+spring:
+  application:
+    name: sg-merchant-site-simulator
+
+ecommerce-simulator:
+  acquiring:
+    base-url: ${ECOMMERCE_SIMULATOR_ACQUIRING_URL:http://127.0.0.1:8550}
+    connect-timeout-ms: ${ECOMMERCE_SIMULATOR_CONNECT_TIMEOUT_MS:1000}
+    read-timeout-ms: ${ECOMMERCE_SIMULATOR_READ_TIMEOUT_MS:20000}
+  three-ds:
+    member-base-url: ${THREE_DS_MEMBER_BASE_URL:http://127.0.0.1:8560}
+    network-base-url: ${THREE_DS_NETWORK_BASE_URL:http://127.0.0.1:8561}
+
+logging:
+  file:
+    name: ${MERCHANT_SITE_SIMULATOR_LOG_FILE:${user.dir}/runtime/merchant-site/logs/merchant-site-simulator.log}

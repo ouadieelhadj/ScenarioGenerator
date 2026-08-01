@@ -1,0 +1,29 @@
+server:
+  port: ${THREE_DS_MEMBER_REST_PORT:8560}
+
+spring:
+  application:
+    name: sg-3ds-member
+  datasource:
+    url: ${THREE_DS_DB_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${THREE_DS_DB_USER:postgres}
+    password: ${THREE_DS_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    enabled: false
+
+three-ds:
+  member:
+    base-url: ${THREE_DS_MEMBER_BASE_URL:http://127.0.0.1:8560}
+  network:
+    base-url: ${THREE_DS_NETWORK_BASE_URL:http://127.0.0.1:8561}
+  sandbox:
+    hmac-key: ${THREE_DS_SANDBOX_HMAC_KEY:}
+    challenge-otp: ${THREE_DS_SANDBOX_CHALLENGE_OTP:}
+
+logging:
+  file:
+    name: ${THREE_DS_MEMBER_LOG_FILE:${user.dir}/runtime/3ds/logs/member.log}

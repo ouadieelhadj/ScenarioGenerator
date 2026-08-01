@@ -4,9 +4,54 @@
 > Couvre DEUX depots : le BACK `ScenarioGenerator` (Java/Spring, repo GitHub) et le
 > FRONT `sg-frontend` (Angular 18, dossier separe non encore versionne).
 
-**Derniere mise a jour :** 2026-07-14 (session 13 : MAC valide par Way4 RC[0] + flux switch reel sign-on/ZPK/ZAK OK)
-**Branche back :** feature/multi-network (dev, a jour) / chore/cleanup-modules (merge v1.3.0)
+**Derniere mise a jour :** 2026-08-02 (module 3DS sandbox et e-commerce authentifie termines)
+**Branche back active :** codex/adding-issuing-module
 **Version courante back :** v1.3.0 (taguee, publiee) - SWAM incr.1+2 crypto complet
+
+---
+
+## 22. MODULE 3DS ET E-COMMERCE AUTHENTIFIE (02/08/2026)
+
+Le resume autoritatif de ce chantier est `REPRISE_3DS.md`.
+Sauvegarde Git : commit `feat(3ds): add authenticated ecommerce flows` sur
+`codex/adding-issuing-module`.
+
+Modules ajoutes ou raccordes :
+
+- `sg-3ds-member` : 3DS Server et ACS LanaCash ;
+- `sg-3ds-network-simulator` : Directory Server Visa/Mastercard et ACS
+  confrere de recette ;
+- `sg-merchant-site-simulator` : renommage de l'ancien simulateur e-commerce,
+  avec sites national et international ;
+- `sg-visa-mastercard-gateway-simulator` : Mastercard vers DMAS, Visa off-us
+  ferme tant que le moteur Visa n'existe pas ;
+- `sg-acquiring` : validation ECI/preuve/dsTransId, verification HMAC et
+  consommation anti-rejeu avant autorisation financiere.
+
+Validation executee :
+
+- frictionless national : achat approuve, RC=00, 3DS=AUTHENTICATED ;
+- challenge national : achat approuve, RC=00, 3DS=AUTHENTICATED ;
+- challenge international : achat approuve, RC=00, 3DS=AUTHENTICATED ;
+- trois preuves en statut Y confirmees consommees en base ;
+- campagnes de tests ciblees sans echec ;
+- aucun processus de recette reste actif.
+
+Commande de reference :
+
+```bash
+bash ./tests/3ds/e2e/run-all-scenarios.sh
+```
+
+Documentation :
+
+- `tests/3ds/README.md` ;
+- `documents/design/platform/ARCHITECTURE_PLATEFORME_MONETIQUE_V1.md` ;
+- `REPRISE_3DS.md`.
+
+Premier travail non termine : developper le moteur financier Visa off-us. Les
+simulateurs 3DS ne sont pas certifies EMVCo/Visa/Mastercard et devront etre
+remplaces ou raccordes a des composants homologues pour la production.
 
 ---
 

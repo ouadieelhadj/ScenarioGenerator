@@ -16,6 +16,9 @@ spring:
     enabled: false
 
 acquiring:
+  three-ds:
+    enabled: ${ACQUIRING_THREE_DS_ENABLED:false}
+    base-url: ${ACQUIRING_THREE_DS_BASE_URL:http://127.0.0.1:8560}
   issuing:
     enabled: ${ACQUIRING_ISSUING_ENABLED:false}
     base-url: ${ACQUIRING_ISSUING_BASE_URL:http://127.0.0.1:8540/api/issuing/v1}
@@ -28,9 +31,9 @@ acquiring:
   network:
     connect-timeout-ms: ${ACQUIRING_NETWORK_CONNECT_TIMEOUT_MS:1000}
     read-timeout-ms: ${ACQUIRING_NETWORK_READ_TIMEOUT_MS:15000}
-    dmas:
-      enabled: ${ACQUIRING_DMAS_ENABLED:false}
-      base-url: ${ACQUIRING_DMAS_BASE_URL:http://127.0.0.1:8084}
+    card-gateway:
+      enabled: ${ACQUIRING_CARD_GATEWAY_ENABLED:false}
+      base-url: ${ACQUIRING_CARD_GATEWAY_BASE_URL:http://127.0.0.1:8563}
     swam:
       enabled: ${ACQUIRING_SWAM_ENABLED:false}
       base-url: ${ACQUIRING_SWAM_BASE_URL:http://127.0.0.1:8094}

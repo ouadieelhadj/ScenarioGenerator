@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: sg-visa-mastercard-gateway-simulator
+
+server:
+  port: ${CARD_NETWORK_GATEWAY_PORT:8563}
+
+card-network:
+  mastercard:
+    enabled: ${CARD_NETWORK_MASTERCARD_ENABLED:false}
+    base-url: ${CARD_NETWORK_MASTERCARD_BASE_URL:http://127.0.0.1:8084}
+  visa:
+    enabled: ${CARD_NETWORK_VISA_ENABLED:false}
+    base-url: ${CARD_NETWORK_VISA_BASE_URL:http://127.0.0.1:8564}
+
+logging:
+  file:
+    name: ${CARD_NETWORK_GATEWAY_LOG_FILE:${user.dir}/runtime/card-network/logs/sg-visa-mastercard-gateway-simulator.log}

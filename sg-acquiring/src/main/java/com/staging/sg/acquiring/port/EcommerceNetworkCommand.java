@@ -16,5 +16,8 @@ public record EcommerceNetworkCommand(
         String terminalId,
         String merchantId,
         EcommerceNetworkRoute route,
-        EcommerceAuthenticationStatus authenticationStatus) {
+        EcommerceAuthenticationStatus authenticationStatus,
+        String eci,
+        String authenticationValue,
+        String directoryServerTransactionId) {
 }

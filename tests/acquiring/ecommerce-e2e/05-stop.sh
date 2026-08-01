@@ -2,8 +2,11 @@
 set -Eeuo pipefail
 # shellcheck disable=SC1091
 source "$(cd "$(dirname "$0")" && pwd)/_common.sh" "${1:-}"
-stop_module sg-ecommerce-simulator ecommerce-simulator
+stop_module sg-merchant-site-simulator merchant-site-simulator
+stop_module sg-3ds-network-simulator 3ds-network
+stop_module sg-3ds-member 3ds-member
 stop_module sg-acquiring acquiring
+stop_module sg-visa-mastercard-gateway-simulator card-network-gateway
 stop_module sg-card-issuing card-issuing
 if [[ -f "$RUNTIME/route" ]]; then ROUTE="$(tr -d '[:space:]' <"$RUNTIME/route")"; fi
 if [[ "$ROUTE" == "SWAM" ]]; then
