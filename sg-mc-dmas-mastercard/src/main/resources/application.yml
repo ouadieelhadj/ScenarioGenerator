@@ -15,6 +15,8 @@ spring:
 
 
 dmas:
+  authorization:
+    owner: ${DMAS_AUTHORIZATION_OWNER:LOCAL_ISSUING}
   pek:
     auto-renewal: false
     renewal-interval-ms: 86400000

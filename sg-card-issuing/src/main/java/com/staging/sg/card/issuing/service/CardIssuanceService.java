@@ -2,7 +2,7 @@ package com.staging.sg.card.issuing.service;
 
 import com.staging.sg.card.issuing.api.CardInstrumentRepresentation;
 import com.staging.sg.card.issuing.domain.CardContract;
-import com.staging.sg.card.issuing.domain.CardContractStatus;
+import com.staging.sg.common.contract.PaymentContractStatus;
 import com.staging.sg.card.issuing.domain.CardProduct;
 import com.staging.sg.card.issuing.port.PanReservationCommand;
 import com.staging.sg.card.issuing.port.PanVaultPort;
@@ -10,8 +10,10 @@ import com.staging.sg.card.issuing.port.ProtectedPan;
 import com.staging.sg.card.issuing.repository.CardContractRepository;
 import com.staging.sg.card.issuing.repository.CardInstrumentRepository;
 import com.staging.sg.card.issuing.repository.CardProductRepository;
+import com.staging.sg.card.issuing.repository.PaymentIdentifierRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
@@ -20,6 +22,7 @@ public class CardIssuanceService {
     private final CardContractRepository contracts;
     private final CardProductRepository products;
     private final CardInstrumentRepository instruments;
+    private final PaymentIdentifierRepository identifiers;
     private final PanVaultPort panVault;
     private final CardIssuancePersistenceService persistence;
     private PanTokenService tokens;
@@ -28,11 +31,13 @@ public class CardIssuanceService {
             CardContractRepository contracts,
             CardProductRepository products,
             CardInstrumentRepository instruments,
+            PaymentIdentifierRepository identifiers,
             PanVaultPort panVault,
             CardIssuancePersistenceService persistence) {
         this.contracts = contracts;
         this.products = products;
         this.instruments = instruments;
+        this.identifiers = identifiers;
         this.panVault = panVault;
         this.persistence = persistence;
     }
@@ -66,7 +71,7 @@ public class CardIssuanceService {
         CardContract contract = contracts.findById(contractId)
                 .filter(value -> value.issuerId().equals(issuerId))
                 .orElseThrow(() -> new IllegalArgumentException("Unknown card contract"));
-        if (contract.status() != CardContractStatus.ACTIVE) {
+        if (contract.status() != PaymentContractStatus.ACTIVE) {
             throw new IllegalStateException(
                     "A card can only be issued from an active contract");
         }
@@ -117,7 +122,7 @@ public class CardIssuanceService {
                 .filter(value -> value.issuerId().equals(issuerId))
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Unknown card contract"));
-        if (contract.status() != CardContractStatus.ACTIVE) {
+        if (contract.status() != PaymentContractStatus.ACTIVE) {
             throw new IllegalStateException(
                     "A card can only be registered on an active contract");
         }
@@ -134,5 +139,25 @@ public class CardIssuanceService {
                 correlationId, fingerprint,
                 new ProtectedPan(
                         tokens.newToken(), clearPan, maskedPan, expiryYymm));
+    }
+
+    @Transactional
+    public CardInstrumentRepresentation activate(
+            UUID instrumentId, String issuerId) {
+        var instrument = instruments.findById(instrumentId)
+                .filter(value -> value.issuerId().equals(issuerId))
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Unknown card instrument"));
+        var contract = contracts.findById(instrument.contractId())
+                .filter(value -> value.issuerId().equals(issuerId))
+                .orElseThrow(() -> new IllegalStateException(
+                        "Unknown card contract"));
+        instrument.activate(contract.status());
+        instruments.save(instrument);
+        var identifier = identifiers.findByInstrumentId(instrument.id())
+                .orElseThrow(() -> new IllegalStateException(
+                        "Card payment identifier is unavailable"));
+        return CardInstrumentRepresentation.from(
+                instrument, identifier, false);
     }
 }

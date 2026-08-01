@@ -1,5 +1,6 @@
 package com.staging.sg.card.issuing.domain;
 
+import com.staging.sg.common.contract.PaymentContractStatus;
 import org.junit.jupiter.api.Test;
 
 import java.util.UUID;
@@ -24,12 +25,17 @@ class CardLifecycleTest {
     void contractRequiresMakerCheckerSequence() {
         CardContract contract = contract();
 
+        assertEquals("payment_contract",
+                CardContract.class.getAnnotation(jakarta.persistence.Table.class).name());
+        assertEquals(com.staging.sg.common.contract.PaymentContractType.ISSUING_CARD,
+                contract.contractType());
+
         assertThrows(IllegalStateException.class, () -> contract.approve("checker-1"));
         contract.submit();
         assertThrows(IllegalStateException.class, () -> contract.approve("maker-1"));
         contract.approve("checker-1");
 
-        assertEquals(CardContractStatus.ACTIVE, contract.status());
+        assertEquals(PaymentContractStatus.ACTIVE, contract.status());
     }
 
     @Test
@@ -40,8 +46,8 @@ class CardLifecycleTest {
                 "idem-card", "fingerprint");
 
         assertThrows(IllegalStateException.class,
-                () -> instrument.activate(CardContractStatus.SUSPENDED));
-        instrument.activate(CardContractStatus.ACTIVE);
+                () -> instrument.activate(PaymentContractStatus.SUSPENDED));
+        instrument.activate(PaymentContractStatus.ACTIVE);
 
         assertEquals(CardInstrumentStatus.ACTIVE, instrument.status());
     }

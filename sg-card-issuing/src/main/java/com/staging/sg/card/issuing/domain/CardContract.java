@@ -1,5 +1,7 @@
 package com.staging.sg.card.issuing.domain;
 
+import com.staging.sg.common.contract.PaymentContractStatus;
+import com.staging.sg.common.contract.PaymentContractType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,31 +15,36 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "issuing_card_contract",
+@Table(name = "payment_contract",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_issuing_contract_external",
-                        columnNames = {"issuer_id", "external_reference"}),
-                @UniqueConstraint(name = "uk_issuing_contract_idempotency",
-                        columnNames = {"issuer_id", "created_by", "creation_idempotency_key"})
+                @UniqueConstraint(name = "uk_payment_contract_external",
+                        columnNames = {"institution_id", "external_reference"}),
+                @UniqueConstraint(name = "uk_payment_contract_idempotency",
+                        columnNames = {"institution_id", "created_by", "creation_idempotency_key"})
         })
 public class CardContract {
     @Id
     private UUID id;
-    @Column(name = "issuer_id", nullable = false, length = 64, updatable = false)
+    @Column(name = "institution_id", nullable = false, length = 64, updatable = false)
     private String issuerId;
     @Column(name = "external_reference", nullable = false, length = 128, updatable = false)
     private String externalReference;
     @Column(name = "customer_id", nullable = false, length = 128, updatable = false)
     private String customerId;
-    @Column(name = "cardholder_id", nullable = false, length = 128, updatable = false)
+    @Column(name = "beneficiary_id", nullable = false, length = 128, updatable = false)
     private String cardholderId;
     @Column(name = "funding_contract_id", nullable = false, length = 128, updatable = false)
     private String fundingContractId;
     @Column(name = "product_id", nullable = false, updatable = false)
     private UUID productId;
     @Enumerated(EnumType.STRING)
+    @Column(name = "contract_type", nullable = false, length = 32, updatable = false)
+    private PaymentContractType contractType;
+    @Column(name = "parent_contract_id", updatable = false)
+    private UUID parentContractId;
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 24)
-    private CardContractStatus status;
+    private PaymentContractStatus status;
     @Column(name = "created_by", nullable = false, length = 64, updatable = false)
     private String createdBy;
     @Column(name = "creation_idempotency_key", nullable = false, length = 128,
@@ -74,7 +81,8 @@ public class CardContract {
         value.cardholderId = cardholderId;
         value.fundingContractId = fundingContractId;
         value.productId = productId;
-        value.status = CardContractStatus.DRAFT;
+        value.contractType = PaymentContractType.ISSUING_CARD;
+        value.status = PaymentContractStatus.DRAFT;
         value.createdBy = createdBy;
         value.creationIdempotencyKey = idempotencyKey;
         value.creationFingerprint = fingerprint;
@@ -84,38 +92,38 @@ public class CardContract {
     }
 
     public boolean submit() {
-        if (status == CardContractStatus.PENDING_APPROVAL) return false;
-        require(CardContractStatus.DRAFT, "Only a draft contract can be submitted");
-        status = CardContractStatus.PENDING_APPROVAL;
+        if (status == PaymentContractStatus.PENDING_APPROVAL) return false;
+        require(PaymentContractStatus.DRAFT, "Only a draft contract can be submitted");
+        status = PaymentContractStatus.PENDING_APPROVAL;
         updatedAt = Instant.now();
         return true;
     }
 
     public boolean approve(String approver) {
-        if (status == CardContractStatus.ACTIVE) return false;
-        require(CardContractStatus.PENDING_APPROVAL,
+        if (status == PaymentContractStatus.ACTIVE) return false;
+        require(PaymentContractStatus.PENDING_APPROVAL,
                 "Only a pending contract can be approved");
         if (createdBy.equals(approver)) {
             throw new IllegalStateException(
                     "Maker and checker must be different for contract approval");
         }
-        status = CardContractStatus.ACTIVE;
+        status = PaymentContractStatus.ACTIVE;
         updatedAt = Instant.now();
         return true;
     }
 
     public void suspend() {
-        if (status == CardContractStatus.SUSPENDED) return;
-        require(CardContractStatus.ACTIVE, "Only an active contract can be suspended");
-        status = CardContractStatus.SUSPENDED;
+        if (status == PaymentContractStatus.SUSPENDED) return;
+        require(PaymentContractStatus.ACTIVE, "Only an active contract can be suspended");
+        status = PaymentContractStatus.SUSPENDED;
         updatedAt = Instant.now();
     }
 
     public void reactivate() {
-        if (status == CardContractStatus.ACTIVE) return;
-        require(CardContractStatus.SUSPENDED,
+        if (status == PaymentContractStatus.ACTIVE) return;
+        require(PaymentContractStatus.SUSPENDED,
                 "Only a suspended contract can be reactivated");
-        status = CardContractStatus.ACTIVE;
+        status = PaymentContractStatus.ACTIVE;
         updatedAt = Instant.now();
     }
 
@@ -130,10 +138,12 @@ public class CardContract {
     public String cardholderId() { return cardholderId; }
     public String fundingContractId() { return fundingContractId; }
     public UUID productId() { return productId; }
-    public CardContractStatus status() { return status; }
+    public PaymentContractType contractType() { return contractType; }
+    public UUID parentContractId() { return parentContractId; }
+    public PaymentContractStatus status() { return status; }
     public String createdBy() { return createdBy; }
 
-    private void require(CardContractStatus expected, String message) {
+    private void require(PaymentContractStatus expected, String message) {
         if (status != expected) throw new IllegalStateException(message);
     }
 

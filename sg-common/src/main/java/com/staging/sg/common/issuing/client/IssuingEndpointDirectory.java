@@ -14,7 +14,7 @@ public class IssuingEndpointDirectory {
              WHERE interface_type = ?
                AND direction = 'INBOUND'
                AND status = 'ACTIVE'
-               AND (? IS NULL OR issuer_id = ?)
+               AND (CAST(? AS VARCHAR) IS NULL OR issuer_id = ?)
              ORDER BY interface_version DESC
             """;
 

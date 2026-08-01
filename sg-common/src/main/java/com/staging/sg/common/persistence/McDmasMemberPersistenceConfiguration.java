@@ -1,6 +1,7 @@
 package com.staging.sg.common.persistence;
 
 import com.staging.sg.common.entity.KeyStore;
+import com.staging.sg.common.entity.McDmasCard;
 import com.staging.sg.common.entity.McDmasInterface;
 import com.staging.sg.common.entity.McDmasKek;
 import com.staging.sg.common.entity.McDmasMemberKey;
@@ -21,14 +22,15 @@ import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
         excludeFilters = @ComponentScan.Filter(
                 type = FilterType.REGEX,
                 pattern = "com\\.staging\\.sg\\.common\\.repository\\."
-                        + "(?!(KeyStoreRepository|McDmasInterfaceRepository|McDmasKekRepository|"
+                        + "(?!(KeyStoreRepository|McDmasCardRepository|McDmasInterfaceRepository|McDmasKekRepository|"
                         + "McDmasMemberKeyRepository|McDmasMemberTransactionRepository|"
                         + "ModuleUserRepository)$).*"))
 public class McDmasMemberPersistenceConfiguration {
     @Bean
     PersistenceManagedTypes mcDmasMemberManagedTypes() {
         return PersistenceManagedTypes.of(
-                KeyStore.class.getName(), McDmasInterface.class.getName(),
+                KeyStore.class.getName(), McDmasCard.class.getName(),
+                McDmasInterface.class.getName(),
                 McDmasKek.class.getName(), McDmasMemberKey.class.getName(),
                 McDmasMemberTransaction.class.getName(),
                 ModuleUser.class.getName());

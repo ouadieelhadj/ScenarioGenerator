@@ -10,6 +10,7 @@ Avant toute analyse, modification, test, commit ou push :
 1. Lire entierement le document de reprise du chantier demande :
    - WayPosServer / wayPosSimulator : `POS_REPRISE.md` ;
    - module cartes et issuing : `REPRISE_ISSUING.md` ;
+   - acquisition TPE et e-commerce : `REPRISE_ACQUIRING.md` ;
    - DMCS / DMAS : `REPRISE_DMCS_DMAS.md` ;
    - SWAM LIS : `SESSION_REPRISE_SWAM_LIS.md` ;
    - contexte historique general : `SESSION_RESUME.md`, uniquement si les
@@ -29,8 +30,10 @@ La derniere demande explicite de l'utilisateur determine le chantier actif.
 
 ## Etat de reprise actuel
 
-- Chantier actif de la presente reprise : WayPos, jalon 5/6,
-  E2E reel PIN-ARQC-ARPC-repeat/reversal/advice-reconciliation-EOD.
+- Chantier actif de la presente reprise : Acquisition TPE/e-commerce.
+  Le socle d'administration, le contrat partage avec Issuing et la projection
+  reelle vers ServerPOS sont implementes et testes. Relire
+  `REPRISE_ACQUIRING.md` avant la suite.
 - Jalon WayPos 3/6 termine : outbox et adaptateurs DMAS Member, SWAM Member
   et Mastercard SMS valides par une non-regression agregee de 64 tests sans
   echec.

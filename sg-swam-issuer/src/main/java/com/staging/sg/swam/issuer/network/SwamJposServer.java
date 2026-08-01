@@ -71,6 +71,8 @@ public class SwamJposServer {
 
     /** Push spontane de la ZPK apres le sign-on (flux HPS reel). */
     @Value("${swam.keypush.enabled:true}") private boolean keyPushEnabled;
+    @Value("${swam.authorization.owner:LOCAL_ISSUING}")
+    private String authorizationOwner;
 
     private ISOServer isoServer;
     private Thread serverThread;
@@ -469,7 +471,9 @@ public class SwamJposServer {
             }
 
             SwamIssuingAdapter.Decision decision =
-                    issuingAdapter.authorize(m);
+                    "EXTERNAL_MEMBER_SIMULATOR".equals(authorizationOwner)
+                            ? authorizeExternalMember(m)
+                            : issuingAdapter.authorize(m);
             String responseCode = decision.responseCode();
             String status = decision.status();
 
@@ -508,6 +512,34 @@ public class SwamJposServer {
             source.send(r);
             log.info("[SWAM-SRV] Repondu 1110 DE39={}", responseCode);
             return true;
+        }
+
+        private SwamIssuingAdapter.Decision authorizeExternalMember(ISOMsg message) {
+            String pan = message.hasField(2) ? message.getString(2) : null;
+            long amount = message.hasField(4)
+                    ? Long.parseLong(message.getString(4)) : 0L;
+            SwamIssuerCard card = cardRepository.findByPan(pan).orElse(null);
+            String responseCode;
+            if (card == null) {
+                responseCode = "114";
+            } else if (!"ACTIVE".equals(card.getStatus())) {
+                responseCode = "062";
+            } else if (card.getBalance() < amount) {
+                responseCode = "116";
+            } else {
+                card.setBalance(card.getBalance() - amount);
+                card.setUpdatedAt(java.time.LocalDateTime.now());
+                cardRepository.save(card);
+                responseCode = "000";
+            }
+            log.info("[SWAM-SWITCH] Decision transmise par le membre emetteur simule DE39={}",
+                    responseCode);
+            String authCode = "000".equals(responseCode)
+                    ? authorizationCode(message.hasField(11) ? message.getString(11) : "0")
+                    : null;
+            return new SwamIssuingAdapter.Decision(
+                    responseCode, authCode, null,
+                    "000".equals(responseCode) ? "APPROVED" : "DECLINED", false);
         }
 
         private boolean sendFormatError(ISOSource source, ISOMsg request, String responseMti)

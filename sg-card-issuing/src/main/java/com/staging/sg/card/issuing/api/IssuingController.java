@@ -54,7 +54,8 @@ public class IssuingController {
         return Map.of(
                 "schemaVersions", List.of("1.0"),
                 "decisionOwner", "sg-card-issuing",
-                "callers", List.of("WAY_POS", "SWAM", "DMAS", "PRE_CLEARING"),
+                "callers", List.of("WAY_POS", "SWAM", "DMAS", "ECOMMERCE",
+                        "PRE_CLEARING"),
                 "authorizationStatus", "DEPENDENCIES_NOT_READY",
                 "preClearingFinancialMutation", false);
     }

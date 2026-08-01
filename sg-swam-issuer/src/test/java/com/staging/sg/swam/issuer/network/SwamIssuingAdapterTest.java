@@ -14,7 +14,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
+import com.staging.sg.common.issuing.IssuingAuthorizationRequest;
 
 class SwamIssuingAdapterTest {
     @Test
@@ -38,6 +41,32 @@ class SwamIssuingAdapterTest {
         assertThat(result.responseCode()).isEqualTo("000");
         assertThat(result.authorizationCode()).isEqualTo("654321");
         assertThat(result.retryable()).isFalse();
+    }
+
+    @Test
+    void marksManualCondition59AsEcommerce() throws Exception {
+        DatabaseIssuingClient issuing = mock(DatabaseIssuingClient.class);
+        SwamInterfaceService interfaces = mock(SwamInterfaceService.class);
+        SwamInterface configured = mock(SwamInterface.class);
+        when(configured.getBankCode()).thenReturn("BANK1");
+        when(interfaces.get()).thenReturn(configured);
+        when(issuing.authorize(eq("SWAM"), any())).thenReturn(
+                new IssuingAuthorizationResponse("1.0", "BANK1", "T", "C",
+                        IssuingDecisionStatus.APPROVED, "APPROVED", "123456",
+                        1000, "504", null, false, Map.of()));
+        ISOMsg message = message();
+        message.set(22, "010");
+        message.set(25, "59");
+
+        new SwamIssuingAdapter(issuing, interfaces).authorize(message);
+
+        ArgumentCaptor<IssuingAuthorizationRequest> request =
+                ArgumentCaptor.forClass(IssuingAuthorizationRequest.class);
+        verify(issuing).authorize(eq("SWAM"), request.capture());
+        assertThat(request.getValue().ecommerce()).isTrue();
+        assertThat(request.getValue().cardPresent()).isFalse();
+        assertThat(request.getValue().attributes())
+                .containsEntry("authenticationStatus", "NOT_PERFORMED");
     }
 
     private static ISOMsg message() throws Exception {

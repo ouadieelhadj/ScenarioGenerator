@@ -1,0 +1,40 @@
+server:
+  port: ${ACQUIRING_REST_PORT:8550}
+
+spring:
+  application:
+    name: sg-acquiring
+  datasource:
+    url: ${ACQUIRING_DB_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${ACQUIRING_DB_USER:acquiring_user}
+    password: ${ACQUIRING_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    enabled: false
+
+acquiring:
+  issuing:
+    enabled: ${ACQUIRING_ISSUING_ENABLED:false}
+    base-url: ${ACQUIRING_ISSUING_BASE_URL:http://127.0.0.1:8540/api/issuing/v1}
+    issuer-id: ${ACQUIRING_ISSUING_ISSUER_ID:}
+  server-pos:
+    enabled: ${ACQUIRING_SERVER_POS_ENABLED:false}
+    base-url: ${ACQUIRING_SERVER_POS_BASE_URL:http://127.0.0.1:8530}
+    connect-timeout-ms: ${ACQUIRING_SERVER_POS_CONNECT_TIMEOUT_MS:1000}
+    read-timeout-ms: ${ACQUIRING_SERVER_POS_READ_TIMEOUT_MS:3000}
+  network:
+    connect-timeout-ms: ${ACQUIRING_NETWORK_CONNECT_TIMEOUT_MS:1000}
+    read-timeout-ms: ${ACQUIRING_NETWORK_READ_TIMEOUT_MS:15000}
+    dmas:
+      enabled: ${ACQUIRING_DMAS_ENABLED:false}
+      base-url: ${ACQUIRING_DMAS_BASE_URL:http://127.0.0.1:8084}
+    swam:
+      enabled: ${ACQUIRING_SWAM_ENABLED:false}
+      base-url: ${ACQUIRING_SWAM_BASE_URL:http://127.0.0.1:8094}
+
+logging:
+  file:
+    name: ${ACQUIRING_LOG_FILE:${user.dir}/runtime/acquiring/logs/acquiring.log}

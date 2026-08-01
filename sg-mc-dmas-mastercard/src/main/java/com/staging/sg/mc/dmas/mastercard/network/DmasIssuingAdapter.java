@@ -25,6 +25,7 @@ public class DmasIssuingAdapter {
         try {
             String reference = "DMAS-" + text(message, 7) + "-"
                     + text(message, 11) + "-" + text(message, 37);
+            boolean ecommerce = ecommerce(message);
             IssuingAuthorizationResponse response = issuing.authorize(
                     "DMAS",
                     new IssuingAuthorizationRequest(
@@ -35,11 +36,14 @@ public class DmasIssuingAdapter {
                             amount(message), text(message, 49),
                             text(message, 12), text(message, 41),
                             text(message, 42), text(message, 18),
-                            text(message, 19), true, false,
+                            text(message, 19), !ecommerce, ecommerce,
                             hex(message, 52), "DMAS_PEK",
                             hex(message, 55),
                             Map.of("sourceMti", message.getMTI(),
-                                    "processingCode", text(message, 3))));
+                                    "processingCode", text(message, 3),
+                                    "channel", ecommerce ? "ECOMMERCE" : "TPE",
+                                    "authenticationStatus", ecommerce
+                                            ? "NOT_PERFORMED" : "NOT_APPLICABLE")));
             return new Decision(
                     responseCode(response), response.authorizationCode(),
                     response.arpcHex(), response.status().name(),
@@ -77,6 +81,10 @@ public class DmasIssuingAdapter {
 
     private static String hex(ISOMsg m, int field) {
         return m.hasField(field) ? ISOUtil.hexString(m.getBytes(field)) : null;
+    }
+
+    private static boolean ecommerce(ISOMsg message) {
+        return text(message, 22).startsWith("01") || "59".equals(text(message, 25));
     }
 
     public record Decision(

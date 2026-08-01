@@ -13,7 +13,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import org.mockito.ArgumentCaptor;
+import com.staging.sg.common.issuing.IssuingAuthorizationRequest;
 
 class DmasIssuingAdapterTest {
     @Test
@@ -36,6 +39,30 @@ class DmasIssuingAdapterTest {
         assertThat(result.responseCode()).isEqualTo("51");
         assertThat(result.status()).isEqualTo("DECLINED");
         assertThat(result.retryable()).isFalse();
+    }
+
+    @Test
+    void marksManualCondition59AsEcommerce() throws Exception {
+        DatabaseIssuingClient issuing = mock(DatabaseIssuingClient.class);
+        McDmasInterfaceService interfaces = mock(McDmasInterfaceService.class);
+        when(interfaces.bankCode()).thenReturn("BANK1");
+        when(issuing.authorize(eq("DMAS"), any())).thenReturn(
+                new IssuingAuthorizationResponse("1.0", "BANK1", "T", "C",
+                        IssuingDecisionStatus.APPROVED, "APPROVED", "123456",
+                        1000, "504", null, false, Map.of()));
+        ISOMsg message = message();
+        message.set(22, "010");
+        message.set(25, "59");
+
+        new DmasIssuingAdapter(issuing, interfaces).authorize(message);
+
+        ArgumentCaptor<IssuingAuthorizationRequest> request =
+                ArgumentCaptor.forClass(IssuingAuthorizationRequest.class);
+        verify(issuing).authorize(eq("DMAS"), request.capture());
+        assertThat(request.getValue().ecommerce()).isTrue();
+        assertThat(request.getValue().cardPresent()).isFalse();
+        assertThat(request.getValue().attributes())
+                .containsEntry("authenticationStatus", "NOT_PERFORMED");
     }
 
     private static ISOMsg message() throws Exception {

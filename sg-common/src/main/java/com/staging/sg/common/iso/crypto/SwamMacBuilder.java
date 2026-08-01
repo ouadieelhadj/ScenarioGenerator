@@ -24,13 +24,14 @@ public final class SwamMacBuilder {
     }
 
     public static byte[] build(ISOMsg message) throws Exception {
-        boolean withPrefixes = !isSignOn(message);
+        ISOMsg canonical = canonicalWireMessage(message);
+        boolean withPrefixes = !isSignOn(canonical);
         ByteArrayOutputStream output = new ByteArrayOutputStream();
         for (int field = 2; field <= 127; field++) {
-            if (!message.hasField(field)) {
+            if (!canonical.hasField(field)) {
                 continue;
             }
-            String value = message.getString(field);
+            String value = canonical.getString(field);
             if (value == null) {
                 continue;
             }
@@ -50,6 +51,19 @@ public final class SwamMacBuilder {
         log.info("[SWAM-MAC] M6 input : prefixes={} inputLen={} inputHex={}",
                 withPrefixes, input.length, ISOUtil.hexString(input));
         return input;
+    }
+
+    /**
+     * The sender calculates the MAC before jPOS packs the message, while the
+     * receiver calculates it after unpacking. A wire round-trip canonicalizes
+     * every fixed field (space padding for IF_CHAR, zero padding for numeric
+     * fields) before both sides build the M6 input.
+     */
+    private static ISOMsg canonicalWireMessage(ISOMsg message) throws Exception {
+        ISOMsg canonical = new ISOMsg();
+        canonical.setPackager(message.getPackager());
+        canonical.unpack(message.pack());
+        return canonical;
     }
 
     private static boolean isSignOn(ISOMsg message) throws Exception {

@@ -2,7 +2,7 @@ package com.staging.sg.card.issuing.service;
 
 import com.staging.sg.card.issuing.api.CardInstrumentRepresentation;
 import com.staging.sg.card.issuing.domain.CardContract;
-import com.staging.sg.card.issuing.domain.CardContractStatus;
+import com.staging.sg.common.contract.PaymentContractStatus;
 import com.staging.sg.card.issuing.domain.CardInstrument;
 import com.staging.sg.card.issuing.domain.OutboxEvent;
 import com.staging.sg.card.issuing.domain.PaymentIdentifier;
@@ -79,7 +79,7 @@ public class CardIssuancePersistenceService {
         CardContract contract = contracts.findById(id)
                 .filter(value -> value.issuerId().equals(issuerId))
                 .orElseThrow(() -> new IllegalArgumentException("Unknown card contract"));
-        if (contract.status() != CardContractStatus.ACTIVE) {
+        if (contract.status() != PaymentContractStatus.ACTIVE) {
             throw new IllegalStateException(
                     "A card can only be issued from an active contract");
         }

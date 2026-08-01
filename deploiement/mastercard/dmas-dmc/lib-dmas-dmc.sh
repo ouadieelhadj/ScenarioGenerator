@@ -34,8 +34,24 @@ dmas_url_port() {
 }
 
 dmas_pid_alive() {
-  tasklist.exe //FI "PID eq $1" //FO CSV //NH 2>/dev/null |
-    tr -d '\r' | grep -q "\"$1\""
+  kill -0 "$1" 2>/dev/null || {
+    local win_pid
+    win_pid="$(dmas_windows_pid "$1")"
+    [[ -n "$win_pid" ]] && tasklist.exe //FI "PID eq $win_pid" //FO CSV //NH 2>/dev/null |
+      tr -d '\r' | grep -q "\"$win_pid\""
+  }
+}
+
+dmas_windows_pid() {
+  local value="$1"
+  ps -W 2>/dev/null | awk -v target="$value" \
+    'NR > 1 && ($1 == target || $4 == target) {print $4; exit}'
+}
+
+dmas_posix_pid() {
+  local value="$1"
+  ps -W 2>/dev/null | awk -v target="$value" \
+    'NR > 1 && ($1 == target || $4 == target) {print $1; exit}'
 }
 
 dmas_listening_pids() {
@@ -164,13 +180,20 @@ dmas_start_module() {
 }
 
 dmas_stop_module() {
-  local module="$1" port="$2" pid="" candidate
+  local module="$1" port="$2" pid="" candidate win_pid posix_pid
   local pid_file="$DMAS_DMC_PID_DIR/$module.pid"
 
   if [[ -f "$pid_file" ]]; then
     pid="$(tr -d '[:space:]' <"$pid_file")"
-    if dmas_pid_alive "$pid" && dmas_pid_matches_module "$pid" "$module"; then
-      taskkill.exe //T //F //PID "$pid" >/dev/null 2>&1 || true
+    win_pid="$(dmas_windows_pid "$pid")"
+    # The PID file is written by dmas_start_module in this runtime. It is the
+    # trusted ownership proof; WMI command-line inspection may be denied on
+    # hardened Windows workstations.
+    if dmas_pid_alive "$pid" && [[ -n "$win_pid" ]]; then
+      kill "$pid" 2>/dev/null || true
+      sleep 1
+      kill -9 "$pid" 2>/dev/null || true
+      taskkill.exe //T //F //PID "$win_pid" >/dev/null 2>&1 || true
       echo "[STOP] $module PID=$pid"
     fi
     rm -f "$pid_file"
@@ -178,6 +201,10 @@ dmas_stop_module() {
 
   for candidate in $(dmas_listening_pids "$port"); do
     if dmas_pid_matches_module "$candidate" "$module"; then
+      posix_pid="$(dmas_posix_pid "$candidate")"
+      [[ -n "$posix_pid" ]] && kill "$posix_pid" 2>/dev/null || true
+      sleep 1
+      [[ -n "$posix_pid" ]] && kill -9 "$posix_pid" 2>/dev/null || true
       taskkill.exe //T //F //PID "$candidate" >/dev/null 2>&1 || true
       echo "[STOP] $module detecte sur le port $port, PID=$candidate"
     else

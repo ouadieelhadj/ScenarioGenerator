@@ -1,6 +1,6 @@
-package com.staging.sg.card.issuing.domain;
+package com.staging.sg.common.contract;
 
-public enum CardContractStatus {
+public enum PaymentContractStatus {
     DRAFT,
     PENDING_APPROVAL,
     ACTIVE,

@@ -106,6 +106,14 @@ public class CardManagementController {
                 request.pan(), request.expiryYymm());
     }
 
+    @PostMapping("/cards/{id}/activate")
+    public CardInstrumentRepresentation activateCard(
+            @PathVariable UUID id,
+            @RequestHeader("X-Issuer-ID") String issuerId,
+            @RequestHeader("X-Correlation-ID") String correlationId) {
+        return issuance.activate(id, issuerId);
+    }
+
     @PostMapping("/interfaces")
     public IssuingInterfaceRepresentation createInterface(
             @RequestHeader("X-Caller-ID") String callerId,

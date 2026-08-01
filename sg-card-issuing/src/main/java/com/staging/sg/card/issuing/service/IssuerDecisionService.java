@@ -1,5 +1,6 @@
 package com.staging.sg.card.issuing.service;
 
+import com.staging.sg.common.contract.PaymentContractStatus;
 import com.staging.sg.card.issuing.domain.*;
 import com.staging.sg.card.issuing.port.*;
 import com.staging.sg.card.issuing.repository.*;
@@ -75,7 +76,7 @@ public class IssuerDecisionService implements IssuerAuthorizationUseCase {
                     IssuingDecisionStatus.DECLINED,"CARD_EXPIRED",null,0);
 
         CardContract contract=contracts.findById(instrument.contractId()).orElse(null);
-        if(contract==null || contract.status()!=CardContractStatus.ACTIVE
+        if(contract==null || contract.status()!=PaymentContractStatus.ACTIVE
                 || !contract.issuerId().equals(request.issuerId()))
             return terminal(request,fingerprint,identifier.id(),
                     IssuingDecisionStatus.DECLINED,"CONTRACT_NOT_ACTIVE",null,0);

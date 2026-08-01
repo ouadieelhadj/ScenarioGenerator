@@ -1,5 +1,6 @@
 package com.staging.sg.card.issuing.domain;
 
+import com.staging.sg.common.contract.PaymentContractStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -83,9 +84,9 @@ public class CardInstrument {
         return value;
     }
 
-    public void activate(CardContractStatus contractStatus) {
+    public void activate(PaymentContractStatus contractStatus) {
         if (status == CardInstrumentStatus.ACTIVE) return;
-        if (contractStatus != CardContractStatus.ACTIVE
+        if (contractStatus != PaymentContractStatus.ACTIVE
                 || status != CardInstrumentStatus.INACTIVE) {
             throw new IllegalStateException(
                     "Instrument requires an active contract and INACTIVE state");

@@ -24,8 +24,24 @@ swam_wait() {
 }
 
 swam_pid_alive() {
-  tasklist.exe //FI "PID eq $1" //FO CSV //NH 2>/dev/null |
-    tr -d '\r' | grep -q "\"$1\""
+  kill -0 "$1" 2>/dev/null || {
+    local win_pid
+    win_pid="$(swam_windows_pid "$1")"
+    [[ -n "$win_pid" ]] && tasklist.exe //FI "PID eq $win_pid" //FO CSV //NH 2>/dev/null |
+      tr -d '\r' | grep -q "\"$win_pid\""
+  }
+}
+
+swam_windows_pid() {
+  local value="$1"
+  ps -W 2>/dev/null | awk -v target="$value" \
+    'NR > 1 && ($1 == target || $4 == target) {print $4; exit}'
+}
+
+swam_posix_pid() {
+  local value="$1"
+  ps -W 2>/dev/null | awk -v target="$value" \
+    'NR > 1 && ($1 == target || $4 == target) {print $1; exit}'
 }
 
 swam_listening_pids() {
@@ -42,11 +58,23 @@ swam_port_is_listening() {
 
 swam_stop_pid() {
   local pid="$1" label="${2:-processus SWAM}" known_alive="${3:-false}"
+  local posix_pid win_pid
   [[ "$pid" =~ ^[0-9]+$ ]] || return 1
-  if taskkill.exe //T //F //PID "$pid" >/dev/null 2>&1; then
-    echo "[STOP] $label PID=$pid"
-    return 0
-  fi
+  posix_pid="$(swam_posix_pid "$pid")"
+  win_pid="$(swam_windows_pid "$pid")"
+  [[ -n "$posix_pid" ]] && kill "$posix_pid" 2>/dev/null || true
+  sleep 1
+  [[ -n "$posix_pid" ]] && kill -9 "$posix_pid" 2>/dev/null || true
+  [[ -n "$win_pid" ]] && taskkill.exe //T //F //PID "$win_pid" >/dev/null 2>&1 || true
+  for _ in $(seq 1 10); do
+    if [[ -z "$posix_pid" || ! -d "/proc/$posix_pid" ]] \
+        && { [[ -z "$win_pid" ]] || ! tasklist.exe //FI "PID eq $win_pid" //FO CSV //NH 2>/dev/null |
+          tr -d '\r' | grep -q "\"$win_pid\""; }; then
+      echo "[STOP] $label PID=$pid"
+      return 0
+    fi
+    sleep 1
+  done
   if [[ "$known_alive" != "true" ]] && ! swam_pid_alive "$pid"; then
     return 0
   fi

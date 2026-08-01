@@ -5,11 +5,13 @@ import com.staging.sg.card.issuing.domain.CardContract;
 import com.staging.sg.card.issuing.domain.CardInstrumentStatus;
 import com.staging.sg.card.issuing.domain.CardProduct;
 import com.staging.sg.card.issuing.domain.CardType;
+import com.staging.sg.card.issuing.domain.PaymentIdentifier;
 import com.staging.sg.card.issuing.port.PanVaultPort;
 import com.staging.sg.card.issuing.port.ProtectedPan;
 import com.staging.sg.card.issuing.repository.CardContractRepository;
 import com.staging.sg.card.issuing.repository.CardInstrumentRepository;
 import com.staging.sg.card.issuing.repository.CardProductRepository;
+import com.staging.sg.card.issuing.repository.PaymentIdentifierRepository;
 import com.staging.sg.common.issuing.PaymentIdentifierType;
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +32,8 @@ class CardIssuanceServiceTest {
         CardContractRepository contracts = mock(CardContractRepository.class);
         CardProductRepository products = mock(CardProductRepository.class);
         CardInstrumentRepository instruments = mock(CardInstrumentRepository.class);
+        PaymentIdentifierRepository identifiers =
+                mock(PaymentIdentifierRepository.class);
         PanVaultPort vault = mock(PanVaultPort.class);
         CardIssuancePersistenceService persistence =
                 mock(CardIssuancePersistenceService.class);
@@ -50,7 +54,8 @@ class CardIssuanceServiceTest {
                 any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(expected);
         CardIssuanceService service = new CardIssuanceService(
-                contracts, products, instruments, vault, persistence);
+                contracts, products, instruments, identifiers,
+                vault, persistence);
 
         var response = service.issueVirtual(
                 contract.id(), "ISSUER-1", "maker-1",
@@ -70,6 +75,8 @@ class CardIssuanceServiceTest {
         CardContractRepository contracts = mock(CardContractRepository.class);
         CardProductRepository products = mock(CardProductRepository.class);
         CardInstrumentRepository instruments = mock(CardInstrumentRepository.class);
+        PaymentIdentifierRepository identifiers =
+                mock(PaymentIdentifierRepository.class);
         PanVaultPort vault = mock(PanVaultPort.class);
         CardIssuancePersistenceService persistence =
                 mock(CardIssuancePersistenceService.class);
@@ -81,7 +88,8 @@ class CardIssuanceServiceTest {
                 "ISSUER-1", "maker-1", "idem-card")).thenReturn(Optional.empty());
         when(contracts.findById(contract.id())).thenReturn(Optional.of(contract));
         CardIssuanceService service = new CardIssuanceService(
-                contracts, products, instruments, vault, persistence);
+                contracts, products, instruments, identifiers,
+                vault, persistence);
 
         assertThrows(IllegalStateException.class, () -> service.issueVirtual(
                 contract.id(), "ISSUER-1", "maker-1",
@@ -90,6 +98,41 @@ class CardIssuanceServiceTest {
         verify(vault, never()).reserveVirtualPan(any());
         verify(persistence, never()).persist(
                 any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void activatesRegisteredCardWhenContractIsActive() {
+        CardContractRepository contracts = mock(CardContractRepository.class);
+        CardProductRepository products = mock(CardProductRepository.class);
+        CardInstrumentRepository instruments = mock(CardInstrumentRepository.class);
+        PaymentIdentifierRepository identifiers =
+                mock(PaymentIdentifierRepository.class);
+        PanVaultPort vault = mock(PanVaultPort.class);
+        CardIssuancePersistenceService persistence =
+                mock(CardIssuancePersistenceService.class);
+        CardProduct product = activeProduct();
+        CardContract contract = activeContract(product.id());
+        var instrument = com.staging.sg.card.issuing.domain.CardInstrument.inactive(
+                "ISSUER-1", contract.id(), "pan_tok_test",
+                "532196******3348", "2912", "maker-1",
+                "idem-card", "fingerprint");
+        PaymentIdentifier identifier = PaymentIdentifier.activePan(
+                "ISSUER-1", instrument.id(), "pan_tok_test",
+                "5321962145453348", "532196******3348");
+        when(instruments.findById(instrument.id()))
+                .thenReturn(Optional.of(instrument));
+        when(contracts.findById(contract.id()))
+                .thenReturn(Optional.of(contract));
+        when(identifiers.findByInstrumentId(instrument.id()))
+                .thenReturn(Optional.of(identifier));
+        CardIssuanceService service = new CardIssuanceService(
+                contracts, products, instruments, identifiers,
+                vault, persistence);
+
+        var response = service.activate(instrument.id(), "ISSUER-1");
+
+        assertEquals(CardInstrumentStatus.ACTIVE, response.status());
+        verify(instruments).save(instrument);
     }
 
     private static CardProduct activeProduct() {

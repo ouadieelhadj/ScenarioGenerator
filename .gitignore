@@ -25,8 +25,11 @@ logs/
 reports/
 platform.env
 *.platform.env
+runtime/issuing-connected-e2e/connected-e2e.env
 platform-path.sh
 run-logs/
+/runtime/
+*/runtime/
 scripts/TNR_*.txt
 sg-frontend/.angular/
 sg-frontend/node_modules/

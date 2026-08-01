@@ -64,6 +64,9 @@ public class McDmasMastercardHandler {
     private final com.staging.sg.mc.dmas.mastercard.emv.McDmasEmvValidator emvValidator;
     private final DmasIssuingAdapter issuingAdapter;
 
+    @Value("${dmas.authorization.owner:LOCAL_ISSUING}")
+    private String authorizationOwner;
+
     /**
      * Cle d'indexation des cles, deduite du DE2 du message recu.
      *
@@ -226,8 +229,20 @@ public class McDmasMastercardHandler {
         log.info("[DMAS-ISS] DE52 PIN block        = {}", request.hasField(52) ? "present (8o)" : "absent");
         log.info("[DMAS-ISS] DE61 POS Data         = {}", net.safeGet(request, 61));
 
-        DmasIssuingAdapter.Decision decision =
-                issuingAdapter.authorize(request);
+        DmasIssuingAdapter.Decision decision;
+        if ("EXTERNAL_MEMBER_SIMULATOR".equals(authorizationOwner)) {
+            String simulatedCode = decide(request, pan, amountS);
+            decision = new DmasIssuingAdapter.Decision(
+                    simulatedCode,
+                    "00".equals(simulatedCode) ? authorizationCode(request) : null,
+                    null,
+                    "00".equals(simulatedCode) ? "APPROVED" : "DECLINED",
+                    false);
+            log.info("[DMAS-NETWORK] Decision transmise par le membre emetteur simule DE39={}",
+                    simulatedCode);
+        } else {
+            decision = issuingAdapter.authorize(request);
+        }
         String rc = decision.responseCode();
 
         ISOMsg resp = new ISOMsg();
@@ -643,6 +658,13 @@ public class McDmasMastercardHandler {
         }
         log.info("[DMAS-ISS] 0430 construit DE39={} ({})", rc, rcLabel(rc));
         return resp;
+    }
+
+    private static String authorizationCode(ISOMsg request) {
+        String stan = request.hasField(11) ? request.getString(11) : "0";
+        String digits = stan == null ? "" : stan.replaceAll("\\D", "");
+        return String.format("%06d", Long.parseLong(digits.isEmpty() ? "0" : digits)
+                % 1_000_000L);
     }
 
     private void markAuthorizationJournalReversed(String pan, String de90) {

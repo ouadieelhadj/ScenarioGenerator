@@ -22,6 +22,8 @@ jwt:
 
 # MAC DE128 (parametrable, meme mecanique que DMAS)
 swam:
+  authorization:
+    owner: ${SWAM_AUTHORIZATION_OWNER:LOCAL_ISSUING}
   mac:
     fields: "4,11,37,41,42"
     representation: "ascii"

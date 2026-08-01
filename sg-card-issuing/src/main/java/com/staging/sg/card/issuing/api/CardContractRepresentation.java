@@ -1,7 +1,7 @@
 package com.staging.sg.card.issuing.api;
 
 import com.staging.sg.card.issuing.domain.CardContract;
-import com.staging.sg.card.issuing.domain.CardContractStatus;
+import com.staging.sg.common.contract.PaymentContractStatus;
 
 import java.util.UUID;
 
@@ -13,7 +13,7 @@ public record CardContractRepresentation(
         String cardholderId,
         String fundingContractId,
         UUID productId,
-        CardContractStatus status,
+        PaymentContractStatus status,
         boolean idempotentReplay) {
 
     public static CardContractRepresentation from(
