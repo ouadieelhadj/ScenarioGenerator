@@ -232,10 +232,36 @@ public class McDmasMastercardHandler {
         DmasIssuingAdapter.Decision decision;
         if ("EXTERNAL_MEMBER_SIMULATOR".equals(authorizationOwner)) {
             String simulatedCode = decide(request, pan, amountS);
+            String simulatedArpcHex = null;
+
+            // In the standalone network sandbox there is no local Issuing
+            // engine to validate the cryptogram.  The network simulator must
+            // therefore perform the same ARQC verification before accepting
+            // an EMV authorization and return issuer authentication data in
+            // tag 91.  A present but unverifiable/invalid ARQC must never be
+            // hidden behind a simulated approval.
+            if (request.hasField(55) && "00".equals(simulatedCode)) {
+                java.util.Map<String, Object> emvResult = validateDe55IfPresent(request);
+                if (emvResult == null
+                        || !Boolean.TRUE.equals(emvResult.get("validated"))) {
+                    simulatedCode = "05";
+                    log.warn("[DMAS-NETWORK] Autorisation EMV refusee : ARQC non valide");
+                } else {
+                    String arpc = String.valueOf(emvResult.getOrDefault("arpc", ""));
+                    String arc = String.valueOf(emvResult.getOrDefault("arc", ""));
+                    if (arpc.matches("(?i)[0-9a-f]{16}")
+                            && arc.matches("(?i)[0-9a-f]{4}")) {
+                        simulatedArpcHex = "910A" + arpc + arc;
+                    } else {
+                        simulatedCode = "05";
+                        log.warn("[DMAS-NETWORK] Autorisation EMV refusee : ARPC indisponible");
+                    }
+                }
+            }
             decision = new DmasIssuingAdapter.Decision(
                     simulatedCode,
                     "00".equals(simulatedCode) ? authorizationCode(request) : null,
-                    null,
+                    simulatedArpcHex,
                     "00".equals(simulatedCode) ? "APPROVED" : "DECLINED",
                     false);
             log.info("[DMAS-NETWORK] Decision transmise par le membre emetteur simule DE39={}",
@@ -279,7 +305,7 @@ public class McDmasMastercardHandler {
             try {
                 resp.set(55, org.jpos.iso.ISOUtil.hex2byte(
                         decision.arpcHex()));
-                log.info("[DMAS-ISS] DE55 reponse recu de Issuing");
+                log.info("[DMAS-ISS] DE55 reponse tag 91 construit");
             } catch (Exception e) {
                 log.warn("[DMAS-ISS] pose du DE55 reponse impossible : {}",
                         e.getMessage());

@@ -84,14 +84,32 @@ dmas_wait_port() {
 
 dmas_wait_http() {
   local url="$1" label="$2"
+  shift 2
   for _ in $(seq 1 90); do
-    curl -fsS "$url" >/dev/null 2>&1 && {
+    curl -fsS "$@" "$url" >/dev/null 2>&1 && {
       echo "[OK] $label UP"
       return 0
     }
     sleep 1
   done
   echo "[FAIL] $label indisponible : $url" >&2
+  return 1
+}
+
+# Readiness probe for modules that do not embed Spring Boot Actuator.  Any
+# HTTP response proves that Tomcat and the requested route are reachable;
+# the campaign immediately exercises the authenticated POST afterwards.
+dmas_wait_http_ready() {
+  local url="$1" label="$2"
+  shift 2
+  for _ in $(seq 1 90); do
+    curl -sS -o /dev/null "$@" "$url" >/dev/null 2>&1 && {
+      echo "[OK] $label HTTP pret"
+      return 0
+    }
+    sleep 1
+  done
+  echo "[FAIL] $label HTTP indisponible : $url" >&2
   return 1
 }
 

@@ -11,7 +11,7 @@ pan="${DMAS_TEST_PAN:-}"
 if [[ -z "$pan" ]]; then
   pan="$(dmas_psql --tuples-only --no-align --command="
 SELECT pan FROM mc_dmas_cards
- WHERE active=true AND bank_code='$DMAS_MEMBER_BANK_CODE'
+ WHERE status='ACTIVE' AND bank_code='$DMAS_MEMBER_BANK_CODE'
  ORDER BY id LIMIT 1;" | tr -d '[:space:]')"
 fi
 [[ "$pan" =~ ^[0-9]{12,19}$ ]] || {
