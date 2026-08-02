@@ -1,0 +1,8 @@
+server:
+  port: ${VISA_BASE2_NETWORK_SIMULATOR_PORT:8567}
+spring:
+  application:
+    name: sg-visa-base2-network-simulator
+logging:
+  file:
+    name: ${VISA_BASE2_NETWORK_SIMULATOR_LOG_FILE:${user.dir}/runtime/visa/logs/base2-network-simulator.log}

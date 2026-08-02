@@ -270,6 +270,8 @@
     "swamMember": "SWAM Membre",
     "dmasMember": "DMAS Membre",
     "dmcsMember": "DMCS Membre",
+    "visaOnline": "Visa Online Membre",
+    "visaBase2": "Visa Base II Membre",
     "simulators": "Simulateurs"
   },
   "moduleMenus": { "operations": "Opérations", "simulators": "Simulateurs" },
@@ -281,7 +283,9 @@
     "authorizations": "Autorisations", "cardControls": "Contrôles carte", "statements": "Relevés",
     "network": "Réseau", "reconciliation": "Rapprochement", "posSimulator": "Simulateur POS",
     "merchantSiteLocal": "Site marchand national", "merchantSiteInternational": "Site marchand international",
-    "threeDsNetwork": "Simulateur réseau 3DS", "cardNetwork": "Simulateur réseau Visa / Mastercard"
+    "threeDsNetwork": "Simulateur réseau 3DS", "cardNetwork": "Simulateur réseau Visa / Mastercard",
+    "presentments": "Présentations", "base2Files": "Fichiers Base II",
+    "visaNetSimulator": "Simulateur réseau VisaNet", "base2Simulator": "Simulateur réseau Base II"
   },
   "roles": {
     "title": "Rôles", "subtitle": "Rôles et permissions effectives", "loadError": "Impossible de charger les rôles.",
@@ -297,6 +301,13 @@
   },
   "moduleWorkspace": {
     "ready": "Module enregistré dans le portail", "detail": "Le menu, la route et le contrôle d'accès sont actifs. L'écran métier sera raccordé à son API dédiée."
+  },
+  "visaWorkspace": {
+    "sandbox": "Sandbox fonctionnelle non certifiée", "scope": "Périmètre opérationnel",
+    "onlineScope": "Autorisation Visa Online ISO 8583, corrélation STAN/RRN, réponse DE39/DE38 et références Visa DE62.",
+    "base2Scope": "Préparation CTF Base II à 168 octets, ARN contrôlé, validation de structure et acquittement réseau idempotent.",
+    "safety": "Sécurité et traçabilité", "safetyDetail": "PAN masqué, aucune clé ni donnée sensible journalisée, refus explicite quand le transport ou une donnée obligatoire manque.",
+    "flow": { "acquiring": "Acquisition e-commerce", "gateway": "Routage Visa", "visanet": "VisaNet", "response": "Réponse inverse", "authorization": "Autorisation acceptée", "presentment": "Présentation", "base2": "Fichier Base II", "ack": "Acquittement" }
   },
   "deployment": {
     "title": "Déploiements", "subtitle": "Préparer, valider et exploiter les plateformes membres et simulateurs.",

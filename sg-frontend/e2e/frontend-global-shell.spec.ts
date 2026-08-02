@@ -17,6 +17,15 @@ const navigation = {
       }],
     },
     {
+      code: 'VISA_ONLINE_MEMBER', labelKey: 'modules.visaOnline', icon: 'pi pi-bolt',
+      children: [{
+        id: 30, type: 'MENU', code: 'VISA_ONLINE_MEMBER_OPERATIONS', labelKey: 'moduleMenus.operations',
+        icon: 'pi pi-folder', context: {}, children: [
+          { id: 31, type: 'SCREEN', code: 'VISA_ONLINE_TRANSACTIONS', labelKey: 'screens.transactions', icon: 'pi pi-list', route: '/modules/VISA_ONLINE_MEMBER/transactions', componentKey: 'VISA_WORKSPACE', context: {}, children: [] },
+        ],
+      }],
+    },
+    {
       code: 'LAB_SIMULATORS', labelKey: 'modules.simulators', icon: 'pi pi-bolt',
       children: [{
         id: 20, type: 'MENU', code: 'LAB_SIMULATORS_CATALOG', labelKey: 'moduleMenus.simulators',
@@ -24,6 +33,7 @@ const navigation = {
           { id: 21, type: 'SCREEN', code: 'LAB_POS_SIMULATOR', labelKey: 'screens.posSimulator', icon: 'pi pi-desktop', route: '/lab/LAB_SIMULATORS/pos-simulator', componentKey: 'MODULE_WORKSPACE', context: {}, children: [] },
           { id: 22, type: 'SCREEN', code: 'LAB_MERCHANT_LOCAL', labelKey: 'screens.merchantSiteLocal', icon: 'pi pi-shop', route: '/lab/LAB_SIMULATORS/merchant-site-local', componentKey: 'MODULE_WORKSPACE', context: {}, children: [] },
           { id: 23, type: 'SCREEN', code: 'LAB_MERCHANT_INTERNATIONAL', labelKey: 'screens.merchantSiteInternational', icon: 'pi pi-globe', route: '/lab/LAB_SIMULATORS/merchant-site-international', componentKey: 'MODULE_WORKSPACE', context: {}, children: [] },
+          { id: 24, type: 'SCREEN', code: 'LAB_VISANET_NETWORK', labelKey: 'screens.visaNetSimulator', icon: 'pi pi-bolt', route: '/lab/LAB_SIMULATORS/visanet-network', componentKey: 'VISA_WORKSPACE', context: {}, children: [] },
         ],
       }],
     },
@@ -42,6 +52,19 @@ function token(): string {
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(value => localStorage.setItem('sg-token', value), token());
   await page.route('**/api/me/navigation', route => route.fulfill({ json: navigation }));
+});
+
+test('affiche le domaine Visa et range son simulateur dans le LAB', async ({ page }) => {
+  await page.goto('/dashboard');
+  await page.locator('[data-module-code="VISA_ONLINE_MEMBER"]').click();
+  await page.getByRole('link', { name: 'Transactions' }).click();
+  await expect(page).toHaveURL(/\/modules\/VISA_ONLINE_MEMBER\/transactions$/);
+  await expect(page.getByText(/Sandbox fonctionnelle/)).toBeVisible();
+
+  await page.locator('[data-module-code="LAB_SIMULATORS"]').click();
+  await page.getByRole('link', { name: /VisaNet/ }).click();
+  await expect(page).toHaveURL(/\/lab\/LAB_SIMULATORS\/visanet-network$/);
+  await expect(page.getByText('VisaNet', { exact: true })).toBeVisible();
 });
 
 test('conserve le menu commun et isole les simulateurs', async ({ page }) => {

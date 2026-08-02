@@ -41,6 +41,12 @@
         <module>sg-3ds-member</module>
         <module>sg-3ds-network-simulator</module>
         <module>sg-visa-mastercard-gateway-simulator</module>
+        <module>sg-visa-common</module>
+        <module>sg-visa-online-member</module>
+        <module>sg-visa-visanet-simulator</module>
+        <module>sg-visa-base2-common</module>
+        <module>sg-visa-base2-member</module>
+        <module>sg-visa-base2-network-simulator</module>
         <module>sg-deployment-core</module>
         <module>sg-deployment-cli</module>
         <module>sg-members-bundle</module>
@@ -73,6 +79,16 @@
             <dependency>
                 <groupId>com.staging</groupId>
                 <artifactId>sg-dmcs-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.staging</groupId>
+                <artifactId>sg-visa-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.staging</groupId>
+                <artifactId>sg-visa-base2-common</artifactId>
                 <version>${project.version}</version>
             </dependency>
 

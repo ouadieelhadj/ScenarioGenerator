@@ -1,0 +1,12 @@
+server:
+  port: ${VISA_VISANET_SIMULATOR_PORT:8565}
+spring:
+  application:
+    name: sg-visa-visanet-simulator
+visa:
+  simulator:
+    default-response-code: ${VISA_SIMULATOR_DEFAULT_RESPONSE_CODE:05}
+    aci: ${VISA_SIMULATOR_ACI:Y}
+logging:
+  file:
+    name: ${VISA_VISANET_SIMULATOR_LOG_FILE:${user.dir}/runtime/visa/logs/visanet-simulator.log}

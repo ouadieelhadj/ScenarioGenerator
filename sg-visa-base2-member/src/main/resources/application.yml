@@ -1,0 +1,17 @@
+server:
+  port: ${VISA_BASE2_MEMBER_PORT:8566}
+spring:
+  application:
+    name: sg-visa-base2-member
+visa:
+  base2:
+    network:
+      enabled: ${VISA_BASE2_NETWORK_ENABLED:false}
+      base-url: ${VISA_BASE2_NETWORK_BASE_URL:http://127.0.0.1:8567}
+    member:
+      cib: ${VISA_BASE2_CIB:}
+      acquiring-identifier: ${VISA_BASE2_ACQUIRING_IDENTIFIER:}
+      business-id: ${VISA_BASE2_BUSINESS_ID:}
+logging:
+  file:
+    name: ${VISA_BASE2_MEMBER_LOG_FILE:${user.dir}/runtime/visa/logs/base2-member.log}

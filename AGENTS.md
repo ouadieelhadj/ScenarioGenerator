@@ -14,6 +14,7 @@ Avant toute analyse, modification, test, commit ou push :
    - DMCS / DMAS : `REPRISE_DMCS_DMAS.md` ;
    - SWAM LIS : `SESSION_REPRISE_SWAM_LIS.md` ;
    - module 3DS et e-commerce authentifie : `REPRISE_3DS.md` ;
+   - Visa Online et Visa Base II : `REPRISE_VISA.md` ;
    - contexte historique general : `SESSION_RESUME.md`, uniquement si les
      documents specialises ne suffisent pas.
 2. Executer en lecture seule :
@@ -31,10 +32,13 @@ La derniere demande explicite de l'utilisateur determine le chantier actif.
 
 ## Etat de reprise actuel
 
-- Chantier actif de la presente reprise : Acquisition TPE/e-commerce.
-  Le socle d'administration, le contrat partage avec Issuing et la projection
-  reelle vers ServerPOS sont implementes et testes. Relire
-  `REPRISE_ACQUIRING.md` avant la suite.
+- Chantier actif de la presente reprise : Visa Online et Visa Base II. Le
+  premier increment sandbox, les quatre applications, le frontend, les bundles
+  et l'E2E Online vers Base II sont implementes et testes. Relire
+  `REPRISE_VISA.md` avant la suite.
+- Le socle Acquisition TPE/e-commerce, le contrat partagé avec Issuing et la
+  projection réelle vers ServerPOS sont implémentés et testés. Relire
+  `REPRISE_ACQUIRING.md` avant toute reprise de ce chantier séparé.
 - Jalon WayPos 3/6 termine : outbox et adaptateurs DMAS Member, SWAM Member
   et Mastercard SMS valides par une non-regression agregee de 64 tests sans
   echec.
@@ -57,8 +61,11 @@ La derniere demande explicite de l'utilisateur determine le chantier actif.
   `E:\Way4-Knowledge-Base` et ne doit pas etre confondu avec le code WayPos.
 - Le socle 3DS sandbox est termine : trois E2E (frictionless national,
   challenge national et challenge international) passent avec RC=00 et
-  verification anti-rejeu. Relire `REPRISE_3DS.md`. Le moteur financier Visa
-  off-us reste volontairement absent et ferme.
+  verification anti-rejeu. Relire `REPRISE_3DS.md`.
+- Le premier circuit Visa off-us sandbox est valide : gateway, Visa Online
+  membre, simulateur VisaNet, Base II membre et simulateur reseau Base II.
+  Il reste non certifie et ferme par defaut. Le clearing Visa certifie complet,
+  VROL et les chargebacks attendent les specifications officielles manquantes.
 
 ## Protection du travail existant
 

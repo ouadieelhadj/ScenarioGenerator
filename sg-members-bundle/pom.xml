@@ -19,6 +19,8 @@
         <dependency><groupId>com.staging</groupId><artifactId>sg-mc-dmas-member</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
         <dependency><groupId>com.staging</groupId><artifactId>sg-dmcs-acquirer</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
         <dependency><groupId>com.staging</groupId><artifactId>sg-dmcs-issuer</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-visa-online-member</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-visa-base2-member</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
     </dependencies>
 
     <build><plugins>
@@ -31,12 +33,12 @@
             <executions><execution><id>embed-member-libraries</id><phase>prepare-package</phase><goals><goal>copy-dependencies</goal></goals>
                 <configuration>
                     <outputDirectory>${project.build.outputDirectory}/bundled-libs</outputDirectory><includeScope>runtime</includeScope>
-                    <excludeArtifactIds>sg-way-pos-server,sg-acquiring,sg-card-issuing,sg-3ds-member,sg-swam-lis-member,sg-mc-dmas-member,sg-dmcs-acquirer,sg-dmcs-issuer</excludeArtifactIds>
+                    <excludeArtifactIds>sg-way-pos-server,sg-acquiring,sg-card-issuing,sg-3ds-member,sg-swam-lis-member,sg-mc-dmas-member,sg-dmcs-acquirer,sg-dmcs-issuer,sg-visa-online-member,sg-visa-base2-member</excludeArtifactIds>
                 </configuration>
             </execution><execution><id>inventory-member-libraries</id><phase>prepare-package</phase><goals><goal>list</goal></goals>
                 <configuration>
                     <outputFile>${project.build.outputDirectory}/bundle-libraries.txt</outputFile><includeScope>runtime</includeScope><sort>true</sort>
-                    <excludeArtifactIds>sg-way-pos-server,sg-acquiring,sg-card-issuing,sg-3ds-member,sg-swam-lis-member,sg-mc-dmas-member,sg-dmcs-acquirer,sg-dmcs-issuer</excludeArtifactIds>
+                    <excludeArtifactIds>sg-way-pos-server,sg-acquiring,sg-card-issuing,sg-3ds-member,sg-swam-lis-member,sg-mc-dmas-member,sg-dmcs-acquirer,sg-dmcs-issuer,sg-visa-online-member,sg-visa-base2-member</excludeArtifactIds>
                 </configuration>
             </execution></executions>
         </plugin>
@@ -52,6 +54,8 @@
                     <resource><directory>${maven.multiModuleProjectDirectory}/sg-mc-dmas-member/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
                     <resource><directory>${maven.multiModuleProjectDirectory}/sg-dmcs-acquirer/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
                     <resource><directory>${maven.multiModuleProjectDirectory}/sg-dmcs-issuer/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-visa-online-member/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-visa-base2-member/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
                 </resources></configuration>
             </execution></executions>
         </plugin>

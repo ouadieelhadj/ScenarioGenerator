@@ -8,6 +8,9 @@ const clearingWorkspace: ScreenLoader = () => import('../../features/clearing/cl
 const moduleWorkspace: ScreenLoader = () => import('../../features/module-workspace/module-workspace.component')
   .then(module => module.ModuleWorkspaceComponent);
 
+const visaWorkspace: ScreenLoader = () => import('../../features/visa/visa-workspace.component')
+  .then(module => module.VisaWorkspaceComponent);
+
 const REGISTRY: Record<string, ScreenLoader> = {
   CLEARING_TRANSACTIONS: clearingWorkspace,
   CLEARING_FILES: clearingWorkspace,
@@ -16,6 +19,7 @@ const REGISTRY: Record<string, ScreenLoader> = {
   CLEARING_EOD: clearingWorkspace,
   CLEARING_ACCOUNTING: clearingWorkspace,
   MODULE_WORKSPACE: moduleWorkspace,
+  VISA_WORKSPACE: visaWorkspace,
 };
 
 export function loadRegisteredScreen(componentKey?: string): Promise<Type<unknown> | null> {

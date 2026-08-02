@@ -259,7 +259,7 @@
   },
   "modules": {
     "serverPos": "ServerPOS", "acquiring": "POS / e-commerce acquiring", "issuing": "Issuing",
-    "swamMember": "SWAM Member", "dmasMember": "DMAS Member", "dmcsMember": "DMCS Member", "simulators": "Simulators"
+    "swamMember": "SWAM Member", "dmasMember": "DMAS Member", "dmcsMember": "DMCS Member", "visaOnline": "Visa Online Member", "visaBase2": "Visa Base II Member", "simulators": "Simulators"
   },
   "moduleMenus": { "operations": "Operations", "simulators": "Simulators" },
   "screens": {
@@ -270,7 +270,8 @@
     "cardControls": "Card controls", "statements": "Statements", "network": "Network", "reconciliation": "Reconciliation",
     "posSimulator": "POS simulator", "merchantSiteLocal": "Domestic merchant site",
     "merchantSiteInternational": "International merchant site", "threeDsNetwork": "3DS network simulator",
-    "cardNetwork": "Visa / Mastercard network simulator"
+    "cardNetwork": "Visa / Mastercard network simulator", "presentments": "Presentments", "base2Files": "Base II files",
+    "visaNetSimulator": "VisaNet network simulator", "base2Simulator": "Base II network simulator"
   },
   "roles": {
     "title": "Roles", "subtitle": "Roles and effective permissions", "loadError": "Unable to load roles.",
@@ -283,6 +284,13 @@
   },
   "dynamicScreen": { "unavailableTitle": "Screen unavailable", "unavailableDetail": "This screen is not registered by the frontend." },
   "moduleWorkspace": { "ready": "Module registered in the portal", "detail": "Menu, route and access control are active. The business screen will connect to its dedicated API." },
+  "visaWorkspace": {
+    "sandbox": "Functional non-certified sandbox", "scope": "Operational scope",
+    "onlineScope": "Visa Online ISO 8583 authorization, STAN/RRN correlation, DE39/DE38 response and Visa DE62 references.",
+    "base2Scope": "168-byte Base II CTF generation, validated ARN, structural controls and idempotent network acknowledgement.",
+    "safety": "Security and traceability", "safetyDetail": "Masked PAN, no keys or sensitive data in logs, explicit refusal when transport or mandatory data is missing.",
+    "flow": { "acquiring": "E-commerce acquiring", "gateway": "Visa routing", "visanet": "VisaNet", "response": "Reverse response", "authorization": "Approved authorization", "presentment": "Presentment", "base2": "Base II file", "ack": "Acknowledgement" }
+  },
   "deployment": {
     "title": "Deployments", "subtitle": "Prepare, validate and operate member and simulator platforms.",
     "menu": { "overview": "Overview", "clients": "Bank clients", "environments": "Environments", "modules": "Modules", "licenses": "Licenses", "executions": "Executions" },

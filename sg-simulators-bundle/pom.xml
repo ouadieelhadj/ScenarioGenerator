@@ -17,6 +17,8 @@
         <dependency><groupId>com.staging</groupId><artifactId>sg-visa-mastercard-gateway-simulator</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
         <dependency><groupId>com.staging</groupId><artifactId>sg-mc-dmas-mastercard</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
         <dependency><groupId>com.staging</groupId><artifactId>sg-swam-lis-switch</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-visa-visanet-simulator</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-visa-base2-network-simulator</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
     </dependencies>
 
     <build><plugins>
@@ -29,12 +31,12 @@
             <executions><execution><id>embed-simulator-libraries</id><phase>prepare-package</phase><goals><goal>copy-dependencies</goal></goals>
                 <configuration>
                     <outputDirectory>${project.build.outputDirectory}/bundled-libs</outputDirectory><includeScope>runtime</includeScope>
-                    <excludeArtifactIds>sg-way-pos-simulator,sg-merchant-site-simulator,sg-3ds-network-simulator,sg-visa-mastercard-gateway-simulator,sg-mc-dmas-mastercard,sg-swam-lis-switch</excludeArtifactIds>
+                    <excludeArtifactIds>sg-way-pos-simulator,sg-merchant-site-simulator,sg-3ds-network-simulator,sg-visa-mastercard-gateway-simulator,sg-mc-dmas-mastercard,sg-swam-lis-switch,sg-visa-visanet-simulator,sg-visa-base2-network-simulator</excludeArtifactIds>
                 </configuration>
             </execution><execution><id>inventory-simulator-libraries</id><phase>prepare-package</phase><goals><goal>list</goal></goals>
                 <configuration>
                     <outputFile>${project.build.outputDirectory}/bundle-libraries.txt</outputFile><includeScope>runtime</includeScope><sort>true</sort>
-                    <excludeArtifactIds>sg-way-pos-simulator,sg-merchant-site-simulator,sg-3ds-network-simulator,sg-visa-mastercard-gateway-simulator,sg-mc-dmas-mastercard,sg-swam-lis-switch</excludeArtifactIds>
+                    <excludeArtifactIds>sg-way-pos-simulator,sg-merchant-site-simulator,sg-3ds-network-simulator,sg-visa-mastercard-gateway-simulator,sg-mc-dmas-mastercard,sg-swam-lis-switch,sg-visa-visanet-simulator,sg-visa-base2-network-simulator</excludeArtifactIds>
                 </configuration>
             </execution></executions>
         </plugin>
@@ -48,6 +50,8 @@
                     <resource><directory>${maven.multiModuleProjectDirectory}/sg-visa-mastercard-gateway-simulator/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
                     <resource><directory>${maven.multiModuleProjectDirectory}/sg-mc-dmas-mastercard/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
                     <resource><directory>${maven.multiModuleProjectDirectory}/sg-swam-lis-switch/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-visa-visanet-simulator/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-visa-base2-network-simulator/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
                 </resources></configuration>
             </execution></executions>
         </plugin>

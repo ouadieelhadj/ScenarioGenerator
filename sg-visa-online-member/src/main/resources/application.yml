@@ -1,0 +1,18 @@
+server:
+  port: ${VISA_ONLINE_MEMBER_PORT:8564}
+spring:
+  application:
+    name: sg-visa-online-member
+visa:
+  online:
+    network:
+      enabled: ${VISA_ONLINE_NETWORK_ENABLED:false}
+      base-url: ${VISA_ONLINE_NETWORK_BASE_URL:http://127.0.0.1:8565}
+    member:
+      acquirer-id: ${VISA_ONLINE_ACQUIRER_ID:}
+      acquirer-country: ${VISA_ONLINE_ACQUIRER_COUNTRY:}
+      default-mcc: ${VISA_ONLINE_DEFAULT_MCC:}
+      merchant-location: ${VISA_ONLINE_MERCHANT_LOCATION:}
+logging:
+  file:
+    name: ${VISA_ONLINE_MEMBER_LOG_FILE:${user.dir}/runtime/visa/logs/online-member.log}

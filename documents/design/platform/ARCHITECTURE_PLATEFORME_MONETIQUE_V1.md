@@ -28,7 +28,10 @@ flowchart LR
     ACQ --> SWAM["SWAM membre/acquirer<br/>cartes confreres domestiques"]
     ACQ --> GW["sg-visa-mastercard-gateway-simulator"]
     GW --> DMAS["DMAS Mastercard"]
-    GW -. "indisponible / fail closed" .-> VISA["Futur moteur Visa"]
+    GW --> VO["sg-visa-online-member"]
+    VO <--> VN["sg-visa-visanet-simulator"]
+    VO --> B2["sg-visa-base2-member"]
+    B2 <--> B2N["sg-visa-base2-network-simulator"]
 ```
 
 ## Responsabilites des modules
@@ -40,11 +43,14 @@ flowchart LR
 | `sg-merchant-site-simulator` | Sites national/international et orchestration achat | 8551 | Fonctionnel sandbox |
 | `sg-3ds-member` | 3DS Server acquereur et ACS emetteur, separes par API | 8560 | Fonctionnel sandbox |
 | `sg-3ds-network-simulator` | DS Visa/Mastercard et ACS confrere | 8561 | Simulateur uniquement |
-| `sg-visa-mastercard-gateway-simulator` | Multiplexeur des reseaux financiers | 8563 | Mastercard raccorde, Visa ferme |
+| `sg-visa-mastercard-gateway-simulator` | Multiplexeur des reseaux financiers | 8563 | Mastercard et Visa raccordables, fermes par defaut |
+| `sg-visa-online-member` | Autorisation Visa Online du membre | 8564 | Fonctionnel sandbox non certifie |
+| `sg-visa-visanet-simulator` | Reseau VisaNet d'autorisation | 8565 | Simulateur uniquement |
+| `sg-visa-base2-member` | Preparation et emission CTF Base II | 8566 | Premier presentment TC05 sandbox |
+| `sg-visa-base2-network-simulator` | Controle et acquittement des fichiers Base II | 8567 | Simulateur uniquement |
 | `sg-way-pos-server` | Serveur TPE, terminal et commercant issus d'Acquiring | 8530 | Fonctionnel |
 | DMAS | Reseau Mastercard simule et membre bancaire | 8083/8084 | Fonctionnel recette |
 | SWAM | Switch domestique simule et membre bancaire | 8511/8094 | Fonctionnel recette |
-| Futur Visa | Traitement financier Visa off-us | a definir | Non developpe |
 
 ## Achat e-commerce national avec carte LanaCash
 
@@ -100,7 +106,10 @@ flowchart TD
     R -->|Mastercard off-us| G["Passerelle Visa/Mastercard"]
     G --> D["DMAS Mastercard"]
     R -->|Visa off-us| G
-    G -->|Moteur absent| F["Refus explicite / service indisponible"]
+    G --> V["Visa Online Member"]
+    V --> N["VisaNet simule"]
+    V --> B["Base II Member / TC05"]
+    B --> BN["Reseau Base II simule"]
 ```
 
 Le nom de programme fourni par le marchand n'est jamais utilise pour choisir
@@ -115,14 +124,18 @@ seul la route financiere : la route reste issue du routage BIN d'Acquisition.
 - correlation sur les identifiants 3DS Server, DS et ACS ;
 - preuve verifiee et consommee avant l'autorisation financiere ;
 - aucun PAN, OTP ou secret complet dans les logs ou la base 3DS ;
-- mode Visa financier off-us ferme tant que le vrai module Visa est absent ;
+- routes Visa et Base II fermees par defaut tant que leurs transports ne sont
+  pas explicitement actives ;
+- les deux reseaux Visa portent toujours la provenance `SIMULATED_NETWORK` ;
 - un raccordement certifie reel exigera specifications officielles, certificats,
   gestion HSM, homologation reseau et tests de conformite.
 
 ## Recette
 
-Le guide executable est `tests/3ds/README.md`. La commande de reference est :
+Les guides executables sont `tests/3ds/README.md` et
+`tests/visa/TEST_VISA_ONLINE_BASEII.md`. Les commandes de reference sont :
 
 ```bash
 bash ./tests/3ds/e2e/run-all-scenarios.sh
+bash ./tests/visa/e2e/run-visa-online-base2.sh
 ```

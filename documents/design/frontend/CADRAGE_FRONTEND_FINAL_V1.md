@@ -4,12 +4,12 @@
 
 | Élément | Valeur |
 |---|---|
-| Version | 1.0 |
+| Version | 1.1 |
 | Date | 2 août 2026 |
 | Statut | Validé pour démarrage du développement |
 | Frontend | `sg-frontend` — Angular 18 standalone |
 | Tests E2E | Playwright |
-| Sources | Cadrages global et Issuing V0.1, code Angular, backend, SQL RBAC/workflow et décisions utilisateur |
+| Sources | Cadrages global, Issuing et Visa, code Angular, backend, SQL RBAC/workflow et décisions utilisateur |
 
 Ce document consolide et améliore les deux cadrages V0.1 après vérification du
 code réel. Il fixe l'organisation du portail avant développement.
@@ -25,6 +25,8 @@ code réel. Il fixe l'organisation du portail avant développement.
    - SWAM Membre ;
    - DMAS Membre ;
    - DMCS Membre ;
+   - VisaNet / Visa Online Membre ;
+   - Visa Base II Membre ;
    - Recette et simulateurs.
 3. Utilisateurs et Rôles restent dans l'Administration commune.
 4. Maker/Checker est un moteur transverse unique. Il n'est pas dupliqué dans
@@ -109,6 +111,8 @@ ScenarioGenerator
 ├── SWAM Membre
 ├── DMAS Membre
 ├── DMCS Membre
+├── VisaNet / Visa Online Membre
+├── Visa Base II Membre
 └── Recette et simulateurs
 ```
 
@@ -127,6 +131,8 @@ fonctions transverses.
 | `SWAM_MEMBER` | SWAM Membre | SID temps réel et LIS clearing du membre |
 | `DMAS_MEMBER` | DMAS Membre | Connexion Mastercard DMAS côté membre |
 | `DMCS_MEMBER` | DMCS Membre | Clearing Mastercard côté membre |
+| `VISA_ONLINE_MEMBER` | VisaNet / Visa Online Membre | Autorisation Visa côté banque membre |
+| `VISA_BASE2_MEMBER` | Visa Base II Membre | Clearing, règlement et litiges Visa côté membre |
 | `LAB_SIMULATORS` | Recette et simulateurs | Simulateurs et scénarios réservés LAB/DEV |
 
 Les bibliothèques communes, modules E2E internes et composants techniques ne
@@ -213,7 +219,35 @@ Le réseau Mastercard DMAS simulé et les cartes de recette appartiennent au LAB
 
 L'IHM ne fabrique jamais un DE31/ARN absent.
 
-### 6.7 Recette et simulateurs
+### 6.7 VisaNet / Visa Online Membre
+
+- tableau de bord, santé et dépendances ;
+- interfaces et sessions réseau ;
+- sign-on, sign-off et echo ;
+- autorisations et réponses en consultation masquée ;
+- reversals, advices et repeats ;
+- journal d'autorisation et références ACI/TID/code de validation ;
+- configuration, capacités, événements et audit.
+
+Le menu membre ne permet jamais de modifier les règles de décision du
+simulateur VisaNet.
+
+### 6.8 Visa Base II Membre
+
+- tableau de bord clearing ;
+- journées métier et EOD ;
+- projections et transactions clearing ;
+- fichiers, lots, TCR et erreurs ;
+- rapprochement et écarts ;
+- litiges, réponses et reversals ;
+- frais, change, règlement et comptabilisation ;
+- catalogues versionnés, dépendances et audit.
+
+L'envoi de fichier, le rapprochement manuel, les litiges, les réponses et la
+comptabilisation sont soumis aux politiques Maker/Checker applicables. Aucun
+code Visa absent n'est fabriqué par l'IHM.
+
+### 6.9 Recette et simulateurs
 
 Visible uniquement dans les environnements et profils autorisés :
 
@@ -225,10 +259,15 @@ Visible uniquement dans les environnements et profils autorisés :
 - simulateur réseau DMAS Mastercard ;
 - simulateur switch SWAM ;
 - simulateurs Mastercard SMS disponibles ;
+- simulateur réseau VisaNet Online : sessions, issuer externe, décisions,
+  timeouts/repeats et traces ISO masquées ;
+- simulateur réseau Visa Base II : réception/livraison de fichiers, contrôles,
+  rejets, litiges et positions simulées ;
 - progression, résultats, corrélation, preuves et nettoyage.
 
-Le moteur Visa off-us absent est affiché indisponible. Aucun secret, PAN
-complet ou donnée HSM n'est persisté dans le navigateur.
+Les backends Visa sandbox sont disponibles, mais les écrans restent explicites
+sur leur statut non certifié. Aucun secret, PAN complet, CAVV, buffer ISO brut
+ou donnée HSM n'est persisté dans le navigateur.
 
 ## 7. Utilisateurs, rôles et profils
 
@@ -357,6 +396,8 @@ src/app/
     ├── swam-member/
     ├── dmas-member/
     ├── dmcs-member/
+    ├── visa-online-member/
+    ├── visa-base2-member/
     └── lab-simulators/
 ```
 
@@ -441,7 +482,9 @@ d'erreur commun.
 
 - SWAM Membre ;
 - DMAS Membre ;
-- DMCS Membre.
+- DMCS Membre ;
+- VisaNet / Visa Online Membre ;
+- Visa Base II Membre.
 
 ### Lot 4 — Recette et simulateurs
 
@@ -449,6 +492,8 @@ d'erreur commun.
 - POS Simulator ;
 - Merchant Site Simulator local/international ;
 - simulateurs 3DS et réseaux ;
+- simulateur réseau VisaNet Online ;
+- simulateur réseau Visa Base II ;
 - résultats et preuves de recette.
 
 ## 13. Stratégie de tests
@@ -465,7 +510,8 @@ d'erreur commun.
 1. utilisateur non authentifié redirigé vers login ;
 2. menu commun toujours visible après chargement des modules ;
 3. menus ServerPOS, Acquisition, Issuing, SWAM Membre, DMAS Membre,
-   DMCS Membre et Simulateurs visibles selon droits ;
+   DMCS Membre, VisaNet Membre, Visa Base II Membre et Simulateurs visibles
+   selon droits ;
 4. sous-menus hiérarchiques non aplatis ;
 5. accès direct interdit redirigé vers forbidden ;
 6. Utilisateurs reste fonctionnel ;
@@ -479,6 +525,9 @@ d'erreur commun.
 14. dépendance absente affichée indisponible sans faux succès ;
 15. absence de secrets et PAN complet dans DOM, URL et stockage ;
 16. non-régression campagnes, exécutions, DMAS, thèmes et langues.
+17. simulateurs VisaNet et Base II visibles uniquement dans le LAB ;
+18. impossibilité pour un profil membre de modifier une décision du simulateur ;
+19. actions Base II sensibles soumises au Maker/Checker.
 
 Les tests connectés nécessitant des backends indisponibles utilisent des mocks
 contractuels Playwright clairement identifiés. Ils ne remplacent pas les E2E
@@ -491,6 +540,8 @@ réels, qui restent séparés dans les rapports.
 - Utilisateurs et Rôles sont présents dans l'Administration ;
 - Maker/Checker est transverse et interdit l'auto-validation ;
 - le Merchant Site Simulator est uniquement dans Simulateurs ;
+- VisaNet Membre et Visa Base II Membre possèdent chacun un menu métier ;
+- les deux simulateurs réseau Visa restent uniquement dans Simulateurs ;
 - les routes directes respectent le RBAC ;
 - une clé de composant inconnue reste fail-closed ;
 - aucune donnée monétique interdite n'est exposée ;
@@ -504,7 +555,7 @@ Le développement commence par le Lot 0, dans cet ordre :
 
 1. rendre le menu commun permanent ;
 2. rendre la navigation métier hiérarchique ;
-3. ajouter le catalogue des sept modules validés ;
+3. ajouter le catalogue des neuf modules métier validés ;
 4. introduire le registre de composants et l'écran indisponible fail-closed ;
 5. créer les routes Administration Utilisateurs/Rôles et Workflow ;
 6. retirer les fixtures sensibles de la configuration de production ;
@@ -519,3 +570,8 @@ des rôles est validé avec la non-régression de 69 tests `sg-common`.
 Le test connecté au catalogue SQL 19 reste à exécuter sur une base de recette.
 Les API Maker/Checker ne sont pas encore implémentées : le frontend reste donc
 volontairement fermé et n'affiche aucune approbation fictive.
+
+L'extension V1.1 ajoute VisaNet Membre, Visa Base II Membre et les deux
+simulateurs réseau. Les menus, le composant de domaine et le contrôle
+Playwright sont implémentés ; les actions certifiées de clearing/litige restent
+fermées tant que les contrats officiels correspondants ne sont pas disponibles.

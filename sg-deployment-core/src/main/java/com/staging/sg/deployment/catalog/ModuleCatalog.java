@@ -36,6 +36,13 @@ public final class ModuleCatalog {
                         "com.staging.sg.dmcs.acquirer.SgDmcsAcquirerApplication", 8082),
                 member("DMCS_MEMBER_ISSUER", "DMCS Member Issuer", "sg-dmcs-issuer",
                         "com.staging.sg.dmcs.issuer.SgDmcsIssuerApplication", 8083),
+                member("VISA_ONLINE_MEMBER", "Visa Online Member", "sg-visa-online-member",
+                        "com.staging.sg.visa.online.member.VisaOnlineMemberApplication", 8564,
+                        "VISA_ONLINE_ACQUIRER_ID", "VISA_ONLINE_ACQUIRER_COUNTRY",
+                        "VISA_ONLINE_DEFAULT_MCC", "VISA_ONLINE_MERCHANT_LOCATION"),
+                member("VISA_BASE2_MEMBER", "Visa Base II Member", "sg-visa-base2-member",
+                        "com.staging.sg.visa.base2.member.VisaBase2MemberApplication", 8566,
+                        "VISA_BASE2_CIB", "VISA_BASE2_ACQUIRING_IDENTIFIER", "VISA_BASE2_BUSINESS_ID"),
                 simulator("POS_SIMULATOR", "POS Simulator", "sg-way-pos-simulator",
                         "com.staging.sg.waypos.simulator.WayPosSimulatorApplication", 8532),
                 simulator("MERCHANT_SITE_SIMULATOR", "Merchant Site Simulator", "sg-merchant-site-simulator",
@@ -48,7 +55,13 @@ public final class ModuleCatalog {
                 simulator("DMAS_MASTERCARD_SIMULATOR", "DMAS Mastercard Simulator", "sg-mc-dmas-mastercard",
                         "com.staging.sg.mc.dmas.mastercard.SgMcDmasMastercardApplication", null),
                 simulator("SWAM_SWITCH_SIMULATOR", "SWAM Switch Simulator", "sg-swam-lis-switch",
-                        "com.staging.sg.swam.lis.switching.SwamLisSwitchApplication", 8522)
+                        "com.staging.sg.swam.lis.switching.SwamLisSwitchApplication", 8522),
+                simulator("VISANET_NETWORK_SIMULATOR", "VisaNet Network Simulator",
+                        "sg-visa-visanet-simulator",
+                        "com.staging.sg.visa.visanet.simulator.VisaNetSimulatorApplication", 8565),
+                simulator("VISA_BASE2_NETWORK_SIMULATOR", "Visa Base II Network Simulator",
+                        "sg-visa-base2-network-simulator",
+                        "com.staging.sg.visa.base2.network.VisaBase2NetworkSimulatorApplication", 8567)
         ));
     }
 
