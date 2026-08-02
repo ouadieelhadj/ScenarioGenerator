@@ -24,7 +24,9 @@
     "swamLisMember": "SWAM LIS Member",
     "swamLisSwitch": "SWAM LIS Switch",
     "core": "Home",
-    "config": "Configuration"
+    "config": "Configuration",
+    "campaigns": "Campaigns", "workflow": "Workflow", "myOperations": "My operations",
+    "myApprovals": "My approvals", "users": "Users", "roles": "Roles", "businessModules": "Business modules"
   },
   "topbar": {
     "theme": "Theme",
@@ -254,5 +256,31 @@
     "foundationReady": "Dynamic foundation active",
     "dynamicContext": "Shared screen loaded with module context",
     "dynamicContextDetail": "Business lists and actions will be enabled with query APIs and fine-grained permissions."
-  }
+  },
+  "modules": {
+    "serverPos": "ServerPOS", "acquiring": "POS / e-commerce acquiring", "issuing": "Issuing",
+    "swamMember": "SWAM Member", "dmasMember": "DMAS Member", "dmcsMember": "DMCS Member", "simulators": "Simulators"
+  },
+  "moduleMenus": { "operations": "Operations", "simulators": "Simulators" },
+  "screens": {
+    "overview": "Overview", "terminals": "Terminals", "merchants": "Merchants", "routing": "Routing",
+    "keys": "Keys", "transactions": "Transactions", "logs": "Logs", "contracts": "Contracts",
+    "posTransactions": "POS transactions", "ecommerceTransactions": "E-commerce transactions", "settlement": "Settlement",
+    "customers": "Customers", "products": "Products", "cards": "Cards", "authorizations": "Authorizations",
+    "cardControls": "Card controls", "statements": "Statements", "network": "Network", "reconciliation": "Reconciliation",
+    "posSimulator": "POS simulator", "merchantSiteLocal": "Domestic merchant site",
+    "merchantSiteInternational": "International merchant site", "threeDsNetwork": "3DS network simulator",
+    "cardNetwork": "Visa / Mastercard network simulator"
+  },
+  "roles": {
+    "title": "Roles", "subtitle": "Roles and effective permissions", "loadError": "Unable to load roles.",
+    "none": "No roles.", "code": "Code", "label": "Label", "permissions": "Permissions"
+  },
+  "workflow": {
+    "myOperations": "My operations", "myApprovals": "My approvals", "none": "No requests.",
+    "foundationTitle": "Maker/Checker foundation ready",
+    "foundationDetail": "The interface remains closed until workflow APIs are connected. No fictitious approval is created."
+  },
+  "dynamicScreen": { "unavailableTitle": "Screen unavailable", "unavailableDetail": "This screen is not registered by the frontend." },
+  "moduleWorkspace": { "ready": "Module registered in the portal", "detail": "Menu, route and access control are active. The business screen will connect to its dedicated API." }
 }

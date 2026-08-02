@@ -2,7 +2,6 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { TranslatePipe } from '@ngx-translate/core';
 import { DmasService } from '../../core/services/dmas.service';
-import { TEST_DEFAULTS } from '../../core/config/api.config';
 import { CardRequest, AuthRequest } from '../../core/models/dmas.models';
 
 type Tab = 'network' | 'keys' | 'cards' | 'auth';
@@ -23,16 +22,16 @@ export class DmasComponent {
   readonly log = signal<LogEntry[]>([]);
 
   // --- Cles ---
-  memberGroupId = TEST_DEFAULTS.memberGroupId;
-  kekClear = TEST_DEFAULTS.kekClear;
+  memberGroupId = '';
+  kekClear = '';
 
   // --- Cartes ---
-  card: CardRequest = { ...TEST_DEFAULTS.card };
-  lookupPan = TEST_DEFAULTS.card.pan;
-  balanceAmount = TEST_DEFAULTS.card.balance;
+  card: CardRequest = { pan: '', pin: '', balance: 0, currency: '', expiry: '' };
+  lookupPan = '';
+  balanceAmount = 0;
 
   // --- Test 0100 ---
-  auth: AuthRequest = { ...TEST_DEFAULTS.auth };
+  auth: AuthRequest = { DE002_PAN: '', DE004_AMOUNT: 0 };
   showAdvanced = signal(false);
 
   setTab(t: Tab): void { this.tab.set(t); }
@@ -75,4 +74,3 @@ export class DmasComponent {
   // Test 0100
   sendAuth(): void { this.run('Authorize 0100', this.dmas.authorize(this.auth)); }
 }
-

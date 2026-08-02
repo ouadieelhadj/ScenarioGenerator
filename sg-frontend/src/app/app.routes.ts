@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 import { permissionGuard } from './core/guards/permission.guard';
 import { Permission } from './core/models/auth.models';
+import { moduleScreenGuard } from './core/guards/module-screen.guard';
 
 export const routes: Routes = [
   {
@@ -44,14 +45,38 @@ export const routes: Routes = [
       },
       {
         path: 'modules/:moduleCode/:screen',
-        loadComponent: () => import('./features/clearing/clearing-workspace.component')
-          .then(m => m.ClearingWorkspaceComponent),
+        canActivate: [moduleScreenGuard],
+        loadComponent: () => import('./features/dynamic-screen/dynamic-screen-host.component')
+          .then(m => m.DynamicScreenHostComponent),
       },
       {
-        path: 'admin',
+        path: 'lab/:moduleCode/:screen',
+        canActivate: [moduleScreenGuard],
+        loadComponent: () => import('./features/dynamic-screen/dynamic-screen-host.component')
+          .then(m => m.DynamicScreenHostComponent),
+      },
+      {
+        path: 'workflow/my-operations',
+        data: { mode: 'operations' },
+        loadComponent: () => import('./features/workflow/workflow-inbox.component').then(m => m.WorkflowInboxComponent),
+      },
+      {
+        path: 'workflow/my-approvals',
+        data: { mode: 'approvals' },
+        loadComponent: () => import('./features/workflow/workflow-inbox.component').then(m => m.WorkflowInboxComponent),
+      },
+      { path: 'admin', pathMatch: 'full', redirectTo: 'administration/users' },
+      {
+        path: 'administration/users',
         canActivate: [permissionGuard],
-        data: { permissions: [Permission.USER_MANAGE, Permission.ROLE_MANAGE, Permission.CATALOG_MANAGE] },
+        data: { permissions: [Permission.USER_MANAGE] },
         loadComponent: () => import('./features/admin/admin.component').then(m => m.AdminComponent),
+      },
+      {
+        path: 'administration/roles',
+        canActivate: [permissionGuard],
+        data: { permissions: [Permission.ROLE_MANAGE] },
+        loadComponent: () => import('./features/roles/roles.component').then(m => m.RolesComponent),
       },
       {
         path: 'profile',

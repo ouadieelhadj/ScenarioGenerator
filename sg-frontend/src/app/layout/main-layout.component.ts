@@ -1,17 +1,18 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../core/auth/auth.service';
 import { ThemeService } from '../core/theme/theme.service';
 import { LanguageService } from '../core/i18n/language.service';
-import { MENU_ITEMS } from './menu';
+import { COMMON_MENU_ITEMS, MenuItem } from './menu';
 import { NavigationService } from '../core/services/navigation.service';
 import { ModuleNavigation, NavigationItem } from '../core/models/navigation.models';
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, TranslatePipe, NgTemplateOutlet],
   templateUrl: './main-layout.component.html',
   styleUrl: './main-layout.component.scss',
 })
@@ -28,17 +29,15 @@ export class MainLayoutComponent implements OnInit {
   readonly languages = this.lang.available;
   readonly currentLang = this.lang.current;
 
-  readonly menu = computed(() =>
-    MENU_ITEMS.filter(item =>
-      !item.permissions || this.auth.hasAnyPermission(item.permissions)
-    )
-  );
-  readonly modules = this.navigation.modules;
+  readonly menu = computed(() => this.filterCommonMenu(COMMON_MENU_ITEMS));
+  readonly modules = computed(() => this.navigation.modules().filter(module =>
+    !['CORE', 'CORE_PORTAL'].includes(module.code.toUpperCase())
+  ));
   readonly selectedModuleCode = signal<string | null>(null);
   readonly selectedModule = computed(() =>
     this.modules().find(module => module.code === this.selectedModuleCode()) ?? null
   );
-  readonly dynamicScreens = computed(() => this.flattenScreens(this.selectedModule()?.children ?? []));
+  readonly dynamicMenu = computed(() => this.selectedModule()?.children ?? []);
 
   ngOnInit(): void {
     this.navigation.load().subscribe(() => {
@@ -50,14 +49,26 @@ export class MainLayoutComponent implements OnInit {
 
   selectModule(module: ModuleNavigation): void {
     this.selectedModuleCode.set(module.code);
-    const first = this.flattenScreens(module.children)[0];
+    const first = this.firstScreen(module.children);
     if (first?.route) this.router.navigateByUrl(first.route);
   }
 
-  private flattenScreens(items: NavigationItem[]): NavigationItem[] {
-    return items.flatMap(item =>
-      item.type === 'SCREEN' ? [item] : this.flattenScreens(item.children ?? [])
-    );
+  private firstScreen(items: NavigationItem[]): NavigationItem | null {
+    for (const item of items) {
+      if (item.type === 'SCREEN' && item.route) return item;
+      const child = this.firstScreen(item.children ?? []);
+      if (child) return child;
+    }
+    return null;
+  }
+
+  private filterCommonMenu(items: MenuItem[]): MenuItem[] {
+    return items.flatMap(item => {
+      if (item.permissions && !this.auth.hasAnyPermission(item.permissions)) return [];
+      const children = this.filterCommonMenu(item.children ?? []);
+      if (!item.route && item.children?.length && !children.length) return [];
+      return [{ ...item, children }];
+    });
   }
 
   onThemeChange(id: string): void { this.theme.setTheme(id); }

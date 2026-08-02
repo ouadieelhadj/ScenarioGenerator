@@ -83,6 +83,14 @@ export const ENDPOINTS = {
     byId: (id: number) => `/api/admin/users/${id}`,
     toggle: (id: number) => `/api/admin/users/${id}/toggle`,
   },
+  roles: {
+    base: '/api/admin/roles',
+    permissions: '/api/admin/roles/permissions',
+  },
+  workflow: {
+    myOperations: '/api/workflow/requests/mine',
+    myApprovals: '/api/workflow/approvals/mine',
+  },
   dmas: {
     network: {
       signon: '/api/admin/dmas/network/signon',
@@ -104,18 +112,6 @@ export const ENDPOINTS = {
 } as const;
 
 /** Valeurs de test par defaut (editables). */
-export const TEST_DEFAULTS = {
-  memberGroupId: 'TESTGRP01',
-  kekClear: '0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF',
-  card: { pan: '5321962145453348', pin: '1234', balance: 1000000, currency: '840', expiry: '2812' },
-  auth: {
-    DE002_PAN: '5321962145453348', DE004_AMOUNT: 5000, DE003_PROCESSING_CODE: '000000',
-    DE018_MCC: '5999', DE022_POS_ENTRY_MODE: '051', DE025_POS_CONDITION_CODE: '00',
-    DE032_ACQUIRING_BIN: '400000', DE041_TERMINAL_ID: 'TERM0001', DE042_MERCHANT_ID: 'MERCHANT000001',
-    DE043_MERCHANT_NAME: 'SG TEST SHOP', DE049_CURRENCY_CODE: '840', DE052_PIN: '',
-  },
-} as const;
-
 /** Helpers URL — resolvent le port dynamiquement a chaque appel. */
 export const url = {
   orchestrator: (path: string) => `${baseUrl('orchestrator')}${path}`,

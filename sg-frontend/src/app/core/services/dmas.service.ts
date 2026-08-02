@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ENDPOINTS, url, TEST_DEFAULTS } from '../config/api.config';
+import { ENDPOINTS, url } from '../config/api.config';
 import { Card, CardRequest, AuthRequest } from '../models/dmas.models';
 
 @Injectable({ providedIn: 'root' })
@@ -24,7 +24,7 @@ export class DmasService {
   bootstrapKek(memberGroupId: string, kekClear: string): Observable<unknown> {
     return this.http.post(url.acquirer(this.ep.kek.bootstrap), { memberGroupId, kekClear });
   }
-  exchangePek(memberGroupId: string = TEST_DEFAULTS.memberGroupId): Observable<unknown> {
+  exchangePek(memberGroupId: string): Observable<unknown> {
     const params = new HttpParams().set('memberGroupId', memberGroupId);
     return this.http.post(url.acquirer(this.ep.keyexchange.pek), {}, { params });
   }
@@ -45,4 +45,3 @@ export class DmasService {
     return this.http.post(url.orchestrator(this.ep.authorize), req);
   }
 }
-

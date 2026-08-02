@@ -24,7 +24,9 @@
     "swamLisMember": "SWAM LIS Miembro",
     "swamLisSwitch": "SWAM LIS Switch",
     "core": "Inicio",
-    "config": "Configuración"
+    "config": "Configuración",
+    "campaigns": "Campañas", "workflow": "Workflow", "myOperations": "Mis operaciones",
+    "myApprovals": "Mis aprobaciones", "users": "Usuarios", "roles": "Roles", "businessModules": "Módulos de negocio"
   },
   "topbar": {
     "theme": "Tema",
@@ -254,5 +256,31 @@
     "foundationReady": "Base dinamica activa",
     "dynamicContext": "Pantalla compartida cargada con el contexto del modulo",
     "dynamicContextDetail": "Las listas y acciones se activaran con las API de consulta y los permisos detallados."
-  }
+  },
+  "modules": {
+    "serverPos": "ServerPOS", "acquiring": "Adquirencia POS / e-commerce", "issuing": "Issuing",
+    "swamMember": "SWAM Miembro", "dmasMember": "DMAS Miembro", "dmcsMember": "DMCS Miembro", "simulators": "Simuladores"
+  },
+  "moduleMenus": { "operations": "Operaciones", "simulators": "Simuladores" },
+  "screens": {
+    "overview": "Resumen", "terminals": "Terminales", "merchants": "Comercios", "routing": "Enrutamiento",
+    "keys": "Claves", "transactions": "Transacciones", "logs": "Registros", "contracts": "Contratos",
+    "posTransactions": "Transacciones POS", "ecommerceTransactions": "Transacciones e-commerce", "settlement": "Liquidación",
+    "customers": "Clientes", "products": "Productos", "cards": "Tarjetas", "authorizations": "Autorizaciones",
+    "cardControls": "Controles de tarjeta", "statements": "Extractos", "network": "Red", "reconciliation": "Conciliación",
+    "posSimulator": "Simulador POS", "merchantSiteLocal": "Sitio comercial nacional",
+    "merchantSiteInternational": "Sitio comercial internacional", "threeDsNetwork": "Simulador de red 3DS",
+    "cardNetwork": "Simulador de red Visa / Mastercard"
+  },
+  "roles": {
+    "title": "Roles", "subtitle": "Roles y permisos efectivos", "loadError": "No se pueden cargar los roles.",
+    "none": "No hay roles.", "code": "Código", "label": "Nombre", "permissions": "Permisos"
+  },
+  "workflow": {
+    "myOperations": "Mis operaciones", "myApprovals": "Mis aprobaciones", "none": "No hay solicitudes.",
+    "foundationTitle": "Base Maker/Checker lista",
+    "foundationDetail": "La interfaz permanece cerrada hasta conectar las API del workflow. No se crea ninguna aprobación ficticia."
+  },
+  "dynamicScreen": { "unavailableTitle": "Pantalla no disponible", "unavailableDetail": "Esta pantalla no está registrada por el frontend." },
+  "moduleWorkspace": { "ready": "Módulo registrado en el portal", "detail": "El menú, la ruta y el control de acceso están activos. La pantalla se conectará a su API dedicada." }
 }

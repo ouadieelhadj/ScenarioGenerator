@@ -4,36 +4,74 @@
       <i class="pi pi-bolt"></i>
       <span>ScenarioGenerator</span>
     </div>
+
+    <nav class="menu common-menu" aria-label="Navigation commune">
+      <ng-container *ngTemplateOutlet="commonTree; context: { $implicit: menu(), level: 0 }" />
+    </nav>
+
     @if (modules().length) {
-      <nav class="module-menu" aria-label="Modules">
+      <div class="menu-separator"><span>{{ 'menu.businessModules' | translate }}</span></div>
+      <nav class="module-menu" aria-label="Modules métier">
         @for (module of modules(); track module.code) {
           <button class="menu-item module-item"
                   [class.active]="selectedModuleCode() === module.code"
+                  [attr.data-module-code]="module.code"
                   (click)="selectModule(module)">
             <i [class]="module.icon || 'pi pi-box'"></i>
             <span>{{ module.labelKey | translate }}</span>
           </button>
         }
       </nav>
-      <nav class="menu screen-menu" aria-label="Écrans du module">
-        @for (item of dynamicScreens(); track item.id) {
-          <a class="menu-item" [routerLink]="item.route" routerLinkActive="active">
-            <i [class]="item.icon || 'pi pi-circle'"></i>
-            <span>{{ item.labelKey | translate }}</span>
-          </a>
-        }
-      </nav>
-    } @else {
-      <nav class="menu">
-        @for (item of menu(); track item.route) {
-          <a class="menu-item" [routerLink]="item.route" routerLinkActive="active">
-            <i [class]="item.icon"></i>
-            <span>{{ item.labelKey | translate }}</span>
-          </a>
-        }
-      </nav>
+      @if (selectedModule()) {
+        <nav class="menu screen-menu" aria-label="Écrans du module">
+          <ng-container *ngTemplateOutlet="dynamicTree; context: { $implicit: dynamicMenu(), level: 0 }" />
+        </nav>
+      }
     }
   </aside>
+
+  <ng-template #commonTree let-items let-level="level">
+    @for (item of items; track item.code) {
+      @if (item.route) {
+        <a class="menu-item" [class.nested]="level > 0" [routerLink]="item.route" routerLinkActive="active">
+          <i [class]="item.icon"></i>
+          <span>{{ item.labelKey | translate }}</span>
+        </a>
+      } @else {
+        <div class="menu-group" [class.nested]="level > 0">
+          <i [class]="item.icon"></i>
+          <span>{{ item.labelKey | translate }}</span>
+        </div>
+      }
+      @if (item.children?.length) {
+        <div class="menu-children">
+          <ng-container *ngTemplateOutlet="commonTree; context: { $implicit: item.children, level: level + 1 }" />
+        </div>
+      }
+    }
+  </ng-template>
+
+  <ng-template #dynamicTree let-items let-level="level">
+    @for (item of items; track item.id) {
+      @if (item.type === 'SCREEN' && item.route) {
+        <a class="menu-item" [class.nested]="level > 0" [routerLink]="item.route" routerLinkActive="active"
+           [attr.data-screen-code]="item.code">
+          <i [class]="item.icon || 'pi pi-circle'"></i>
+          <span>{{ item.labelKey | translate }}</span>
+        </a>
+      } @else {
+        <div class="menu-group" [class.nested]="level > 0">
+          <i [class]="item.icon || 'pi pi-folder'"></i>
+          <span>{{ item.labelKey | translate }}</span>
+        </div>
+      }
+      @if (item.children?.length) {
+        <div class="menu-children">
+          <ng-container *ngTemplateOutlet="dynamicTree; context: { $implicit: item.children, level: level + 1 }" />
+        </div>
+      }
+    }
+  </ng-template>
 
   <div class="main">
     <header class="topbar">

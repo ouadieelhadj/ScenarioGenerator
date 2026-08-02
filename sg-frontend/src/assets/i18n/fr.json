@@ -24,7 +24,14 @@
     "config": "Configuration",
     "swamLisMember": "SWAM LIS Membre",
     "swamLisSwitch": "SWAM LIS Switch",
-    "core": "Accueil"
+    "core": "Accueil",
+    "campaigns": "Campagnes",
+    "workflow": "Workflow",
+    "myOperations": "Mes opérations",
+    "myApprovals": "Mes validations",
+    "users": "Utilisateurs",
+    "roles": "Rôles",
+    "businessModules": "Modules métier"
   },
   "topbar": {
     "theme": "Thème",
@@ -254,5 +261,40 @@
     "foundationReady": "Socle dynamique actif",
     "dynamicContext": "Écran commun chargé avec le contexte du module",
     "dynamicContextDetail": "Les listes et actions métier seront activées avec les API de consultation et les permissions fines."
+  },
+  "modules": {
+    "serverPos": "ServerPOS",
+    "acquiring": "Acquisition POS / e-commerce",
+    "issuing": "Issuing",
+    "swamMember": "SWAM Membre",
+    "dmasMember": "DMAS Membre",
+    "dmcsMember": "DMCS Membre",
+    "simulators": "Simulateurs"
+  },
+  "moduleMenus": { "operations": "Opérations", "simulators": "Simulateurs" },
+  "screens": {
+    "overview": "Vue d'ensemble", "terminals": "Terminaux", "merchants": "Commerçants",
+    "routing": "Routage", "keys": "Clés", "transactions": "Transactions", "logs": "Journaux",
+    "contracts": "Contrats", "posTransactions": "Transactions POS", "ecommerceTransactions": "Transactions e-commerce",
+    "settlement": "Compensation", "customers": "Clients", "products": "Produits", "cards": "Cartes",
+    "authorizations": "Autorisations", "cardControls": "Contrôles carte", "statements": "Relevés",
+    "network": "Réseau", "reconciliation": "Rapprochement", "posSimulator": "Simulateur POS",
+    "merchantSiteLocal": "Site marchand national", "merchantSiteInternational": "Site marchand international",
+    "threeDsNetwork": "Simulateur réseau 3DS", "cardNetwork": "Simulateur réseau Visa / Mastercard"
+  },
+  "roles": {
+    "title": "Rôles", "subtitle": "Rôles et permissions effectives", "loadError": "Impossible de charger les rôles.",
+    "none": "Aucun rôle.", "code": "Code", "label": "Libellé", "permissions": "Permissions"
+  },
+  "workflow": {
+    "myOperations": "Mes opérations", "myApprovals": "Mes validations", "none": "Aucune demande.",
+    "foundationTitle": "Socle Maker/Checker prêt",
+    "foundationDetail": "L'interface est fermée tant que les API de workflow ne sont pas raccordées. Aucune validation fictive n'est créée."
+  },
+  "dynamicScreen": {
+    "unavailableTitle": "Écran indisponible", "unavailableDetail": "Cet écran n'est pas enregistré dans le registre frontend."
+  },
+  "moduleWorkspace": {
+    "ready": "Module enregistré dans le portail", "detail": "Le menu, la route et le contrôle d'accès sont actifs. L'écran métier sera raccordé à son API dédiée."
   }
 }
