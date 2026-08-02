@@ -1,0 +1,177 @@
+<div class="page-header">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1><i class="pi pi-cloud-upload"></i> {{ 'deployment.title' | translate }}</h1>
+    <p>{{ 'deployment.subtitle' | translate }}</p>
+  </div>
+</div>
+
+@if (error()) {
+  <div class="alert-error"><i class="pi pi-exclamation-circle"></i> {{ error()! | translate }}</div>
+}
+
+@if (loading()) {
+  <div class="state"><i class="pi pi-spin pi-spinner"></i> {{ 'common.loading' | translate }}</div>
+} @else {
+  @switch (section) {
+    @case ('overview') {
+      <section class="metrics">
+        <article><i class="pi pi-building"></i><strong>{{ clients().length }}</strong><span>{{ 'deployment.metrics.clients' | translate }}</span></article>
+        <article><i class="pi pi-server"></i><strong>{{ environments().length }}</strong><span>{{ 'deployment.metrics.environments' | translate }}</span></article>
+        <article><i class="pi pi-box"></i><strong>2</strong><span>{{ 'deployment.metrics.bundles' | translate }}</span></article>
+      </section>
+      <section class="card dual-mode">
+        <div><i class="pi pi-desktop"></i><h2>{{ 'deployment.overview.menuMode' | translate }}</h2><p>{{ 'deployment.overview.menuModeDetail' | translate }}</p></div>
+        <div><i class="pi pi-code"></i><h2>{{ 'deployment.overview.cliMode' | translate }}</h2><p>{{ 'deployment.overview.cliModeDetail' | translate }}</p></div>
+      </section>
+      <section class="card safety">
+        <i class="pi pi-shield"></i>
+        <div><strong>{{ 'deployment.overview.safety' | translate }}</strong><p>{{ 'deployment.overview.safetyDetail' | translate }}</p></div>
+      </section>
+    }
+
+    @case ('clients') {
+      <div class="section-head">
+        <h2>{{ 'deployment.clients.title' | translate }}</h2>
+        <button class="btn-primary" *hasPermission="'DEPLOYMENT_PREPARE'" (click)="showClientForm.set(true)">
+          <i class="pi pi-plus"></i> {{ 'deployment.clients.new' | translate }}
+        </button>
+      </div>
+      <section class="card">
+        @if (!clients().length) { <div class="state">{{ 'deployment.clients.none' | translate }}</div> }
+        @else {
+          <table><thead><tr><th>{{ 'deployment.fields.code' | translate }}</th><th>{{ 'deployment.fields.legalName' | translate }}</th><th>{{ 'deployment.fields.country' | translate }}</th><th>{{ 'deployment.fields.status' | translate }}</th></tr></thead>
+          <tbody>@for (client of clients(); track client.id) {
+            <tr><td><strong>{{ client.code }}</strong></td><td>{{ client.legalName }}</td><td>{{ client.countryCode }}</td><td><span class="badge">{{ client.status }}</span></td></tr>
+          }</tbody></table>
+        }
+      </section>
+    }
+
+    @case ('environments') {
+      <div class="section-head">
+        <div>
+          <h2>{{ 'deployment.environments.title' | translate }}</h2>
+          <select [ngModel]="selectedClientId()" (ngModelChange)="selectClient(+$event)">
+            @for (client of clients(); track client.id) { <option [ngValue]="client.id">{{ client.code }} - {{ client.legalName }}</option> }
+          </select>
+        </div>
+        <button class="btn-primary" *hasPermission="'DEPLOYMENT_PREPARE'" [disabled]="!selectedClientId()" (click)="showEnvironmentForm.set(true)">
+          <i class="pi pi-plus"></i> {{ 'deployment.environments.new' | translate }}
+        </button>
+      </div>
+      <div class="environment-grid">
+        @for (environment of environments(); track environment.id) {
+          <article class="card environment-card">
+            <header><div><span class="badge">{{ environment.environmentType }}</span><h3>{{ environment.code }}</h3></div><i class="pi pi-server"></i></header>
+            <dl>
+              <div><dt>OS</dt><dd>{{ environment.targetOs }}</dd></div>
+              <div><dt>Shell</dt><dd>{{ environment.shellType }}</dd></div>
+              <div><dt>DB</dt><dd>{{ environment.databaseType }}</dd></div>
+              <div><dt>{{ 'deployment.fields.root' | translate }}</dt><dd>{{ environment.deploymentRoot }}</dd></div>
+            </dl>
+            <button class="btn-secondary" *hasPermission="'DEPLOYMENT_PREPARE'" (click)="validate(environment)" data-testid="preflight-button">
+              <i class="pi pi-check-circle"></i> {{ 'deployment.preflight.run' | translate }}
+            </button>
+          </article>
+        } @empty { <div class="state card">{{ 'deployment.environments.none' | translate }}</div> }
+      </div>
+      @if (report()) {
+        <section class="card report" [class.blocking]="report()!.verdict === 'BLOCKING'">
+          <header><div><p class="eyebrow">{{ report()!.executionId }}</p><h3>{{ 'deployment.preflight.title' | translate }}</h3></div><span class="verdict">{{ report()!.verdict }}</span></header>
+          @for (check of report()!.checks; track check.code) {
+            <div class="check" [class]="check.status.toLowerCase()"><i class="pi" [class.pi-check-circle]="check.status === 'OK'" [class.pi-exclamation-triangle]="check.status !== 'OK'"></i><strong>{{ check.code }}</strong><span>{{ check.detail }}</span></div>
+          }
+        </section>
+      }
+    }
+
+    @case ('modules') {
+      <div class="module-columns">
+        <section class="card"><h2>{{ 'deployment.modules.members' | translate }}</h2>@for (module of modules('MEMBER'); track module.code) { <div class="module-row"><i class="pi pi-building"></i><div><strong>{{ module.label }}</strong><span>{{ module.artifactId }}</span></div><code>{{ module.defaultPort || 'DB/ENV' }}</code></div> }</section>
+        <section class="card"><h2>{{ 'deployment.modules.simulators' | translate }}</h2>@for (module of modules('SIMULATOR'); track module.code) { <div class="module-row"><i class="pi pi-bolt"></i><div><strong>{{ module.label }}</strong><span>{{ module.artifactId }}</span></div><code>{{ module.defaultPort || 'DB/ENV' }}</code></div> }</section>
+      </div>
+    }
+
+    @case ('licenses') {
+      <section class="card feature-info"><i class="pi pi-file-pdf"></i><div><h2>{{ 'deployment.licenses.title' | translate }}</h2><p>{{ 'deployment.licenses.detail' | translate }}</p><code>license.pdf + license.json.sig</code></div></section>
+      <section class="card safety"><i class="pi pi-lock"></i><div><strong>{{ 'deployment.licenses.noSecrets' | translate }}</strong><p>{{ 'deployment.licenses.noSecretsDetail' | translate }}</p></div></section>
+      <form class="card action-form" *hasPermission="'DEPLOYMENT_PREPARE'" (ngSubmit)="createLicense()">
+        <label><span>{{ 'deployment.fields.environment' | translate }}</span><select name="licenseEnvironment" [ngModel]="selectedEnvironmentId()" (ngModelChange)="selectedEnvironmentId.set(+$event)">@for (environment of environments(); track environment.id) { <option [ngValue]="environment.id">{{ environment.code }}</option> }</select></label>
+        <label><span>{{ 'deployment.fields.validFrom' | translate }}</span><input type="date" name="validFrom" [(ngModel)]="licenseForm.validFrom" /></label>
+        <label><span>{{ 'deployment.fields.validUntil' | translate }}</span><input type="date" name="validUntil" [(ngModel)]="licenseForm.validUntil" /></label>
+        <label><span>{{ 'deployment.fields.bundleVersion' | translate }}</span><input name="bundleVersion" [(ngModel)]="licenseForm.bundleVersion" /></label>
+        <button class="btn-primary" [disabled]="saving() || !selectedEnvironmentId()"><i class="pi pi-send"></i> {{ 'deployment.licenses.prepare' | translate }}</button>
+      </form>
+      <section class="card">
+        @if (!licenses().length) { <div class="state">{{ 'deployment.licenses.none' | translate }}</div> }
+        @else { <table><thead><tr><th>{{ 'deployment.fields.environment' | translate }}</th><th>{{ 'deployment.fields.validity' | translate }}</th><th>{{ 'deployment.fields.bundleVersion' | translate }}</th><th>{{ 'deployment.fields.status' | translate }}</th><th>Maker / Checker</th><th>{{ 'common.actions' | translate }}</th></tr></thead>
+          <tbody>@for (license of licenses(); track license.id) { <tr><td>#{{ license.environmentId }}</td><td>{{ license.validFrom }} → {{ license.validUntil }}</td><td>{{ license.bundleVersion }}</td><td><span class="badge">{{ license.status }}</span></td><td>{{ license.preparedBy }} / {{ license.approvedBy || '—' }}</td><td>@if (license.status === 'PENDING') { <button class="btn-secondary" *hasPermission="'DEPLOYMENT_APPROVE'" (click)="approveLicense(license)"><i class="pi pi-check"></i> {{ 'deployment.approve' | translate }}</button> }</td></tr> }</tbody></table> }
+      </section>
+    }
+
+    @case ('executions') {
+      <section class="card feature-info"><i class="pi pi-list-check"></i><div><h2>{{ 'deployment.executions.title' | translate }}</h2><p>{{ 'deployment.executions.detail' | translate }}</p><code>validate · plan · install · start · status · stop · upgrade · rollback · logs</code></div></section>
+      <form class="card action-form" *hasPermission="'DEPLOYMENT_EXECUTE'" (ngSubmit)="createExecution()">
+        <label><span>{{ 'deployment.fields.environment' | translate }}</span><select name="executionEnvironment" [ngModel]="selectedEnvironmentId()" (ngModelChange)="selectedEnvironmentId.set(+$event)">@for (environment of environments(); track environment.id) { <option [ngValue]="environment.id">{{ environment.code }}</option> }</select></label>
+        <label><span>{{ 'deployment.executions.action' | translate }}</span><select name="executionAction" [(ngModel)]="executionAction">@for (action of executionActions; track action) { <option [value]="action">{{ action }}</option> }</select></label>
+        <button class="btn-primary" [disabled]="saving() || !selectedEnvironmentId()"><i class="pi pi-send"></i> {{ 'deployment.executions.request' | translate }}</button>
+      </form>
+      <section class="card">
+        @if (!executions().length) { <div class="state">{{ 'deployment.executions.none' | translate }}</div> }
+        @else { <table><thead><tr><th>{{ 'deployment.fields.environment' | translate }}</th><th>{{ 'deployment.executions.action' | translate }}</th><th>{{ 'deployment.fields.status' | translate }}</th><th>Maker / Checker</th><th>{{ 'common.actions' | translate }}</th></tr></thead>
+          <tbody>@for (execution of executions(); track execution.id) { <tr><td>#{{ execution.environmentId }}</td><td><strong>{{ execution.action }}</strong></td><td><span class="badge">{{ execution.status }}</span></td><td>{{ execution.requestedBy }} / {{ execution.approvedBy || '—' }}</td><td>@if (execution.status === 'PENDING_APPROVAL') { <button class="btn-secondary" *hasPermission="'DEPLOYMENT_APPROVE'" (click)="approveExecution(execution)"><i class="pi pi-check"></i> {{ 'deployment.approve' | translate }}</button> }</td></tr> }</tbody></table> }
+      </section>
+    }
+  }
+}
+
+@if (showClientForm()) {
+  <div class="dialog-overlay" (click)="showClientForm.set(false)"><form class="dialog" (click)="$event.stopPropagation()" (ngSubmit)="createClient()">
+    <header><h2>{{ 'deployment.clients.new' | translate }}</h2><button type="button" class="icon" (click)="showClientForm.set(false)"><i class="pi pi-times"></i></button></header>
+    <div class="form-grid">
+      <label><span>{{ 'deployment.fields.code' | translate }}</span><input name="clientCode" [(ngModel)]="clientForm.code" required /></label>
+      <label><span>{{ 'deployment.fields.legalName' | translate }}</span><input name="legalName" [(ngModel)]="clientForm.legalName" required /></label>
+      <label><span>{{ 'deployment.fields.commercialName' | translate }}</span><input name="commercialName" [(ngModel)]="clientForm.commercialName" /></label>
+      <label><span>{{ 'deployment.fields.country' | translate }}</span><input name="country" [(ngModel)]="clientForm.countryCode" required /></label>
+      <label><span>{{ 'deployment.fields.currency' | translate }}</span><input name="currency" [(ngModel)]="clientForm.currencyCode" /></label>
+    </div>
+    <footer><button type="button" class="btn-ghost" (click)="showClientForm.set(false)">{{ 'common.cancel' | translate }}</button><button class="btn-primary" [disabled]="saving()">{{ 'common.save' | translate }}</button></footer>
+  </form></div>
+}
+
+@if (showEnvironmentForm()) {
+  <div class="dialog-overlay" (click)="showEnvironmentForm.set(false)"><form class="dialog wide" (click)="$event.stopPropagation()" (ngSubmit)="createEnvironment()">
+    <header><h2>{{ 'deployment.environments.new' | translate }}</h2><button type="button" class="icon" (click)="showEnvironmentForm.set(false)"><i class="pi pi-times"></i></button></header>
+    <div class="form-grid">
+      <label><span>{{ 'deployment.fields.code' | translate }}</span><input name="envCode" [(ngModel)]="environmentForm.code" required /></label>
+      <label><span>{{ 'deployment.fields.environmentType' | translate }}</span><select name="envType" [(ngModel)]="environmentForm.environmentType"><option>LOCAL</option><option>DEV</option><option>TEST</option><option>RECETTE</option><option>PREPROD</option></select></label>
+      <label><span>OS</span><select name="targetOs" [(ngModel)]="environmentForm.targetOs" (ngModelChange)="environmentForm.shellType = shellsFor($event)[0]"><option value="WINDOWS">WINDOWS</option><option value="LINUX">LINUX</option></select></label>
+      <label><span>Shell</span><select name="shellType" [(ngModel)]="environmentForm.shellType" data-testid="shell-select">@for (shell of shellsFor(environmentForm.targetOs); track shell) { <option [value]="shell">{{ shell }}</option> }</select></label>
+      <label class="full"><span>{{ 'deployment.fields.shellExecutable' | translate }}</span><input name="shellExecutable" [(ngModel)]="environmentForm.shellExecutable" /></label>
+      <label class="full"><span>{{ 'deployment.fields.root' | translate }}</span><input name="deploymentRoot" [(ngModel)]="environmentForm.deploymentRoot" required /></label>
+      <label><span>Java</span><input name="javaExecutable" [(ngModel)]="environmentForm.javaExecutable" required /></label>
+      <label><span>{{ 'deployment.fields.databaseType' | translate }}</span><select name="dbType" [(ngModel)]="environmentForm.databaseType">@for (type of databaseTypes(); track type) { <option [value]="type">{{ type }}</option> }</select></label>
+      @if (environmentForm.databaseType !== 'NONE') {
+        <label><span>DB Host</span><input name="dbHost" [(ngModel)]="environmentForm.databaseHost" /></label>
+        <label><span>DB Port</span><input name="dbPort" type="number" [(ngModel)]="environmentForm.databasePort" /></label>
+        <label><span>DB Name</span><input name="dbName" [(ngModel)]="environmentForm.databaseName" /></label>
+        <label><span>DB Schema</span><input name="dbSchema" [(ngModel)]="environmentForm.databaseSchema" /></label>
+        <label><span>DB User</span><input name="dbUser" [(ngModel)]="environmentForm.databaseUser" /></label>
+        <label><span>{{ 'deployment.fields.dbSecretRef' | translate }}</span><input name="dbSecret" [(ngModel)]="environmentForm.databasePasswordSecretRef" placeholder="secret://..." /></label>
+      }
+    </div>
+    <div class="module-picker">
+      <fieldset><legend>{{ 'deployment.modules.members' | translate }}</legend>@for (module of modules('MEMBER'); track module.code) { <label><input type="checkbox" [checked]="hasModule('MEMBER', module.code)" (change)="toggleModule('MEMBER', module.code, $any($event.target).checked)" /> {{ module.label }}</label> }</fieldset>
+      <fieldset><legend>{{ 'deployment.modules.simulators' | translate }}</legend>@for (module of modules('SIMULATOR'); track module.code) { <label><input type="checkbox" [checked]="hasModule('SIMULATOR', module.code)" (change)="toggleModule('SIMULATOR', module.code, $any($event.target).checked)" /> {{ module.label }}</label> }</fieldset>
+    </div>
+    <div class="form-grid">
+      <label class="full"><span>{{ 'deployment.fields.variableReferences' | translate }}</span><textarea name="variables" [(ngModel)]="variableReferencesText" rows="5" placeholder="VARIABLE=secret://provider/reference"></textarea></label>
+      <label class="full"><span>Members bundle</span><input name="membersBundle" [(ngModel)]="environmentForm.membersBundlePath" /></label>
+      <label class="full"><span>Simulators bundle</span><input name="simulatorsBundle" [(ngModel)]="environmentForm.simulatorsBundlePath" /></label>
+      <label class="full"><span>license.json.sig</span><input name="licensePath" [(ngModel)]="environmentForm.licensePath" /></label>
+      <label class="full"><span>license-public.pem</span><input name="publicKey" [(ngModel)]="environmentForm.licensePublicKeyPath" /></label>
+    </div>
+    <footer><button type="button" class="btn-ghost" (click)="showEnvironmentForm.set(false)">{{ 'common.cancel' | translate }}</button><button class="btn-primary" [disabled]="saving()">{{ 'common.save' | translate }}</button></footer>
+  </form></div>
+}

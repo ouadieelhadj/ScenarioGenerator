@@ -1,0 +1,26 @@
+schemaVersion: '1'
+clientCode: LOCAL_TEST_BANK
+clientName: Banque locale de test ScenarioGenerator
+environmentCode: LOCAL
+targetOs: WINDOWS
+shellType: GIT_BASH
+shellExecutable: 'D:\Program Files\Git\bin\bash.exe'
+deploymentRoot: ../../../runtime/deployment/local
+javaExecutable: 'D:\MoneyCore\idea-2026.1.3.win\jbr\bin\java.exe'
+
+database:
+  type: NONE
+
+memberModules: []
+simulatorModules:
+  - THREE_DS_NETWORK_SIMULATOR
+
+# Ce manifeste ne contient que des références. Ne jamais y placer de secret.
+variables: {}
+
+bundles:
+  members: ../../../sg-members-bundle/target/scenario-members-bundle.jar
+  simulators: ../../../sg-simulators-bundle/target/scenario-simulators-bundle.jar
+
+licenseFile: ../../../output/pdf/license.json.sig
+licensePublicKey: ../../../output/pdf/license-public.pem

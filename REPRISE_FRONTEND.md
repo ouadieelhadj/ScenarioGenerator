@@ -48,3 +48,14 @@ faire passer le test connecté.
 Aucun serveur de test démarré par cette session n'est encore actif. Un ancien
 serveur Angular sur le port 4200 a été observé et volontairement conservé car il
 n'appartient pas à cette session.
+
+## Sauvegarde Git du lot frontend
+
+- branche : `codex/AddingGlobalFrontrend` ;
+- commit : `8e8a22d feat(frontend): add global modular portal foundation` ;
+- branche distante : `origin/codex/AddingGlobalFrontrend` ;
+- état : commit créé et poussé avec succès.
+
+Le module de déploiement a ensuite été implémenté et testé localement. Son état,
+ses tests et la promotion future vers la recette sont décrits exclusivement dans
+`REPRISE_DEPLOYMENT.md`.

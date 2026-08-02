@@ -31,7 +31,8 @@
     "myApprovals": "Mes validations",
     "users": "Utilisateurs",
     "roles": "Rôles",
-    "businessModules": "Modules métier"
+    "businessModules": "Modules métier",
+    "deployments": "Déploiements"
   },
   "topbar": {
     "theme": "Thème",
@@ -296,5 +297,37 @@
   },
   "moduleWorkspace": {
     "ready": "Module enregistré dans le portail", "detail": "Le menu, la route et le contrôle d'accès sont actifs. L'écran métier sera raccordé à son API dédiée."
+  },
+  "deployment": {
+    "title": "Déploiements", "subtitle": "Préparer, valider et exploiter les plateformes membres et simulateurs.",
+    "menu": { "overview": "Vue d'ensemble", "clients": "Clients banques", "environments": "Environnements", "modules": "Modules", "licenses": "Licences", "executions": "Exécutions" },
+    "metrics": { "clients": "Clients banques", "environments": "Environnements", "bundles": "Bundles exécutables" },
+    "overview": {
+      "menuMode": "Pilotage depuis le menu", "menuModeDetail": "Les équipes fonctionnelles préparent les clients, environnements, modules et contrôles préalables depuis l'administration.",
+      "cliMode": "Pilotage technique par CLI", "cliModeDetail": "Les mêmes opérations sont disponibles en Git Bash, Linux Bash, PowerShell et CMD avec un contrat commun.",
+      "safety": "Déploiement fermé par défaut", "safetyDetail": "Tout contrôle BLOQUANT interdit l'installation. Les secrets restent référencés et ne sont jamais affichés ni enregistrés dans Git."
+    },
+    "clients": { "title": "Clients banques", "new": "Nouveau client", "none": "Aucun client banque n'est encore enregistré." },
+    "environments": { "title": "Environnements", "new": "Nouvel environnement", "none": "Aucun environnement pour ce client." },
+    "fields": {
+      "code": "Code", "legalName": "Raison sociale", "commercialName": "Nom commercial", "country": "Pays", "currency": "Devise", "status": "Statut",
+      "environmentType": "Type d'environnement", "root": "Répertoire de déploiement", "shellExecutable": "Exécutable du shell", "databaseType": "Base de données",
+      "dbSecretRef": "Référence secrète du mot de passe DB", "variableReferences": "Références des variables sensibles",
+      "environment": "Environnement", "validFrom": "Valide à partir du", "validUntil": "Valide jusqu'au", "validity": "Validité", "bundleVersion": "Version des bundles"
+    },
+    "preflight": { "run": "Vérifier les prérequis", "title": "Rapport de prérequis" },
+    "modules": { "members": "Modules côté membre", "simulators": "Modules simulateurs" },
+    "licenses": {
+      "title": "Licences de déploiement", "detail": "Chaque livraison contient une licence technique signée et une licence PDF lisible par le client.",
+      "noSecrets": "Aucun secret dans les licences", "noSecretsDetail": "Les licences identifient le client, l'environnement et les modules autorisés sans contenir de clé, mot de passe ou PAN.",
+      "prepare": "Préparer la licence", "none": "Aucune demande de licence."
+    },
+    "executions": { "title": "Exécutions techniques", "detail": "La CLI commune conserve un cycle explicite et contrôlable sur tous les shells supportés.", "action": "Action", "request": "Soumettre au checker", "none": "Aucune demande d'exécution." },
+    "approve": "Approuver",
+    "errors": {
+      "load": "Impossible de charger l'administration des déploiements.", "environments": "Impossible de charger les environnements.", "save": "Impossible d'enregistrer les informations.",
+      "clientRequired": "Sélectionnez d'abord un client banque.", "environmentRequired": "Sélectionnez d'abord un environnement.", "variables": "Chaque variable doit respecter NOM=secret://référence.", "preflight": "Le contrôle des prérequis a échoué.",
+      "license": "La demande de licence a échoué.", "execution": "La demande d'exécution a échoué.", "approval": "L'approbation a échoué. Vérifiez la séparation maker/checker et la configuration serveur."
+    }
   }
 }

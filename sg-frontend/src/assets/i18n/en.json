@@ -26,7 +26,7 @@
     "core": "Home",
     "config": "Configuration",
     "campaigns": "Campaigns", "workflow": "Workflow", "myOperations": "My operations",
-    "myApprovals": "My approvals", "users": "Users", "roles": "Roles", "businessModules": "Business modules"
+    "myApprovals": "My approvals", "users": "Users", "roles": "Roles", "businessModules": "Business modules", "deployments": "Deployments"
   },
   "topbar": {
     "theme": "Theme",
@@ -282,5 +282,20 @@
     "foundationDetail": "The interface remains closed until workflow APIs are connected. No fictitious approval is created."
   },
   "dynamicScreen": { "unavailableTitle": "Screen unavailable", "unavailableDetail": "This screen is not registered by the frontend." },
-  "moduleWorkspace": { "ready": "Module registered in the portal", "detail": "Menu, route and access control are active. The business screen will connect to its dedicated API." }
+  "moduleWorkspace": { "ready": "Module registered in the portal", "detail": "Menu, route and access control are active. The business screen will connect to its dedicated API." },
+  "deployment": {
+    "title": "Deployments", "subtitle": "Prepare, validate and operate member and simulator platforms.",
+    "menu": { "overview": "Overview", "clients": "Bank clients", "environments": "Environments", "modules": "Modules", "licenses": "Licenses", "executions": "Executions" },
+    "metrics": { "clients": "Bank clients", "environments": "Environments", "bundles": "Executable bundles" },
+    "overview": { "menuMode": "Menu-driven operations", "menuModeDetail": "Functional teams prepare clients, environments, modules and preflight checks from administration.", "cliMode": "Technical CLI operations", "cliModeDetail": "The same operations are available through Git Bash, Linux Bash, PowerShell and CMD.", "safety": "Fail-closed deployment", "safetyDetail": "Any BLOCKING check prevents installation. Secrets remain references and are never displayed or committed to Git." },
+    "clients": { "title": "Bank clients", "new": "New client", "none": "No bank client has been registered yet." },
+    "environments": { "title": "Environments", "new": "New environment", "none": "No environment for this client." },
+    "fields": { "code": "Code", "legalName": "Legal name", "commercialName": "Commercial name", "country": "Country", "currency": "Currency", "status": "Status", "environmentType": "Environment type", "root": "Deployment directory", "shellExecutable": "Shell executable", "databaseType": "Database", "dbSecretRef": "DB password secret reference", "variableReferences": "Sensitive variable references", "environment": "Environment", "validFrom": "Valid from", "validUntil": "Valid until", "validity": "Validity", "bundleVersion": "Bundle version" },
+    "preflight": { "run": "Check prerequisites", "title": "Prerequisite report" },
+    "modules": { "members": "Member-side modules", "simulators": "Simulator modules" },
+    "licenses": { "title": "Deployment licenses", "detail": "Each delivery contains a signed technical license and a client-readable PDF license.", "noSecrets": "No secrets in licenses", "noSecretsDetail": "Licenses identify the client, environment and authorized modules without containing keys, passwords or PANs.", "prepare": "Prepare license", "none": "No license request." },
+    "executions": { "title": "Technical executions", "detail": "The shared CLI keeps an explicit and controllable lifecycle across all supported shells.", "action": "Action", "request": "Submit to checker", "none": "No execution request." },
+    "approve": "Approve",
+    "errors": { "load": "Unable to load deployment administration.", "environments": "Unable to load environments.", "save": "Unable to save the information.", "clientRequired": "Select a bank client first.", "environmentRequired": "Select an environment first.", "variables": "Each variable must follow NAME=secret://reference.", "preflight": "The prerequisite check failed.", "license": "The license request failed.", "execution": "The execution request failed.", "approval": "Approval failed. Check maker/checker separation and server configuration." }
+  }
 }

@@ -26,7 +26,7 @@
     "core": "Inicio",
     "config": "Configuración",
     "campaigns": "Campañas", "workflow": "Workflow", "myOperations": "Mis operaciones",
-    "myApprovals": "Mis aprobaciones", "users": "Usuarios", "roles": "Roles", "businessModules": "Módulos de negocio"
+    "myApprovals": "Mis aprobaciones", "users": "Usuarios", "roles": "Roles", "businessModules": "Módulos de negocio", "deployments": "Despliegues"
   },
   "topbar": {
     "theme": "Tema",
@@ -282,5 +282,20 @@
     "foundationDetail": "La interfaz permanece cerrada hasta conectar las API del workflow. No se crea ninguna aprobación ficticia."
   },
   "dynamicScreen": { "unavailableTitle": "Pantalla no disponible", "unavailableDetail": "Esta pantalla no está registrada por el frontend." },
-  "moduleWorkspace": { "ready": "Módulo registrado en el portal", "detail": "El menú, la ruta y el control de acceso están activos. La pantalla se conectará a su API dedicada." }
+  "moduleWorkspace": { "ready": "Módulo registrado en el portal", "detail": "El menú, la ruta y el control de acceso están activos. La pantalla se conectará a su API dedicada." },
+  "deployment": {
+    "title": "Despliegues", "subtitle": "Preparar, validar y operar plataformas de miembros y simuladores.",
+    "menu": { "overview": "Resumen", "clients": "Clientes bancarios", "environments": "Entornos", "modules": "Módulos", "licenses": "Licencias", "executions": "Ejecuciones" },
+    "metrics": { "clients": "Clientes bancarios", "environments": "Entornos", "bundles": "Bundles ejecutables" },
+    "overview": { "menuMode": "Operación desde el menú", "menuModeDetail": "Los equipos funcionales preparan clientes, entornos, módulos y comprobaciones previas.", "cliMode": "Operación técnica por CLI", "cliModeDetail": "Las mismas operaciones están disponibles en Git Bash, Linux Bash, PowerShell y CMD.", "safety": "Despliegue cerrado por defecto", "safetyDetail": "Cualquier control BLOCKING impide la instalación. Los secretos siguen siendo referencias y nunca se guardan en Git." },
+    "clients": { "title": "Clientes bancarios", "new": "Nuevo cliente", "none": "Todavía no hay ningún cliente bancario registrado." },
+    "environments": { "title": "Entornos", "new": "Nuevo entorno", "none": "No hay ningún entorno para este cliente." },
+    "fields": { "code": "Código", "legalName": "Razón social", "commercialName": "Nombre comercial", "country": "País", "currency": "Moneda", "status": "Estado", "environmentType": "Tipo de entorno", "root": "Directorio de despliegue", "shellExecutable": "Ejecutable del shell", "databaseType": "Base de datos", "dbSecretRef": "Referencia secreta de contraseña DB", "variableReferences": "Referencias de variables sensibles", "environment": "Entorno", "validFrom": "Válida desde", "validUntil": "Válida hasta", "validity": "Validez", "bundleVersion": "Versión de bundles" },
+    "preflight": { "run": "Comprobar prerrequisitos", "title": "Informe de prerrequisitos" },
+    "modules": { "members": "Módulos del miembro", "simulators": "Módulos simuladores" },
+    "licenses": { "title": "Licencias de despliegue", "detail": "Cada entrega contiene una licencia técnica firmada y una licencia PDF legible por el cliente.", "noSecrets": "Sin secretos en las licencias", "noSecretsDetail": "Las licencias identifican al cliente, el entorno y los módulos autorizados sin contener claves, contraseñas o PAN.", "prepare": "Preparar licencia", "none": "No hay solicitudes de licencia." },
+    "executions": { "title": "Ejecuciones técnicas", "detail": "La CLI común conserva un ciclo explícito y controlable en todos los shells compatibles.", "action": "Acción", "request": "Enviar al checker", "none": "No hay solicitudes de ejecución." },
+    "approve": "Aprobar",
+    "errors": { "load": "No se puede cargar la administración de despliegues.", "environments": "No se pueden cargar los entornos.", "save": "No se puede guardar la información.", "clientRequired": "Seleccione primero un cliente bancario.", "environmentRequired": "Seleccione primero un entorno.", "variables": "Cada variable debe respetar NOMBRE=secret://referencia.", "preflight": "La comprobación de prerrequisitos ha fallado.", "license": "La solicitud de licencia ha fallado.", "execution": "La solicitud de ejecución ha fallado.", "approval": "La aprobación ha fallado. Verifique la separación maker/checker y la configuración del servidor." }
+  }
 }

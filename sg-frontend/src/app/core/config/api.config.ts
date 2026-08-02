@@ -91,6 +91,16 @@ export const ENDPOINTS = {
     myOperations: '/api/workflow/requests/mine',
     myApprovals: '/api/workflow/approvals/mine',
   },
+  deployments: {
+    catalog: '/api/admin/deployments/catalog',
+    clients: '/api/admin/deployments/clients',
+    environments: '/api/admin/deployments/environments',
+    preflight: (id: number) => `/api/admin/deployments/environments/${id}/preflight`,
+    licenses: '/api/admin/deployments/licenses',
+    approveLicense: (id: string) => `/api/admin/deployments/licenses/${id}/approve`,
+    executions: '/api/admin/deployments/executions',
+    approveExecution: (id: string) => `/api/admin/deployments/executions/${id}/approve`,
+  },
   dmas: {
     network: {
       signon: '/api/admin/dmas/network/signon',

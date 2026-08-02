@@ -85,6 +85,13 @@ management:
       exposure:
         include: health, info
 
+deployment:
+  license:
+    # La clé privée reste fournie au processus par l'environnement ou un coffre.
+    private-key-path: ${DEPLOYMENT_LICENSE_PRIVATE_KEY_PATH:}
+    public-key-path: ${DEPLOYMENT_LICENSE_PUBLIC_KEY_PATH:}
+    output-root: ${DEPLOYMENT_LICENSE_OUTPUT_ROOT:}
+
 logging:
   file:
     name: D:/MoneyCore/ScenarioGenerator/logs/GeneratorOrchestrator.log

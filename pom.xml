@@ -41,6 +41,10 @@
         <module>sg-3ds-member</module>
         <module>sg-3ds-network-simulator</module>
         <module>sg-visa-mastercard-gateway-simulator</module>
+        <module>sg-deployment-core</module>
+        <module>sg-deployment-cli</module>
+        <module>sg-members-bundle</module>
+        <module>sg-simulators-bundle</module>
         <module>sg-issuing-internal-e2e</module>
     </modules>
 

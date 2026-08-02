@@ -79,6 +79,36 @@ export const routes: Routes = [
         loadComponent: () => import('./features/roles/roles.component').then(m => m.RolesComponent),
       },
       {
+        path: 'administration/deployments',
+        canActivate: [permissionGuard], data: { permissions: [Permission.DEPLOYMENT_VIEW], section: 'overview' },
+        loadComponent: () => import('./features/deployment/deployment.component').then(m => m.DeploymentComponent),
+      },
+      {
+        path: 'administration/deployments/clients',
+        canActivate: [permissionGuard], data: { permissions: [Permission.DEPLOYMENT_VIEW], section: 'clients' },
+        loadComponent: () => import('./features/deployment/deployment.component').then(m => m.DeploymentComponent),
+      },
+      {
+        path: 'administration/deployments/environments',
+        canActivate: [permissionGuard], data: { permissions: [Permission.DEPLOYMENT_VIEW], section: 'environments' },
+        loadComponent: () => import('./features/deployment/deployment.component').then(m => m.DeploymentComponent),
+      },
+      {
+        path: 'administration/deployments/modules',
+        canActivate: [permissionGuard], data: { permissions: [Permission.DEPLOYMENT_VIEW], section: 'modules' },
+        loadComponent: () => import('./features/deployment/deployment.component').then(m => m.DeploymentComponent),
+      },
+      {
+        path: 'administration/deployments/licenses',
+        canActivate: [permissionGuard], data: { permissions: [Permission.DEPLOYMENT_VIEW], section: 'licenses' },
+        loadComponent: () => import('./features/deployment/deployment.component').then(m => m.DeploymentComponent),
+      },
+      {
+        path: 'administration/deployments/executions',
+        canActivate: [permissionGuard], data: { permissions: [Permission.DEPLOYMENT_VIEW], section: 'executions' },
+        loadComponent: () => import('./features/deployment/deployment.component').then(m => m.DeploymentComponent),
+      },
+      {
         path: 'profile',
         loadComponent: () => import('./features/profile/profile.component').then(m => m.ProfileComponent),
       },

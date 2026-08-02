@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.staging</groupId><artifactId>scenario-generator</artifactId><version>1.0.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>sg-members-bundle</artifactId>
+    <name>ScenarioGenerator Members Bundle</name>
+
+    <dependencies>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-deployment-core</artifactId><version>${project.version}</version></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-way-pos-server</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-acquiring</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-card-issuing</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-3ds-member</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-swam-lis-member</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-mc-dmas-member</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-dmcs-acquirer</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+        <dependency><groupId>com.staging</groupId><artifactId>sg-dmcs-issuer</artifactId><version>${project.version}</version><scope>runtime</scope></dependency>
+    </dependencies>
+
+    <build><plugins>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId><artifactId>maven-jar-plugin</artifactId><version>3.3.0</version>
+            <configuration><archive><manifest><mainClass>com.staging.sg.deployment.bundle.BundleLauncher</mainClass></manifest></archive></configuration>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId><artifactId>maven-dependency-plugin</artifactId><version>3.6.0</version>
+            <executions><execution><id>embed-member-libraries</id><phase>prepare-package</phase><goals><goal>copy-dependencies</goal></goals>
+                <configuration>
+                    <outputDirectory>${project.build.outputDirectory}/bundled-libs</outputDirectory><includeScope>runtime</includeScope>
+                    <excludeArtifactIds>sg-way-pos-server,sg-acquiring,sg-card-issuing,sg-3ds-member,sg-swam-lis-member,sg-mc-dmas-member,sg-dmcs-acquirer,sg-dmcs-issuer</excludeArtifactIds>
+                </configuration>
+            </execution><execution><id>inventory-member-libraries</id><phase>prepare-package</phase><goals><goal>list</goal></goals>
+                <configuration>
+                    <outputFile>${project.build.outputDirectory}/bundle-libraries.txt</outputFile><includeScope>runtime</includeScope><sort>true</sort>
+                    <excludeArtifactIds>sg-way-pos-server,sg-acquiring,sg-card-issuing,sg-3ds-member,sg-swam-lis-member,sg-mc-dmas-member,sg-dmcs-acquirer,sg-dmcs-issuer</excludeArtifactIds>
+                </configuration>
+            </execution></executions>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId><artifactId>maven-resources-plugin</artifactId><version>3.3.1</version>
+            <executions><execution><id>embed-thin-member-modules</id><phase>prepare-package</phase><goals><goal>copy-resources</goal></goals>
+                <configuration><outputDirectory>${project.build.outputDirectory}/bundled-modules</outputDirectory><resources>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-way-pos-server/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-acquiring/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-card-issuing/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-3ds-member/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-swam-lis-member/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-mc-dmas-member/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-dmcs-acquirer/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                    <resource><directory>${maven.multiModuleProjectDirectory}/sg-dmcs-issuer/target</directory><filtering>false</filtering><includes><include>*.jar.original</include></includes></resource>
+                </resources></configuration>
+            </execution></executions>
+        </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId><artifactId>maven-shade-plugin</artifactId><version>3.6.0</version>
+            <executions><execution><phase>package</phase><goals><goal>shade</goal></goals><configuration>
+                <finalName>scenario-members-bundle</finalName><createDependencyReducedPom>false</createDependencyReducedPom>
+                <artifactSet><includes>
+                    <include>com.staging:sg-deployment-core</include><include>org.yaml:snakeyaml</include>
+                    <include>com.fasterxml.jackson.core:jackson-databind</include>
+                    <include>com.fasterxml.jackson.core:jackson-core</include>
+                    <include>com.fasterxml.jackson.core:jackson-annotations</include>
+                </includes></artifactSet>
+            </configuration></execution></executions>
+        </plugin>
+    </plugins></build>
+</project>
