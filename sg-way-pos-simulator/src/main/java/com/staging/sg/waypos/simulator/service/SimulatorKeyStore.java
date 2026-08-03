@@ -45,6 +45,15 @@ public class SimulatorKeyStore {
         return statuses;
     }
 
+    public synchronized List<WayPosKeyExchangeCodec.KeyStatusDetails>
+            initialMasterKeyStatuses() throws Exception {
+        MasterKey tamk = masterKey("TAMK");
+        MasterKey tpmk = masterKey("TPMK");
+        return List.of(
+                masterStatus(tamk, "TAMK"),
+                masterStatus(tpmk, "TPMK"));
+    }
+
     public synchronized List<WayPosKeyExchangeCodec.KeyStatus> importBlocks(
             List<WayPosKeyExchangeCodec.KeyBlock> blocks) {
         List<WayPosKeyExchangeCodec.KeyStatus> results = new ArrayList<>();
@@ -80,6 +89,10 @@ public class SimulatorKeyStore {
     }
 
     private byte[] unwrap(WayPosKeyExchangeCodec.KeyBlock block) throws Exception {
+        if (!"1".equals(block.keyBlockFormat())) {
+            throw new IllegalArgumentException(
+                    "DF40=2 requires the matching Thales HSM key-block implementation");
+        }
         MasterKey masterKey = masterKey(block.masterKeyType());
         if (!masterKey.id().equals(block.masterKeyId())) {
             throw new IllegalArgumentException("Unknown master key reference");
@@ -142,6 +155,28 @@ public class SimulatorKeyStore {
             return new MasterKey(properties.masterKeyId(), properties.masterKeyHex());
         }
         throw new IllegalArgumentException("Unknown master key type");
+    }
+
+    private static WayPosKeyExchangeCodec.KeyStatusDetails masterStatus(
+            MasterKey key, String type) throws Exception {
+        if (!validKeyHex(key.hex()) || key.hex().length() != 48) {
+            throw new IllegalStateException(
+                    "A triple-length terminal master key is required");
+        }
+        byte[] clear = ISOUtil.hex2byte(key.hex());
+        try {
+            return new WayPosKeyExchangeCodec.KeyStatusDetails(
+                    key.id(), "0", type, keyKcv(clear), "C", "0");
+        } finally {
+            Arrays.fill(clear, (byte) 0);
+        }
+    }
+
+    private static String keyKcv(byte[] key) throws Exception {
+        Cipher cipher = Cipher.getInstance("DESede/ECB/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE,
+                new SecretKeySpec(expandDesEde(key), "DESede"));
+        return ISOUtil.hexString(cipher.doFinal(new byte[8])).substring(0, 6);
     }
 
     private static void verifyKcv(byte[] key, String expected) throws Exception {

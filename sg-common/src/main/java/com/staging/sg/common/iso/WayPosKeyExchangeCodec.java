@@ -10,19 +10,36 @@ public final class WayPosKeyExchangeCodec {
     public static final int MAX_KEY_BLOCK_LENGTH = 127;
 
     public record KeyStatus(String keyId, String status, String keyType) {}
+    public record KeyStatusDetails(
+            String keyId, String status, String keyType, String kcv,
+            String algorithm, String identificationScheme) {
+        public KeyStatus statusOnly() {
+            return new KeyStatus(keyId, status, keyType);
+        }
+    }
     public record KeyBlock(
             String keyId, String keyType, String kcv, String algorithm,
             String masterKeyId, String masterKeyType, byte[] ansiX917Block,
-            String actionCode, String identificationScheme, String replacementKeyId) {
+            String keyBlockFormat, String actionCode, String identificationScheme,
+            String replacementKeyId) {
         public KeyBlock {
             ansiX917Block = ansiX917Block == null ? null : ansiX917Block.clone();
+            keyBlockFormat = keyBlockFormat == null ? "1" : keyBlockFormat;
             actionCode = actionCode == null ? "0" : actionCode;
+        }
+        public KeyBlock(
+                String keyId, String keyType, String kcv, String algorithm,
+                String masterKeyId, String masterKeyType, byte[] ansiX917Block,
+                String actionCode, String identificationScheme, String replacementKeyId) {
+            this(keyId, keyType, kcv, algorithm, masterKeyId, masterKeyType,
+                    ansiX917Block, "1", actionCode, identificationScheme,
+                    replacementKeyId);
         }
         public KeyBlock(
                 String keyId, String keyType, String kcv, String algorithm,
                 String masterKeyId, String masterKeyType, byte[] ansiX917Block) {
             this(keyId, keyType, kcv, algorithm, masterKeyId, masterKeyType,
-                    ansiX917Block, "0", null, null);
+                    ansiX917Block, "1", "0", null, null);
         }
         @Override public byte[] ansiX917Block() {
             return ansiX917Block == null ? null : ansiX917Block.clone();
@@ -46,7 +63,7 @@ public final class WayPosKeyExchangeCodec {
             inner.add(text(0xDF25, key.masterKeyId()));
             inner.add(text(0xDF28, key.masterKeyType()));
             if ("0".equals(key.actionCode()) || "1".equals(key.actionCode())) {
-                inner.add(text(0xDF40, "1")); // ANSI X9.17
+                inner.add(text(0xDF40, key.keyBlockFormat()));
                 inner.add(new WayPosBerTlv.Tlv(0xDF41, key.ansiX917Block()));
             }
             inner.add(text(0xDF50, key.actionCode()));
@@ -86,12 +103,9 @@ public final class WayPosKeyExchangeCodec {
                     default -> { /* Future OpenWay tags are deliberately ignored. */ }
                 }
             }
-            if (("0".equals(action) || "1".equals(action)) && !"1".equals(format)) {
-                throw new IllegalArgumentException("Only ANSI X9.17 key blocks are supported");
-            }
             KeyBlock key = new KeyBlock(
                     id, type, kcv, algorithm, masterId, masterType, block,
-                    action, scheme, replacement);
+                    format, action, scheme, replacement);
             validateResponseKey(key);
             result.add(key);
         }
@@ -144,18 +158,53 @@ public final class WayPosKeyExchangeCodec {
         return WayPosBerTlv.encode(outer);
     }
 
+    public static byte[] encodeStatusDetails(List<KeyStatusDetails> statuses) {
+        if (statuses.size() > MAX_KEYS) {
+            throw new IllegalArgumentException("OpenWay accepts at most 15 key groups");
+        }
+        List<WayPosBerTlv.Tlv> outer = new ArrayList<>();
+        int index = 1;
+        for (KeyStatusDetails status : statuses) {
+            List<WayPosBerTlv.Tlv> inner = new ArrayList<>();
+            inner.add(text(0xDF20, status.keyId()));
+            inner.add(text(0xDF21, status.status()));
+            if (status.kcv() != null) inner.add(text(0xDF22, status.kcv()));
+            if (status.algorithm() != null) {
+                inner.add(text(0xDF23, status.algorithm()));
+            }
+            inner.add(text(0xDF24, status.keyType()));
+            if (status.identificationScheme() != null) {
+                inner.add(text(0xDF26, status.identificationScheme()));
+            }
+            outer.add(new WayPosBerTlv.Tlv(
+                    0xFF00 + index++, WayPosBerTlv.encode(inner)));
+        }
+        return WayPosBerTlv.encode(outer);
+    }
+
     public static List<KeyStatus> decodeStatuses(byte[] data) {
-        List<KeyStatus> result = new ArrayList<>();
+        return decodeStatusDetails(data).stream()
+                .map(KeyStatusDetails::statusOnly)
+                .toList();
+    }
+
+    public static List<KeyStatusDetails> decodeStatusDetails(byte[] data) {
+        List<KeyStatusDetails> result = new ArrayList<>();
         for (WayPosBerTlv.Tlv group : WayPosBerTlv.decode(data)) {
             if ((group.tag() & 0xFF00) != 0xFF00) continue;
             String id = null, status = null, type = null;
+            String kcv = null, algorithm = null, scheme = null;
             for (WayPosBerTlv.Tlv item : WayPosBerTlv.decode(group.value())) {
                 if (item.tag() == 0xDF20) id = text(item);
                 if (item.tag() == 0xDF21) status = text(item);
+                if (item.tag() == 0xDF22) kcv = text(item);
+                if (item.tag() == 0xDF23) algorithm = text(item);
                 if (item.tag() == 0xDF24) type = text(item);
+                if (item.tag() == 0xDF26) scheme = text(item);
             }
             if (id != null && status != null && type != null) {
-                result.add(new KeyStatus(id, status, type));
+                result.add(new KeyStatusDetails(
+                        id, status, type, kcv, algorithm, scheme));
             }
         }
         return List.copyOf(result);
@@ -183,6 +232,11 @@ public final class WayPosKeyExchangeCodec {
         }
         if (!List.of("0", "1", "2").contains(key.actionCode())) {
             throw new IllegalArgumentException("Unsupported DF50 action " + key.actionCode());
+        }
+        if (("0".equals(key.actionCode()) || "1".equals(key.actionCode()))
+                && !List.of("1", "2").contains(key.keyBlockFormat())) {
+            throw new IllegalArgumentException(
+                    "Unsupported DF40 key-block format " + key.keyBlockFormat());
         }
         if (("0".equals(key.actionCode()) || "1".equals(key.actionCode()))
                 && (key.ansiX917Block() == null

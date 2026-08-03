@@ -14,6 +14,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class WayPosSystemMessageServiceTest {
@@ -52,6 +53,29 @@ class WayPosSystemMessageServiceTest {
         assertEquals("000123", closed.getString(60));
         assertEquals("000124", terminal.getBatchId());
         assertTrue(terminal.acceptsFinancialTransactions());
+    }
+
+    @Test
+    void keyConfirmationAppliesTerminalStatusesBeforeResponding() throws Exception {
+        PosTerminalProfile terminal = PosTerminalProfile.provisioned(
+                "TERM0001", "MERCHANT0000001", true,
+                "BIN", true, "000123");
+        PosTerminalProfileRepository terminals =
+                mock(PosTerminalProfileRepository.class);
+        when(terminals.findLockedByTerminalId("TERM0001"))
+                .thenReturn(Optional.of(terminal));
+        WayPosKeyExchangeService keyExchange =
+                mock(WayPosKeyExchangeService.class);
+        WayPosSystemMessageService service = new WayPosSystemMessageService(
+                terminals, keyExchange, mock(WayPosReconciliationService.class),
+                mock(WayPosFileUpdateService.class));
+        ISOMsg request = message("0800", "930000");
+
+        ISOMsg response = service.process(request);
+
+        verify(keyExchange).confirm(request, terminal);
+        assertEquals("0810", response.getMTI());
+        assertEquals("00", response.getString(39));
     }
 
     private static ISOMsg reconciliation(String mti) throws Exception {

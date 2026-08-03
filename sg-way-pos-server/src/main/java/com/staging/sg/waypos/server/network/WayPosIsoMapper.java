@@ -65,6 +65,11 @@ public class WayPosIsoMapper {
         LocalDateTime now = LocalDateTime.now(ZoneOffset.UTC);
         response.set(12, now.format(DE12));
         response.set(13, now.format(DE13));
+        if (!response.hasField(37)
+                && (request.getMTI().startsWith("01")
+                || request.getMTI().startsWith("02"))) {
+            response.set(37, generatedRrn(now, value(request, 11)));
+        }
         response.set(39, routingResponse.posResponseCode());
         if (routingResponse.authorizationCode() != null) {
             response.set(38, routingResponse.authorizationCode());
@@ -73,6 +78,14 @@ public class WayPosIsoMapper {
             response.set(55, org.jpos.iso.ISOUtil.hex2byte(routingResponse.arpcHex()));
         }
         return response;
+    }
+
+    private static String generatedRrn(LocalDateTime now, String stan) {
+        if (stan == null || !stan.matches("\\d{6}")) {
+            throw new IllegalArgumentException(
+                    "A six-digit DE11 is required to generate DE37");
+        }
+        return now.format(DE13) + stan + "00";
     }
 
     public ISOMsg systemError(ISOMsg request) throws Exception {

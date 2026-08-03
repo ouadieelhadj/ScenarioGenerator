@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WayPosIsoMapperTest {
     private final WayPosIsoMapper mapper = new WayPosIsoMapper();
@@ -24,10 +25,29 @@ class WayPosIsoMapperTest {
         assertEquals(idempotencyKey("0220"), idempotencyKey("0221"));
     }
 
+    @Test
+    void generatesTwelveDigitRrnWhenRealTerminalOmitsDe37() throws Exception {
+        ISOMsg request = new ISOMsg();
+        request.setPackager(new WayPosPackager());
+        request.setMTI("0200");
+        request.set(7, "0724154116");
+        request.set(11, "000217");
+
+        ISOMsg response = mapper.toResponse(request,
+                new RoutingTransactionResponse(
+                        "tx", "DECLINED", "96", "96", null,
+                        null, null, null, false, Map.of()));
+
+        assertEquals("0210", response.getMTI());
+        assertEquals(request.getString(7), response.getString(7));
+        assertTrue(response.getString(37).matches("\\d{12}"));
+    }
+
     private String responseMti(String requestMti) throws Exception {
         ISOMsg request = new ISOMsg();
         request.setPackager(new WayPosPackager());
         request.setMTI(requestMti);
+        request.set(11, "123456");
         return mapper.toResponse(request, new RoutingTransactionResponse(
                 "tx", "APPROVED", "00", "00", null,
                 "00000", null, null, false, Map.of())).getMTI();

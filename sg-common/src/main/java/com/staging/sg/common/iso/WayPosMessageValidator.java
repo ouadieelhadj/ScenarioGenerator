@@ -14,7 +14,7 @@ public final class WayPosMessageValidator {
         String mti = message.getMTI();
         List<Integer> required = new ArrayList<>(List.of(7, 11, 41, 63));
         if (mti.startsWith("01") || mti.startsWith("02")) {
-            required.addAll(List.of(2, 3, 4, 14, 22, 25, 37, 49));
+            required.addAll(List.of(2, 3, 4, 14, 22, 25, 49));
         } else if (mti.startsWith("04")) {
             required.addAll(List.of(2, 3, 4, 24, 37, 49, 60));
         } else if (mti.startsWith("05")) {

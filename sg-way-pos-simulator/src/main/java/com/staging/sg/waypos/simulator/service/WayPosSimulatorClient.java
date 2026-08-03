@@ -129,7 +129,7 @@ public class WayPosSimulatorClient {
         }
         Exchange confirmation = null;
         if (confirm && !statuses.isEmpty()) {
-            confirmation = exchangeKeys();
+            confirmation = confirmKeys();
         }
         return new SimulatorKeyChangeResponse(
                 first.responseCode(), first.macVerified(), statuses,
@@ -144,7 +144,7 @@ public class WayPosSimulatorClient {
             throw new IllegalStateException(
                     "No imported key status is available for confirmation");
         }
-        Exchange confirmation = exchangeKeys();
+        Exchange confirmation = confirmKeys();
         boolean confirmed = "00".equals(confirmation.responseCode())
                 && confirmation.macVerified();
         return new SimulatorKeyConfirmationResponse(
@@ -163,7 +163,9 @@ public class WayPosSimulatorClient {
         message.set(12, now.format(DE12));
         message.set(13, now.format(DE13));
         message.set(41, fixed(defaultValue(input.terminalId(), properties.terminalId()), 8));
-        message.set(42, fixed(defaultValue(input.merchantId(), properties.merchantId()), 15));
+        if (input.merchantId() != null && !input.merchantId().isBlank()) {
+            message.set(42, fixed(input.merchantId(), 15));
+        }
         if (mti.startsWith("01") || mti.startsWith("02")) {
             financialFields(message, input, now, stan);
         } else if (mti.startsWith("04")) {
@@ -207,8 +209,7 @@ public class WayPosSimulatorClient {
         message.set(14, required(input.expiry(), "expiry"));
         message.set(22, defaultValue(input.entryMode(), "051"));
         message.set(25, defaultValue(input.conditionCode(), "00"));
-        message.set(37, defaultValue(
-                input.rrn(), now.format(DE13) + stan + "00"));
+        setIfPresent(message, 37, input.rrn());
         message.set(43, fixed("WAY POS TEST CASABLANCA MA", 40));
         message.set(49, properties.currency());
     }
@@ -229,21 +230,46 @@ public class WayPosSimulatorClient {
 
     private Exchange exchangeKeys() throws Exception {
         String stan = stans.next();
+        ISOMsg request = buildInitialKeyChange(stan);
+        ISOMsg response = send(request);
+        boolean verified = !response.hasField(64);
+        return new Exchange(response,
+                response.hasField(39) ? response.getString(39) : null, verified);
+    }
+
+    ISOMsg buildInitialKeyChange(String stan) throws Exception {
         ISOMsg request = buildSystem("0800", "960000", stan);
-        List<WayPosKeyExchangeCodec.KeyStatus> statuses = keyStore.statuses();
-        if (!statuses.isEmpty()) {
-            request.set(48, WayPosKeyExchangeCodec.encodeStatuses(statuses));
-        }
+        request.set(48, WayPosKeyExchangeCodec.encodeStatusDetails(
+                keyStore.initialMasterKeyStatuses()));
+        return request;
+    }
+
+    private Exchange confirmKeys() throws Exception {
+        String stan = stans.next();
+        ISOMsg request = buildKeyConfirmation(stan);
         byte[] requestTak = keyStore.activeTak();
         try {
             applyMac(request, requestTak);
             ISOMsg response = send(request);
-            boolean verified = response.hasField(64) && verifyMac(response, requestTak);
+            boolean verified = response.hasField(64)
+                    && verifyMac(response, requestTak);
             return new Exchange(response,
-                    response.hasField(39) ? response.getString(39) : null, verified);
+                    response.hasField(39) ? response.getString(39) : null,
+                    verified);
         } finally {
             Arrays.fill(requestTak, (byte) 0);
         }
+    }
+
+    ISOMsg buildKeyConfirmation(String stan) throws Exception {
+        List<WayPosKeyExchangeCodec.KeyStatus> statuses = keyStore.statuses();
+        if (statuses.isEmpty()) {
+            throw new IllegalStateException(
+                    "No imported key status is available for confirmation");
+        }
+        ISOMsg request = buildSystem("0800", "930000", stan);
+        request.set(48, WayPosKeyExchangeCodec.encodeStatuses(statuses));
+        return request;
     }
 
     private ISOMsg buildSystem(String mti, String processingCode, String stan) throws Exception {
@@ -254,11 +280,7 @@ public class WayPosSimulatorClient {
         message.set(3, processingCode);
         message.set(7, now.format(DE7));
         message.set(11, stan);
-        message.set(12, now.format(DE12));
-        message.set(13, now.format(DE13));
         message.set(41, fixed(properties.terminalId(), 8));
-        message.set(42, fixed(properties.merchantId(), 15));
-        message.set(49, properties.currency());
         message.set(63, "007SV1.0.0");
         return message;
     }
@@ -327,7 +349,7 @@ public class WayPosSimulatorClient {
                     "Expected response MTI " + expectedMti
                             + ", received " + response.getMTI());
         }
-        for (int field : new int[] {2, 3, 4, 11, 41, 49}) {
+        for (int field : new int[] {2, 3, 4, 7, 11, 41, 49}) {
             if (request.hasField(field)
                     && (!response.hasField(field)
                     || !request.getString(field)

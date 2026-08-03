@@ -62,6 +62,7 @@ public class WayPosSystemMessageService {
                     request, accepted ? "00" : "30", terminal.getBatchId());
         }
         if (mti.startsWith("08") && "930000".equals(processingCode)) {
+            keyExchange.confirm(request, terminal);
             return response(request, "00", terminal.getBatchId());
         }
         if (mti.startsWith("08") && "960000".equals(processingCode)) {

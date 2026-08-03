@@ -43,6 +43,11 @@ public class WayPosKeyExchangeService {
     }
 
     @Transactional
+    public void confirm(ISOMsg request, PosTerminalProfile terminal) {
+        applyTerminalStatuses(request, terminal);
+    }
+
+    @Transactional
     public void provision(ProvisionedKey value) {
         if (keys.findByTerminalIdAndKeyTypeAndKeyId(
                 value.terminalId(), value.keyType(), value.keyId()).isPresent()) {

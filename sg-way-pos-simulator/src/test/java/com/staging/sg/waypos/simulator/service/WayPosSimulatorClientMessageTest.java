@@ -1,6 +1,7 @@
 package com.staging.sg.waypos.simulator.service;
 
 import com.staging.sg.common.iso.WayPosMessageValidator;
+import com.staging.sg.common.iso.WayPosKeyExchangeCodec;
 import com.staging.sg.common.iso.WayPosPackager;
 import com.staging.sg.common.iso.WayPosPrivateData;
 import com.staging.sg.waypos.simulator.api.SimulatorTransactionRequest;
@@ -14,8 +15,10 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class WayPosSimulatorClientMessageTest {
 
@@ -35,6 +38,23 @@ class WayPosSimulatorClientMessageTest {
                 message.getBytes(52));
         assertArrayEquals(ISOUtil.hex2byte(input.emvDataHex()),
                 message.getBytes(55));
+    }
+
+    @Test
+    void canBuildRealTerminalShapeWithoutRequestRrnOrMerchantId()
+            throws Exception {
+        WayPosSimulatorClient client = client();
+        SimulatorTransactionRequest input = new SimulatorTransactionRequest(
+                "0200", "000000", "5321962145453348", "2912",
+                "000000001000", "051", "00", null, null, null,
+                "TERM0001", null, false, null, null, null, null,
+                null, null, null, "007SV1.0.0");
+
+        ISOMsg message = client.build(input, "000009");
+
+        WayPosMessageValidator.validateRequest(message);
+        assertFalse(message.hasField(37));
+        assertFalse(message.hasField(42));
     }
 
     @Test
@@ -154,14 +174,58 @@ class WayPosSimulatorClientMessageTest {
                         request, response));
     }
 
+    @Test
+    void buildsRealKeyConfirmationAs0800Processing930000() throws Exception {
+        SimulatorKeyStore keyStore = mock(SimulatorKeyStore.class);
+        when(keyStore.statuses()).thenReturn(List.of(
+                new WayPosKeyExchangeCodec.KeyStatus("27", "0", "TPK"),
+                new WayPosKeyExchangeCodec.KeyStatus("27", "0", "TAK")));
+        WayPosSimulatorClient client = client(keyStore);
+
+        ISOMsg request = client.buildKeyConfirmation("000010");
+
+        WayPosMessageValidator.validateRequest(request);
+        assertEquals("0800", request.getMTI());
+        assertEquals("930000", request.getString(3));
+        assertEquals(2, WayPosKeyExchangeCodec.decodeStatuses(
+                request.getBytes(48)).size());
+        assertFalse(request.hasField(42));
+        assertFalse(request.hasField(49));
+    }
+
+    @Test
+    void buildsInitialRkiLikeRealTerminalWithMasterKcvsAndNoMac()
+            throws Exception {
+        SimulatorKeyStore keyStore = mock(SimulatorKeyStore.class);
+        when(keyStore.initialMasterKeyStatuses()).thenReturn(List.of(
+                new WayPosKeyExchangeCodec.KeyStatusDetails(
+                        "00", "0", "TAMK", "A1B2C3", "C", "0"),
+                new WayPosKeyExchangeCodec.KeyStatusDetails(
+                        "00", "0", "TPMK", "D4E5F6", "C", "0")));
+        WayPosSimulatorClient client = client(keyStore);
+
+        ISOMsg request = client.buildInitialKeyChange("000011");
+
+        WayPosMessageValidator.validateRequest(request);
+        assertEquals("0800", request.getMTI());
+        assertEquals("960000", request.getString(3));
+        assertEquals(2, WayPosKeyExchangeCodec.decodeStatusDetails(
+                request.getBytes(48)).size());
+        assertFalse(request.hasField(64));
+    }
+
     private static WayPosSimulatorClient client() {
+        return client(mock(SimulatorKeyStore.class));
+    }
+
+    private static WayPosSimulatorClient client(SimulatorKeyStore keyStore) {
         SimulatorProperties properties = new SimulatorProperties(
                 "localhost", 8531, 55, "TERM0001", "MERCHANT0000001",
                 "504", "BIN", null, "00", "TMK", null,
                 "BINARY", "ECB");
         return new WayPosSimulatorClient(
                 properties, new WayPosPackager(), new SimulatorStan(),
-                mock(SimulatorKeyStore.class));
+                keyStore);
     }
 
     private static SimulatorTransactionRequest request(

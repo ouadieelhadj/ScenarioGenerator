@@ -1039,3 +1039,85 @@ Etat runtime au moment de la demande de sauvegarde utilisateur :
 - Premier travail WayPos non termine : E2E financier reel
   PIN/ARQC/ARPC-repeat/reversal/advice/reconciliation-EOD, uniquement apres
   fourniture des vrais elements de recette.
+
+## Compatibilite TPE reel Feitian controlee le 2026-08-03
+
+- Journal Way4 reel analyse en lecture seule depuis un emplacement externe au
+  depot. Aucun PAN complet, piste, PIN block, cryptogramme, MAC reel ou cle n'a
+  ete recopie dans le depot.
+- Terminal reel concerne : DE41 `12488881`.
+- Le TPE envoie l'achat sur le fil en `0200`. Way4 le projette en `0100`
+  interne, recoit un `0110`, puis renvoie un `0210` au TPE.
+- Le cas observe a recu un `0210` avec RC `96`; il ne constitue donc pas une
+  preuve d'approbation financiere.
+- Cadrage confirme : 293 octets recus, dont un prefixe longueur big-endian de
+  2 octets et un payload ISO de 291 octets. La valeur du prefixe est `0x0123`.
+- Champs externes observes dans le `0200` : DE2, 3, 4, 7, 11, 14, 22, 23,
+  25, 35, 41, 49, 52, 55, 63 et 64. DE42 et DE37 sont absents.
+- Le packager jPOS est conforme aux longueurs observees : DE55 binaire de 131
+  octets, DE63 de 57 caracteres et DE64 binaire de 4 octets. Le profil Way4
+  utilise un MAC binaire, coherent avec `macData=BIN`.
+- Ecart corrige : le validateur ServerPOS exigeait DE37 dans toute requete
+  financiere et aurait rejete ce vrai `0200` apres un unpack pourtant correct.
+  DE37 est maintenant optionnel en requete ; ServerPOS produit un RRN
+  numerique de 12 chiffres dans le `0210` lorsqu'il est absent.
+- Le simulateur peut maintenant omettre DE37 et DE42 lorsque l'appelant ne les
+  fournit pas, et il verifie aussi la correlation de DE7 dans la reponse.
+- Reference securisee ajoutee :
+  `tests/waypos/reference/example_log_reel_server_way4.md`.
+- Test structurel ajoute :
+  `sg-common/src/test/java/com/staging/sg/common/iso/WayPosRealServerReferenceTest.java`.
+  Il conserve la forme et l'hexadecimal neutralise, jamais les donnees reelles.
+- Non-regression executee avec le Maven embarque : 70 tests `sg-common`, 35
+  tests ServerPOS et 18 tests simulateur, soit 123 tests, 0 echec et
+  `BUILD SUCCESS` le 2026-08-03 a 15:50:59.
+- Packaging des JAR ServerPOS et simulateur reussi a 15:51:51.
+- Processus encore actif : le ServerPOS demarre avant cette correction ecoute
+  toujours les ports 8530/8531 et charge l'ancien JAR. Il faut l'arreter et le
+  redemarrer avant le test physique.
+- Premier travail non termine : obtenir un journal `POS_FEITIAN` contenant le
+  cycle RKI reel complet `0800/0810`, completer la reference neutralisee, puis
+  executer avec le TPE physique RKI, confirmation et achat `0200/0210`.
+
+## Cycle RKI reel Way4 controle et aligne le 2026-08-03
+
+- Un second journal Way4 reel a ete analyse en lecture seule depuis
+  `E:\ext_20260803094518.log`. Aucun bloc de cle protege, PAN, PIN block ou
+  autre donnee de paiement n'a ete recopie dans le depot.
+- Le cycle observe confirme un `0800/960000` initial sans DE64. DE48 contient
+  les statuts et KCV de la TAMK et de la TPMK du terminal.
+- La reponse `0810/960000` RC00 transporte deux groupes : TPK protegee sous
+  TPMK et TAK protegee sous TAMK. Les blocs observes utilisent `DF40=2` et
+  contiennent chacun 112 octets.
+- La confirmation reelle n'est pas un second `960000` : le TPE envoie un
+  `0800/930000` avec les statuts TPK/TAK en DE48 et un MAC DE64 calcule avec
+  la TAK nouvellement recue. Way4 repond `0810/930000` RC00.
+- ServerPOS accepte maintenant le `960000` initial sans MAC uniquement lorsque
+  le bootstrap local de test est explicitement active et que les KCV TAMK et
+  TPMK de DE48/DE59 correspondent aux cles de test configurees. Toute absence
+  ou divergence reste fermee avec RC63 ; aucune cle claire n'est journalisee.
+- Pour le `930000`, le controle MAC essaie aussi la TAK livree en attente. Si
+  le MAC est valide, les statuts recus activent la TAK et la TPK, puis la
+  reponse est protegee avec la meme nouvelle TAK.
+- Le simulateur reproduit maintenant la sequence reelle : `960000` sans MAC
+  avec metadonnees/KCV TAMK/TPMK, puis `930000` avec statuts et nouvelle TAK.
+- Le codec accepte et conserve explicitement `DF40=1` et `DF40=2`. Le
+  simulateur sait derouler le format ANSI local `DF40=1`. Il refuse
+  volontairement de derouler `DF40=2` sans implementation HSM Thales
+  correspondante ; aucun faux dechiffrement n'est annonce.
+- Non-regression agregee finale executee avec le Maven embarque : 72 tests
+  `sg-common`, 3 DMAS Member, 11 SWAM Acquirer, 3 Mastercard SMS Acquirer,
+  38 ServerPOS et 20 simulateur, soit 147 tests, 0 echec et `BUILD SUCCESS`
+  le 2026-08-03 a 16:28:42. Mastercard SMS Issuer compile mais ne contient
+  actuellement aucun test.
+- Le test cible de validation KCV TAMK/TPMK a ensuite reussi : 1 test,
+  0 echec, `BUILD SUCCESS` a 16:29:54.
+- Le processus ServerPOS PID `25092` encore en ecoute sur 8530/8531 a ete
+  demarre avant ces corrections et charge donc l'ancien JAR. Ne pas utiliser
+  ce processus pour conclure le test physique : l'arreter puis redemarrer le
+  JAR reconstruit.
+- Les JAR ServerPOS et simulateur ont ete reconstruits avec succes a 16:31:05
+  dans leurs repertoires `target` respectifs.
+- Premier travail non termine : redemarrer ServerPOS, puis executer avec le
+  TPE physique `960000`, `930000` et enfin un achat `0200/0210`. Le parcours
+  physique n'est pas encore declare passe.

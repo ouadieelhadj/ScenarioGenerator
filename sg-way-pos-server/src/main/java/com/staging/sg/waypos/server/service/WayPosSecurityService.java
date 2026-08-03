@@ -17,13 +17,16 @@ public class WayPosSecurityService {
     private final PosTerminalProfileRepository terminals;
     private final JposHsmService hsm;
     private final WayPosKeyExchangeService keyExchange;
+    private final WayPosInitialKeyChangeAuthenticator initialKeyChange;
 
     public WayPosSecurityService(
             PosTerminalProfileRepository terminals, JposHsmService hsm,
-            WayPosKeyExchangeService keyExchange) {
+            WayPosKeyExchangeService keyExchange,
+            WayPosInitialKeyChangeAuthenticator initialKeyChange) {
         this.terminals = terminals;
         this.hsm = hsm;
         this.keyExchange = keyExchange;
+        this.initialKeyChange = initialKeyChange;
     }
 
     public ValidatedTerminal validate(ISOMsg request) throws Exception {
@@ -42,7 +45,8 @@ public class WayPosSecurityService {
                     "57", "Extended operation disabled for terminal");
         }
         if (!request.hasField(64)) {
-            if (profile.isMacRequired()) {
+            if (profile.isMacRequired()
+                    && !initialKeyChange.authenticates(request)) {
                 throw new PosSecurityException("63", "MAC required");
             }
             return new ValidatedTerminal(profile, null, null, null);
@@ -56,7 +60,7 @@ public class WayPosSecurityService {
                     profile, profile.getTakUnderLmk(),
                     profile.getTakKcv(), profile.getTakLength());
         }
-        if (isKeyChange(request)) {
+        if (isKeyLifecycleMessage(request)) {
             for (PosTerminalKey candidate :
                     keyExchange.candidateAuthenticationKeys(terminalId)) {
                 if (validMac(data, received, candidate.getKeyUnderLmk(),
@@ -98,10 +102,11 @@ public class WayPosSecurityService {
         return MessageDigest.isEqual(received, expected);
     }
 
-    private static boolean isKeyChange(ISOMsg request) {
+    private static boolean isKeyLifecycleMessage(ISOMsg request) {
         try {
             return request.getMTI().startsWith("08")
-                    && "960000".equals(request.getString(3));
+                    && ("960000".equals(request.getString(3))
+                    || "930000".equals(request.getString(3)));
         } catch (Exception e) {
             return false;
         }
