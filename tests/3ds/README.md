@@ -89,3 +89,13 @@ sequenceDiagram
 Les PAN, OTP et valeurs d'authentification brutes ne sont pas persistes. La
 base conserve seulement une empreinte du PAN, une empreinte de la preuve et
 la date de consommation de cette preuve.
+
+## Test manuel dans le navigateur
+
+Le parcours navigateur complete les appels REST ci-dessus. Il permet a
+l'operateur de saisir une carte de test, d'etre redirige vers la page ACS,
+de saisir l'OTP sandbox affiche puis de voir la reponse financiere.
+
+Le guide et les scripts composant par composant sont disponibles dans
+`tests/3ds/browser-e2e/README.md`. L'adresse de la boutique est
+`http://127.0.0.1:8551/`.

@@ -70,3 +70,48 @@ Aucun processus du harnais 3DS n'est reste actif apres les tests.
 - `documents/design/platform/ARCHITECTURE_PLATEFORME_MONETIQUE_V1.md` ;
 - cadrage source externe :
   `E:/Way4-Knowledge-Base/03_Guides/3DS/CADRAGE_MODULE_3DS_DE_BOUT_EN_BOUT.md`.
+
+## Complement du 3 aout 2026 - parcours navigateur marchand et ACS
+
+Le parcours e-commerce dispose maintenant d'une interface operateur complete :
+
+- la boutique `sg-merchant-site-simulator` permet la saisie manuelle du PAN,
+  de l'expiration et du montant ;
+- le marchand utilise l'URL ACS retournee par le parcours 3DS et ne connait
+  pas en dur l'ACS emetteur ;
+- `sg-3ds-member` expose la page ACS LanaCash pour une carte locale ;
+- `sg-3ds-network-simulator` expose une page ACS externe sandbox pour les
+  scenarios reseau ;
+- l'OTP est affiche seulement sous le profil `connected-e2e`, puis saisi par
+  l'operateur ;
+- le retour marchand reprend le checkout, verifie la preuve 3DS et lance
+  l'autorisation financiere ;
+- le PAN n'est ni journalise ni persiste par la boutique.
+
+Le harnais detaille est sous `tests/3ds/browser-e2e/`. Il demarre separement
+Issuing, la passerelle, Acquisition, le membre 3DS, le simulateur reseau 3DS
+et le site marchand. Il fournit aussi le provisionnement, le statut, le suivi
+des journaux, l'arret et le controle Playwright.
+
+Validations exactes executees :
+
+- Maven cible : `sg-common` 69 tests, boutique 4 tests, membre 3DS 3 tests,
+  simulateur reseau 3DS 3 tests, aucun echec, `BUILD SUCCESS` ;
+- packaging des six JAR necessaires : `BUILD SUCCESS` ;
+- six sondes HTTP du harnais : `OK` ;
+- Playwright Chromium : `1 passed` ;
+- resultat navigateur : `APPROVED`, `RC=00`, `LOCAL_ISSUING`,
+  `AUTHENTICATED` ;
+- captures controlees sous
+  `runtime/acquiring-ecommerce-e2e/ui-evidence/`.
+
+Les six services de ce parcours sont volontairement laisses actifs apres la
+validation afin que l'utilisateur effectue le test manuel sur
+`http://127.0.0.1:8551/`. Ils doivent ensuite etre arretes avec
+`bash tests/3ds/browser-e2e/stop.sh`.
+
+Premier travail non termine : le parcours navigateur complet avec ACS externe
+et autorisation financiere off-us Visa/Mastercard n'est pas revendique comme
+valide. La page ACS externe est implementee et testee isolement ; son E2E
+financier depend du routage reseau cible et doit faire l'objet d'une campagne
+separee.

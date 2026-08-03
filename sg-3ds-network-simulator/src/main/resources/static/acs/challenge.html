@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Authentification 3-D Secure</title>
+  <link rel="stylesheet" href="/acs/challenge.css">
+</head>
+<body>
+  <main class="challenge-card">
+    <header><span class="shield">✓</span><div><strong id="issuer">Banque émettrice simulée</strong><small>3-D Secure 2.3.1</small></div></header>
+    <section>
+      <p class="eyebrow">Vérification du porteur</p>
+      <h1>Confirmez votre paiement</h1>
+      <p>Un code à usage unique a été envoyé par SMS au porteur simulé.</p>
+      <div class="sandbox"><strong>Mode sandbox</strong><span>OTP de test : <code id="sandbox-otp">••••••</code></span></div>
+      <form id="challenge-form" autocomplete="off">
+        <label>Code de vérification
+          <input id="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="12" placeholder="Saisir l’OTP" required autofocus>
+        </label>
+        <button id="confirm" type="submit">Confirmer</button>
+      </form>
+      <p id="message" class="message" aria-live="polite"></p>
+      <p class="transaction">Transaction 3DS : <span id="transaction-reference"></span></p>
+    </section>
+  </main>
+  <footer>ACS externe simulé — aucun OTP réel n’est envoyé</footer>
+  <script src="/acs/challenge.js" defer></script>
+</body>
+</html>

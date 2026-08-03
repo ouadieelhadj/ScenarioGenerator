@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Atlas Market — Boutique sandbox</title>
+  <link rel="stylesheet" href="/merchant.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="Atlas Market accueil">
+      <span class="brand-mark">AM</span>
+      <span><strong>Atlas Market</strong><small>Boutique de démonstration</small></span>
+    </a>
+    <span class="sandbox-badge">SANDBOX</span>
+  </header>
+
+  <main class="layout">
+    <section class="product-card" aria-labelledby="product-title">
+      <div class="product-visual"><span>SG</span></div>
+      <p class="eyebrow">Produit numérique</p>
+      <h1 id="product-title">Pack ScenarioGenerator Lab</h1>
+      <p class="product-copy">Accès de démonstration au laboratoire monétique pour une campagne.</p>
+      <ul>
+        <li>Activation immédiate</li>
+        <li>Environnement national ou international</li>
+        <li>Paiement sécurisé par 3-D Secure</li>
+      </ul>
+    </section>
+
+    <section class="checkout-card" aria-labelledby="checkout-title">
+      <div id="checkout-panel">
+        <p class="eyebrow">Paiement sécurisé</p>
+        <h2 id="checkout-title">Finaliser la commande</h2>
+        <div id="configuration-status" class="notice loading">Chargement du profil marchand…</div>
+
+        <form id="checkout-form" autocomplete="off">
+          <label>Nom du porteur
+            <input id="cardholder" type="text" value="CLIENT TEST" maxlength="40" required>
+          </label>
+          <label>Numéro de carte
+            <input id="pan" type="text" inputmode="numeric" autocomplete="cc-number"
+                   placeholder="0000 0000 0000 0000" maxlength="23" required>
+            <span id="card-brand" class="field-hint">Le BIN déterminera le routage réel.</span>
+          </label>
+          <div class="field-row">
+            <label>Expiration MM/AA
+              <input id="expiry" type="text" inputmode="numeric" autocomplete="cc-exp"
+                     placeholder="12/29" maxlength="5" required>
+            </label>
+            <label>Montant (MAD)
+              <input id="amount" type="number" min="1" step="0.01" value="10.00" required>
+            </label>
+          </div>
+
+          <details>
+            <summary>Paramètres du scénario sandbox</summary>
+            <div class="scenario-grid">
+              <label>Route attendue
+                <select id="network-route">
+                  <option value="LOCAL_ISSUING">Issuing local</option>
+                  <option value="DMAS_MASTERCARD">DMAS Mastercard</option>
+                  <option value="SWAM">SWAM</option>
+                  <option value="VISA">Visa</option>
+                </select>
+              </label>
+              <label>Type de site
+                <select id="site-type">
+                  <option value="NATIONAL">National</option>
+                  <option value="INTERNATIONAL">International</option>
+                </select>
+              </label>
+              <label>Programme 3DS
+                <select id="program">
+                  <option value="MASTERCARD">Mastercard</option>
+                  <option value="VISA">Visa</option>
+                </select>
+              </label>
+              <label>Parcours 3DS
+                <select id="flow">
+                  <option value="CHALLENGE">Challenge OTP</option>
+                  <option value="FRICTIONLESS">Frictionless</option>
+                  <option value="NOT_REQUESTED">Sans 3DS</option>
+                </select>
+              </label>
+              <label>ACS émetteur
+                <select id="issuer-mode">
+                  <option value="MEMBER">ACS LanaCash</option>
+                  <option value="EXTERNAL_SIMULATOR">ACS externe simulé</option>
+                </select>
+              </label>
+            </div>
+          </details>
+
+          <div class="total"><span>Total</span><strong id="total-value">10,00 MAD</strong></div>
+          <button id="pay-button" type="submit" disabled>Payer maintenant</button>
+          <p class="security-note">Le PAN est utilisé uniquement en mémoire pour ce test local. Il n’est ni enregistré ni journalisé.</p>
+        </form>
+      </div>
+
+      <section id="result-panel" class="result-panel" hidden aria-live="polite">
+        <div id="result-icon" class="result-icon">✓</div>
+        <p class="eyebrow">Résultat du paiement</p>
+        <h2 id="result-title">Paiement approuvé</h2>
+        <p id="result-message"></p>
+        <dl id="result-details"></dl>
+        <a class="secondary-button" href="/">Nouvel achat</a>
+      </section>
+    </section>
+  </main>
+
+  <footer>Atlas Market Sandbox · Aucun paiement réel n’est effectué</footer>
+  <script src="/merchant.js" defer></script>
+</body>
+</html>

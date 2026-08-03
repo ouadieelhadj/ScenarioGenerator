@@ -58,8 +58,9 @@ start_jar() {
   if curl -fsS --connect-timeout 2 --max-time 3 "$health" >/dev/null 2>&1; then
     fail "$label utilise deja son port; aucun processus externe ne sera reutilise"
   fi
-  nohup "$JAVA" -jar "$jar" "$@" >"$log_file" 2>&1 &
+  nohup "$JAVA" -jar "$jar" "$@" </dev/null >"$log_file" 2>&1 &
   pid=$!
+  disown "$pid" 2>/dev/null || true
   printf '%s\n' "$pid" >"$pid_file"
   if ! wait_http "$health" "$label"; then
     tail -80 "$log_file" >&2 || true

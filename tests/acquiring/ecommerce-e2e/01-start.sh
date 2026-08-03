@@ -98,6 +98,7 @@ if [[ "${THREE_DS_ENABLED:-false}" == "true" ]]; then
 fi
 export THREE_DS_MEMBER_BASE_URL="$THREE_DS_MEMBER_URL"
 export THREE_DS_NETWORK_BASE_URL="$THREE_DS_NETWORK_URL"
+export ECOMMERCE_SIMULATOR_PROFILE_ID_FILE="$RUNTIME/profile-id"
 export MERCHANT_SITE_SIMULATOR_LOG_FILE="$LOG_DIR/merchant-site-simulator.log"
 start_jar sg-merchant-site-simulator merchant-site-simulator \
   "$SIMULATOR_URL/api/merchant-site-simulator/v1/health" \

@@ -141,3 +141,16 @@ appele les scripts d'arret de tous les domaines.
 - aucun port utilise par la campagne globale n'est reste en ecoute apres son
   arret ; deux processus Java preexistants ecoutent encore sur `8080` et
   `18081`, hors ports et hors PID de cette campagne, et n'ont pas ete touches.
+
+## Confirmation operateur du 3 aout 2026
+
+La campagne globale a ete relancee par l'utilisateur sur le commit `48c39cb`
+avec `PLATFORM_E2E_SKIP_BUILD=true` et l'arret prealable du harnais. Les six
+domaines ont de nouveau retourne `PASSED` : Issuing, Acquisition, 3DS,
+Mastercard DMAS/DMCS, SWAM et Visa. Les services de cette campagne ont ete
+arretes par sa phase finale.
+
+Le fichier local ignore
+`runtime/platform-e2e/platform-e2e.env` est disponible sur cette machine pour
+les prochaines campagnes. Il doit etre transmis a RECETTE par canal securise
+et depose au meme emplacement ; il ne doit jamais etre ajoute a Git.

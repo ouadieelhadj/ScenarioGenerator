@@ -6,6 +6,9 @@ spring:
     name: sg-merchant-site-simulator
 
 ecommerce-simulator:
+  public-base-url: ${MERCHANT_SITE_SIMULATOR_BASE_URL:http://127.0.0.1:8551}
+  ui:
+    profile-id-file: ${ECOMMERCE_SIMULATOR_PROFILE_ID_FILE:${user.dir}/runtime/acquiring-ecommerce-e2e/profile-id}
   acquiring:
     base-url: ${ECOMMERCE_SIMULATOR_ACQUIRING_URL:http://127.0.0.1:8550}
     connect-timeout-ms: ${ECOMMERCE_SIMULATOR_CONNECT_TIMEOUT_MS:1000}

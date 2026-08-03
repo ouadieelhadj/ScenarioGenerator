@@ -4,6 +4,7 @@ import com.staging.sg.common.ecommerce.*;
 import com.staging.sg.common.issuing.PaymentIdentifierType;
 import com.staging.sg.common.threeds.*;
 import com.staging.sg.ecommerce.simulator.api.MerchantSiteType;
+import com.staging.sg.ecommerce.simulator.api.InteractiveCheckoutStartResponse;
 import com.staging.sg.ecommerce.simulator.api.SimulatorPurchaseRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.net.http.HttpClient;
 import java.time.Duration;
@@ -23,7 +25,11 @@ public class EcommerceSimulatorClient {
     private final RestClient acquiring;
     private final RestClient threeDsMember;
     private final RestClient threeDsNetwork;
+    private final String memberBaseUrl;
+    private final String networkBaseUrl;
+    private final String merchantSiteBaseUrl;
     private final Map<UUID, ThreeDsRReq> externalResults = new ConcurrentHashMap<>();
+    private final Map<UUID, PendingCheckout> pendingCheckouts = new ConcurrentHashMap<>();
 
     @Autowired
     public EcommerceSimulatorClient(
@@ -36,7 +42,9 @@ public class EcommerceSimulatorClient {
             @Value("${ecommerce-simulator.three-ds.member-base-url:http://127.0.0.1:8560}")
             String memberUrl,
             @Value("${ecommerce-simulator.three-ds.network-base-url:http://127.0.0.1:8561}")
-            String networkUrl) {
+            String networkUrl,
+            @Value("${ecommerce-simulator.public-base-url:http://127.0.0.1:8551}")
+            String merchantSiteBaseUrl) {
         JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(
                 HttpClient.newBuilder()
                         .connectTimeout(Duration.ofMillis(connectTimeoutMs)).build());
@@ -47,24 +55,70 @@ public class EcommerceSimulatorClient {
                 .requestFactory(factory).build();
         this.threeDsNetwork = RestClient.builder().baseUrl(networkUrl)
                 .requestFactory(factory).build();
+        this.memberBaseUrl = memberUrl;
+        this.networkBaseUrl = networkUrl;
+        this.merchantSiteBaseUrl = merchantSiteBaseUrl;
     }
 
     public EcommerceSimulatorClient(String baseUrl, int connectTimeoutMs,
             int readTimeoutMs) {
         this(baseUrl, connectTimeoutMs, readTimeoutMs,
-                "http://127.0.0.1:8560", "http://127.0.0.1:8561");
+                "http://127.0.0.1:8560", "http://127.0.0.1:8561",
+                "http://127.0.0.1:8551");
     }
 
     public EcommercePurchaseResponse purchase(SimulatorPurchaseRequest input) {
-        require(input);
-        String transactionId = value(input.transactionId(), UUID.randomUUID().toString());
-        String correlationId = value(input.correlationId(),
-                "ecom-corr-" + transactionId);
-        String idempotencyKey = value(input.idempotencyKey(),
-                "ecom-idem-" + transactionId);
-        Authentication authentication = authenticate(input, transactionId, correlationId);
+        require(input, true);
+        RequestContext context = context(input);
+        Authentication authentication = authenticate(input, context.transactionId(),
+                context.correlationId());
+        return authorize(input, context, authentication);
+    }
+
+    public InteractiveCheckoutStartResponse startInteractive(
+            SimulatorPurchaseRequest input) {
+        require(input, false);
+        RequestContext context = context(input);
+        if (input.threeDsFlow() == ThreeDsFlow.NOT_REQUESTED) {
+            return InteractiveCheckoutStartResponse.completed(authorize(input, context,
+                    Authentication.notPerformed()));
+        }
+        ThreeDsStartResponse started = input.siteType() == MerchantSiteType.INTERNATIONAL
+                ? startInternational(input, context.transactionId(), context.correlationId())
+                : startNational(input, context.transactionId(), context.correlationId());
+        if (started.transStatus() != ThreeDsTransStatus.C) {
+            return InteractiveCheckoutStartResponse.completed(
+                    authorize(input, context, accepted(started)));
+        }
+        UUID checkoutId = UUID.randomUUID();
+        pendingCheckouts.put(checkoutId, new PendingCheckout(input, context, started));
+        return InteractiveCheckoutStartResponse.challenge(checkoutId,
+                browserChallengeUrl(checkoutId, input, started));
+    }
+
+    public EcommercePurchaseResponse completeInteractive(UUID checkoutId) {
+        PendingCheckout pending = pendingCheckouts.get(checkoutId);
+        if (pending == null) {
+            throw new IllegalArgumentException("Checkout 3DS inconnu ou deja termine");
+        }
+        ThreeDsStartResponse completed = pending.input().siteType()
+                == MerchantSiteType.INTERNATIONAL
+                ? fromExternalResult(pending.started())
+                : threeDsMember.get()
+                    .uri("/api/3ds/member/v1/authentications/{id}",
+                            pending.started().threeDSServerTransId())
+                    .retrieve().body(ThreeDsStartResponse.class);
+        EcommercePurchaseResponse response = authorize(pending.input(), pending.context(),
+                accepted(completed));
+        pendingCheckouts.remove(checkoutId);
+        return response;
+    }
+
+    private EcommercePurchaseResponse authorize(SimulatorPurchaseRequest input,
+            RequestContext context, Authentication authentication) {
         EcommercePurchaseRequest request = new EcommercePurchaseRequest(
-                "1.0", transactionId, correlationId, idempotencyKey,
+                "1.0", context.transactionId(), context.correlationId(),
+                context.idempotencyKey(),
                 input.acquirerId(), input.profileId(), input.merchantOrderId(),
                 input.amountMinor(), input.currency(), PaymentIdentifierType.PAN,
                 input.pan(), input.expiry(), input.networkRoute(),
@@ -72,8 +126,8 @@ public class EcommerceSimulatorClient {
                 authentication.dsTransId());
         EcommercePurchaseResponse response = acquiring.post()
                 .uri("/api/acquiring/v1/ecommerce/transactions")
-                .header("Idempotency-Key", idempotencyKey)
-                .header("X-Correlation-ID", correlationId)
+                .header("Idempotency-Key", context.idempotencyKey())
+                .header("X-Correlation-ID", context.correlationId())
                 .body(request)
                 .retrieve()
                 .onStatus(HttpStatusCode::isError, (ignored, result) -> {
@@ -84,6 +138,35 @@ public class EcommerceSimulatorClient {
                 .body(EcommercePurchaseResponse.class);
         if (response == null) throw new IllegalStateException("Empty acquiring response");
         return response;
+    }
+
+    private RequestContext context(SimulatorPurchaseRequest input) {
+        String transactionId = value(input.transactionId(), UUID.randomUUID().toString());
+        String correlationId = value(input.correlationId(),
+                "ecom-corr-" + transactionId);
+        String idempotencyKey = value(input.idempotencyKey(),
+                "ecom-idem-" + transactionId);
+        return new RequestContext(transactionId, correlationId, idempotencyKey);
+    }
+
+    private String browserChallengeUrl(UUID checkoutId, SimulatorPurchaseRequest input,
+            ThreeDsStartResponse started) {
+        String acsBase = input.issuerMode() == ThreeDsIssuerMode.MEMBER
+                ? memberBaseUrl : networkBaseUrl;
+        String returnUrl = UriComponentsBuilder.fromUriString(merchantSiteBaseUrl)
+                .path("/")
+                .queryParam("checkoutId", checkoutId)
+                .queryParam("resume", "3ds")
+                .build().encode().toUriString();
+        return UriComponentsBuilder.fromUriString(acsBase)
+                .path("/acs/challenge.html")
+                .queryParam("threeDSServerTransId", started.threeDSServerTransId())
+                .queryParam("dsTransId", started.dsTransId())
+                .queryParam("acsTransId", started.acsTransId())
+                .queryParam("messageVersion", started.messageVersion())
+                .queryParam("program", started.program())
+                .queryParam("returnUrl", returnUrl)
+                .build().encode().toUriString();
     }
 
     public ThreeDsRRes receiveResult(ThreeDsRReq result) {
@@ -185,7 +268,8 @@ public class EcommerceSimulatorClient {
                 result.eci(), result.authenticationValue(), result.dsTransId().toString());
     }
 
-    private static void require(SimulatorPurchaseRequest input) {
+    private static void require(SimulatorPurchaseRequest input,
+            boolean challengeDataRequired) {
         if (input == null || input.profileId() == null || blank(input.acquirerId())
                 || blank(input.merchantOrderId()) || input.amountMinor() <= 0
                 || input.currency() == null || !input.currency().matches("\\d{3}")
@@ -197,7 +281,7 @@ public class EcommerceSimulatorClient {
         }
         if (input.threeDsFlow() != ThreeDsFlow.NOT_REQUESTED
                 && (input.threeDsProgram() == null || input.issuerMode() == null
-                    || input.challengeData() == null
+                    || challengeDataRequired && input.challengeData() == null
                         && input.threeDsFlow() == ThreeDsFlow.CHALLENGE)) {
             throw new IllegalArgumentException("Incomplete 3DS simulator scenario");
         }
@@ -218,4 +302,10 @@ public class EcommerceSimulatorClient {
                     null, null, null);
         }
     }
+
+    private record RequestContext(String transactionId, String correlationId,
+            String idempotencyKey) {}
+
+    private record PendingCheckout(SimulatorPurchaseRequest input,
+            RequestContext context, ThreeDsStartResponse started) {}
 }
