@@ -1,6 +1,8 @@
 package com.staging.sg.acquiring.service;
 
 import com.staging.sg.common.ecommerce.EcommerceNetworkRoute;
+import com.staging.sg.common.threeds.ThreeDsIssuerMode;
+import com.staging.sg.common.threeds.ThreeDsProgram;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 
@@ -48,5 +50,26 @@ class EcommerceRouteResolverTest {
                 "5321969999999999", EcommerceNetworkRoute.SWAM))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("authoritative BIN route");
+    }
+
+    @Test
+    void previewsTheProgramAndMemberAcsFromTheAuthoritativeBinRoute()
+            throws Exception {
+        JdbcTemplate jdbc = mock(JdbcTemplate.class);
+        ResultSet row = mock(ResultSet.class);
+        when(row.getString("bin_from")).thenReturn("532196");
+        when(row.getString("bin_to")).thenReturn("532196");
+        when(row.getString("interface_code")).thenReturn("00000");
+        when(jdbc.query(anyString(), any(org.springframework.jdbc.core.RowMapper.class)))
+                .thenAnswer(call -> List.of(call.<org.springframework.jdbc.core.RowMapper<?>>getArgument(1)
+                        .mapRow(row, 0)));
+
+        var preview = new EcommerceRouteResolver(jdbc)
+                .preview("5321969999999999");
+
+        assertThat(preview.networkRoute())
+                .isEqualTo(EcommerceNetworkRoute.LOCAL_ISSUING);
+        assertThat(preview.threeDsProgram()).isEqualTo(ThreeDsProgram.MASTERCARD);
+        assertThat(preview.issuerMode()).isEqualTo(ThreeDsIssuerMode.MEMBER);
     }
 }

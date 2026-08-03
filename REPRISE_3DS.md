@@ -115,3 +115,30 @@ et autorisation financiere off-us Visa/Mastercard n'est pas revendique comme
 valide. La page ACS externe est implementee et testee isolement ; son E2E
 financier depend du routage reseau cible et doit faire l'objet d'une campagne
 separee.
+
+## Sauvegarde intermediaire du 3 aout 2026 - boutique complete
+
+A la demande de l'utilisateur, le site marchand a ete etendu pour commencer
+avant le paiement : catalogue, fiche article, panier, creation de commande,
+choix du paiement par carte, saisie carte, challenge ACS et recu. Les prix et
+le montant de la commande sont calcules cote serveur marchand.
+
+Le choix technique de route a disparu de l'ecran client. Le paiement envoie
+`AUTO` a Acquisition. Une previsualisation BIN autoritative fournit uniquement
+le programme 3DS et le type d'ACS ; Acquisition recalcule ensuite la route au
+moment de l'autorisation financiere.
+
+Etat de validation de cette sauvegarde :
+
+- compilation Java : succes ;
+- tests executes sans fork : `sg-common` 69, Acquisition 16 et marchand 7,
+  aucun echec, `BUILD SUCCESS` ;
+- syntaxe JavaScript et Git Bash : succes ;
+- packaging des nouveaux JAR : non execute ;
+- Playwright du nouveau catalogue : non execute ;
+- test manuel operateur : non execute.
+
+Premier travail non termine : arreter les six services qui executent encore
+les anciens JAR `c630cd2`, reconstruire les modules, les redemarrer, puis
+executer avec l'utilisateur le parcours catalogue jusqu'au recu. Ne pas
+presenter le nouvel E2E comme valide avant cette campagne.

@@ -1,6 +1,7 @@
 package com.staging.sg.ecommerce.simulator.api;
 
 import com.staging.sg.ecommerce.simulator.service.EcommerceSimulatorClient;
+import com.staging.sg.ecommerce.simulator.service.MerchantStorefrontService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -11,6 +12,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class MerchantSiteUiControllerTest {
     @TempDir
@@ -21,8 +23,10 @@ class MerchantSiteUiControllerTest {
         UUID profileId = UUID.randomUUID();
         Path profile = temporaryDirectory.resolve("profile-id");
         Files.writeString(profile, profileId.toString());
+        MerchantStorefrontService storefront = mock(MerchantStorefrontService.class);
+        when(storefront.siteType()).thenReturn(MerchantSiteType.NATIONAL);
         MerchantSiteUiController controller = new MerchantSiteUiController(
-                mock(EcommerceSimulatorClient.class), profile.toString());
+                mock(EcommerceSimulatorClient.class), storefront, profile.toString());
 
         var response = controller.configuration();
 
@@ -38,7 +42,7 @@ class MerchantSiteUiControllerTest {
     @Test
     void failsClosedWhenTheMerchantProfileIsMissing() {
         MerchantSiteUiController controller = new MerchantSiteUiController(
-                mock(EcommerceSimulatorClient.class),
+                mock(EcommerceSimulatorClient.class), mock(MerchantStorefrontService.class),
                 temporaryDirectory.resolve("missing").toString());
 
         assertThat(controller.configuration().getStatusCode().value()).isEqualTo(503);

@@ -96,6 +96,28 @@ public class EcommerceSimulatorClient {
                 browserChallengeUrl(checkoutId, input, started));
     }
 
+    public InteractiveCheckoutStartResponse startAutomatic(
+            SimulatorPurchaseRequest input) {
+        if (input == null || input.pan() == null) {
+            throw new IllegalArgumentException("A card is required for automatic routing");
+        }
+        EcommerceRoutePreviewResponse preview = acquiring.post()
+                .uri("/api/acquiring/v1/ecommerce/routes/resolve")
+                .body(new EcommerceRoutePreviewRequest(input.pan()))
+                .retrieve().body(EcommerceRoutePreviewResponse.class);
+        if (preview == null || preview.networkRoute() == null
+                || preview.threeDsProgram() == null || preview.issuerMode() == null) {
+            throw new IllegalStateException("Acquiring returned an incomplete BIN route");
+        }
+        SimulatorPurchaseRequest routed = new SimulatorPurchaseRequest(
+                input.transactionId(), input.correlationId(), input.idempotencyKey(),
+                input.acquirerId(), input.profileId(), input.merchantOrderId(),
+                input.amountMinor(), input.currency(), input.pan(), input.expiry(),
+                EcommerceNetworkRoute.AUTO, input.siteType(), preview.threeDsProgram(),
+                input.threeDsFlow(), preview.issuerMode(), input.challengeData());
+        return startInteractive(routed);
+    }
+
     public EcommercePurchaseResponse completeInteractive(UUID checkoutId) {
         PendingCheckout pending = pendingCheckouts.get(checkoutId);
         if (pending == null) {

@@ -8,108 +8,145 @@
 </head>
 <body>
   <header class="topbar">
-    <a class="brand" href="/" aria-label="Atlas Market accueil">
+    <a class="brand" href="#catalog" aria-label="Atlas Market accueil">
       <span class="brand-mark">AM</span>
       <span><strong>Atlas Market</strong><small>Boutique de démonstration</small></span>
     </a>
-    <span class="sandbox-badge">SANDBOX</span>
+    <nav aria-label="Parcours de commande">
+      <ol class="steps" id="journey-steps">
+        <li class="active">Boutique</li><li>Panier</li><li>Paiement</li><li>Confirmation</li>
+      </ol>
+    </nav>
+    <button id="cart-button" class="cart-button" type="button" aria-label="Voir le panier">
+      Panier <span id="cart-count">0</span>
+    </button>
   </header>
 
-  <main class="layout">
-    <section class="product-card" aria-labelledby="product-title">
-      <div class="product-visual"><span>SG</span></div>
-      <p class="eyebrow">Produit numérique</p>
-      <h1 id="product-title">Pack ScenarioGenerator Lab</h1>
-      <p class="product-copy">Accès de démonstration au laboratoire monétique pour une campagne.</p>
-      <ul>
-        <li>Activation immédiate</li>
-        <li>Environnement national ou international</li>
-        <li>Paiement sécurisé par 3-D Secure</li>
-      </ul>
+  <main>
+    <div id="configuration-status" class="notice loading">Ouverture de la boutique…</div>
+
+    <section id="catalog-view" class="view" aria-labelledby="catalog-title">
+      <div class="hero">
+        <div>
+          <p class="eyebrow">Atlas Market Sandbox</p>
+          <h1 id="catalog-title">Choisissez votre expérience</h1>
+          <p>Découvrez nos ateliers de démonstration et suivez un véritable parcours d’achat sécurisé.</p>
+          <a class="primary-link" href="#products">Voir les articles</a>
+        </div>
+        <div class="hero-visual" aria-hidden="true"><span>AM</span><small>LAB STORE</small></div>
+      </div>
+      <div class="section-heading" id="products">
+        <div><p class="eyebrow">Notre sélection</p><h2>Articles disponibles</h2></div>
+        <p>Prix sandbox en dirhams marocains</p>
+      </div>
+      <div id="product-grid" class="product-grid" aria-live="polite"></div>
     </section>
 
-    <section class="checkout-card" aria-labelledby="checkout-title">
-      <div id="checkout-panel">
-        <p class="eyebrow">Paiement sécurisé</p>
-        <h2 id="checkout-title">Finaliser la commande</h2>
-        <div id="configuration-status" class="notice loading">Chargement du profil marchand…</div>
-
-        <form id="checkout-form" autocomplete="off">
-          <label>Nom du porteur
-            <input id="cardholder" type="text" value="CLIENT TEST" maxlength="40" required>
-          </label>
-          <label>Numéro de carte
-            <input id="pan" type="text" inputmode="numeric" autocomplete="cc-number"
-                   placeholder="0000 0000 0000 0000" maxlength="23" required>
-            <span id="card-brand" class="field-hint">Le BIN déterminera le routage réel.</span>
-          </label>
-          <div class="field-row">
-            <label>Expiration MM/AA
-              <input id="expiry" type="text" inputmode="numeric" autocomplete="cc-exp"
-                     placeholder="12/29" maxlength="5" required>
-            </label>
-            <label>Montant (MAD)
-              <input id="amount" type="number" min="1" step="0.01" value="10.00" required>
+    <section id="product-view" class="view narrow" hidden aria-labelledby="product-title">
+      <button class="back-button" type="button" data-action="catalog">← Retour au catalogue</button>
+      <div class="product-detail">
+        <div id="detail-visual" class="detail-visual"><span id="detail-code"></span></div>
+        <div>
+          <span id="detail-badge" class="product-badge"></span>
+          <p id="detail-category" class="eyebrow"></p>
+          <h1 id="product-title"></h1>
+          <p id="detail-description" class="lead"></p>
+          <ul id="detail-features" class="feature-list"></ul>
+          <div class="purchase-row">
+            <strong id="detail-price" class="price"></strong>
+            <label>Quantité
+              <select id="detail-quantity" aria-label="Quantité">
+                <option value="1">1</option><option value="2">2</option>
+                <option value="3">3</option><option value="4">4</option><option value="5">5</option>
+              </select>
             </label>
           </div>
-
-          <details>
-            <summary>Paramètres du scénario sandbox</summary>
-            <div class="scenario-grid">
-              <label>Route attendue
-                <select id="network-route">
-                  <option value="LOCAL_ISSUING">Issuing local</option>
-                  <option value="DMAS_MASTERCARD">DMAS Mastercard</option>
-                  <option value="SWAM">SWAM</option>
-                  <option value="VISA">Visa</option>
-                </select>
-              </label>
-              <label>Type de site
-                <select id="site-type">
-                  <option value="NATIONAL">National</option>
-                  <option value="INTERNATIONAL">International</option>
-                </select>
-              </label>
-              <label>Programme 3DS
-                <select id="program">
-                  <option value="MASTERCARD">Mastercard</option>
-                  <option value="VISA">Visa</option>
-                </select>
-              </label>
-              <label>Parcours 3DS
-                <select id="flow">
-                  <option value="CHALLENGE">Challenge OTP</option>
-                  <option value="FRICTIONLESS">Frictionless</option>
-                  <option value="NOT_REQUESTED">Sans 3DS</option>
-                </select>
-              </label>
-              <label>ACS émetteur
-                <select id="issuer-mode">
-                  <option value="MEMBER">ACS LanaCash</option>
-                  <option value="EXTERNAL_SIMULATOR">ACS externe simulé</option>
-                </select>
-              </label>
-            </div>
-          </details>
-
-          <div class="total"><span>Total</span><strong id="total-value">10,00 MAD</strong></div>
-          <button id="pay-button" type="submit" disabled>Payer maintenant</button>
-          <p class="security-note">Le PAN est utilisé uniquement en mémoire pour ce test local. Il n’est ni enregistré ni journalisé.</p>
-        </form>
+          <button id="add-to-cart" class="primary-button" type="button">Ajouter au panier</button>
+        </div>
       </div>
+    </section>
 
-      <section id="result-panel" class="result-panel" hidden aria-live="polite">
+    <section id="cart-view" class="view narrow" hidden aria-labelledby="cart-title">
+      <button class="back-button" type="button" data-action="catalog">← Continuer mes achats</button>
+      <div class="panel">
+        <p class="eyebrow">Votre sélection</p>
+        <h1 id="cart-title">Mon panier</h1>
+        <div id="cart-lines" class="cart-lines"></div>
+        <div id="empty-cart" class="empty-state" hidden>
+          <strong>Votre panier est vide</strong><p>Choisissez un article dans le catalogue.</p>
+        </div>
+        <div id="cart-summary" class="cart-summary">
+          <span>Total TTC</span><strong id="cart-total">0,00 MAD</strong>
+        </div>
+        <button id="checkout-button" class="primary-button" type="button">Passer au paiement</button>
+      </div>
+    </section>
+
+    <section id="payment-view" class="view checkout-layout" hidden aria-labelledby="payment-title">
+      <aside class="order-summary">
+        <p class="eyebrow">Récapitulatif</p>
+        <h2>Votre commande</h2>
+        <div id="payment-order-lines"></div>
+        <div class="summary-total"><span>Total</span><strong id="payment-total"></strong></div>
+        <p id="order-reference" class="reference"></p>
+      </aside>
+      <div class="panel payment-panel">
+        <div id="payment-method-step">
+          <p class="eyebrow">Paiement</p>
+          <h1 id="payment-title">Choisissez votre moyen de paiement</h1>
+          <button id="select-card" class="payment-method" type="button">
+            <span class="card-symbol">▰</span>
+            <span><strong>Carte bancaire</strong><small>Visa ou Mastercard · 3-D Secure</small></span>
+            <span aria-hidden="true">→</span>
+          </button>
+          <p class="security-banner">Connexion sécurisée avec notre plateforme Acquisition e-commerce.</p>
+        </div>
+
+        <div id="card-step" hidden>
+          <button id="back-to-methods" class="back-button" type="button">← Moyens de paiement</button>
+          <p class="eyebrow">Carte bancaire</p>
+          <h1>Informations de paiement</h1>
+          <p class="lead small">Le réseau, l’ACS 3DS et la route financière seront déterminés automatiquement.</p>
+          <form id="card-form" autocomplete="off">
+            <label>Nom du porteur
+              <input id="cardholder" type="text" value="CLIENT TEST" maxlength="40" autocomplete="cc-name" required>
+            </label>
+            <label>Numéro de carte
+              <input id="pan" type="text" inputmode="numeric" autocomplete="cc-number"
+                     placeholder="0000 0000 0000 0000" maxlength="23" required>
+              <span id="card-brand" class="field-hint">Le BIN déterminera automatiquement le routage.</span>
+            </label>
+            <div class="field-row">
+              <label>Expiration MM/AA
+                <input id="expiry" type="text" inputmode="numeric" autocomplete="cc-exp"
+                       placeholder="12/29" maxlength="5" required>
+              </label>
+              <div class="locked-amount"><span>Montant à payer</span><strong id="locked-total"></strong></div>
+            </div>
+            <button id="pay-button" class="primary-button" type="submit">Payer et s’authentifier</button>
+            <p class="security-note">Le PAN est utilisé uniquement en mémoire. Il n’est ni enregistré ni journalisé.</p>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="result-view" class="view narrow" hidden aria-live="polite">
+      <div id="result-panel" class="panel result-panel">
         <div id="result-icon" class="result-icon">✓</div>
-        <p class="eyebrow">Résultat du paiement</p>
-        <h2 id="result-title">Paiement approuvé</h2>
+        <p class="eyebrow">Confirmation de commande</p>
+        <h1 id="result-title">Paiement approuvé</h1>
         <p id="result-message"></p>
+        <div class="receipt-product" id="receipt-order"></div>
         <dl id="result-details"></dl>
-        <a class="secondary-button" href="/">Nouvel achat</a>
-      </section>
+        <button id="new-order" class="primary-button" type="button">Retour à la boutique</button>
+      </div>
     </section>
   </main>
 
-  <footer>Atlas Market Sandbox · Aucun paiement réel n’est effectué</footer>
+  <footer>
+    <strong>Atlas Market Sandbox</strong>
+    <span>Aucun paiement réel n’est effectué · Parcours de recette ScenarioGenerator</span>
+  </footer>
   <script src="/merchant.js" defer></script>
 </body>
 </html>

@@ -1,6 +1,9 @@
 package com.staging.sg.acquiring.service;
 
 import com.staging.sg.common.ecommerce.EcommerceNetworkRoute;
+import com.staging.sg.common.ecommerce.EcommerceRoutePreviewResponse;
+import com.staging.sg.common.threeds.ThreeDsIssuerMode;
+import com.staging.sg.common.threeds.ThreeDsProgram;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -39,6 +42,25 @@ public class EcommerceRouteResolver {
                     "Requested ecommerce route does not match the authoritative BIN route");
         }
         return resolved;
+    }
+
+    public EcommerceRoutePreviewResponse preview(String pan) {
+        if (pan == null || !pan.matches("\\d{12,19}")) {
+            throw new IllegalArgumentException("Invalid payment identifier for BIN routing");
+        }
+        EcommerceNetworkRoute route = resolve(pan, EcommerceNetworkRoute.AUTO);
+        ThreeDsProgram program = switch (route) {
+            case VISA -> ThreeDsProgram.VISA;
+            case DMAS_MASTERCARD -> ThreeDsProgram.MASTERCARD;
+            case LOCAL_ISSUING, SWAM -> pan.startsWith("4")
+                    ? ThreeDsProgram.VISA : ThreeDsProgram.MASTERCARD;
+            case AUTO -> throw new IllegalStateException(
+                    "Authoritative BIN routing cannot resolve to AUTO");
+        };
+        ThreeDsIssuerMode issuerMode = route == EcommerceNetworkRoute.LOCAL_ISSUING
+                ? ThreeDsIssuerMode.MEMBER
+                : ThreeDsIssuerMode.EXTERNAL_SIMULATOR;
+        return new EcommerceRoutePreviewResponse(route, program, issuerMode);
     }
 
     private static EcommerceNetworkRoute fromInterfaceCode(String code) {
