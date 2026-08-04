@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -27,10 +28,36 @@ class WayPosInitialKeyChangeAuthenticatorTest {
         });
         WayPosInitialKeyChangeAuthenticator authenticator =
                 new WayPosInitialKeyChangeAuthenticator(
-                        hsm, true, TAMK, TPMK, "00", "00");
+                        hsm, true, true, false, TAMK, TPMK, "00", "00");
 
         assertTrue(authenticator.authenticates(request("D4E5F6")));
         assertFalse(authenticator.authenticates(request("000000")));
+    }
+
+    @Test
+    void exposesOnlyNormalizedKcvInExplicitTestDiagnosticMode() {
+        List<WayPosKeyExchangeCodec.KeyStatusDetails> statuses = List.of(
+                new WayPosKeyExchangeCodec.KeyStatusDetails(
+                        "00", "0", "TAMK", "a1b2c3", "C", "0"));
+
+        assertEquals("A1B2C3", WayPosInitialKeyChangeAuthenticator.receivedKcv(
+                statuses, "TAMK", "00"));
+        assertEquals("ABSENT", WayPosInitialKeyChangeAuthenticator.receivedKcv(
+                statuses, "TPMK", "00"));
+    }
+
+    @Test
+    void bypassesMismatchOnlyWhenExplicitTestSwitchIsEnabled() throws Exception {
+        JposHsmService hsm = mock(JposHsmService.class);
+        when(hsm.computeKcv(any())).thenAnswer(invocation -> {
+            byte[] key = invocation.getArgument(0);
+            return key[0] == 0x11 ? "A1B2C3" : "D4E5F6";
+        });
+        WayPosInitialKeyChangeAuthenticator authenticator =
+                new WayPosInitialKeyChangeAuthenticator(
+                        hsm, true, true, true, TAMK, TPMK, "00", "00");
+
+        assertTrue(authenticator.authenticates(request("000000")));
     }
 
     private static ISOMsg request(String tpmkKcv) throws Exception {

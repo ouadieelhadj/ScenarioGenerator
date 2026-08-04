@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface PosTerminalKeyRepository extends JpaRepository<PosTerminalKey, Long> {
-    List<PosTerminalKey> findTop15ByTerminalIdAndKeyStatusInOrderByIdAsc(
+    List<PosTerminalKey> findTop15ByTerminalIdAndKeyStatusInOrderByIdDesc(
             String terminalId, Collection<String> statuses);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
@@ -19,4 +19,6 @@ public interface PosTerminalKeyRepository extends JpaRepository<PosTerminalKey, 
 
     List<PosTerminalKey> findByTerminalIdAndKeyTypeAndKeyStatusIn(
             String terminalId, String keyType, Collection<String> statuses);
+
+    List<PosTerminalKey> findByTerminalIdOrderByIdDesc(String terminalId);
 }

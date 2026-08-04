@@ -79,6 +79,70 @@ public final class WayPosKeyExchangeCodec {
         return WayPosBerTlv.encode(outer);
     }
 
+    /**
+     * Encodes the exact two-key envelope observed on the accepted Feitian F20
+     * Way4 RKI response: TPK first, TAK second, a shared two-digit key ID and
+     * two 112-byte DF40=2 protected key blocks. Optional tags that Way4 does
+     * not put on the wire are deliberately omitted.
+     */
+    public static byte[] encodeWay4F20Response(List<KeyBlock> keys) {
+        if (keys == null || keys.size() != 2) {
+            throw new IllegalArgumentException(
+                    "Way4 F20 RKI requires exactly one TPK and one TAK");
+        }
+        KeyBlock tpk = keys.stream()
+                .filter(key -> "TPK".equals(key.keyType()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Missing TPK"));
+        KeyBlock tak = keys.stream()
+                .filter(key -> "TAK".equals(key.keyType()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Missing TAK"));
+        validateWay4F20Key(tpk, "TPMK");
+        validateWay4F20Key(tak, "TAMK");
+        if (!tpk.keyId().equals(tak.keyId())) {
+            throw new IllegalArgumentException(
+                    "Way4 F20 TPK and TAK must share the same key ID");
+        }
+        return WayPosBerTlv.encode(List.of(
+                way4F20Group(0xFF01, tpk),
+                way4F20Group(0xFF02, tak)));
+    }
+
+    private static WayPosBerTlv.Tlv way4F20Group(int tag, KeyBlock key) {
+        return new WayPosBerTlv.Tlv(tag, WayPosBerTlv.encode(List.of(
+                text(0xDF24, key.keyType()),
+                text(0xDF20, key.keyId()),
+                text(0xDF25, key.masterKeyId()),
+                text(0xDF28, key.masterKeyType()),
+                text(0xDF40, key.keyBlockFormat()),
+                new WayPosBerTlv.Tlv(0xDF41, key.ansiX917Block()))));
+    }
+
+    private static void validateWay4F20Key(
+            KeyBlock key, String expectedMasterType) {
+        if (key.keyId() == null || !key.keyId().matches("[0-9]{2}")) {
+            throw new IllegalArgumentException(
+                    "Way4 F20 key ID must contain exactly two ASCII digits");
+        }
+        if (!"00".equals(key.masterKeyId())
+                || !expectedMasterType.equals(key.masterKeyType())) {
+            throw new IllegalArgumentException(
+                    key.keyType() + " must reference master key 00/"
+                            + expectedMasterType);
+        }
+        byte[] block = key.ansiX917Block();
+        if (!"2".equals(key.keyBlockFormat())
+                || block == null || block.length != 112
+                || block[0] != 'D' || block[1] != '0'
+                || block[2] != '1' || block[3] != '1'
+                || block[4] != '2') {
+            throw new IllegalArgumentException(
+                    key.keyType()
+                            + " requires the observed DF40=2 D0112 block");
+        }
+    }
+
     public static List<KeyBlock> decodeResponse(byte[] data) {
         List<KeyBlock> result = new ArrayList<>();
         for (WayPosBerTlv.Tlv group : WayPosBerTlv.decode(data)) {

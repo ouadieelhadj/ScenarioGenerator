@@ -19,6 +19,12 @@ way-pos:
   iso-port: ${WAY_POS_ISO_PORT:8531}
   t1-seconds: ${WAY_POS_T1_SECONDS:55}
   local-test-bootstrap-enabled: ${WAY_POS_LOCAL_TEST_BOOTSTRAP_ENABLED:false}
+  rki-log-kcv-enabled: ${WAY_POS_RKI_LOG_KCV_ENABLED:false}
+  rki-allow-kcv-mismatch-test-only: ${WAY_POS_RKI_ALLOW_KCV_MISMATCH_TEST_ONLY:false}
+  rki-generate-tr31-enabled: ${WAY_POS_RKI_GENERATE_TR31_ENABLED:false}
+  rki-way4-key-id: ${WAY_POS_RKI_WAY4_KEY_ID:27}
+  rki-way4-tak-block-ascii: ${WAY_POS_RKI_WAY4_TAK_BLOCK_ASCII:}
+  rki-way4-tpk-block-ascii: ${WAY_POS_RKI_WAY4_TPK_BLOCK_ASCII:}
   pan-pepper: ${WAY_POS_PAN_PEPPER:change-me-in-production}
   outbox-key-hex: ${WAY_POS_OUTBOX_KEY_HEX:}
   connectors:

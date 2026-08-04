@@ -9,6 +9,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class JposHsmServiceWayPosPinTest {
@@ -59,6 +61,31 @@ class JposHsmServiceWayPosPinTest {
                 "TAK", tak.underLmk(), tak.kcv(), 16));
         assertFalse(hsm.validateKeyUnderLmk(
                 "TAK", tak.underLmk(), "000000", 16));
+    }
+
+    @Test
+    void tr31BlockContainsTheSameTakStoredUnderLocalLmk() throws Exception {
+        JposHsmService hsm = new JposHsmService();
+        ReflectionTestUtils.setField(
+                hsm, "lmkFile",
+                temporaryDirectory.resolve("waypos-tr31.lmk").toString());
+        ReflectionTestUtils.setField(hsm, "lmkRebuild", true);
+        hsm.init();
+        String kbpk = "00112233445566778899AABBCCDDEEFF"
+                + "0102030405060708";
+
+        JposHsmService.Tr31KeyResult generated =
+                hsm.generateTr31WorkingKey("TAK", 16, kbpk, "28");
+
+        String block = new String(generated.keyBlockAscii(),
+                java.nio.charset.StandardCharsets.US_ASCII);
+        byte[] fromBlock = Tr31VersionDKeyBlock.unwrap(
+                ISOUtil.hex2byte(kbpk), block);
+        byte[] fromLmk = hsm.exposeClearKey(
+                "TAK", generated.keyUnderLmkHex(), generated.kcv(), 16);
+        assertEquals(112, generated.keyBlockAscii().length);
+        assertTrue(block.startsWith("D0112M3TN28N0000"));
+        assertArrayEquals(fromLmk, fromBlock);
     }
 
     private static Key form(JposHsmService hsm, String type, String clear)

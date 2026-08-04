@@ -65,6 +65,7 @@ public class WayPosJposServer {
         @Override
         public boolean process(ISOSource source, ISOMsg message) {
             try {
+                WayPosSafeMessageTrace.received(message);
                 log.info("[WAY-POS] received MTI={} STAN={} terminal={}",
                         message.getMTI(), text(message, 11), text(message, 41));
                 WayPosMessageValidator.validateRequest(message);
@@ -72,19 +73,19 @@ public class WayPosJposServer {
                 if (systemMessages.supports(message)) {
                     ISOMsg response = systemMessages.process(message);
                     security.protectResponse(message, response, profile);
-                    source.send(response);
+                    send(source, response);
                     return true;
                 }
                 var request = mapper.toRequest(message);
                 var response = routingService.process(request);
                 ISOMsg isoResponse = mapper.toResponse(message, response);
                 security.protectResponse(message, isoResponse, profile);
-                source.send(isoResponse);
+                send(source, isoResponse);
                 return true;
             } catch (PosSecurityException e) {
                 log.warn("[WAY-POS] security rejection RC{}: {}", e.responseCode(), e.getMessage());
                 try {
-                    source.send(mapper.error(message, e.responseCode()));
+                    send(source, mapper.error(message, e.responseCode()));
                     return true;
                 } catch (Exception sendFailure) {
                     return false;
@@ -92,13 +93,21 @@ public class WayPosJposServer {
             } catch (Exception e) {
                 log.error("[WAY-POS] processing failure", e);
                 try {
-                    source.send(mapper.systemError(message));
+                    send(source, mapper.systemError(message));
                     return true;
                 } catch (Exception sendFailure) {
                     log.error("[WAY-POS] unable to send RC96", sendFailure);
                     return false;
                 }
             }
+        }
+
+        private void send(ISOSource source, ISOMsg response) throws Exception {
+            WayPosSafeMessageTrace.outgoing(response);
+            source.send(response);
+            log.info("[WAY-POS] sent MTI={} STAN={} RRN={} terminal={} RC={}",
+                    response.getMTI(), text(response, 11), text(response, 37),
+                    text(response, 41), text(response, 39));
         }
 
         private String text(ISOMsg message, int field) {

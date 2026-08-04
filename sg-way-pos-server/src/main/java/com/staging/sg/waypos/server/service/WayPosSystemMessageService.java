@@ -6,7 +6,6 @@ import org.jpos.iso.ISOMsg;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -72,6 +71,7 @@ public class WayPosSystemMessageService {
             }
             var keyFields = keyExchange.exchange(request, terminal);
             ISOMsg response = response(request, "00", null);
+            response.unset(63);
             if (!keyFields.isEmpty()) response.set(48, keyFields.get(0));
             if (keyFields.size() > 1) response.set(59, keyFields.get(1));
             return response;
@@ -113,7 +113,7 @@ public class WayPosSystemMessageService {
         mti[2] = (char) (mti[2] + 1);
         response.setMTI(new String(mti));
         copy(request, response, 2, 3, 4, 7, 11, 24, 37, 41, 42, 49, 63);
-        ZonedDateTime now = ZonedDateTime.now(ZoneOffset.UTC);
+        ZonedDateTime now = ZonedDateTime.now();
         response.set(12, now.format(DateTimeFormatter.ofPattern("HHmmss")));
         response.set(13, now.format(DateTimeFormatter.ofPattern("MMdd")));
         response.set(39, rc);

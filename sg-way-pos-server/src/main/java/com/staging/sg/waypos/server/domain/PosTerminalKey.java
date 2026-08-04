@@ -91,9 +91,21 @@ public class PosTerminalKey {
     public Integer getKeyLength() { return keyLength; }
 
     public WayPosKeyExchangeCodec.KeyBlock toWireBlock() {
+        String keyBlockFormat = isObservedWay4F20Block() ? "2" : "1";
         return new WayPosKeyExchangeCodec.KeyBlock(
                 keyId, keyType, kcv, algorithm, masterKeyId, masterKeyType,
-                ansiX917Block, actionCode, "0", replacementKeyId);
+                ansiX917Block, keyBlockFormat, actionCode, "0",
+                replacementKeyId);
+    }
+
+    private boolean isObservedWay4F20Block() {
+        return ansiX917Block != null
+                && ansiX917Block.length == 112
+                && ansiX917Block[0] == 'D'
+                && ansiX917Block[1] == '0'
+                && ansiX917Block[2] == '1'
+                && ansiX917Block[3] == '1'
+                && ansiX917Block[4] == '2';
     }
 
     public void markDelivered() {

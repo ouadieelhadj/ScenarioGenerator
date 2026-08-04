@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Properties;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
@@ -159,6 +161,62 @@ public class JposHsmService implements HsmService {
         log.info("[HSM] generateWorkingKey {} — KCV={} underKEK={} thales={}",
                 keyType, kcv, r.keyUnderKekHex, r.thalesCommand);
         return r;
+    }
+
+    /**
+     * Generates one Way4/F20 working key, keeps it under the local LMK and
+     * wraps the same key in an ANSI X9.143 TR-31 version-D block.
+     */
+    public Tr31KeyResult generateTr31WorkingKey(
+            String keyType, int keyLengthBytes, String kbpkClearHex,
+            String keyVersion) throws Exception {
+        if (!("TAK".equals(keyType) || "TPK".equals(keyType))) {
+            throw new IllegalArgumentException("TR-31 RKI supports TAK/TPK only");
+        }
+        if (keyLengthBytes != 16) {
+            throw new IllegalArgumentException(
+                    "Way4 F20 TAK/TPK must contain 16 bytes");
+        }
+        byte[] kbpk = ISOUtil.hex2byte(kbpkClearHex);
+        byte[] clear = null;
+        try {
+            SecureDESKey workUnderLmk = sm.generateKey(
+                    jposLen(keyLengthBytes), smType(keyType));
+            byte[] kcvBytes = sm.generateKeyCheckValue(workUnderLmk);
+            String kcv = ISOUtil.hexString(kcvBytes)
+                    .substring(0, 6).toUpperCase();
+            String underLmk = ISOUtil.hexString(workUnderLmk.getKeyBytes())
+                    .toUpperCase();
+            clear = exposeClearKey(
+                    keyType, underLmk, kcv, keyLengthBytes);
+            String usage = "TAK".equals(keyType) ? "M3" : "P0";
+            String block = Tr31VersionDKeyBlock.wrap(
+                    kbpk, clear, usage, "N", keyVersion, "N");
+            log.info(
+                    "[HSM] generated Way4/F20 {} keyId={} KCV={} "
+                            + "TR31=D0112 blockLength={}",
+                    keyType, keyVersion, kcv, block.length());
+            return new Tr31KeyResult(
+                    underLmk, kcv,
+                    block.getBytes(StandardCharsets.US_ASCII),
+                    keyLengthBytes);
+        } finally {
+            Arrays.fill(kbpk, (byte) 0);
+            if (clear != null) Arrays.fill(clear, (byte) 0);
+        }
+    }
+
+    public record Tr31KeyResult(
+            String keyUnderLmkHex, String kcv,
+            byte[] keyBlockAscii, int keyLength) {
+        public Tr31KeyResult {
+            keyBlockAscii = keyBlockAscii.clone();
+        }
+
+        @Override
+        public byte[] keyBlockAscii() {
+            return keyBlockAscii.clone();
+        }
     }
 
     @Override

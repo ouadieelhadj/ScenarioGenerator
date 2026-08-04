@@ -2,6 +2,7 @@ package com.staging.sg.common.iso;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Arrays;
 
@@ -69,5 +70,36 @@ class WayPosKeyExchangeCodecTest {
         assertEquals("2", decoded.keyBlockFormat());
         assertEquals(112, decoded.ansiX917Block().length);
         assertEquals("TPMK", decoded.masterKeyType());
+    }
+
+    @Test
+    void encodesExactWay4F20TwoKeyEnvelope() {
+        var tpk = new WayPosKeyExchangeCodec.KeyBlock(
+                "27", "TPK", null, null, "00", "TPMK",
+                observedBlock('1'), "2", "0", null, null);
+        var tak = new WayPosKeyExchangeCodec.KeyBlock(
+                "27", "TAK", null, null, "00", "TAMK",
+                observedBlock('2'), "2", "0", null, null);
+
+        byte[] encoded = WayPosKeyExchangeCodec.encodeWay4F20Response(
+                List.of(tak, tpk));
+
+        assertEquals(292, encoded.length);
+        var groups = WayPosBerTlv.decode(encoded);
+        assertEquals(List.of(0xFF01, 0xFF02),
+                groups.stream().map(WayPosBerTlv.Tlv::tag).toList());
+        assertEquals(List.of(0xDF24, 0xDF20, 0xDF25, 0xDF28, 0xDF40, 0xDF41),
+                WayPosBerTlv.decode(groups.get(0).value()).stream()
+                        .map(WayPosBerTlv.Tlv::tag).toList());
+        var decoded = WayPosKeyExchangeCodec.decodeResponse(encoded);
+        assertEquals("TPK", decoded.get(0).keyType());
+        assertEquals("TAK", decoded.get(1).keyType());
+        assertEquals("27", decoded.get(0).keyId());
+        assertEquals("2", decoded.get(0).keyBlockFormat());
+    }
+
+    private static byte[] observedBlock(char fill) {
+        return ("D0112" + String.valueOf(fill).repeat(107))
+                .getBytes(StandardCharsets.US_ASCII);
     }
 }

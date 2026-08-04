@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -76,6 +77,36 @@ class WayPosSystemMessageServiceTest {
         verify(keyExchange).confirm(request, terminal);
         assertEquals("0810", response.getMTI());
         assertEquals("00", response.getString(39));
+    }
+
+    @Test
+    void keyChangeResponseMatchesWay4FieldSet() throws Exception {
+        PosTerminalProfile terminal = PosTerminalProfile.provisioned(
+                "TERM0001", "MERCHANT0000001", true,
+                "BIN", true, "000123");
+        terminal.activateWorkingKey(
+                "TAK", "00112233445566778899AABBCCDDEEFF",
+                "A1B2C3", 16);
+        PosTerminalProfileRepository terminals =
+                mock(PosTerminalProfileRepository.class);
+        when(terminals.findLockedByTerminalId("TERM0001"))
+                .thenReturn(Optional.of(terminal));
+        WayPosKeyExchangeService keyExchange =
+                mock(WayPosKeyExchangeService.class);
+        when(keyExchange.exchange(any(), eq(terminal)))
+                .thenReturn(java.util.List.of(new byte[292]));
+        WayPosSystemMessageService service = new WayPosSystemMessageService(
+                terminals, keyExchange, mock(WayPosReconciliationService.class),
+                mock(WayPosFileUpdateService.class));
+        ISOMsg request = message("0800", "960000");
+
+        ISOMsg response = service.process(request);
+
+        assertEquals("0810", response.getMTI());
+        assertEquals("00", response.getString(39));
+        assertEquals(292, response.getBytes(48).length);
+        assertFalse(response.hasField(59));
+        assertFalse(response.hasField(63));
     }
 
     private static ISOMsg reconciliation(String mti) throws Exception {
