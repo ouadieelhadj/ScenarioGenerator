@@ -1,0 +1,25 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MCD94.Test.02.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "TPE_ONLY",
+    "objective":  "To ensure that the terminal correctly performs Cardholder Verification",
+    "actions":  "Please use test card : MCD94 v1.0 | Transaction amount is above the CVM Required Limit and below the Contactless Transaction Limit : $CL_MCD_CVM_Limit$ \u003c Amount \u003c = $CL_MCD_Transaction_Limit$ | Tap the test card on the contactless reader and follow the instructions",
+    "cards":  [
+                  {
+                      "cardId":  "MCD94",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089700943",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_mcd94-test-02-scenario-01_v1_log_1.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+
+              ]
+}

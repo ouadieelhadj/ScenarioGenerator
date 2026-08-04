@@ -1,0 +1,131 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MCD65.Test.01.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal prompts the cardholder to perform a contact transaction when the issuer declines with Response Code 65 - [RA278] | To ensure that the terminal requests cardholder verification for a contact transaction triggered by Response Code 65 - [RA331",
+    "actions":  "A first transaction is performed on the contactless interface | Please use test card : MCD65 v1.0 | Transaction amount is below the CVM Required Limit : Amount \u003c $CL_MCD_CVM_Limit$ | Tap the test card on the contactless reader and follow the instructions | A second transaction is performed on the contact interface | Please use test card : M-TIP65 Version 20A | Insert the test card in the chip reader and follow the instructions | If a choice is prompted , select the \u0027Mastercard\u0027 application | If needed , the Transaction amount is the same as in the previous transaction | If requested , PIN  = 4315",
+    "cards":  [
+                  {
+                      "cardId":  "MCD65",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089700653",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "M-TIP65",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089700653",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "M-TIP65",
+                      "application":  "Application_2",
+                      "brand":  "Maestro",
+                      "pan":  "6799998900000070652",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_mcd65-test-01-scenario-01_v1_log_1.xml",
+                           "test_mcd65-test-01-scenario-01_v1_log_2.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  1,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  false,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089700653",
+                                                     "3":  "000000",
+                                                     "4":  "000000004900",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "072",
+                                                     "23":  "001",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "5413330089700653D49122010123456789",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+                                                           "55":  "9F3303E00808950500000080019F37041373ECDE9F26084C81CAF83CCB0D579F36020001820219809C01009F1A0206439A032604099F02060000000049005F2A0205049F03060000000000009F2701809F34031F03029F3501228407A00000000410109F090200029F10120110A00000000000000000000000000000FF"
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "65",
+                                       "approved":  false,
+                                       "emvResponseRequired":  false
+                                   }
+                  },
+                  {
+                      "id":  "step-02-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  false,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089700653",
+                                                     "3":  "000000",
+                                                     "4":  "000000006000",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "052",
+                                                     "23":  "011",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "5413330089700653D49122010123456789",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+                                                           "55":  "9F3303E0F8C8950500800080009F3704DDA9E68B9F26087A84312DA56D50FB9F3602000E820279009C01009F1A0206439A032604099F02060000000060005F2A0205049F03060000000000009F2701809F34034103029F3501228407A00000000410109F090200019F10120110A04000000000000000000000000000FF"
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  false
+                                   }
+                  }
+              ]
+}

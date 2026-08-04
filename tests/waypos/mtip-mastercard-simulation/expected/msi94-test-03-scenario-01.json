@@ -1,0 +1,66 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MSI94.Test.03.Scenario.01",
+    "scenarioClassification":  "TPE_ONLY",
+    "automatedResponses":  [
+
+                           ],
+    "checks":  [
+                   {
+                       "number":  1,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The terminal prompts the cardholder to perform a contact transaction - [RA277",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  2,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In Read Record, Tag 5A (PAN) = 6799998900000070942",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  3,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, TVR Byte 3, bit 8 (Cardholder verification was not successful) = 1",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  4,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, TVR Byte 3, bit 3 (Online PIN entered) = 0",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  5,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, CVM Results = 3F0001",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  6,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, the terminal requests an AAC",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  7,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, Tag 9F02 (Amount Authorized) \u003e CVM Required Limit: $CL_MSI_CVM_Limit$",
+                       "referenceResult":  "pass"
+                   }
+               ]
+}

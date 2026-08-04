@@ -1,0 +1,95 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "COM02.Test.02.Scenario.02",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal correctly processes an RFU Device Type in the Third Party Data | To ensure that the terminal correctly selects the highest priority application without cardholder assistance - [RA470 - RA376] | To ensure that the terminal correctly transmits Mobile POS data elements, when applicable | To ensure that the terminal correctly transmits DE 55 Tag 9F34 (CVM Results) | To ensure that the terminal correctly transmits the Device Type, when applicable",
+    "actions":  "Please use test card : COM02 v1.0 | Transaction amount is above the Floor Limit : Amount \u003e $CL_MSI_Floor_Limit$ | Tap the test card on the contactless reader and follow the instructions | If requested , PIN  = 4315",
+    "cards":  [
+                  {
+                      "cardId":  "COM02",
+                      "application":  "Application_1",
+                      "brand":  "Maestro",
+                      "pan":  "6799998900000074324",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "COM02",
+                      "application":  "Application_2",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089704325",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "COM02",
+                      "application":  "Application_3",
+                      "brand":  "US Maestro AID",
+                      "pan":  "5413330089754320",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "COM02",
+                      "application":  "Application_4",
+                      "brand":  "Cirrus",
+                      "pan":  "6799978900000064329",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_COM02-Test-02-Scenario-02_V1_log_1.xml",
+                           "test_COM02-Test-02-Scenario-02_V1_log_2.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  true,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "6799998900000074324",
+                                                     "3":  "000000",
+                                                     "4":  "000000006900",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "072",
+                                                     "23":  "001",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "6799998900000074324D4912201012345678",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+                                                           "55":  "9F3303E06008950500000480019F37043AC4F12C9F2608C94BCF849D0EF8DE9F36020008820219809C01009F1A0206439A032604179F02060000000069005F2A0205049F03060000000000009F2701809F34034203009F3501228407A00000000430609F090200029F10120110A00000000000000000000000000000FF"
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true,
+                                      "pin":  "4315"
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  false
+                                   }
+                  }
+              ]
+}

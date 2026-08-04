@@ -1,0 +1,70 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "M-TIP02.Test.01.Scenario.03",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal correctly processes technical fallback",
+    "actions":  "Please use test card : M-TIP02 Version 25A | Swipe the card in the magstripe reader and follow the instructions | Transaction amount  = 000000000300 or 000003000000 | If requested , PIN  = 4315",
+    "cards":  [
+                  {
+                      "cardId":  "M-TIP02",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089020029",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_m-tip02-test-01-scenario-03_v2_log_1.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  true,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089020029",
+                                                     "3":  "000000",
+                                                     "4":  "000000000300",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "802",
+                                                     "23":  "000",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "5413330089020029D4912201062980790",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true,
+                                      "pin":  "4315"
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  false
+                                   }
+                  }
+              ]
+}

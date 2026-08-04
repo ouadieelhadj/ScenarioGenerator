@@ -1,6 +1,7 @@
 package com.staging.sg.waypos.simulator.service;
 
 import com.staging.sg.common.iso.WayPosKeyExchangeCodec;
+import com.staging.sg.common.iso.crypto.Tr31VersionDKeyBlock;
 import com.staging.sg.waypos.simulator.config.SimulatorProperties;
 import org.jpos.iso.ISOUtil;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,7 @@ public class SimulatorKeyStore {
     private final Map<String, byte[]> workingKeys = new LinkedHashMap<>();
     private List<WayPosKeyExchangeCodec.KeyStatus> statuses = List.of();
     private byte[] activeTak;
+    private byte[] activeTpk;
 
     public SimulatorKeyStore(SimulatorProperties properties) {
         this.properties = properties;
@@ -58,6 +60,7 @@ public class SimulatorKeyStore {
             List<WayPosKeyExchangeCodec.KeyBlock> blocks) {
         List<WayPosKeyExchangeCodec.KeyStatus> results = new ArrayList<>();
         byte[] nextTak = null;
+        byte[] nextTpk = null;
         for (WayPosKeyExchangeCodec.KeyBlock block : blocks) {
             String status;
             try {
@@ -69,6 +72,7 @@ public class SimulatorKeyStore {
                     verifyKcv(clear, block.kcv());
                     workingKeys.put(keyName(block.keyType(), block.keyId()), clear.clone());
                     if ("TAK".equals(block.keyType())) nextTak = clear.clone();
+                    if ("TPK".equals(block.keyType())) nextTpk = clear.clone();
                     Arrays.fill(clear, (byte) 0);
                     status = "0";
                 }
@@ -84,15 +88,46 @@ public class SimulatorKeyStore {
             if (activeTak != null) Arrays.fill(activeTak, (byte) 0);
             activeTak = nextTak;
         }
+        if (nextTpk != null) {
+            if (activeTpk != null) Arrays.fill(activeTpk, (byte) 0);
+            activeTpk = nextTpk;
+        }
         statuses = List.copyOf(results);
         return statuses;
     }
 
-    private byte[] unwrap(WayPosKeyExchangeCodec.KeyBlock block) throws Exception {
-        if (!"1".equals(block.keyBlockFormat())) {
-            throw new IllegalArgumentException(
-                    "DF40=2 requires the matching Thales HSM key-block implementation");
+    public synchronized byte[] encryptIso0PinBlock(
+            String pin, String pan) throws Exception {
+        if (activeTpk == null) {
+            throw new IllegalStateException("A confirmed TPK is required");
         }
+        if (pin == null || !pin.matches("\\d{4,12}")) {
+            throw new IllegalArgumentException("PIN must contain 4..12 digits");
+        }
+        if (pan == null || !pan.matches("\\d{13,19}")) {
+            throw new IllegalArgumentException("PAN must contain 13..19 digits");
+        }
+        String pinField = "0" + Integer.toHexString(pin.length()).toUpperCase()
+                + pin + "F".repeat(14 - pin.length());
+        String panField = "0000"
+                + pan.substring(pan.length() - 13, pan.length() - 1);
+        byte[] clear = ISOUtil.hex2byte(pinField);
+        byte[] panBytes = ISOUtil.hex2byte(panField);
+        byte[] key = activeTpk.clone();
+        try {
+            for (int i = 0; i < clear.length; i++) clear[i] ^= panBytes[i];
+            Cipher cipher = Cipher.getInstance("DESede/ECB/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE,
+                    new SecretKeySpec(expandDesEde(key), "DESede"));
+            return cipher.doFinal(clear);
+        } finally {
+            Arrays.fill(clear, (byte) 0);
+            Arrays.fill(panBytes, (byte) 0);
+            Arrays.fill(key, (byte) 0);
+        }
+    }
+
+    private byte[] unwrap(WayPosKeyExchangeCodec.KeyBlock block) throws Exception {
         MasterKey masterKey = masterKey(block.masterKeyType());
         if (!masterKey.id().equals(block.masterKeyId())) {
             throw new IllegalArgumentException("Unknown master key reference");
@@ -108,6 +143,16 @@ public class SimulatorKeyStore {
         }
         byte[] master = ISOUtil.hex2byte(masterKey.hex());
         try {
+            if ("2".equals(block.keyBlockFormat())) {
+                String tr31 = new String(
+                        block.ansiX917Block(), StandardCharsets.US_ASCII);
+                return Tr31VersionDKeyBlock.unwrap(master, tr31);
+            }
+            if (!"1".equals(block.keyBlockFormat())) {
+                throw new IllegalArgumentException(
+                        "Unsupported key-block format "
+                                + block.keyBlockFormat());
+            }
             byte[] key24 = expandDesEde(master);
             String mode = defaultValue(properties.ansiX917CipherMode(), "ECB").toUpperCase();
             Cipher cipher;

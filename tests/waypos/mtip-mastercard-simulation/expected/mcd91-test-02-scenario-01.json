@@ -1,0 +1,79 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MCD91.Test.02.Scenario.01",
+    "scenarioClassification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "automatedResponses":  [
+                               {
+                                   "responseMti":  "0110",
+                                   "responseCode":  "00",
+                                   "approved":  true,
+                                   "emvResponseRequired":  false
+                               }
+                           ],
+    "checks":  [
+                   {
+                       "number":  1,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The terminal informs the cardholder that the transaction is approved",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  2,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In Read Record, Tag 5A (PAN) = 5413330089700919",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  3,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, TVR Byte 1, bit 8 (Offline data authentication was not performed) = 1",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  4,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 55 - Tag 5F2A (Transaction Currency Code) is present",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  5,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 55 - Tag 9A (Transaction Date) is present",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  6,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 55 - Tag 9C (Transaction Type) is present",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  7,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 55 - Tag 9F1A (Terminal Country Code) is present",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  8,
+                       "step":  1,
+                       "mandatory":  "SUGGESTED",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0110/0210/1210 message, DE 39 (Response Code) = 00 (Approved)",
+                       "referenceResult":  "pass"
+                   }
+               ]
+}

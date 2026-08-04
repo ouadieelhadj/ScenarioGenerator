@@ -1,0 +1,41 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "M-TIP51.Test.01.Scenario.02",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "TPE_ONLY",
+    "objective":  "To ensure that the terminal correctly processes PDOL and its related data for M/Chip Advance cards | To ensure that the terminal correctly processes M/Chip Advance-like CDOL1 | To ensure that the terminal correctly processes Third Party Data (Fleet Card) | To ensure that the terminal correctly processes US Debit cards | To ensure that the terminal correctly transmits Tag 9F10 (Issuer Application Data) with maximum length | To ensure that the terminal has its application version number set to \u00270002\u0027 - [RA176",
+    "actions":  "Please use test card : M-TIP51 Version 25A | Insert the test card in the chip reader and follow the instructions | If a choice is prompted , select the \u0027Maestro\u0027 application | Transaction amount  = 000000001000 or 000010000000 | If requested , PIN  = 4315",
+    "cards":  [
+                  {
+                      "cardId":  "M-TIP51",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089020516",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "M-TIP51",
+                      "application":  "Application_2",
+                      "brand":  "Maestro",
+                      "pan":  "6799998900000200515",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "M-TIP51",
+                      "application":  "Application_3",
+                      "brand":  "US Maestro",
+                      "pan":  "5413330089099510",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_m-tip51-test-01-scenario-02_v1_log_1.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+
+              ]
+}

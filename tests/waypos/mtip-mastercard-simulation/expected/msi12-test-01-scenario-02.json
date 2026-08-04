@@ -1,0 +1,141 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MSI12.Test.01.Scenario.02",
+    "scenarioClassification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "automatedResponses":  [
+                               {
+                                   "responseMti":  "0110",
+                                   "responseCode":  "00",
+                                   "approved":  true,
+                                   "emvResponseRequired":  false
+                               },
+                               {
+                                   "responseMti":  "0410",
+                                   "responseCode":  "00",
+                                   "approved":  true,
+                                   "emvResponseRequired":  false
+                               }
+                           ],
+    "checks":  [
+                   {
+                       "number":  1,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The terminal informs the cardholder that the transaction is approved",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  2,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The terminal does not prompt for a contact transaction",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  3,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In Read Record, Tag 5A (PAN) = 6799998900000070124",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  4,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, TVR Byte 1, bit 3 (CDA failed) = 0",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  5,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, TVR Byte 1, bit 8 (Offline data authentication was not performed) = 0",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  6,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, the Reference Control Parameter bit 5 = 1 (CDA Requested)",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  7,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, TVR Byte 2, bit 8 (ICC and terminal have different application versions) = 0 - [RA176",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  8,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, TVR Byte 3, bit 3 (Online PIN entered) = 0",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  9,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, TVR Byte 3, bit 4 (PIN entry required, PIN pad present, but PIN was not entered) = 0",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  10,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, TVR Byte 3, bit 5 (PIN entry required and PIN pad not present or not working) = 0",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  11,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 23 (Card Sequence Number) = 049 - [RA121",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  12,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 48 SE 23 (Device Type) is not present",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  13,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 55 - Tag 9F10 (Issuer Authorization Data) = 0110A0000F040000010203040506070809FF0102030405060708090A0B0C0D0E",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  14,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 55 - Tag 9F33 (Terminal Capabilities) is like \u0027??08??\u0027 - [RA490",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  15,
+                       "step":  1,
+                       "mandatory":  "SUGGESTED",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0110/0210/1210 message, DE 39 (Response Code) = 00 (Approved)",
+                       "referenceResult":  "pass"
+                   }
+               ]
+}

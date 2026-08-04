@@ -1,0 +1,133 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "M-TIP02.Test.01.Scenario.02",
+    "scenarioClassification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "automatedResponses":  [
+                               {
+                                   "responseMti":  "0110",
+                                   "responseCode":  "00",
+                                   "approved":  true,
+                                   "emvResponseRequired":  false
+                               },
+                               {
+                                   "responseMti":  "0410",
+                                   "responseCode":  "00",
+                                   "approved":  true,
+                                   "emvResponseRequired":  false
+                               }
+                           ],
+    "checks":  [
+                   {
+                       "number":  1,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "When the card is inserted in the chip reader, the terminal displays a message instructing to use the magstripe reader - [RA018",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  2,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The card is swiped in the magstripe reader",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  3,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "When the card is swiped in the magstripe reader, the terminal gives the choice to proceed with the magstripe transaction (as technical fallback) or to use the chip reader",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  4,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The tester proceeds with the magstripe transaction (as technical fallback)",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  5,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 2 (PAN) = 5413330089020029",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  6,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 4 (Transaction Amount) contains \u002700200\u0027",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  7,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 22 SF 1 (POS Terminal PAN Entry Mode) = 80 - [RA015 - RA016 - RA306",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  8,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 35 (Track 2 Data) is like \u00275413330089020029?4912201062980790\u0027 or DE 45 (Track 1 Data) is present",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  8,
+                       "step":  2,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 35 (Track 2 Data) is like \u00275413330089020029?4912201062980790\u0027 or DE 45 (Track 1 Data) is present",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  9,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 45 (Track 1 Data) = \u0027B5413330089020029^MTIP02^4912629807900000000000000000\u0027 or DE 35 (Track 2 Data) is present",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  9,
+                       "step":  2,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 45 (Track 1 Data) = \u0027B5413330089020029^MTIP02^4912629807900000000000000000\u0027 or DE 35 (Track 2 Data) is present",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  10,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 61 SF 11 (Terminal Input Capability Indicator) = $DE61_SF11_Value$",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  11,
+                       "step":  1,
+                       "mandatory":  "SUGGESTED",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0110/0210/1210 message, DE 39 (Response Code) = 00 (Approved)",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  12,
+                       "step":  1,
+                       "mandatory":  "SUGGESTED",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0110/0210/1210 message, DE 55 (ICC System-Related Data) is not present",
+                       "referenceResult":  "pass"
+                   }
+               ]
+}

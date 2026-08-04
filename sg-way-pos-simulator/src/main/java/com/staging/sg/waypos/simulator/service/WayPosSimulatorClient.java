@@ -2,8 +2,10 @@ package com.staging.sg.waypos.simulator.service;
 
 import com.staging.sg.common.iso.WayPosLengthChannel;
 import com.staging.sg.common.iso.WayPosKeyExchangeCodec;
+import com.staging.sg.common.iso.WayPosMessageValidator;
 import com.staging.sg.common.iso.WayPosPackager;
 import com.staging.sg.common.iso.crypto.WayPosMac;
+import com.staging.sg.waypos.simulator.api.SimulatorFieldMapRequest;
 import com.staging.sg.waypos.simulator.api.SimulatorKeyChangeResponse;
 import com.staging.sg.waypos.simulator.api.SimulatorKeyConfirmationResponse;
 import com.staging.sg.waypos.simulator.api.SimulatorTransactionRequest;
@@ -53,6 +55,45 @@ public class WayPosSimulatorClient {
         }
         remember(request);
         return exchange(request, macEnabled);
+    }
+
+    public SimulatorTransactionResponse sendFieldMap(
+            SimulatorFieldMapRequest input) throws Exception {
+        ISOMsg request = buildFieldMap(input);
+        boolean macEnabled = Boolean.TRUE.equals(input.macEnabled());
+        if (macEnabled) {
+            applyActiveMac(request);
+        }
+        remember(request);
+        return exchange(request, macEnabled);
+    }
+
+    ISOMsg buildFieldMap(SimulatorFieldMapRequest input) throws Exception {
+        if (input == null) {
+            throw new IllegalArgumentException("request is required");
+        }
+        ISOMsg message = new ISOMsg();
+        message.setPackager(packager);
+        message.setMTI(required(input.mti(), "mti"));
+        setFieldMap(message, input.fields(), false);
+        setFieldMap(message, input.binaryFields(), true);
+        if (input.pin() != null && !input.pin().isBlank()) {
+            if (message.hasField(52)) {
+                throw new IllegalArgumentException(
+                        "DE52 and clear certification PIN are mutually exclusive");
+            }
+            message.set(52, keyStore.encryptIso0PinBlock(
+                    input.pin(), message.getString(2)));
+        }
+        if (input.unsetFields() != null) {
+            for (Integer field : input.unsetFields()) {
+                if (field != null) message.unset(field);
+            }
+        }
+        if (!Boolean.FALSE.equals(input.validate())) {
+            WayPosMessageValidator.validateRequest(message);
+        }
+        return message;
     }
 
     public SimulatorTransactionResponse repeat(
@@ -389,6 +430,42 @@ public class WayPosSimulatorClient {
         if (value != null && !value.isBlank()) {
             message.set(field, ISOUtil.hex2byte(value));
         }
+    }
+
+    private static void setFieldMap(
+            ISOMsg message, Map<String, String> fields, boolean binary)
+            throws Exception {
+        if (fields == null) return;
+        for (Map.Entry<String, String> entry : fields.entrySet()) {
+            int field = fieldNumber(entry.getKey());
+            if (field == 1 || field == 64) {
+                throw new IllegalArgumentException(
+                        "DE" + field + " is managed by the simulator");
+            }
+            String value = required(entry.getValue(), "DE" + field);
+            if (binary) {
+                message.set(field, ISOUtil.hex2byte(value));
+            } else {
+                message.set(field, value);
+            }
+        }
+    }
+
+    private static int fieldNumber(String name) {
+        String normalized = required(name, "field name")
+                .trim().toUpperCase();
+        if (normalized.startsWith("DE")) normalized = normalized.substring(2);
+        int field;
+        try {
+            field = Integer.parseInt(normalized);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid ISO field " + name, e);
+        }
+        if (field < 2 || field > 63) {
+            throw new IllegalArgumentException(
+                    "Only primary-bitmap fields DE2..DE63 are supported");
+        }
+        return field;
     }
 
     private static String required(String value, String name) {

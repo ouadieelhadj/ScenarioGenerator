@@ -64,7 +64,7 @@ public final class Tr31VersionDKeyBlock {
         return result;
     }
 
-    static byte[] unwrap(byte[] kbpk, String block) throws Exception {
+    public static byte[] unwrap(byte[] kbpk, String block) throws Exception {
         if (block == null || block.length() != BLOCK_ASCII_LENGTH
                 || !block.startsWith("D0112")) {
             throw new IllegalArgumentException("Invalid TR-31 D0112 block");

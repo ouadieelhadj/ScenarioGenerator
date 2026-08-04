@@ -53,6 +53,20 @@ public class WayPosSimulatorController {
         }
     }
 
+    @PostMapping("/transactions/field-map")
+    public ResponseEntity<?> sendFieldMap(
+            @RequestBody SimulatorFieldMapRequest request) {
+        try {
+            return ResponseEntity.ok(client.sendFieldMap(request));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError()
+                    .body(Map.of("error", e.getClass().getSimpleName()
+                            + ": " + e.getMessage()));
+        }
+    }
+
     @PostMapping("/transactions/repeat")
     public ResponseEntity<?> repeat(
             @RequestParam(name = "terminalId", required = false)

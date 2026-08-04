@@ -1,0 +1,71 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MSI01.Test.16.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal correctly prints a cardholder receipt, if supported | To ensure that the terminal correctly manages the Online PIN verification | To ensure that the terminal correctly performs Online PIN above the CVM Required Limit | To ensure that the terminal correctly implements the Contactless Transaction Limit",
+    "actions":  "Please use test card : MSI01 v1.0 | Transaction amount is equal to the Contactless Transaction Limit : Amount  = $CL_MSI_Transaction_Limit$ | Tap the test card on the contactless reader and follow the instructions | If requested , PIN  = 4315",
+    "cards":  [
+                  {
+                      "cardId":  "MSI01",
+                      "application":  "Application_1",
+                      "brand":  "Maestro",
+                      "pan":  "6799998900000070017",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_msi01-test-16-scenario-01_v1_log_1.xml",
+                           "test_msi01-test-16-scenario-01_v1_log_2.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  true,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "6799998900000070017",
+                                                     "3":  "000000",
+                                                     "4":  "000000900000",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "072",
+                                                     "23":  "001",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "6799998900000070017D4912201012345678",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+                                                           "55":  "9F3303E06008950500000480019F37047798CB919F2608DFDE8C53C5BB59449F36020001820219809C01009F1A0206439A032604099F02060000009000005F2A0205049F03060000000000009F2701809F34034203009F3501228407A00000000430609F090200029F10120110A00000000000000000000000000000FF"
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true,
+                                      "pin":  "4315"
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  false
+                                   }
+                  }
+              ]
+}

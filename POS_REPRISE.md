@@ -1121,3 +1121,331 @@ Etat runtime au moment de la demande de sauvegarde utilisateur :
 - Premier travail non termine : redemarrer ServerPOS, puis executer avec le
   TPE physique `960000`, `930000` et enfin un achat `0200/0210`. Le parcours
   physique n'est pas encore declare passe.
+
+## Reprise du test TPE Feitian F20 au 2026-08-03 18:10
+
+- La connectivite du TPE physique vers ServerPOS est maintenant validee. Le
+  TPE atteint l'ecoute ISO `0.0.0.0:8531` via le point d'acces mobile Windows.
+- Une demande reelle a ete recue et correctement depaquetee : `0800/960000`,
+  terminal `12488881`, DE48 present, sans DE64. Les groupes DE48 portent les
+  statuts TAMK et TPMK, identifiants `00`, statut `0`, algorithme `T` et KCV
+  presents. Cela valide la forme du message initial RKI et confirme que
+  l'absence de MAC est normale pour cette premiere requete.
+- L'authentification initiale a retourne `TAMK=MISMATCH TPMK=MISMATCH`, puis
+  RC63. Le libelle historique `MAC required` est generique : le blocage reel
+  est la divergence des preuves KCV, pas l'absence du MAC.
+- Une verification locale sans affichage des valeurs a confirme que
+  `runtime/issuing-connected-e2e/connected-e2e.env` contient exactement les
+  XOR triple longueur documentes des trois composantes TAMK et TPMK. Le fichier
+  de configuration local n'est donc pas divergent des vecteurs fournis.
+- Une trace ISO securisee a ete ajoutee dans les sources ServerPOS. Elle nomme
+  le message, affiche MTI/DE3/STAN/TID, bitmap, champs presents, dump ASCII et
+  hexadecimal aligne, puis le detail champ par champ. PAN, pistes, PIN block,
+  MAC, donnees EMV et materiel RKI sont neutralises avant empaquetage et log.
+- Le diagnostic de l'authentificateur indique maintenant le resultat separe
+  TAMK/TPMK. Une derniere modification source ajoute une empreinte SHA-256
+  tronquee des KCV recus pour permettre la comparaison avec le journal Way4
+  reel sans journaliser les KCV eux-memes.
+- Fichiers WayPos modifies/non commites dans cette reprise :
+  `sg-way-pos-server/src/main/java/com/staging/sg/waypos/server/network/WayPosJposServer.java`,
+  `sg-way-pos-server/src/main/java/com/staging/sg/waypos/server/network/WayPosSafeMessageTrace.java`,
+  `sg-way-pos-server/src/main/java/com/staging/sg/waypos/server/service/WayPosInitialKeyChangeAuthenticator.java`
+  et
+  `sg-way-pos-server/src/test/java/com/staging/sg/waypos/server/network/WayPosSafeMessageTraceTest.java`.
+  Aucun commit ni push n'a ete effectue pour ces changements.
+- Validations executees : non-regression `sg-common` + ServerPOS, 112 tests,
+  0 echec, `BUILD SUCCESS` a 17:46:51 ; packaging executable reussi a 17:59:20
+  apres ajout du dump structure ; dernier test cible trace + authentificateur,
+  2 tests, 0 echec, `BUILD SUCCESS` a 18:08:33. Le dernier ajout d'empreinte
+  compile et passe les tests cibles, mais le JAR n'a pas encore ete repackagé.
+- Processus encore actifs a l'interruption : ServerPOS PID Windows `7428` sur
+  `8530/8531`, charge avec le JAR de 17:59 (sans la derniere empreinte KCV), et
+  ancien detecteur TCP de diagnostic PID Windows `27036` sur `8549`.
+- Premier travail non termine demain : arreter ServerPOS, arreter le detecteur
+  TCP `8549`, repackager ServerPOS, le redemarrer, rappeler le bootstrap local
+  du terminal `12488881`, relancer un seul `0800/960000`, puis comparer les
+  empreintes TAMK/TPMK recues avec celles extraites du journal Way4 reel
+  `E:\ext_20260803094518.log`. Ne pas contourner le controle KCV : si les
+  cles maitres divergent, le TPE ne pourra pas derouler les TAK/TPK retournees.
+
+## Arret explicite demande le 2026-08-03 a 18:19
+
+- ServerPOS PID Windows `7428` a ete arrete par l'utilisateur ; les ports
+  `8530/8531` ont ete verifies libres.
+- Le JAR ServerPOS incluant le dump securise, le diagnostic TAMK/TPMK et les
+  empreintes KCV a ete repackagé avec succes a 18:17:20 (`BUILD SUCCESS`).
+- L'utilisateur a ensuite demande de ne lancer ni nouvelle tentative physique,
+  ni simulateur, et d'arreter immediatement. Aucun autre test n'a ete execute.
+- Aucun commit ni push n'a ete effectue. Les changements WayPos listes dans la
+  section precedente restent locaux et non commites.
+- Le detecteur TCP de diagnostic sur `8549`, precedemment associe au PID
+  Windows `27036`, n'a pas ete arrete dans cette derniere sequence et devra
+  etre controle/nettoye demain.
+- Premier travail non termine : redemarrer le JAR repackagé, executer une
+  nouvelle tentative RKI physique afin d'obtenir les empreintes KCV du F20,
+  les comparer au journal Way4 reel, puis seulement apres un resultat probant
+  poursuivre le `930000` et l'achat. Le simulateur peut valider la regression
+  logicielle, mais ne peut pas remplacer cette preuve physique.
+
+## Reference copiable des cycles RKI Way4 reels du 2026-08-03
+
+Source analysee en lecture seule : `E:\ext_20260803094518.log`.
+
+Les valeurs ci-dessous appartiennent exclusivement a l'environnement de test.
+Les blocs TPK et TAK sont proteges, respectivement sous TPMK et TAMK ; ce ne
+sont pas des cles en clair. Aucun PAN ni PIN n'est reproduit.
+
+### Cycle 1 - echec avant distribution des cles
+
+- DE7 : `0803094701`
+- DE11/STAN : `000219`
+- DE37/RRN : `621501111553`
+- Code reponse : `91`
+- KCV TAMK du `0800` : `08D7B4`
+- KCV TPMK du `0800` : `08D7B4`
+- TPK protegee sous TPMK dans le `0810` : absente
+- TAK protegee sous TAMK dans le `0810` : absente
+
+### Cycle 2 - RC00, lot N27
+
+- DE7 : `0803094849`
+- DE11/STAN : `000220`
+- DE37/RRN : `621501111554`
+- KCV TAMK du `0800` : `08D7B4`
+- KCV TPMK du `0800` : `08D7B4`
+- TPK sous TPMK, ASCII :
+  `D0112P0TN27N0000D76457DF6795675D88B142E995739A967EED3F830776DD835C6E33493D7741379DE1A074312AE0A46AAB1E59C10536C4`
+- TPK sous TPMK, hexadecimal :
+  `44303131325030544E32374E30303030443736343537444636373935363735443838423134324539393537333941393637454544334638333037373644443833354336453333343933443737343133373944453141303734333132414530413436414142314535394331303533364334`
+- TAK sous TAMK, ASCII :
+  `D0112M3TN27N000063ADD5829E1C897A93F6467E93396B610AEBCD652FABAABFA4917F125422590A26FF11E4C87052F8797703A0A9FCFB5A`
+- TAK sous TAMK, hexadecimal :
+  `44303131324D33544E32374E30303030363341444435383239453143383937413933463634363745393333393642363130414542434436353246414241414246413439313746313235343232353930413236464631314534433837303532463837393737303341304139464346423541`
+
+### Cycle 3 - RC00, lot N28
+
+- DE7 : `0803095900`
+- DE11/STAN : `000224`
+- DE37/RRN : `621501111556`
+- KCV TAMK du `0800` : `08D7B4`
+- KCV TPMK du `0800` : `08D7B4`
+- TPK sous TPMK, ASCII :
+  `D0112P0TN28N0000F1A957BB5E824D8B6A9934BDEC858F950A488362A7E2999875693E4F7CECAE78BBE4EA9ABC1F7F6E685AC4DF1C899F8E`
+- TPK sous TPMK, hexadecimal :
+  `44303131325030544E32384E30303030463141393537424235453832344438423641393933344244454338353846393530413438383336324137453239393938373536393345344637434543414537384242453445413941424331463746364536383541433444463143383939463845`
+- TAK sous TAMK, ASCII :
+  `D0112M3TN28N00003EBA2647C37B849DD94280029733B3030F634C60E027FA062141E6FD6E4F48C776CF9BC3D9E516C3218D622E4F2C6CFA`
+- TAK sous TAMK, hexadecimal :
+  `44303131324D33544E32384E30303030334542413236343743333742383439444439343238303032393733334233303330463633344336304530323746413036323134314536464436453446343843373736434639424333443945353136433332313844363232453446324336434641`
+
+### Cycle 4 - RC00, lot N29
+
+- DE7 : `0803100925`
+- DE11/STAN : `000230`
+- DE37/RRN : `621501111559`
+- KCV TAMK du `0800` : `08D7B4`
+- KCV TPMK du `0800` : `08D7B4`
+- TPK sous TPMK, ASCII :
+  `D0112P0TN29N00002F457DEA04B7B5A4ABA7796CF172B2FE1D1D010FA7684C13BD192D14101BD1AF464D5557B56724E3E8CFF6657A1CE1B5`
+- TPK sous TPMK, hexadecimal :
+  `44303131325030544E32394E30303030324634353744454130344237423541344142413737393643463137324232464531443144303130464137363834433133424431393244313431303142443141463436344435353537423536373234453345384346463636353741314345314235`
+- TAK sous TAMK, ASCII :
+  `D0112M3TN29N00000E614D0270FB79ECCF8FFAF072CF1336415ADB4CF604CF978C5FD23EEA3E689D2A83E73947294C765B1B58F59F7614D8`
+- TAK sous TAMK, hexadecimal :
+  `44303131324D33544E32394E30303030304536313444303237304642373945434346384646414630373243463133333634313541444234434636303443463937384335464432334545413345363839443241383345373339343732393443373635423142353846353946373631344438`
+
+### Reference correspondante dans les logs ServerPOS
+
+Sources locales : `runtime/way-pos-gitbash/logs/serverpos.log` et
+`runtime/way-pos-gitbash/logs/serverpos-console.log`.
+
+#### Tentative physique F20 numero 1
+
+- Message : `0800/960000`
+- DE7 : `0803175356`
+- DE11/STAN : `000245`
+- DE37/RRN : absent du message recu
+- DE41/Terminal ID : `12488881`
+- KCV TAMK : present dans DE48 mais valeur neutralisee dans le log
+- KCV TPMK : present dans DE48 mais valeur neutralisee dans le log
+- Reponse ServerPOS : rejet `RC63`
+- TPK sous TPMK dans le `0810` : absente, car aucune distribution acceptee
+- TAK sous TAMK dans le `0810` : absente, car aucune distribution acceptee
+
+#### Tentative physique F20 numero 2
+
+- Message : `0800/960000`
+- DE7 : `0803180026`
+- DE11/STAN : `000246`
+- DE37/RRN : absent du message recu
+- DE41/Terminal ID : `12488881`
+- KCV TAMK : present dans DE48, valeur neutralisee, resultat `MISMATCH`
+- KCV TPMK : present dans DE48, valeur neutralisee, resultat `MISMATCH`
+- Reponse ServerPOS : rejet `RC63`
+- TPK sous TPMK dans le `0810` : absente, car aucune distribution acceptee
+- TAK sous TAMK dans le `0810` : absente, car aucune distribution acceptee
+
+### Conclusion de comparaison
+
+- Les quatre `0800/960000` du log Way4 portent le KCV TAMK `08D7B4` et le
+  KCV TPMK `08D7B4`.
+- Les KCV calcules pour les composantes de test configurees localement sont
+  TAMK `51C71D` et TPMK `95B446` : ils different du journal Way4.
+- ServerPOS a confirme une divergence TAMK et TPMK, mais ses logs securises
+  ne permettent pas de relire les KCV exacts recus du F20.
+- Une nouvelle capture physique avec empreintes KCV est necessaire pour
+  confirmer formellement que le F20 emet toujours les valeurs `08D7B4`.
+
+## Diagnostic KCV exact prepare le 2026-08-04
+
+- La journalisation de diagnostic peut maintenant afficher les KCV TAMK et
+  TPMK exacts recus dans le DE48 du `0800/960000`.
+- Cette sortie est protegee par le drapeau explicite
+  `WAY_POS_RKI_LOG_KCV_ENABLED`. Il reste desactive par defaut dans
+  `application.yml` et le script Git Bash local `start-serverpos.sh` l'active
+  par defaut pour le test physique.
+- Le format attendu dans `serverpos.log` est :
+  `[WAY-POS][RKI][TEST-ONLY] ... TAMK_KCV=xxxxxx TPMK_KCV=xxxxxx`.
+- Seuls les deux KCV sont affiches. Le DE48 complet, les blocs de cles, le PAN
+  complet et le PIN block restent neutralises. Le `0800/960000` physique
+  observe ne contient de toute facon ni PAN, ni PIN, ni DE64/MAC.
+- Le script de demarrage prefere maintenant le JAR principal nouvellement
+  construit ; les anciens JAR `bootstrap` ne servent que de repli si le JAR
+  principal est absent.
+- Test cible `WayPosInitialKeyChangeAuthenticatorTest` : 2 tests, 0 echec,
+  `BUILD SUCCESS` le 2026-08-04 a 09:01:10. La sortie de test a confirme
+  l'affichage distinct des deux KCV et les resultats MATCH/MISMATCH.
+- Packaging executable ServerPOS : `BUILD SUCCESS` le 2026-08-04 a 09:01:48.
+  JAR produit :
+  `sg-way-pos-server/target/sg-way-pos-server-1.0.0-SNAPSHOT.jar`.
+- La verification `git diff --check` des fichiers modifies a reussi. Le shell
+  Bash n'est pas expose dans l'environnement PowerShell Codex courant ; la
+  validation `bash -n` du script devra etre faite dans le Git Bash operateur.
+- Aucun service n'a ete demarre pendant cette modification. Aucun commit ni
+  push n'a ete effectue.
+- Premier travail non termine : demarrer ce nouveau JAR, provisionner le
+  terminal `12488881`, suivre `serverpos.log`, puis declencher une seule
+  tentative RKI F20 afin de relever et comparer les KCV exacts.
+
+## Preuve physique KCV F20 obtenue le 2026-08-04 a 09:13
+
+- Le nouveau JAR ServerPOS a ete demarre et le terminal physique Feitian F20
+  `12488881` a atteint l'ecoute ISO via le point d'acces Windows.
+- Une seule demande physique `0800/960000` a ete recue avec DE7
+  `0804091312`, DE11/STAN `000247`, DE41 `12488881` et les champs
+  `3,7,11,41,48,63`. DE37, PAN, PIN et DE64/MAC sont absents de cette demande.
+- Le diagnostic test-only a extrait les valeurs exactes du DE48 :
+  `TAMK_KCV=08D7B4` et `TPMK_KCV=08D7B4`.
+- Ces deux valeurs sont identiques a celles des quatre cycles RKI du journal
+  Way4 reel `E:\ext_20260803094518.log`. Le packager, le codec DE48 et la
+  lecture des KCV par ServerPOS sont donc confirmes par le TPE physique.
+- L'authentification locale a retourne `TAMK=MISMATCH TPMK=MISMATCH`, puis
+  RC63, car les composantes actuellement configurees dans ServerPOS donnent
+  les KCV TAMK `51C71D` et TPMK `95B446`.
+- Il ne faut pas contourner ce controle : sans les TAMK/TPMK correspondant
+  reellement a `08D7B4`, les blocs TAK/TPK retournes seraient chiffres sous de
+  mauvaises cles maitres et le F20 ne pourrait pas les importer.
+- ServerPOS reste actif a l'issue de cette tentative. Le parcours `930000`
+  et l'achat ne doivent pas etre lances tant que les cles maitres ne sont pas
+  alignees.
+- Premier travail non termine : obtenir ou faire confirmer les composantes
+  TAMK/TPMK reellement injectees dans le F20, verifier qu'elles produisent les
+  deux KCV `08D7B4`, les configurer cote ServerPOS, refaire le bootstrap puis
+  relancer un seul `0800/960000` pour obtenir MATCH/MATCH et RC00.
+
+## Bypass diagnostic et trace ISO bidirectionnelle du 2026-08-04
+
+- A la demande explicite de l'utilisateur, un bypass KCV strictement limite
+  au diagnostic local a ete ajoute. Il est desactive par defaut et ne devient
+  actif qu'avec `WAY_POS_RKI_ALLOW_KCV_MISMATCH_TEST_ONLY=true`, en plus du
+  bootstrap local deja explicite.
+- Le bypass n'accepte pas un DE48 absent ou mal forme : les preuves TAMK et
+  TPMK doivent toutes deux etre presentes, porter le bon identifiant, le
+  statut initial `0` et un KCV hexadecimal de six caracteres.
+- Une tentative physique F20 a ete recue avec DE7 `0804092718`, STAN `000248`
+  et les KCV `08D7B4`/`08D7B4`. La divergence a ete explicitement contournee
+  par le mode test. Aucune trace sortante n'existait encore dans ce JAR, donc
+  l'envoi effectif du `0810` et le resultat cote TPE n'ont pas pu etre prouves
+  par ce journal.
+- Une trace ISO generique et permanente couvre maintenant toutes les demandes
+  et reponses ServerPOS, sans instrumentation par scenario : systeme/RKI,
+  autorisation, financier, confirmation, reversal, reconciliation, rejet de
+  securite et erreur RC96.
+- Chaque bloc indique `INCOMING` ou `OUTGOING`, nom du message, MTI, DE3,
+  STAN, RRN, terminal, RC, bitmap, champs presents, dump ASCII/hexadecimal et
+  detail champ par champ. Tous les appels `source.send` passent par ce point
+  unique et une ligne de synthese confirme l'envoi.
+- Le DE48 complet et les blocs de cles, le PAN complet et les pistes, le PIN
+  block, DE55/EMV et DE64/MAC restent neutralises dans les dumps. Les deux KCV
+  TAMK/TPMK restent visibles par la ligne RKI test-only dediee.
+- Premier passage de tests pendant que ServerPOS etait actif : les 2 tests de
+  trace ont reussi, puis Mockito a echoue par manque de memoire native ; il ne
+  s'agissait pas d'un echec fonctionnel ou de compilation.
+- Apres arret de ServerPOS, validation cible finale : 5 tests, 0 echec,
+  `BUILD SUCCESS` le 2026-08-04 a 09:52:00.
+- Packaging executable final : `BUILD SUCCESS` le 2026-08-04 a 09:52:32.
+  JAR : `sg-way-pos-server/target/sg-way-pos-server-1.0.0-SNAPSHOT.jar`.
+- ServerPOS est arrete a ce point ; les ports `8530/8531` doivent etre
+  controles avant le prochain demarrage. Aucun commit ni push n'a ete fait.
+- Premier travail non termine : redemarrer le JAR avec le bypass test-only,
+  refaire le bootstrap du terminal `12488881`, lancer une seule RKI F20 et
+  analyser les blocs `INCOMING 0800/960000`, `OUTGOING 0810/960000`, puis
+  eventuellement `INCOMING 0800/930000` et `OUTGOING 0810/930000`.
+
+## Alignement du 0810 RKI sur la reponse Way4 reelle le 2026-08-04
+
+- La reponse Way4 acceptee par le F20 a ete recoupee avec
+  `E:\ext_20260803094518.log`. Son `0810/960000` porte exactement les champs
+  `3,7,11,12,13,39,41,48`, le bitmap `2238000002810000`, aucun DE59, DE63 ou
+  DE64, et un DE48 de 292 octets compose de deux groupes de 146 octets.
+- Le premier essai ServerPOS corrigeait bien le bitmap et les champs, mais
+  envoyait encore un DE48 de 168 octets. Les variables Git Bash contenant les
+  blocs Way4 `D0112` n'etaient pas effectivement liees aux proprietes Spring ;
+  ServerPOS retombait donc sur le format local DF40=1. Le TPE a plante sur
+  cette reponse et aucun `0800/930000` n'a ete recu.
+- Le demarrage transmet maintenant explicitement les deux blocs de rejeu et
+  l'identifiant de cle comme arguments Spring. Le bootstrap refuse de valider
+  un rejeu demande tant qu'il ne prouve pas
+  `wireFormat=WAY4_F20_DF40_2`, `de48Length=292` et le `keyId` attendu.
+- L'encodeur produit l'enveloppe Way4/F20 exacte : TPK puis TAK, identifiant
+  commun, references TPMK/TAMK, DF40=2 et blocs ASCII `D0112` de 112 octets.
+  Seules les deux cles les plus recentes sont livrees et marquees comme
+  distribuees. Le DE63 est retire du `0810/960000` et DE12 utilise l'heure
+  locale de la JVM comme la trace Way4 reelle.
+- Validation du reacteur cible le 2026-08-04 a 11:28:23 : 155 tests au total,
+  0 echec et 0 erreur (`sg-common` 73, DMAS 3, SWAM 11, SMS Acquirer 3,
+  ServerPOS 45, simulateur WayPOS 20 ; SMS Issuer sans test), `BUILD SUCCESS`.
+- Packaging executable final : `BUILD SUCCESS` le 2026-08-04 a 11:28:56.
+  JAR : `sg-way-pos-server/target/sg-way-pos-server-1.0.0-SNAPSHOT.jar`.
+- ServerPOS est arrete. Aucun test physique n'a ete declenche par Codex,
+  aucun commit ni push n'a ete effectue.
+- Limite volontaire du rejeu : les blocs captures permettent de verifier que
+  le F20 accepte la structure du `0810` et repond par `0800/930000`, mais les
+  cles sous LMK generees localement ne correspondent pas aux cles Way4
+  protegees rejouees. Le MAC du `930000` peut donc etre rejete par ServerPOS ;
+  cela ne doit pas etre presente comme un RKI complet.
+- Prochaine etape operateur : demarrer ServerPOS, lancer le bootstrap et ne
+  poursuivre sur le F20 que si le script affiche explicitement
+  `format=WAY4_F20_DF40_2, DE48=292, keyId=27`.
+
+## Priorite du rejeu Way4 sur les anciennes cles en base a 11:38
+
+- L'essai physique suivant a encore produit un DE48 de 168 octets et fait
+  planter le TPE. La cause confirmee est que l'echange selectionnait les
+  anciens blocs locaux persistants ; les blocs Way4 configures n'etaient
+  jusque-la exploites que par le bootstrap, refuse sur un identifiant deja
+  present.
+- Le bootstrap n'est plus requis pour construire la reponse de rejeu. Lorsque
+  les deux variables de blocs Way4 sont configurees au demarrage, le service
+  d'echange utilise directement ces blocs pour produire le DE48 de 292 octets,
+  tout en conservant les metadonnees de cles locales existantes pour le cote
+  serveur.
+- Une regression automatisee reproduit exactement la presence d'anciens blocs
+  locaux et verifie que la sortie configuree contient un seul DE48 de 292
+  octets, dans l'ordre TPK/TAK, avec deux blocs de 112 octets et l'identifiant
+  commun `27`.
+- Tests cibles : 10 tests, 0 echec, `BUILD SUCCESS` a 11:37:35. Packaging du
+  JAR executable : `BUILD SUCCESS` a 11:38:05.
+- ServerPOS est arrete. Le prochain essai ne doit pas appeler le bootstrap :
+  demarrer directement ServerPOS avec les exports Way4 deja presents, puis
+  lancer une seule RKI physique et verifier `FLD (048) : (292)`.

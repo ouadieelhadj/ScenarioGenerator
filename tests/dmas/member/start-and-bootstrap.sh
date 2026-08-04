@@ -44,7 +44,10 @@ TOKEN="$(login 2>/dev/null || true)"
 if [ -z "$TOKEN" ]; then
   JAR="$(find_jar)"
   [ -n "$JAR" ] || { echo "JAR absent : compiler $MODULE"; exit 1; }
-  nohup "$JAVA_BIN" -jar "$JAR" --sg.interface="$INTERFACE_ID" >"$LOG_FILE" 2>&1 &
+  nohup "$JAVA_BIN" -jar "$JAR" \
+    --sg.interface="$INTERFACE_ID" \
+    --dmas.security.routing-permit-all="${DMAS_ROUTING_PERMIT_ALL:-true}" \
+    >"$LOG_FILE" 2>&1 &
   echo "$!" >"$SG_ROOT/logs/$MODULE.pid"
   for _ in $(seq 1 60); do
     TOKEN="$(login 2>/dev/null || true)"; [ -n "$TOKEN" ] && break; sleep 1
@@ -61,4 +64,8 @@ curl -fsS -X POST "$BASE_URL/api/admin/dmas/keys/inject?clear=$PEK_CLEAR&keyType
 curl -fsS -X POST "$BASE_URL/api/admin/dmas/mdk/bootstrap" "${AUTH[@]}" "${JSON[@]}" \
   -d "{\"mdkClear\":\"$MDK_CLEAR\",\"bank\":\"$BANK_CODE\"}"; echo
 curl -fsS "$BASE_URL/api/admin/dmas/keys/current?bank=$BANK_CODE&keyType=PEK" "${AUTH[@]}"; echo
+curl -fsS -X POST "$BASE_URL/api/admin/dmas/network/signon?bank=$BANK_CODE" \
+  "${AUTH[@]}"; echo
+curl -fsS "$BASE_URL/api/admin/dmas/network/status?bank=$BANK_CODE" \
+  "${AUTH[@]}"; echo
 echo "OK - $MODULE pret sur $BASE_URL"

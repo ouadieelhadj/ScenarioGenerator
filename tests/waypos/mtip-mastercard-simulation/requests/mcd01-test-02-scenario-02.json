@@ -1,0 +1,25 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MCD01.Test.02.Scenario.02",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "TPE_ONLY",
+    "objective":  "To ensure that the terminal correctly performs refund",
+    "actions":  "Please use test card : MCD01 v1.2 | Initiate a refund of a previously approved transaction | If requested , the refund amount is the same as the purchase amount | Tap the test card on the contactless reader and follow the instructions",
+    "cards":  [
+                  {
+                      "cardId":  "MCD01",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "2223600089700011",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_mcd01-test-02-scenario-02_v1_log_1.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+
+              ]
+}

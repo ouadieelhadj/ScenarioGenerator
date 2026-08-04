@@ -1,0 +1,105 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "M-TIP04.Test.01.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal correctly processes magstripe only card (with service code \u00271??\u0027)",
+    "actions":  "Please use test card : M-TIP04 Version 25A | Swipe the card in the magstripe reader and follow the instructions | Transaction amount  = 000000002000 or 000020000000 | If requested , PIN  = 4315",
+    "cards":  [
+                  {
+                      "cardId":  "M-TIP04",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089020037",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_m-tip04-test-01-scenario-01_v2_log_1.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  true,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089020037",
+                                                     "3":  "000000",
+                                                     "4":  "000000002000",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "902",
+                                                     "23":  "000",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "5413330089020037D4912101050930812",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true,
+                                      "pin":  "4315"
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  false
+                                   }
+                  },
+                  {
+                      "id":  "step-02-0400",
+                      "sourceMti":  "0400",
+                      "sourceContainsPinBlock":  false,
+                      "request":  {
+                                      "mti":  "0400",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089020037",
+                                                     "3":  "000000",
+                                                     "4":  "000000002000",
+                                                     "37":  "611401012852",
+                                                     "49":  "504",
+                                                     "24":  "400",
+                                                     "60":  "400"
+                                                 },
+                                      "binaryFields":  {
+
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0410",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  false
+                                   }
+                  }
+              ]
+}

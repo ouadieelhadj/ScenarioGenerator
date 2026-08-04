@@ -1,0 +1,55 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MCD06.Test.01.Scenario.01",
+    "scenarioClassification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "automatedResponses":  [
+                               {
+                                   "responseMti":  "0110",
+                                   "responseCode":  "00",
+                                   "approved":  true,
+                                   "emvResponseRequired":  false
+                               }
+                           ],
+    "checks":  [
+                   {
+                       "number":  1,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The terminal informs the cardholder that the transaction is approved",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  2,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In Read Record, Tag 5A (PAN) = 5413330089700067",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  3,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 35 (Track 2 Data) is like \u00275413330089700067?49122010123456789\u0027 - [RA121",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  4,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In the Mastercard Simulator, the ARQC is successfully validated",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  5,
+                       "step":  1,
+                       "mandatory":  "SUGGESTED",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0110/0210/1210 message, DE 39 (Response Code) = 00 (Approved)",
+                       "referenceResult":  "pass"
+                   }
+               ]
+}

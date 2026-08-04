@@ -271,7 +271,7 @@ public class JposHsmService implements HsmService {
         SecureDESKey pek = rebuildKey("PEK", pekUnderLmkHex, kcv, keyLenBytes);
         // 1. PIN -> PIN block sous LMK (FORMAT00 = ISO-0)
         String pan12 = extractPan12(pan);
-        EncryptedPIN underLmk = sm.encryptPIN(pin, pan12, true);
+        EncryptedPIN underLmk = sm.encryptPIN(pin, pan12, false);
         // 2. Export sous PEK -> PIN block destiné au DE052
         EncryptedPIN underPek = sm.exportPIN(underLmk, pek, SMAdapter.FORMAT00);
         byte[] block = underPek.getPINBlock();
@@ -292,7 +292,7 @@ public class JposHsmService implements HsmService {
         SecureDESKey pek = rebuildKey("PEK", pekUnderLmkHex, kcv, keyLenBytes);
         // 1. Reconstruire l'EncryptedPIN reçu (sous PEK)
         String pan12 = extractPan12(pan);
-        EncryptedPIN underPek = new EncryptedPIN(pinBlockUnderPek, SMAdapter.FORMAT00, pan12, true);
+        EncryptedPIN underPek = new EncryptedPIN(pinBlockUnderPek, SMAdapter.FORMAT00, pan12, false);
         // 2. Importer sous LMK puis déchiffrer
         EncryptedPIN underLmk = sm.importPIN(underPek, pek);
         String pin = sm.decryptPIN(underLmk);
@@ -319,7 +319,7 @@ public class JposHsmService implements HsmService {
         SecureDESKey tpk = rebuildKey("TPK", tpkUnderLmkHex, tpkKcv, tpkLength);
         SecureDESKey pek = rebuildKey("PEK", pekUnderLmkHex, pekKcv, pekLength);
         EncryptedPIN underTpk =
-                new EncryptedPIN(pinBlockUnderTpk, SMAdapter.FORMAT00, pan12, true);
+                new EncryptedPIN(pinBlockUnderTpk, SMAdapter.FORMAT00, pan12, false);
         EncryptedPIN underLmk = sm.importPIN(underTpk, tpk);
         EncryptedPIN underPek = sm.exportPIN(underLmk, pek, SMAdapter.FORMAT00);
         byte[] translated = underPek.getPINBlock();
@@ -341,7 +341,7 @@ public class JposHsmService implements HsmService {
         SecureDESKey pvkA = rebuildKey("PVK", pvkAUnderLmkHex, pvkAKcv, 8);
         SecureDESKey pvkB = rebuildKey("PVK", pvkBUnderLmkHex, pvkBKcv, 8);
         EncryptedPIN underTpk =
-                new EncryptedPIN(pinBlockUnderTpk, SMAdapter.FORMAT00, pan12, true);
+                new EncryptedPIN(pinBlockUnderTpk, SMAdapter.FORMAT00, pan12, false);
         boolean verified = sm.verifyPVV(
                 underTpk, tpk, pvkA, pvkB, pvki, expectedPvv);
         log.info("[HSM] verifyPinPvv pan=***{} verified={}",
@@ -356,7 +356,7 @@ public class JposHsmService implements HsmService {
             String kcv, int keyLenBytes) throws Exception {
         SecureDESKey tpk = rebuildKey("TPK", tpkUnderLmkHex, kcv, keyLenBytes);
         String pan12 = extractPan12(pan);
-        EncryptedPIN underLmk = sm.encryptPIN(pin, pan12, true);
+        EncryptedPIN underLmk = sm.encryptPIN(pin, pan12, false);
         return sm.exportPIN(underLmk, tpk, SMAdapter.FORMAT00).getPINBlock();
     }
 
@@ -372,7 +372,7 @@ public class JposHsmService implements HsmService {
         SecureDESKey pvkA = rebuildKey("PVK", pvkAUnderLmkHex, pvkAKcv, 8);
         SecureDESKey pvkB = rebuildKey("PVK", pvkBUnderLmkHex, pvkBKcv, 8);
         EncryptedPIN underTpk =
-                new EncryptedPIN(pinBlockUnderTpk, SMAdapter.FORMAT00, pan12, true);
+                new EncryptedPIN(pinBlockUnderTpk, SMAdapter.FORMAT00, pan12, false);
         return sm.calculatePVV(underTpk, tpk, pvkA, pvkB, pvki);
     }
 

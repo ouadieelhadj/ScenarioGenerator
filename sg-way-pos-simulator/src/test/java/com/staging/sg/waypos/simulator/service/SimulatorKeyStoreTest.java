@@ -1,12 +1,14 @@
 package com.staging.sg.waypos.simulator.service;
 
 import com.staging.sg.common.iso.WayPosKeyExchangeCodec;
+import com.staging.sg.common.iso.crypto.Tr31VersionDKeyBlock;
 import com.staging.sg.waypos.simulator.config.SimulatorProperties;
 import org.jpos.iso.ISOUtil;
 import org.junit.jupiter.api.Test;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -84,6 +86,34 @@ class SimulatorKeyStoreTest {
                 new WayPosKeyExchangeCodec.KeyStatus("11", "0", "TAK"),
                 new WayPosKeyExchangeCodec.KeyStatus("12", "0", "TPK")), statuses);
         assertArrayEquals(ISOUtil.hex2byte(takHex), store.activeTak());
+    }
+
+    @Test
+    void importsTr31VersionDWorkingKeyAndUsesTpkForIso0PinBlock()
+            throws Exception {
+        String tpmkHex = "55C22E97E01D280F02F0641E0444C71F6AED406C41242D60";
+        String tpkHex = "AABBCCDDEEFF00112233445566778899";
+        SimulatorProperties properties = new SimulatorProperties(
+                "localhost", 8531, 55, "TERM0001", "MERCHANT0000001",
+                "504", "BIN", "00112233445566778899AABBCCDDEEFF",
+                "00", "TMK", "", "BINARY", "ECB",
+                "01", tpmkHex, "02", tpmkHex);
+        SimulatorKeyStore store = new SimulatorKeyStore(properties);
+        String block = Tr31VersionDKeyBlock.wrap(
+                ISOUtil.hex2byte(tpmkHex), ISOUtil.hex2byte(tpkHex),
+                "P0", "N", "12", "N");
+
+        var statuses = store.importBlocks(List.of(
+                new WayPosKeyExchangeCodec.KeyBlock(
+                        "12", "TPK", kcv(ISOUtil.hex2byte(tpkHex)), "T",
+                        "02", "TPMK",
+                        block.getBytes(StandardCharsets.US_ASCII),
+                        "2", "0", "0", null)));
+
+        assertEquals(List.of(new WayPosKeyExchangeCodec.KeyStatus(
+                "12", "0", "TPK")), statuses);
+        assertEquals(8, store.encryptIso0PinBlock(
+                "4315", "2223600089700011").length);
     }
 
     private static void assertWorkingKeyImport(

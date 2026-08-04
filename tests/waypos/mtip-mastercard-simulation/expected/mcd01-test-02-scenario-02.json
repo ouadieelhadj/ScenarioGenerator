@@ -1,0 +1,34 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MCD01.Test.02.Scenario.02",
+    "scenarioClassification":  "TPE_ONLY",
+    "automatedResponses":  [
+
+                           ],
+    "checks":  [
+                   {
+                       "number":  1,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "At the end of the refund process, the terminal displays a message to inform the cardholder that refund has been done successfully - [RA220",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  2,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In Read Record, Tag 5A (PAN) = 2223600089700011",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  3,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, the terminal requests an AAC - [RA221",
+                       "referenceResult":  "pass"
+                   }
+               ]
+}

@@ -1,0 +1,78 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MSI04.Test.02.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal correctly completes the transaction with a Mobile | To ensure that the terminal correctly manages the contactless values in the existing authorization fields | To ensure that the terminal correctly transmits Track 2 Equivalent Data for an EMV mode contactless transaction | To ensure that the terminal correctly transmits the Device Type, when applicable",
+    "actions":  "A first transaction is performed where the test card simulates a mobile device requesting CDCVM | Please use test card : MSI04 v1.0 | Transaction amount is above the CVM Required Limit and below the Contactless Transaction Limit (CDCVM) : $CL_MSI_CVM_Limit$ \u003c Amount \u003c = $CL_MSI_On_Device_CVM_Transaction_Limit$ | Tap the test card on the contactless reader and follow the instructions | A second transaction is performed where the test card simulates that CDCVM was successfully verified | Please use test card : MSI05 v1.1 | If needed , the Transaction amount is the same as in the previous transaction | Tap the test card on the contactless reader and follow the instructions",
+    "cards":  [
+                  {
+                      "cardId":  "MSI04",
+                      "application":  "Application_1",
+                      "brand":  "Maestro",
+                      "pan":  "6799998900000070041",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "MSI05",
+                      "application":  "Application_1",
+                      "brand":  "Maestro",
+                      "pan":  "6799998900000070041",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_MSI04-Test-02-Scenario-01_V1_log_1.xml",
+                           "test_MSI04-Test-02-Scenario-01_V1_log_2.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  1,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  false,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "6799998900000070041",
+                                                     "3":  "000000",
+                                                     "4":  "000000050200",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "072",
+                                                     "23":  "001",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "6799998900000070041D4912201012345678",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+                                                           "55":  "9F3303E06008950500200080019F3704A0CABA6B9F2608AFC3700E694E29319F3602000682021B809C01009F1A0206439A032604159F02060000000502005F2A0205049F03060000000000009F2701809F34030100029F3501228407A00000000430609F090200029F10120110A00000000000000000000000000000FF"
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  false
+                                   }
+                  }
+              ]
+}

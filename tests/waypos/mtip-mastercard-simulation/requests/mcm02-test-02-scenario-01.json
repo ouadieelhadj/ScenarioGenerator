@@ -1,0 +1,25 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MCM02.Test.02.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "TPE_ONLY",
+    "objective":  "To ensure that the terminal correctly manages mag-stripe mode contactless transactions",
+    "actions":  "Please use test card : MCM02 v1.0 | Transaction amount is below the Contactless Transaction Limit : Amount \u003c = $CL_MCD_Transaction_Limit$ | Tap the test card on the contactless reader and follow the instructions",
+    "cards":  [
+                  {
+                      "cardId":  "MCM02",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089730023",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           null
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+
+              ]
+}

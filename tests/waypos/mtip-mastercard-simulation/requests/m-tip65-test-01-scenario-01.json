@@ -1,0 +1,78 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "M-TIP65.Test.01.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal correctly processes transactions without ARPC | To ensure that the terminal correctly processes a card that contains 9F24 (Payment Account Reference) | To ensure that the terminal correctly processes a card that contains long Issuer certificates | To ensure that the terminal correctly processes a card that requests 9F1D (TRMD) in CDOL1",
+    "actions":  "Please use test card : M-TIP65 Version 25A | Insert the test card in the chip reader and follow the instructions | Transaction amount is above the Floor Limit | If a choice is prompted , select the \u0027MasterCard\u0027 application | If requested , PIN  = 4315 | If displayed in the Mastercard Simulator , please ignore the Data Integrity Warning related to missing DE 55 SE 91",
+    "cards":  [
+                  {
+                      "cardId":  "M-TIP65",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089700653",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "M-TIP65",
+                      "application":  "Application_2",
+                      "brand":  "Maestro",
+                      "pan":  "6799998900000070652",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_m-tip65-test-01-scenario-01_v1_log_1.xml",
+                           "test_m-tip65-test-01-scenario-01_v1_log_2.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  false,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089700653",
+                                                     "3":  "000000",
+                                                     "4":  "000000090000",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "052",
+                                                     "23":  "011",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "5413330089700653D49122010123456789",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+                                                           "55":  "9F3303E0F8C8950500800080009F3704FB03F9699F2608F39F570EEEA471449F3602000D820279009C01009F1A0206439A032604069F02060000000900005F2A0205049F03060000000000009F2701809F34034103029F3501228407A00000000410109F090200019F10120110A04000000000000000000000000000FF"
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  false
+                                   }
+                  }
+              ]
+}

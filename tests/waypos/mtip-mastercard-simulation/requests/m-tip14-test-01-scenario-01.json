@@ -1,0 +1,70 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "M-TIP14.Test.01.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal correctly applies the CVM policy when Mastercard application is selected",
+    "actions":  "Please use test card : M-TIP14 Version 25A | Insert the test card in the chip reader and follow the instructions | Transaction amount  = 000000001000 or 000010000000 | If requested , PIN  = 4315",
+    "cards":  [
+                  {
+                      "cardId":  "M-TIP14",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089020078",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_m-tip14-test-01-scenario-01_v1_log_1.xml",
+                           "test_m-tip14-test-01-scenario-01_v1_log_2.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  false,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089020078",
+                                                     "3":  "000000",
+                                                     "4":  "000000001000",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "052",
+                                                     "23":  "000",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "5413330089020078D4912201092430755",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+                                                           "55":  "9F3303E0F8C8950500800080009F37040F99D9B99F2608538D2183C337A0BB9F36020002820238009C01009F1A0206439A032604069F02060000000010005F2A0205049F03060000000000009F2701809F34035E03009F3501228407A00000000410109F090200019F10120110A00000200000000000000000000000FF"
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  true
+                                   }
+                  }
+              ]
+}

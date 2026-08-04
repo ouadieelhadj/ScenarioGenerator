@@ -1,0 +1,49 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "COM01.Test.01.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "TPE_ONLY",
+    "objective":  "To ensure that the terminal correctly processes uncommon data value or length received from the card | To ensure that the terminal correctly completes the transaction when the card supports Data Storage | To ensure that the terminal correctly selects the highest priority application without cardholder assistance - [RA470 - RA376",
+    "actions":  "Please use test card : COM01 v1.0 | Transaction amount is below the Contactless Transaction Limit : Amount \u003c = $CL_MCD_Transaction_Limit$ | Tap the test card on the contactless reader and follow the instructions | If requested , PIN  = 4315",
+    "cards":  [
+                  {
+                      "cardId":  "COM01",
+                      "application":  "Application_1",
+                      "brand":  "Maestro",
+                      "pan":  "6799998900000074316",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "COM01",
+                      "application":  "Application_2",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089704317",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "COM01",
+                      "application":  "Application_3",
+                      "brand":  "US Maestro AID",
+                      "pan":  "5413330089754312",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "COM01",
+                      "application":  "Application_4",
+                      "brand":  "Cirrus",
+                      "pan":  "6799978900000064311",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_com01-test-01-scenario-01_v1_log_1.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+
+              ]
+}

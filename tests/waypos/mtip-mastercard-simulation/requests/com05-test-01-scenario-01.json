@@ -1,0 +1,33 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "COM05.Test.01.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "TPE_ONLY",
+    "objective":  "To ensure that the terminal correctly processes a card with Tag 9F19 and Private Class Tags | To ensure that the terminal correctly processes a card featuring Tag 9F2A (Kernel Identifier) = 08 in PPSE",
+    "actions":  "Please use test card : COM05 v1.0 | Transaction amount is below the Contactless Transaction Limit : Amount \u003c = $CL_MCD_Transaction_Limit$ | Tap the test card on the contactless reader and follow the instructions | If requested , PIN  = 4315",
+    "cards":  [
+                  {
+                      "cardId":  "COM05",
+                      "application":  "Application_2",
+                      "brand":  "Maestro",
+                      "pan":  "6799998900000074357",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "COM05",
+                      "application":  "Application_3",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089704358",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_com05-test-01-scenario-01_v1_log_1.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+
+              ]
+}

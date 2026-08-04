@@ -1,0 +1,127 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "COM02.Test.02.Scenario.02",
+    "scenarioClassification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "automatedResponses":  [
+                               {
+                                   "responseMti":  "0110",
+                                   "responseCode":  "00",
+                                   "approved":  true,
+                                   "emvResponseRequired":  false
+                               }
+                           ],
+    "checks":  [
+                   {
+                       "number":  1,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The terminal informs the cardholder that the transaction is approved",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  2,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In the SELECT command, AID = A0000000043060",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  3,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In Read Record, Tag 5A (PAN) = 6799998900000074324",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  4,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_CRYPTO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 22 SF 2 (POS Terminal PIN Entry Mode) = 1 (Terminal has PIN Entry Capability) - [RA515",
+                       "referenceResult":  "not reported"
+                   },
+                   {
+                       "number":  5,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_CRYPTO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 22 SF 2 (POS Terminal PIN Entry Mode) = 2 (Terminal does not have PIN entry capability) - [RA515",
+                       "referenceResult":  "not reported"
+                   },
+                   {
+                       "number":  6,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_CRYPTO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 22 SF 2 (POS Terminal PIN Entry Mode) = 3 (mPOS Software-based PIN Entry Capability) - [RA515",
+                       "referenceResult":  "not reported"
+                   },
+                   {
+                       "number":  7,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 48 SE 21 SF 1 = 0 (Dedicated mPOS Terminal) - [RA515",
+                       "referenceResult":  "not reported"
+                   },
+                   {
+                       "number":  8,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 48 SE 21 SF 1 = 1 (Off the Shelf Mobile Device) - [RA515",
+                       "referenceResult":  "not reported"
+                   },
+                   {
+                       "number":  9,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 48 SE 23 (Device Type) = 99 (RFU)",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  10,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 55 - Tag 9F1E (Terminal Capabilities) is 8 bytes long",
+                       "referenceResult":  "not reported"
+                   },
+                   {
+                       "number":  11,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 55 - Tag 9F34 (CVM Results) is present - [RA117",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  12,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 61 SF 10 (CAT Level) = 9 (MPOS Acceptance Device) - [RA514",
+                       "referenceResult":  "not reported"
+                   },
+                   {
+                       "number":  13,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 61 SF 11 (Terminal Input Capability Indicator) = 3",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  14,
+                       "step":  1,
+                       "mandatory":  "SUGGESTED",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0110/0210/1210 message, DE 39 (Response Code) = 00 (Approved)",
+                       "referenceResult":  "pass"
+                   }
+               ]
+}

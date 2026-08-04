@@ -7,8 +7,10 @@ import com.staging.sg.waypos.server.domain.PosTerminalProfile;
 import com.staging.sg.waypos.server.repository.PosInterfaceKeyRepository;
 import com.staging.sg.waypos.server.repository.PosTerminalProfileRepository;
 import org.jpos.iso.ISOUtil;
+import org.jpos.security.SecureDESKey;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -69,6 +71,28 @@ public class WayPosPinTranslationService {
                         interfaceCode, underLmk, kcv.toUpperCase(), length));
         key.replace(underLmk, kcv.toUpperCase(), length);
         interfaces.save(key);
+    }
+
+    public String provisionClearInterfaceKeyTestOnly(
+            String interfaceCode, String clearPekHex) {
+        if (interfaceCode == null || interfaceCode.isBlank()
+                || clearPekHex == null
+                || !clearPekHex.matches("(?i)([0-9a-f]{16}|[0-9a-f]{32})")) {
+            throw new IllegalArgumentException("Invalid TEST-ONLY interface PEK");
+        }
+        byte[] clear = ISOUtil.hex2byte(clearPekHex);
+        try {
+            SecureDESKey protectedKey = hsm.formClearKey("PEK", clearPekHex);
+            String kcv = hsm.computeKcv(clear);
+            provisionInterfaceKey(
+                    interfaceCode, ISOUtil.hexString(protectedKey.getKeyBytes()),
+                    kcv, clear.length);
+            return kcv;
+        } catch (Exception e) {
+            throw new IllegalStateException("Unable to protect TEST-ONLY interface PEK", e);
+        } finally {
+            Arrays.fill(clear, (byte) 0);
+        }
     }
 
     private static RoutingTransactionRequest copyWithPinBlock(

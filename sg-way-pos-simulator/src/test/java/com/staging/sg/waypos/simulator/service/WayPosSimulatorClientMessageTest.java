@@ -5,6 +5,7 @@ import com.staging.sg.common.iso.WayPosKeyExchangeCodec;
 import com.staging.sg.common.iso.WayPosPackager;
 import com.staging.sg.common.iso.WayPosPrivateData;
 import com.staging.sg.waypos.simulator.api.SimulatorTransactionRequest;
+import com.staging.sg.waypos.simulator.api.SimulatorFieldMapRequest;
 import com.staging.sg.waypos.simulator.config.SimulatorProperties;
 import org.jpos.iso.ISOMsg;
 import org.jpos.iso.ISOUtil;
@@ -21,6 +22,72 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 class WayPosSimulatorClientMessageTest {
+
+    @Test
+    void buildsCertificationFieldMapWithCardSequenceTrack2AndEmv()
+            throws Exception {
+        WayPosSimulatorClient client = client();
+        SimulatorFieldMapRequest input = new SimulatorFieldMapRequest(
+                "0100",
+                Map.ofEntries(
+                        Map.entry("2", "2223600089700011"),
+                        Map.entry("3", "000000"),
+                        Map.entry("4", "000000008000"),
+                        Map.entry("7", "0407091528"),
+                        Map.entry("11", "041498"),
+                        Map.entry("12", "101528"),
+                        Map.entry("13", "0407"),
+                        Map.entry("14", "4912"),
+                        Map.entry("22", "071"),
+                        Map.entry("23", "001"),
+                        Map.entry("25", "00"),
+                        Map.entry("35", "2223600089700011D49122010123456789"),
+                        Map.entry("41", "TERM0001"),
+                        Map.entry("42", "MERCHANT0000001"),
+                        Map.entry("49", "504"),
+                        Map.entry("63", "007SV1.0.0")),
+                Map.of("55", "9F2701809F2608FCC9477BBF5C9199"),
+                List.of(), null, false, true);
+
+        ISOMsg message = client.buildFieldMap(input);
+
+        assertEquals("001", message.getString(23));
+        assertEquals("2223600089700011D49122010123456789",
+                message.getString(35));
+        assertArrayEquals(
+                ISOUtil.hex2byte("9F2701809F2608FCC9477BBF5C9199"),
+                message.getBytes(55));
+        WayPosMessageValidator.validateRequest(message);
+    }
+
+    @Test
+    void buildsCertificationPinBlockFromActiveTpkWithoutReplayingCapture()
+            throws Exception {
+        SimulatorKeyStore keyStore = mock(SimulatorKeyStore.class);
+        byte[] encrypted = ISOUtil.hex2byte("0011223344556677");
+        when(keyStore.encryptIso0PinBlock(
+                "4315", "2223600089700011")).thenReturn(encrypted);
+        WayPosSimulatorClient client = client(keyStore);
+        SimulatorFieldMapRequest input = new SimulatorFieldMapRequest(
+                "0100",
+                Map.ofEntries(
+                        Map.entry("2", "2223600089700011"),
+                        Map.entry("3", "000000"),
+                        Map.entry("4", "000000008000"),
+                        Map.entry("7", "0407091528"),
+                        Map.entry("11", "041498"),
+                        Map.entry("14", "4912"),
+                        Map.entry("22", "071"),
+                        Map.entry("25", "00"),
+                        Map.entry("41", "TERM0001"),
+                        Map.entry("49", "504"),
+                        Map.entry("63", "007SV1.0.0")),
+                Map.of(), List.of(), "4315", false, true);
+
+        ISOMsg message = client.buildFieldMap(input);
+
+        assertArrayEquals(encrypted, message.getBytes(52));
+    }
 
     @Test
     void buildsBasicPurchaseWithPinEmvAndPrivateData() throws Exception {

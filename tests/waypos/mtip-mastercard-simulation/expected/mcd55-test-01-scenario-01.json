@@ -1,0 +1,171 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MCD55.Test.01.Scenario.01",
+    "scenarioClassification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "automatedResponses":  [
+                               {
+                                   "responseMti":  "0110",
+                                   "responseCode":  "65",
+                                   "approved":  false,
+                                   "emvResponseRequired":  false
+                               },
+                               {
+                                   "responseMti":  "0110",
+                                   "responseCode":  "00",
+                                   "approved":  true,
+                                   "emvResponseRequired":  false
+                               },
+                               {
+                                   "responseMti":  "0410",
+                                   "responseCode":  "00",
+                                   "approved":  true,
+                                   "emvResponseRequired":  false
+                               }
+                           ],
+    "checks":  [
+                   {
+                       "number":  1,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The terminal prompts the cardholder to enter the PIN",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  2,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The terminal doesn\u0027t ask the cardholder to tap the test card again",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  3,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The terminal informs the cardholder that the transaction is approved",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  4,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In Read Record, Tag 5A (PAN) = 5413330089700554",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  5,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, Tag 9F02 (Amount Authorized) \u003c CVM Required Limit: $CL_MCD_CVM_Limit$",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  6,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message (first instance), DE 2 (PAN) = 5413330089700554 - [RA121",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  7,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message (first instance), DE 48 SE 22 SF 02 (Single Tap Indicator) = 1 - [RA559",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  8,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In the Mastercard Simulator, the ARQC is successfully validated",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  9,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message (second instance), DE 2 (PAN) = 5413330089700554 - [RA560",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  10,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message (second instance), DE 11 (STAN) is different from DE 11 in the first instance",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  11,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message (second instance), DE 48 SE 22 SF 02 (Single Tap Indicator) = 1 - [RA559",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  12,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_CRYPTO",
+                       "expectedResult":  "In 0100/0200/1200 message (second instance), DE 48 SE 22 SF 03 (Response to PIN Request) = 1 - [RA560",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  13,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_CRYPTO",
+                       "expectedResult":  "In 0100/0200/1200 message (second instance), DE 52 (PIN Data) or DE 110 (Encryption Data) is present - [RA560",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  13,
+                       "step":  2,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_CRYPTO",
+                       "expectedResult":  "In 0100/0200/1200 message (second instance), DE 52 (PIN Data) or DE 110 (Encryption Data) is present - [RA560",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  14,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message (second instance), DE 55 - Tag 9F36 (Application Transaction Counter) is the same as Tag 9F36 in the first instance - [RA560",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  15,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message (second instance), DE 55 - Tag 9F37 (Unpredictable Number) is the same as Tag 9F37 in the first instance - [RA560",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  16,
+                       "step":  1,
+                       "mandatory":  "SUGGESTED",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0110/0210/1210 message, DE 39 (Response Code) = 65 (Exceeds withdrawal count limit)",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  17,
+                       "step":  1,
+                       "mandatory":  "SUGGESTED",
+                       "classification":  "HOST_CRYPTO",
+                       "expectedResult":  "In 0110/0210/1210 message, DE 48 SE 22 SF 04 (Issuer PIN Request in a Single Tap Mode) = 1",
+                       "referenceResult":  "pass"
+                   }
+               ]
+}

@@ -1,0 +1,106 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MCD50.Test.01.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal correctly processes uncommon data value or length received from the card | To ensure that the terminal correctly processes a 6-digit PIN | To ensure that the terminal correctly processes the RRP protocol, if supported - [RA389] | Note: RRP threshold and time limits will always be exceeded, due to low RRP parameters in the test card | To ensure that the terminal correctly completes the transaction when the card supports Data Storage",
+    "actions":  "Please use test card : MCD50 v1.0 | Transaction amount is above the CVM Required Limit and below the Contactless Transaction Limit : $CL_MCD_CVM_Limit$ \u003c Amount \u003c = $CL_MCD_Transaction_Limit$ | Tap the test card on the contactless reader and follow the instructions | If requested , PIN  = 431555",
+    "cards":  [
+                  {
+                      "cardId":  "MCD50",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089700505",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_MCD50-Test-01-Scenario-01_V1_log_1.xml",
+                           "test_MCD50-Test-01-Scenario-01_V1_log_2.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  true,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089700505",
+                                                     "3":  "000000",
+                                                     "4":  "000000005200",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "072",
+                                                     "23":  "001",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "5413330089700505D49122030123456789",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+                                                           "55":  "9F3303E060089505000004800E9F37047A463FD19F26084E57AF01BBA7FEBD9F36020006820219819C01009F1A0206439A032604159F02060000000052005F2A0205049F03060000000000009F2701809F34034203009F3501228407A00000000410109F090200029F10120110A00000000000000000000000000000FF"
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true,
+                                      "pin":  "431555"
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  false
+                                   }
+                  },
+                  {
+                      "id":  "step-02-0400",
+                      "sourceMti":  "0400",
+                      "sourceContainsPinBlock":  false,
+                      "request":  {
+                                      "mti":  "0400",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089700505",
+                                                     "3":  "000000",
+                                                     "4":  "000000005200",
+                                                     "37":  "610501012788",
+                                                     "49":  "504",
+                                                     "24":  "400",
+                                                     "60":  "400"
+                                                 },
+                                      "binaryFields":  {
+
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0410",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  false
+                                   }
+                  }
+              ]
+}

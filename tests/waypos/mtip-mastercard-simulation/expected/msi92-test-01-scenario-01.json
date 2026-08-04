@@ -1,0 +1,18 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MSI92.Test.01.Scenario.01",
+    "scenarioClassification":  "TPE_ONLY",
+    "automatedResponses":  [
+
+                           ],
+    "checks":  [
+                   {
+                       "number":  1,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The terminal does not send any command to the card beyond the GetPO response - [RA204",
+                       "referenceResult":  "pass"
+                   }
+               ]
+}

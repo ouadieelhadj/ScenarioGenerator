@@ -9,7 +9,7 @@ REST_PORT="${REST_PORT:-8501}"
 INTERFACE_ID="${INTERFACE_ID:-DMAS_MASTERCARD_1}"
 ADMIN_LOGIN="${ADMIN_LOGIN:-admin}"
 MEMBER_GROUP_ID="${MEMBER_GROUP_ID:-TESTGRP01}"
-BANK_CODE="${BANK_CODE:-022905}"
+BANK_CODE="${BANK_CODE:-002202}"
 MODULE="sg-mc-dmas-mastercard"
 LOG_FILE="$SG_ROOT/logs/$MODULE-bootstrap.log"
 BASE_URL="http://localhost:$REST_PORT"
@@ -39,7 +39,10 @@ TOKEN="$(login 2>/dev/null || true)"
 if [ -z "$TOKEN" ]; then
   JAR="$(find_jar)"
   [ -n "$JAR" ] || { echo "JAR absent : compiler $MODULE"; exit 1; }
-  nohup "$JAVA_BIN" -jar "$JAR" --sg.interface="$INTERFACE_ID" >"$LOG_FILE" 2>&1 &
+  nohup "$JAVA_BIN" -jar "$JAR" \
+    --sg.interface="$INTERFACE_ID" \
+    --dmas.authorization.owner="${DMAS_AUTHORIZATION_OWNER:-EXTERNAL_MEMBER_SIMULATOR}" \
+    >"$LOG_FILE" 2>&1 &
   echo "$!" >"$SG_ROOT/logs/$MODULE.pid"
   for _ in $(seq 1 60); do
     TOKEN="$(login 2>/dev/null || true)"; [ -n "$TOKEN" ] && break; sleep 1

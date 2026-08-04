@@ -1,0 +1,25 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MSI94.Test.03.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "TPE_ONLY",
+    "objective":  "To ensure that the terminal correctly performs Cardholder Verification | To ensure that the terminal prompts the cardholder to perform a contact transaction when the terminal informs the cardholder that the transaction is declined - [RA277",
+    "actions":  "Please use test card : MSI94 v1.0 | Transaction amount is above the CVM Required Limit and below the Contactless Transaction Limit : $CL_MSI_CVM_Limit$ \u003c Amount \u003c = $CL_MSI_Transaction_Limit$ | Tap the test card on the contactless reader and follow the instructions | Do not perform the contact transaction when prompted by the terminal",
+    "cards":  [
+                  {
+                      "cardId":  "MSI94",
+                      "application":  "Application_1",
+                      "brand":  "Maestro",
+                      "pan":  "6799998900000070942",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_msi94-test-03-scenario-01_v1_log_1.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+
+              ]
+}

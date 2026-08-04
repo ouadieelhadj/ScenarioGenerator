@@ -1,0 +1,215 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "M-TIP06.Test.02.Scenario.01",
+    "scenarioClassification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "automatedResponses":  [
+                               {
+                                   "responseMti":  "0110",
+                                   "responseCode":  "00",
+                                   "approved":  true,
+                                   "emvResponseRequired":  true
+                               }
+                           ],
+    "checks":  [
+                   {
+                       "number":  1,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In Read Record, Tag 5A (PAN) = 5413330089020011",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  2,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In First GEN AC, Tag 9F02 (Amount Authorized) = 000000004000 or 000040000000",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  3,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, Tag 9C (Transaction Type) = 00 (Purchase) - [RA297",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  4,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, TVR Byte 1, bit 4 (DDA failed) = 0",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  5,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In First GEN AC, the terminal requests an ARQC",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  6,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The seventh Issuer Script command is sent after First GEN AC - [RA120",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  7,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The card responds to the seventh Issuer Script command with SW=9000 - [RA120",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  8,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In Second GEN AC, TVR Byte 5, bit 6 (Script processing failed before final GENERATE AC) = 0",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  9,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "The card responds to the Second GEN AC with a TC",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  10,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 2 (PAN) = 5413330089020011",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  11,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 3 SF 1 (Cardholder Transaction Type Code) = 00 (Purchase)",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  12,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 3 SF 1 (Cardholder Transaction Type Code) = 01 (Withdrawal)",
+                       "referenceResult":  "not reported"
+                   },
+                   {
+                       "number":  13,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 3 SF 1 (Cardholder Transaction Type Code) = 17 (Cash Disbursement)",
+                       "referenceResult":  "not reported"
+                   },
+                   {
+                       "number":  14,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 4 (Transaction Amount) = Tag 9F02 (Amount Authorized) from First GEN AC",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  15,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 14 (Expiration Date) = 4912 or message type = 0200 - [RA121",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  15,
+                       "step":  2,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 14 (Expiration Date) = 4912 or message type = 0200 - [RA121",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  16,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 23 (Card Sequence Number) = 003 - [RA121",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  17,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 55 - Tag 9F03 (Amount Other) = 000000000000 or is not present - [RA126",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  17,
+                       "step":  2,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 55 - Tag 9F03 (Amount Other) = 000000000000 or is not present - [RA126",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  18,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0100/0200/1200 message, DE 55 - Tag 9F36 (Application Transaction Counter) = 0027",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  19,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "TPE_ONLY",
+                       "expectedResult":  "In the Mastercard Simulator, the ARQC is successfully validated",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  20,
+                       "step":  1,
+                       "mandatory":  "MANDATORY",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In Second GEN AC, Tag 91 (Issuer Authentication Data) = DE 55 - Tag 91 from 0110/0210/1210 message - [RA129",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  21,
+                       "step":  1,
+                       "mandatory":  "SUGGESTED",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0110/0210/1210 message, DE 39 (Response Code) = 00 (Approved)",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  22,
+                       "step":  1,
+                       "mandatory":  "SUGGESTED",
+                       "classification":  "HOST_CRYPTO",
+                       "expectedResult":  "In 0110/0210/1210 message, DE 55 - Tag 91 (Issuer Authentication Data) - ARPC Response code value is 0012",
+                       "referenceResult":  "pass"
+                   },
+                   {
+                       "number":  23,
+                       "step":  1,
+                       "mandatory":  "SUGGESTED",
+                       "classification":  "HOST_ISO",
+                       "expectedResult":  "In 0110/0210/1210 message, DE 55 - Tag 71 (Issuer Script Template) is present",
+                       "referenceResult":  "pass"
+                   }
+               ]
+}

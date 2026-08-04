@@ -1,0 +1,105 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "M-TIP23.Test.01.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal correctly sends a reversal for a transaction that has been approved by the issuer but is not completed",
+    "actions":  "Please use test card : M-TIP23 Version 25A | Insert the test card in the chip reader and follow the instructions | Transaction amount  = 000000004000 or 000040000000 | If requested , PIN  = 4315",
+    "cards":  [
+                  {
+                      "cardId":  "M-TIP23",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089020110",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_m-tip23-test-01-scenario-01_v1_log_1.xml",
+                           "test_m-tip23-test-01-scenario-01_v1_log_2.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  1,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  false,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089020110",
+                                                     "3":  "000000",
+                                                     "4":  "000000004000",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "052",
+                                                     "23":  "003",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "5413330089020110D4912601079360805",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+                                                           "55":  "9F3303E0F8C8950500800080009F37045BD20F079F26084B9DD9A9516AFC729F36020017820230009C01009F1A0206439A032604069F02060000000040005F2A0205049F03060000000000009F2701809F34034103029F3501228407A00000000410109F090200019F10120110A00000000000000000000000000000FF"
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  true
+                                   }
+                  },
+                  {
+                      "id":  "step-02-0400",
+                      "sourceMti":  "0400",
+                      "sourceContainsPinBlock":  false,
+                      "request":  {
+                                      "mti":  "0400",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089020110",
+                                                     "3":  "000000",
+                                                     "4":  "000000004000",
+                                                     "37":  "609601012593",
+                                                     "49":  "504",
+                                                     "24":  "400",
+                                                     "60":  "400"
+                                                 },
+                                      "binaryFields":  {
+
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0410",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  false
+                                   }
+                  }
+              ]
+}

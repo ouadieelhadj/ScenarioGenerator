@@ -1,0 +1,25 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MCD93.Test.01.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "TPE_ONLY",
+    "objective":  "To ensure that the terminal prompts the cardholder to perform a contact transaction when the terminal informs the cardholder that the transaction is declined - [RA277",
+    "actions":  "Please use test card : MCD93 v1.0 | Transaction amount is below the Contactless Transaction Limit : Amount \u003c = $CL_MCD_Transaction_Limit$ | Tap the test card on the contactless reader and follow the instructions | Do not perform the contact transaction when prompted by the terminal",
+    "cards":  [
+                  {
+                      "cardId":  "MCD93",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089700935",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_mcd93-test-01-scenario-01_v1_log_1.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  0,
+    "steps":  [
+
+              ]
+}

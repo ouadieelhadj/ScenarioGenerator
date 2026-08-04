@@ -1,0 +1,70 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "MCD19.Test.01.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal correctly handles unexpected data value or length received from the card | To ensure that the terminal correctly handles CDOL1 that includes Tags being forbidden in the DE 55 | To ensure that the terminal correctly handles tags that are processed in contact transactions only (offline limits and last ATC value) | To ensure that the terminal correctly processes a card that does not return PAN Sequence Number (Tag 5F34) | To ensure that the terminal correctly transmits Tag 9F33 (Terminal Capabilities), when applicable - [RA490] | To ensure that the terminal does not process the ICC response data erroneously returned by the issuer | To ensure that the terminal correctly processes a card that contains long Issuer certificates | To ensure that the terminal accepts an unexpected Service Code - [RA362",
+    "actions":  "Please use test card : MCD19 v1.2 | Transaction amount is below the Contactless Transaction Limit : Amount \u003c = $CL_MCD_Transaction_Limit$ | Tap the test card on the contactless reader and follow the instructions | Card is left on the terminal until the transaction is completed or the ticket is printed | If requested , PIN  = 4315",
+    "cards":  [
+                  {
+                      "cardId":  "MCD19",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089700190",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_mcd19-test-01-scenario-01_v1_log_1.xml",
+                           "test_mcd19-test-01-scenario-01_v1_log_2.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  1,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  false,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089700190",
+                                                     "3":  "000000",
+                                                     "4":  "000000002000",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "072",
+                                                     "23":  "000",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "5413330089700190D49126470123456789",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+                                                           "55":  "9F3303E00808950500004080019F3704B14FEB599F2608359EA55302F358199F36020001820219809C01009F1A0206439A032604089F02060000000020005F2A0205049F03060000000000009F2701809F34031F03029F350122840CA0000000041010C1234567899F090200029F10120110A00000000000000000000000000000FF"
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  true
+                                   }
+                  }
+              ]
+}

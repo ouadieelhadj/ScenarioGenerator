@@ -1,0 +1,378 @@
+﻿[
+    {
+        "testCase":  "COM01.Test.01.Scenario.01",
+        "slug":  "com01-test-01-scenario-01",
+        "classification":  "TPE_ONLY",
+        "simulatorSteps":  0,
+        "referenceChecks":  4,
+        "sourceLogs":  1
+    },
+    {
+        "testCase":  "COM02.Test.02.Scenario.02",
+        "slug":  "com02-test-02-scenario-02",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  14,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "COM05.Test.01.Scenario.01",
+        "slug":  "com05-test-01-scenario-01",
+        "classification":  "TPE_ONLY",
+        "simulatorSteps":  0,
+        "referenceChecks":  5,
+        "sourceLogs":  1
+    },
+    {
+        "testCase":  "MCD01.Test.01.Scenario.01",
+        "slug":  "mcd01-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  13,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MCD01.Test.02.Scenario.02",
+        "slug":  "mcd01-test-02-scenario-02",
+        "classification":  "TPE_ONLY",
+        "simulatorSteps":  0,
+        "referenceChecks":  3,
+        "sourceLogs":  1
+    },
+    {
+        "testCase":  "MCD02.Test.02.Scenario.01",
+        "slug":  "mcd02-test-02-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  8,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MCD06.Test.01.Scenario.01",
+        "slug":  "mcd06-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  5,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MCD19.Test.01.Scenario.01",
+        "slug":  "mcd19-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  20,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MCD19.Test.03.Scenario.01",
+        "slug":  "mcd19-test-03-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  2,
+        "referenceChecks":  7,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MCD19.Test.04.Scenario.01",
+        "slug":  "mcd19-test-04-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  4,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MCD50.Test.01.Scenario.01",
+        "slug":  "mcd50-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  2,
+        "referenceChecks":  8,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MCD55.Test.01.Scenario.01",
+        "slug":  "mcd55-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  3,
+        "referenceChecks":  18,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MCD65.Test.01.Scenario.01",
+        "slug":  "mcd65-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  2,
+        "referenceChecks":  4,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MCD91.Test.02.Scenario.01",
+        "slug":  "mcd91-test-02-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  8,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MCD93.Test.01.Scenario.01",
+        "slug":  "mcd93-test-01-scenario-01",
+        "classification":  "TPE_ONLY",
+        "simulatorSteps":  0,
+        "referenceChecks":  5,
+        "sourceLogs":  1
+    },
+    {
+        "testCase":  "MCD94.Test.02.Scenario.01",
+        "slug":  "mcd94-test-02-scenario-01",
+        "classification":  "TPE_ONLY",
+        "simulatorSteps":  0,
+        "referenceChecks":  6,
+        "sourceLogs":  1
+    },
+    {
+        "testCase":  "MCM02.Test.02.Scenario.01",
+        "slug":  "mcm02-test-02-scenario-01",
+        "classification":  "TPE_ONLY",
+        "simulatorSteps":  0,
+        "referenceChecks":  1,
+        "sourceLogs":  0
+    },
+    {
+        "testCase":  "MSI01.Test.16.Scenario.01",
+        "slug":  "msi01-test-16-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  13,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MSI01.Test.16.Scenario.04",
+        "slug":  "msi01-test-16-scenario-04",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  8,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MSI04.Test.01.Scenario.01",
+        "slug":  "msi04-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  2,
+        "referenceChecks":  16,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MSI04.Test.02.Scenario.01",
+        "slug":  "msi04-test-02-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  16,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MSI12.Test.01.Scenario.02",
+        "slug":  "msi12-test-01-scenario-02",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  2,
+        "referenceChecks":  15,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MSI19.Test.01.Scenario.01",
+        "slug":  "msi19-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  23,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MSI19.Test.04.Scenario.01",
+        "slug":  "msi19-test-04-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  4,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "MSI92.Test.01.Scenario.01",
+        "slug":  "msi92-test-01-scenario-01",
+        "classification":  "TPE_ONLY",
+        "simulatorSteps":  0,
+        "referenceChecks":  1,
+        "sourceLogs":  1
+    },
+    {
+        "testCase":  "MSI94.Test.03.Scenario.01",
+        "slug":  "msi94-test-03-scenario-01",
+        "classification":  "TPE_ONLY",
+        "simulatorSteps":  0,
+        "referenceChecks":  7,
+        "sourceLogs":  1
+    },
+    {
+        "testCase":  "M-TIP02.Test.01.Scenario.02",
+        "slug":  "m-tip02-test-01-scenario-02",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  2,
+        "referenceChecks":  14,
+        "sourceLogs":  1
+    },
+    {
+        "testCase":  "M-TIP02.Test.01.Scenario.03",
+        "slug":  "m-tip02-test-01-scenario-03",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  16,
+        "sourceLogs":  1
+    },
+    {
+        "testCase":  "M-TIP04.Test.01.Scenario.01",
+        "slug":  "m-tip04-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  2,
+        "referenceChecks":  12,
+        "sourceLogs":  1
+    },
+    {
+        "testCase":  "M-TIP06.Test.02.Scenario.01",
+        "slug":  "m-tip06-test-02-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  25,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP06.Test.04.Scenario.01",
+        "slug":  "m-tip06-test-04-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  10,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP06.Test.06.Scenario.01",
+        "slug":  "m-tip06-test-06-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  2,
+        "referenceChecks":  9,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP08.Test.01.Scenario.01",
+        "slug":  "m-tip08-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  10,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP12.Test.01.Scenario.01",
+        "slug":  "m-tip12-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  8,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP12.Test.01.Scenario.02",
+        "slug":  "m-tip12-test-01-scenario-02",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  8,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP13.Test.01.Scenario.01",
+        "slug":  "m-tip13-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  12,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP14.Test.01.Scenario.01",
+        "slug":  "m-tip14-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  12,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP15.Test.01.Scenario.02",
+        "slug":  "m-tip15-test-01-scenario-02",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  11,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP23.Test.01.Scenario.01",
+        "slug":  "m-tip23-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  2,
+        "referenceChecks":  7,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP32.Test.01.Scenario.01",
+        "slug":  "m-tip32-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  9,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP33.Test.01.Scenario.01",
+        "slug":  "m-tip33-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  6,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP34.Test.01.Scenario.01",
+        "slug":  "m-tip34-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  6,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP50.Test.01.Scenario.01",
+        "slug":  "m-tip50-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  35,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP50.Test.02.Scenario.01",
+        "slug":  "m-tip50-test-02-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  5,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP51.Test.01.Scenario.02",
+        "slug":  "m-tip51-test-01-scenario-02",
+        "classification":  "TPE_ONLY",
+        "simulatorSteps":  0,
+        "referenceChecks":  10,
+        "sourceLogs":  1
+    },
+    {
+        "testCase":  "M-TIP51.Test.02.Scenario.02",
+        "slug":  "m-tip51-test-02-scenario-02",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  14,
+        "sourceLogs":  2
+    },
+    {
+        "testCase":  "M-TIP65.Test.01.Scenario.01",
+        "slug":  "m-tip65-test-01-scenario-01",
+        "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+        "simulatorSteps":  1,
+        "referenceChecks":  9,
+        "sourceLogs":  2
+    }
+]

@@ -1,0 +1,79 @@
+﻿{
+    "schemaVersion":  "1.0",
+    "testCase":  "M-TIP50.Test.01.Scenario.01",
+    "statusInReferenceRun":  "Passed",
+    "classification":  "SIMULATABLE_WITH_CERTIFICATION_KEYS",
+    "objective":  "To ensure that the terminal correctly behaves when there is an inconsistency between Tag 5F30 (Service Code) and Tag 57 (Track 2 Equivalent Data) | To ensure that the terminal correctly transmits DE 55 Tag 9F1A (Terminal Country Code) even if not requested by the card in CDOL1 | To ensure that the terminal correctly transmits DE 55 Tag 84 (DF Name), 9F33 (Terminal Capabilities), 9F34 (CVM Results), when applicable | To ensure that the terminal correctly processes a PIN with 6 digits, when applicable | To ensure that the terminal correctly processes Track 2 Equivalent Data of length up to 37 digits | To ensure that the terminal correctly processes Issuer Authentication data (IAD - Tag 91) length equal to 16 bytes | To ensure that the terminal correctly processes PDOL | To ensure that the terminal correctly processes a card that does not return PAN Sequence Number (Tag 5F34) | To ensure that the terminal correctly processes the presence of a proprietary Tag in a common ICC record | To ensure that the terminal correctly processes DE55 forbidden Tags when requested in CDOL1 | To ensure that the terminal correctly manages large proprietary data stored in a file dedicated to the Issuer | To ensure that the terminal correctly transmits DE 61 SF 10 (CAT Level), when applicable",
+    "actions":  "Please use test card : M-TIP50 Version 25A | Insert the test card in the chip reader and follow the instructions | If a choice is prompted , select the \u0027MasterCard\u0027 application | Transaction amount  = 000000004000 or 000040000000 | If requested , PIN  = 431555",
+    "cards":  [
+                  {
+                      "cardId":  "M-TIP50",
+                      "application":  "Application_1",
+                      "brand":  "Mastercard",
+                      "pan":  "5413330089020508",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  },
+                  {
+                      "cardId":  "M-TIP50",
+                      "application":  "Application_2",
+                      "brand":  "Maestro",
+                      "pan":  "6799998900000200507",
+                      "expiry":  "4912",
+                      "pinSource":  "TSE_CARD_DETAILS"
+                  }
+              ],
+    "sourceLogFiles":  [
+                           "test_M-TIP50-Test-01-Scenario-01_V1_log_1.xml",
+                           "test_M-TIP50-Test-01-Scenario-01_V1_log_2.xml"
+                       ],
+    "ignoredMastercardNetworkMessages":  1,
+    "steps":  [
+                  {
+                      "id":  "step-01-0100",
+                      "sourceMti":  "0100",
+                      "sourceContainsPinBlock":  true,
+                      "request":  {
+                                      "mti":  "0100",
+                                      "fields":  {
+                                                     "7":  "${MMDDHHMMSS}",
+                                                     "11":  "${STAN}",
+                                                     "41":  "${WAY_POS_TERMINAL_ID}",
+                                                     "63":  "007SV1.0.0",
+                                                     "2":  "5413330089020508",
+                                                     "3":  "000000",
+                                                     "4":  "000000004000",
+                                                     "14":  "4912",
+                                                     "18":  "5712",
+                                                     "22":  "052",
+                                                     "23":  "000",
+                                                     "32":  "022905",
+                                                     "33":  "022905",
+                                                     "35":  "5413330089020508D49122010727005691234",
+                                                     "49":  "504",
+                                                     "12":  "${HHMMSS}",
+                                                     "13":  "${MMDD}",
+                                                     "25":  "00",
+                                                     "37":  "${RRN}",
+                                                     "42":  "${WAY_POS_MERCHANT_ID}",
+                                                     "43":  "WAY POS MTIP TEST CASABLANCA MA       "
+                                                 },
+                                      "binaryFields":  {
+                                                           "55":  "9F3303E0F8C8950500800480009F3704431ED28A9F2608AF625411E4E273809F36020026820279009C01179F1A0206439A032604249F02060000000040005F2A0205049F03060000000000009F2701809F34034203009F3501228407A00000000410109F090200019F10120110A04000200000000000000000000000FF"
+                                                       },
+                                      "unsetFields":  [
+
+                                                      ],
+                                      "macEnabled":  true,
+                                      "validate":  true,
+                                      "pin":  "431555"
+                                  },
+                      "expected":  {
+                                       "responseMti":  "0110",
+                                       "responseCode":  "00",
+                                       "approved":  true,
+                                       "emvResponseRequired":  true
+                                   }
+                  }
+              ]
+}
