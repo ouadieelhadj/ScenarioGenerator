@@ -19,6 +19,7 @@ import com.staging.sg.common.entity.SgOrchestratorCardDmas;
 import com.staging.sg.common.entity.Test;
 import com.staging.sg.common.entity.TpsStep;
 import com.staging.sg.common.entity.User;
+import com.staging.sg.common.entity.UserInvitation;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
@@ -40,7 +41,7 @@ import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
                         + "CampaignRepository|ExecutionRepository|IsoFieldCatalogRepository|"
                         + "MessageTypeRepository|NetworkRepository|PermissionRepository|ResultRepository|RoleRepository|"
                         + "SgOrchestratorCardDmasRepository|TestRepository|TpsStepRepository|"
-                        + "UserRepository)$).*"))
+                        + "UserRepository|UserInvitationRepository)$).*"))
 public class OrchestratorPersistenceConfiguration {
     @Bean
     PersistenceManagedTypes orchestratorManagedTypes() {
@@ -54,6 +55,6 @@ public class OrchestratorPersistenceConfiguration {
                 NetworkRef.class.getName(), Permission.class.getName(), Result.class.getName(),
                 Role.class.getName(), SgOrchestratorCardDmas.class.getName(),
                 Test.class.getName(), TpsStep.class.getName(),
-                User.class.getName());
+                User.class.getName(), UserInvitation.class.getName());
     }
 }

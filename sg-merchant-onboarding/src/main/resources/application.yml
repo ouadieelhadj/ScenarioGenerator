@@ -1,0 +1,34 @@
+server:
+  port: ${MERCHANT_ONBOARDING_REST_PORT:8570}
+
+spring:
+  application:
+    name: sg-merchant-onboarding
+  datasource:
+    url: ${MERCHANT_ONBOARDING_DB_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${MERCHANT_ONBOARDING_DB_USER:onboarding_user}
+    password: ${MERCHANT_ONBOARDING_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    enabled: false
+
+merchant-onboarding:
+  cors:
+    allowed-origins: ${MERCHANT_ONBOARDING_CORS_ORIGINS:http://localhost:4210,http://localhost:4220}
+  acquiring:
+    enabled: ${MERCHANT_ONBOARDING_ACQUIRING_ENABLED:false}
+    base-url: ${MERCHANT_ONBOARDING_ACQUIRING_BASE_URL:http://127.0.0.1:8550}
+  identity:
+    enabled: ${MERCHANT_ONBOARDING_IDENTITY_ENABLED:false}
+    base-url: ${MERCHANT_ONBOARDING_IDENTITY_BASE_URL:http://127.0.0.1:8080}
+
+jwt:
+  secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+
+logging:
+  file:
+    name: ${MERCHANT_ONBOARDING_LOG_FILE:${user.dir}/runtime/merchant-onboarding/logs/merchant-onboarding.log}

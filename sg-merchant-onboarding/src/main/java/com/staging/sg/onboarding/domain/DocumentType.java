@@ -1,0 +1,12 @@
+package com.staging.sg.onboarding.domain;
+
+public enum DocumentType {
+    LEGAL_EXISTENCE,
+    REPRESENTATIVE_IDENTITY,
+    BANK_ACCOUNT_PROOF,
+    TAX_REGISTRATION,
+    ADDRESS_PROOF,
+    SIGNED_TPE_CONTRACT,
+    SIGNED_ECOMMERCE_CONTRACT,
+    SIGNED_CRC
+}

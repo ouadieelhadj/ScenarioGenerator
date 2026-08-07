@@ -1286,3 +1286,230 @@ session sur DE33=300853, switch de prod).
 | ZMK sous LMK | E98805FBB4DE36AC2C7742E242CF80D8 | (stockage) |
 | KEK de test | 0123456789ABCDEF... / D5D44F | E2E local uniquement |
 | ZPK/ZAK | poussees par le switch, KCV variables | par session |
+
+## 23. Nouveau chantier - Portail d'Affiliation Commerçant
+
+### 23.1 Source et état du chantier
+
+- expression de besoin reçue :
+  `documents/Portail Affiliation Commerçant/Portail Affiliation Commerçant - Expression de besoin Merchant Portal - PTS - 11_03_2026.pdf` ;
+- document lu intégralement : 49 pages, version 1.0 ;
+- le document décrit le besoin fonctionnel et les attentes envers un éditeur ;
+  il ne constitue pas encore le cadrage technique de ScenarioGenerator ;
+- aucun développement du portail n'est commencé ;
+- prochaine étape : produire un cadrage technique, le faire valider, puis
+  seulement planifier les incréments de développement.
+
+### 23.2 Vision cible clarifiée avec l'utilisateur
+
+Le nouveau module est propriétaire du parcours d'entrée en relation et
+d'onboarding. Il gère le dossier jusqu'à sa validation métier, documentaire et
+KYC. Aucun canal d'onboarding ne crée directement un commerçant dans
+Acquiring.
+
+Canaux d'entrée prévus :
+
+- portail web sur invitation : le commercial habilité crée le prospect et le
+  compte initial du commerçant ; le commerçant active ensuite ce compte, se
+  connecte et saisit lui-même son dossier d'onboarding sur le portail web ;
+- application mobile multi-profil reportée au Lot 2, avec deux possibilités :
+  1. un commercial habilité crée le prospect/compte et peut saisir ou
+     accompagner le dossier depuis l'application ;
+  2. le commerçant active/utilise son compte et réalise lui-même son
+     auto-onboarding depuis l'application ;
+  les deux parcours utilisent le même backend et chaque action est auditée
+  avec l'identité et le rôle de son auteur ;
+- canaux digitaux/partenaires cités dans le besoin (CIH Online, COPRO, site
+  Lana Cash), raccordés ultérieurement au même contrat d'entrée.
+
+Tous les canaux alimentent un unique cœur métier d'onboarding et le même
+agrégat dossier. Le batch n'est pas un canal d'entrée et n'intervient jamais
+avant la validation Maker/Checker.
+
+Après validation, deux modes de provisionnement Acquiring doivent être
+supportés :
+
+1. **immédiat** : depuis l'écran Maker/Checker, la validation d'un dossier
+   déclenche son provisionnement unitaire via les API Acquiring ;
+2. **différé par lot** : les dossiers validés sont placés dans une file
+   `READY_FOR_PROVISIONING`, cumulés (par exemple 100 validations dans la
+   journée), puis un opérateur ou un ordonnanceur lance le batch de
+   provisionnement.
+
+Le batch différé traite une collection de requêtes ayant exactement la même
+structure JSON canonique que la requête unitaire de provisionnement Acquiring.
+Il doit produire un résultat par dossier et permettre la reprise sans doublon.
+
+La destination de ces deux modes est notre plateforme membre, dans son domaine
+Acquiring. Le portail n'appelle aucun composant monétique ou réseau directement :
+
+- mode API : appel synchrone ou orchestration unitaire des API de la plateforme
+  membre pour le dossier qui vient d'être approuvé ;
+- mode batch : envoi/traitement différé d'un lot de dossiers approuvés, chaque
+  élément respectant le même contrat JSON que l'API unitaire.
+
+Les deux modes doivent retourner les mêmes identifiants, statuts et erreurs de
+provisionnement au dossier d'onboarding.
+
+Le Lot 1 couvre le backend d'onboarding et le portail web. Le Lot 2 réutilisera
+les mêmes contrats API et le même workflow pour ajouter l'application mobile,
+sans dupliquer le cœur métier.
+
+Le Maker/Checker existe déjà dans le frontend ScenarioGenerator et doit être
+réutilisé. Le portail ne doit pas créer une seconde interface de validation.
+Le backend d'onboarding doit enregistrer une demande dans le workflow existant,
+avec la référence du dossier et l'action attendue. Une approbation checker fait
+passer le dossier vers `READY_FOR_PROVISIONING` ; un rejet ou une demande de
+compléments le renvoie dans le workflow métier approprié. Avant développement,
+il faut vérifier le raccordement réel des API Maker/Checker existantes et
+ajouter uniquement le type d'opération onboarding s'il manque.
+
+Acquiring n'est appelé qu'après obtention d'un dossier validé et prêt à être
+provisionné. L'orchestrateur du portail appelle alors les API Acquiring pour
+créer ou préparer, selon les capacités réellement disponibles :
+
+1. le commerçant ;
+2. la chaîne/enseigne et les points de vente ou boutiques ;
+3. les contrats d'acceptation et les produits TPE, E-Commerce, QR Code ou
+   SoftPOS ;
+4. les conditions tarifaires et les équipements ;
+5. le MID, les terminaux et les TID ;
+6. les paramètres d'activation et le suivi du résultat de provisionnement.
+
+Le portail ne doit pas inventer localement un MID ou un TID. Leur attribution,
+réservation ou validation doit rester portée par le référentiel autoritatif du
+socle Acquiring. Le portail conserve les identifiants et statuts retournés.
+
+La cible privilégiée est une intégration du portail vers notre environnement
+Acquiring via des API métier. Le portail ne doit pas dépendre directement de
+WAY4/OpenWay ; l'adaptation éventuelle à WAY4 reste encapsulée derrière
+Acquiring, sauf décision d'architecture ultérieure explicitement validée.
+
+### 23.3 Périmètre fonctionnel extrait de l'expression de besoin
+
+- prospection, qualification, relances, portefeuille et conversion d'un lead
+  en dossier ;
+- auto-onboarding guidé, reprise de brouillon, formulaire dynamique selon le
+  type PP/PM/AE/Association et référence unique ;
+- gestion complète du dossier, contrôles de cohérence et de complétude,
+  demandes de correction, validation et rejet motivé ;
+- gestion multi-PDV, chaînes/enseignes et informations spécifiques par PDV ;
+- choix et paramétrage des produits TPE, E-Commerce, QR Code et SoftPOS ;
+- tarification, formules, exceptions habilitées et conservation des conditions
+  contractualisées ;
+- sélection du MCC depuis un référentiel contrôlé et recherche assistée ;
+- collecte et contrôle des pièces justificatives dynamiques selon le type de
+  commerçant ;
+- génération versionnée des contrats TPE, contrats E-Commerce et CRC,
+  impression, signature manuscrite prévue dans le document, upload des scans
+  signés et archivage ;
+- stockage des données structurées et des métadonnées documentaires,
+  versionnement, recherche et réversibilité ;
+- back-office avec files de travail, affectation, contrôle, compléments,
+  validation/rejet et préparation à l'activation ;
+- rôles Commerçant, Sous-commerçant, Commercial, Back-office et Super Admin,
+  avec périmètres région/agence/portefeuille/chaîne/PDV ;
+- reporting, exports contrôlés et audit ;
+- module ultérieur de réclamations et support TPE avec workflow et SLA ;
+- interfaçage sécurisé, rejouable et traçable avec les canaux digitaux et le SI.
+
+### 23.4 Workflow cible à cadrer
+
+Le statut exact restera paramétrable. La base de travail technique proposée est
+la suivante :
+
+`DRAFT -> SUBMITTED -> KYC_IN_PROGRESS -> COMPLEMENTS_REQUIRED -> KYC_VALIDATED -> APPROVED -> CONTRACT_READY -> READY_FOR_PROVISIONING -> PROVISIONING -> ACTIVE`
+
+En mode différé, `READY_FOR_PROVISIONING` peut passer par
+`QUEUED_FOR_BATCH` avant `PROVISIONING`. Ce statut ne remet pas en cause la
+validation du dossier ; il indique seulement que sa création dans Acquiring
+attend le prochain lot.
+
+Sorties et incidents à prévoir : `REJECTED`, `CANCELLED`,
+`PROVISIONING_FAILED` et `PROVISIONING_PARTIAL`. Une reprise ne doit jamais
+créer de doublons dans Acquiring.
+
+La validation KYC demandée par l'utilisateur n'est pas suffisamment détaillée
+dans l'expression de besoin. Elle devra devenir une étape explicite du cadrage,
+distincte du simple contrôle de complétude documentaire.
+
+### 23.5 Principes techniques à conserver dans le futur cadrage
+
+- architecture API-first avec un contrat JSON canonique, versionné et validé
+  par JSON Schema ;
+- adaptateurs d'onboarding séparés pour web, mobile et partenaires, mais aucun
+  duplicata du moteur métier ;
+- identifiant de dossier et clé d'idempotence obligatoires ;
+- un dispatcher de provisionnement choisit le mode immédiat ou différé après
+  validation, sans changer le contrat métier envoyé à Acquiring ;
+- orchestration persistée du provisionnement Acquiring unitaire ou par lot,
+  avec reprise, délais, résultat par dossier, journal des étapes et protection
+  contre les créations partielles ;
+- découplage recommandé par outbox/événements pour les traitements longs et
+  notifications ;
+- les fichiers KYC ne sont pas incorporés en Base64 dans le contrat JSON : le
+  dossier porte des références documentaires opaques et contrôlées ;
+- stockage documentaire sécurisé, contrôle de type/taille, analyse antivirus,
+  versionnement, politique de conservation et accès par habilitation ;
+- OAuth2/OIDC pour les canaux interactifs ; pour le mobile, prévoir PKCE,
+  association sécurisée du terminal et reprise de session sans stocker de
+  secret applicatif ;
+- séparation des responsabilités entre saisie, contrôle KYC, validation,
+  contractualisation et activation ;
+- audit avant/après, corrélation de bout en bout, absence de données sensibles
+  dans les logs et traçabilité des exports ;
+- aucune donnée fictive ne doit masquer une API Acquiring manquante.
+
+### 23.6 Décisions et informations encore nécessaires
+
+1. Inventorier les API Acquiring existantes et les écarts pour commerçant,
+   chaîne, PDV/boutique, contrat, produit, terminal, MID, TID et activation.
+2. Définir précisément le KYC : contrôles, fournisseur éventuel, décisions
+   automatiques/manuelles, preuves, consentement et règles de conservation.
+3. Confirmer l'autorité d'attribution des MID/TID et les règles de réservation,
+   annulation et réutilisation.
+4. Arrêter le périmètre MVP mobile : saisie, photo/upload, OCR, notifications,
+   suivi, OTP/SSO, biométrie locale et éventuelle signature électronique.
+5. Définir le batch de provisionnement post-validation : déclenchement manuel
+   ou planifié, critères de sélection des dossiers validés, taille du lot,
+   collection/fichier JSON conforme au contrat API, concurrence, résultat par
+   dossier, rapport de rejets, archivage et reprise idempotente.
+6. Décider du stockage documentaire/GED et des durées de conservation.
+7. Unifier les statuts du document fonctionnel avec le workflow KYC et le
+   provisionnement Acquiring.
+8. Préciser volumes, concurrence, SLA, disponibilité, PRA/PCA et contraintes
+   d'hébergement.
+9. Clarifier la signature cible : manuscrite comme dans le document, ou
+   évolution vers signature électronique pour l'auto-onboarding mobile.
+10. Obtenir les matrices/référentiels annoncés mais non complètement fournis :
+    MCC, tarification, modèles TPE, listes d'agences/mandataires et règles de
+    champs/pièces par type.
+
+### 23.7 Prochain livrable attendu
+
+Le cadrage technique devra contenir au minimum : architecture cible, domaines
+et responsabilités, modèle de données, workflow, sécurité, contrats API et
+batch JSON post-validation, mapping vers Acquiring, séquences de
+provisionnement immédiat/différé et de reprise,
+matrice de couverture du besoin, découpage MVP/versions mobile et stratégie de
+tests. Aucun code du portail ne doit être développé avant validation de ce
+cadrage.
+
+### 23.8 Démarrage backend autorisé le 7 août 2026
+
+L'utilisateur a ensuite explicitement autorisé le démarrage du backend avant le
+frontend. Le premier incrément est implémenté sur
+`codex/AddingBackendPortal` : nouveau module persisté, workflow
+Maker/Checker, provisionnement immédiat/batch avec JSON commun, et endpoint
+Acquiring autoritatif pour l'attribution des MID/TID. Le détail, les tests et
+les limites restantes sont consignés dans `REPRISE_MERCHANT_PORTAL.md`.
+
+### 23.9 Dernier lot backend terminé le 7 août 2026
+
+Le backend MVP du Portail d'Affiliation est terminé : invitation/activation
+identité, JWT/RBAC, KYC et pièces, compléments, Maker/Checker et provisionnement
+Acquiring immédiat ou batch. Les migrations ont été appliquées sur PostgreSQL.
+Les E2E réels ont créé un commerçant/MID/TID en mode immédiat puis en mode
+batch. La régression agrégée se termine par `BUILD SUCCESS` avec 107 tests,
+0 échec et 0 erreur. La prochaine étape est le frontend web ; le mobile reste
+dans le lot 2. Voir `REPRISE_MERCHANT_PORTAL.md` pour les preuves et limites.

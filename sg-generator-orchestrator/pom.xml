@@ -17,6 +17,11 @@
     <description>Acquiring module — sends 0100, 0820, 0800</description>
 
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <!-- sg-common -->
         <dependency>
