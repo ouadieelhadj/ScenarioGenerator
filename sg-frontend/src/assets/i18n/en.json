@@ -40,8 +40,12 @@
   "product": {
     "switchLabSubtitle": "Payment simulation and certification portal",
     "switchSubtitle": "Banking payment switch portal",
+    "merchantPortalSubtitle": "Secure merchant onboarding journey",
     "foundationTitle": "Product foundation available",
     "foundationDescription": "Operational functions for this area will be connected to real APIs in the corresponding business delivery."
+  },
+  "merchantPortal": {
+    "menu": { "dashboard": "My onboarding", "newProspect": "New prospect" }
   },
   "topbar": {
     "theme": "Theme",

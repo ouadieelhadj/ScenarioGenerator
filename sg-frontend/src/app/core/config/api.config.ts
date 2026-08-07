@@ -13,6 +13,7 @@ const USE_LOCALSTORAGE_PORTS = false;
 
 const BASE_URLS = {
   orchestrator: environment.apiOrchestrator.replace(/\/$/, ''),
+  onboarding: environment.apiOnboarding.replace(/\/$/, ''),
   acquirer: environment.apiAcquirer.replace(/\/$/, ''),
   issuer: environment.apiIssuer.replace(/\/$/, ''),
 };
@@ -28,16 +29,18 @@ function host(u: string): string {
 
 const DEFAULTS = {
   orchestrator: defaultPort(environment.apiOrchestrator),
+  onboarding: defaultPort(environment.apiOnboarding),
   acquirer: defaultPort(environment.apiAcquirer),
   issuer: defaultPort(environment.apiIssuer),
 };
 const HOSTS = {
   orchestrator: host(environment.apiOrchestrator),
+  onboarding: host(environment.apiOnboarding),
   acquirer: host(environment.apiAcquirer),
   issuer: host(environment.apiIssuer),
 };
 
-type ServiceKey = 'orchestrator' | 'acquirer' | 'issuer';
+type ServiceKey = 'orchestrator' | 'onboarding' | 'acquirer' | 'issuer';
 
 // Lit les ports surchargeables depuis localStorage (si active)
 function readPorts(): Record<ServiceKey, number> {
@@ -76,6 +79,11 @@ export const ENDPOINTS = {
     domainOverview: (domain: string) => `/api/switch/v1/domains/${domain}`,
   },
   auth: { login: '/auth/login' },
+  merchantPortal: {
+    activate: '/auth/merchant-invitations/activate',
+    prospects: '/api/merchant-onboarding/v1/prospects',
+    dossier: (id: string) => `/api/merchant-onboarding/v1/dossiers/${id}`,
+  },
   switchLab: {
     environments: '/api/switchlab/v1/environments',
     overview: '/api/switchlab/v1/overview',
@@ -186,6 +194,7 @@ export const ENDPOINTS = {
 /** Helpers URL — resolvent le port dynamiquement a chaque appel. */
 export const url = {
   orchestrator: (path: string) => `${baseUrl('orchestrator')}${path}`,
+  onboarding: (path: string) => `${baseUrl('onboarding')}${path}`,
   acquirer: (path: string) => `${baseUrl('acquirer')}${path}`,
   issuer: (path: string) => `${baseUrl('issuer')}${path}`,
 };

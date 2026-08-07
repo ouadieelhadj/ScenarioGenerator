@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/merchant-mobile",
+    "types": []
+  },
+  "files": ["src/main.merchant-mobile.ts"],
+  "include": ["src/**/*.d.ts"]
+}

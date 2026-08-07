@@ -6,8 +6,11 @@ import { AuthService } from '../auth/auth.service';
 export const permissionGuard: CanActivateFn = (route) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  const required = (route.data?.['permissions'] as string[]) ?? [];
-  if (required.length === 0 || auth.hasAnyPermission(required)) return true;
+  const requiredPermissions = (route.data?.['permissions'] as string[]) ?? [];
+  const requiredRoles = (route.data?.['roles'] as string[]) ?? [];
+  const hasPermission = requiredPermissions.length > 0 && auth.hasAnyPermission(requiredPermissions);
+  const hasRole = requiredRoles.length > 0 && requiredRoles.some(role => auth.hasRole(role));
+  if ((requiredPermissions.length === 0 && requiredRoles.length === 0) || hasPermission || hasRole) return true;
   router.navigate(['/forbidden']);
   return false;
 };

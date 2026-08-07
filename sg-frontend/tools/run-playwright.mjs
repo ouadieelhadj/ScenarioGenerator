@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 
-const localUrl = 'http://127.0.0.1:4217';
+const localPort = Number(process.env['SG_FRONTEND_TEST_PORT'] ?? 4217);
+const localUrl = `http://127.0.0.1:${localPort}`;
 const externalUrl = process.env['E2E_BASE_URL'];
 let server;
 

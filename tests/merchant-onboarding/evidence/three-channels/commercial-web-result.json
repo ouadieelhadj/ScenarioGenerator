@@ -1,0 +1,22 @@
+﻿{
+    "channel":  "commercial-web",
+    "label":  "Commercial Web",
+    "makerMode":  "COMMERCIAL",
+    "maker":  "commercial.commercial-web.6dd2da69",
+    "kycReviewer":  "backoffice.reviewer",
+    "checker":  "checker.validator",
+    "dossierReference":  "ONB-405A108D",
+    "caseId":  "405a108d-b331-4b6c-b440-3a768eb76909",
+    "workflowId":  9,
+    "kycStatus":  "VALIDATED",
+    "onboardingStatus":  "PROVISIONED",
+    "jobStatus":  "SUCCEEDED",
+    "canonicalJson":  "D:\\MoneyCore\\ScenarioGenerator\\tests\\merchant-onboarding\\evidence\\three-channels\\commercial-web-canonical-acquiring.json",
+    "merchantId":  "e67a0e20-aabe-4825-aa74-a4531c0e98ee",
+    "mid":  "100000000000005",
+    "tids":  [
+                 "10000003",
+                 "10000004"
+             ],
+    "correlationId":  "proof-commercial-web-6DD2DA69"
+}

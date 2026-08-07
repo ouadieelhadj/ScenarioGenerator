@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/merchant-portal",
+    "types": []
+  },
+  "files": ["src/main.merchant-portal.ts"],
+  "include": ["src/**/*.d.ts"]
+}

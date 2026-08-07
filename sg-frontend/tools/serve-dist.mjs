@@ -2,7 +2,7 @@ import { createReadStream, existsSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, normalize, resolve } from 'node:path';
 
-const root = resolve('dist/sg-frontend/browser');
+const root = resolve(process.env['SG_FRONTEND_DIST'] ?? 'dist/sg-frontend/browser');
 const port = Number(process.env['SG_FRONTEND_TEST_PORT'] ?? 4217);
 const mimeTypes = {
   '.css': 'text/css; charset=utf-8', '.html': 'text/html; charset=utf-8',

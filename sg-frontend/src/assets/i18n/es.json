@@ -40,8 +40,12 @@
   "product": {
     "switchLabSubtitle": "Portal de simulación y certificación de pagos",
     "switchSubtitle": "Portal del switch de pagos bancarios",
+    "merchantPortalSubtitle": "Proceso seguro de afiliación de comercios",
     "foundationTitle": "Base del producto disponible",
     "foundationDescription": "Las funciones operativas de esta área se conectarán a las APIs reales en la entrega funcional correspondiente."
+  },
+  "merchantPortal": {
+    "menu": { "dashboard": "Mi afiliación", "newProspect": "Nuevo prospecto" }
   },
   "topbar": {
     "theme": "Tema",

@@ -29,7 +29,7 @@ export class LoginComponent {
     this.auth.login({ login: this.login, password: this.password }).subscribe({
       next: () => {
         this.loading.set(false);
-        this.router.navigate(['/dashboard']);
+        this.router.navigateByUrl(this.product.homeRoute);
       },
       error: (err) => {
         this.loading.set(false);

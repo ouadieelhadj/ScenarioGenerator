@@ -1,0 +1,21 @@
+﻿{
+    "channel":  "merchant-web",
+    "label":  "Commercant Web",
+    "makerMode":  "MERCHANT",
+    "maker":  "merchant.merchant-web.743d4abe",
+    "kycReviewer":  "backoffice.reviewer",
+    "checker":  "checker.validator",
+    "dossierReference":  "ONB-29CBB112",
+    "caseId":  "29cbb112-8def-4044-b5ce-5646136b32a4",
+    "workflowId":  8,
+    "kycStatus":  "VALIDATED",
+    "onboardingStatus":  "PROVISIONED",
+    "jobStatus":  "SUCCEEDED",
+    "canonicalJson":  "D:\\MoneyCore\\ScenarioGenerator\\tests\\merchant-onboarding\\evidence\\three-channels\\merchant-web-canonical-acquiring.json",
+    "merchantId":  "c440269f-37eb-443f-a79a-f272d11ae2ff",
+    "mid":  "100000000000004",
+    "tids":  [
+                 "10000002"
+             ],
+    "correlationId":  "proof-merchant-web-743D4ABE"
+}

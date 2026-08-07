@@ -51,8 +51,12 @@
   "product": {
     "switchLabSubtitle": "Portail de simulation et de certification monétique",
     "switchSubtitle": "Portail du switch monétique bancaire",
+    "merchantPortalSubtitle": "Parcours sécurisé d'affiliation commerçant",
     "foundationTitle": "Fondation du produit disponible",
     "foundationDescription": "Les fonctions opérationnelles de ce domaine seront raccordées aux API réelles dans le lot métier correspondant."
+  },
+  "merchantPortal": {
+    "menu": { "dashboard": "Mon affiliation", "newProspect": "Nouveau prospect" }
   },
   "topbar": {
     "theme": "Thème",

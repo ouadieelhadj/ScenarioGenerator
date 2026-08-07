@@ -135,6 +135,96 @@
           "defaultConfiguration": "development"
         }
       }
+    },
+    "merchant-portal-web": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/merchant-portal-web",
+            "index": "src/index.html",
+            "browser": "src/main.merchant-portal.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.merchant-portal.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }],
+              "outputHashing": "all",
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.merchant-portal.prod.ts" }]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.merchant-portal.ts" }]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "port": 4230 },
+          "configurations": {
+            "production": { "buildTarget": "merchant-portal-web:build:production" },
+            "development": { "buildTarget": "merchant-portal-web:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "merchant-mobile": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/merchant-mobile",
+            "index": "src/index.html",
+            "browser": "src/main.merchant-mobile.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.merchant-mobile.json",
+            "assets": ["src/assets"],
+            "styles": ["src/mobile/mobile.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "750kb", "maximumError": "2mb" }],
+              "outputHashing": "all",
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.merchant-portal.prod.ts" }]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.merchant-portal.ts" }]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "port": 4240 },
+          "configurations": {
+            "production": { "buildTarget": "merchant-mobile:build:production" },
+            "development": { "buildTarget": "merchant-mobile:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
     }
   }
 }

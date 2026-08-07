@@ -7,6 +7,7 @@ export interface MenuItem {
   icon: string;
   route?: string;
   permissions?: string[];
+  roles?: string[];
   children?: MenuItem[];
 }
 
@@ -175,7 +176,15 @@ const SWITCH_MENU_ITEMS: MenuItem[] = [
   commonItem('HELP'),
 ];
 
+const MERCHANT_PORTAL_MENU_ITEMS: MenuItem[] = [
+  { code: 'MERCHANT_DASHBOARD', labelKey: 'merchantPortal.menu.dashboard', icon: 'pi pi-home', route: '/merchant/dashboard' },
+  { code: 'COMMERCIAL_PROSPECTS', labelKey: 'merchantPortal.menu.newProspect', icon: 'pi pi-user-plus', route: '/commercial/prospects/new', permissions: [Permission.ONBOARDING_PROSPECT_CREATE], roles: ['COMMERCIAL', 'ADMIN'] },
+  { ...commonItem('WORKFLOW'), permissions: [Permission.ONBOARDING_APPROVE, Permission.ONBOARDING_KYC_REVIEW], roles: ['CHECKER', 'BACK_OFFICE', 'ADMIN'] },
+  commonItem('HELP'),
+];
+
 export function menuItemsFor(product: PortalProductCode): MenuItem[] {
+  if (product === 'MERCHANT_PORTAL') return MERCHANT_PORTAL_MENU_ITEMS;
   if (product === 'SWITCHLAB') return SWITCHLAB_MENU_ITEMS;
   if (product === 'SWITCH') return SWITCH_MENU_ITEMS;
   return COMMON_MENU_ITEMS;

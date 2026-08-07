@@ -35,9 +35,14 @@ export class MainLayoutComponent implements OnInit {
   readonly menu = computed(() => this.filterCommonMenu(this.configuredMenu));
   readonly leadingMenu = computed(() => this.menu().filter(item => this.product.leadingMenuCodes.includes(item.code)));
   readonly trailingMenu = computed(() => this.menu().filter(item => !this.product.leadingMenuCodes.includes(item.code)));
-  readonly modules = computed(() => this.navigation.modules().filter(module =>
-    !['CORE', 'CORE_PORTAL'].includes(module.code.toUpperCase())
-  ));
+  readonly modules = computed(() => {
+    const modules = this.navigation.modules().filter(module =>
+      !['CORE', 'CORE_PORTAL'].includes(module.code.toUpperCase())
+    );
+    if (this.product.code === 'LEGACY') return modules;
+    const allowed = new Set(this.product.allowedModuleCodes.map(code => code.toUpperCase()));
+    return modules.filter(module => allowed.has(module.code.toUpperCase()));
+  });
   readonly selectedModuleCode = signal<string | null>(null);
   readonly selectedModule = computed(() =>
     this.modules().find(module => module.code === this.selectedModuleCode()) ?? null
@@ -76,7 +81,10 @@ export class MainLayoutComponent implements OnInit {
 
   private filterCommonMenu(items: MenuItem[]): MenuItem[] {
     return items.flatMap(item => {
-      if (item.permissions && !this.auth.hasAnyPermission(item.permissions)) return [];
+      const isRestricted = Boolean(item.permissions?.length || item.roles?.length);
+      const isAllowed = (item.permissions?.length && this.auth.hasAnyPermission(item.permissions))
+        || (item.roles?.length && item.roles.some(role => this.auth.hasRole(role)));
+      if (isRestricted && !isAllowed) return [];
       const children = this.filterCommonMenu(item.children ?? []);
       if (!item.route && item.children?.length && !children.length) return [];
       return [{ ...item, children }];

@@ -1,6 +1,6 @@
 import { InjectionToken } from '@angular/core';
 
-export type PortalProductCode = 'LEGACY' | 'SWITCHLAB' | 'SWITCH';
+export type PortalProductCode = 'LEGACY' | 'SWITCHLAB' | 'SWITCH' | 'MERCHANT_PORTAL';
 
 export interface PortalModuleGroup {
   code: string;
@@ -16,6 +16,7 @@ export interface PortalProductConfig {
   allowedModuleCodes: readonly string[];
   moduleGroups: readonly PortalModuleGroup[];
   leadingMenuCodes: readonly string[];
+  homeRoute: string;
 }
 
 export const PORTAL_PRODUCT = new InjectionToken<PortalProductConfig>('PORTAL_PRODUCT');
@@ -26,6 +27,7 @@ export const LEGACY_PRODUCT: PortalProductConfig = {
   subtitleKey: 'login.subtitle',
   allowedModuleCodes: [],
   leadingMenuCodes: ['DASHBOARD', 'CAMPAIGNS', 'WORKFLOW', 'ADMINISTRATION', 'HELP'],
+  homeRoute: '/dashboard',
   moduleGroups: [{
     code: 'BUSINESS_MODULES',
     labelKey: 'menu.businessModules',
@@ -40,6 +42,7 @@ export const SWITCHLAB_PRODUCT: PortalProductConfig = {
   subtitleKey: 'product.switchLabSubtitle',
   allowedModuleCodes: ['LAB_SIMULATORS'],
   leadingMenuCodes: ['DASHBOARD'],
+  homeRoute: '/dashboard',
   moduleGroups: [{
     code: 'SIMULATORS',
     labelKey: 'menu.simulators',
@@ -63,6 +66,7 @@ export const SWITCH_PRODUCT: PortalProductConfig = {
     'VISA_BASE2_MEMBER',
   ],
   leadingMenuCodes: ['DASHBOARD', 'TRANSACTIONS'],
+  homeRoute: '/dashboard',
   moduleGroups: [
     {
       code: 'ACQUIRING',
@@ -89,4 +93,14 @@ export const SWITCH_PRODUCT: PortalProductConfig = {
       ],
     },
   ],
+};
+
+export const MERCHANT_PORTAL_PRODUCT: PortalProductConfig = {
+  code: 'MERCHANT_PORTAL',
+  brand: "Portail d'Affiliation Commercant",
+  subtitleKey: 'product.merchantPortalSubtitle',
+  allowedModuleCodes: ['MERCHANT_ONBOARDING'],
+  leadingMenuCodes: ['MERCHANT_DASHBOARD', 'COMMERCIAL_PROSPECTS', 'WORKFLOW'],
+  homeRoute: '/merchant/dashboard',
+  moduleGroups: [],
 };

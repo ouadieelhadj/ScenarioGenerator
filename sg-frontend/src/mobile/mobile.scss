@@ -1,0 +1,30 @@
+@import '@ionic/angular/css/core.css';
+@import '@ionic/angular/css/normalize.css';
+@import '@ionic/angular/css/structure.css';
+@import '@ionic/angular/css/typography.css';
+@import '@ionic/angular/css/padding.css';
+@import '@ionic/angular/css/flex-utils.css';
+
+:root {
+  --ion-color-primary: #0057a8;
+  --ion-color-primary-rgb: 0, 87, 168;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-background-color: #f4f7fb;
+  --ion-font-family: Inter, Arial, sans-serif;
+}
+
+.mobile-page {
+  --padding-start: 20px;
+  --padding-end: 20px;
+  --padding-top: 20px;
+  --padding-bottom: 28px;
+}
+
+.mobile-card {
+  border-radius: 18px;
+  box-shadow: 0 8px 28px rgba(12, 45, 82, 0.1);
+}
+
+.form-error { color: var(--ion-color-danger); margin: 12px 4px; }
+.form-success { color: var(--ion-color-success); margin: 12px 4px; }
+.eyebrow { color: var(--ion-color-primary); font-weight: 700; text-transform: uppercase; font-size: .75rem; }

@@ -1,0 +1,23 @@
+﻿{
+    "channel":  "mobile",
+    "label":  "Application Mobile",
+    "makerMode":  "MERCHANT",
+    "maker":  "merchant.mobile.30ea25c0",
+    "kycReviewer":  "backoffice.reviewer",
+    "checker":  "checker.validator",
+    "dossierReference":  "ONB-38832F25",
+    "caseId":  "38832f25-14d5-424c-a916-92f981361acf",
+    "workflowId":  10,
+    "kycStatus":  "VALIDATED",
+    "onboardingStatus":  "PROVISIONED",
+    "jobStatus":  "SUCCEEDED",
+    "canonicalJson":  "D:\\MoneyCore\\ScenarioGenerator\\tests\\merchant-onboarding\\evidence\\three-channels\\mobile-canonical-acquiring.json",
+    "merchantId":  "0c43babc-82b4-4ed4-a7fa-dc6fc90f21c3",
+    "mid":  "100000000000006",
+    "tids":  [
+                 "10000005",
+                 "10000006",
+                 "10000007"
+             ],
+    "correlationId":  "proof-mobile-30EA25C0"
+}

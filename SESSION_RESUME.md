@@ -1513,3 +1513,51 @@ Les E2E réels ont créé un commerçant/MID/TID en mode immédiat puis en mode
 batch. La régression agrégée se termine par `BUILD SUCCESS` avec 107 tests,
 0 échec et 0 erreur. La prochaine étape est le frontend web ; le mobile reste
 dans le lot 2. Voir `REPRISE_MERCHANT_PORTAL.md` pour les preuves et limites.
+
+### 23.10 Cadrage frontend Web et Mobile APK
+
+Le cadrage `CADRAGE_FRONTEND_MERCHANT_PORTAL.md` prepare le developpement du
+portail Angular en Lot 1 et inclut des maintenant l'application Android du Lot
+2. Le mobile est prevu en Ionic Angular/Capacitor, avec APK de recette, APK/AAB
+signes, profils Commercant et Commercial, client API et validateurs partages,
+stockage securise Android et parcours documentaire natif. Aucun code mobile
+n'est lance dans le Lot 1, mais les contrats et l'architecture ne devront pas
+etre redessines au demarrage du Lot 2.
+
+### 23.11 Premier increment frontend Merchant Portal
+
+Une troisieme cible Angular `merchant-portal-web` a ete ajoutee en reutilisant
+le socle des frontends Switch et SwitchLab. Elle fournit l'activation publique,
+la connexion, la creation du prospect commercial, le tableau de bord par role,
+le squelette dossier et le workflow Maker/Checker existant. Son bundle est
+isole des composants monetiques et d'administration. Les builds Merchant,
+Switch et SwitchLab passent, ainsi que 3 E2E Chromium. La preuve est dans
+`tests/frontend/PROOF_OF_TEST_MERCHANT_PORTAL_INCREMENT_1_2026-08-07.md`.
+
+### 23.12 Demarrage du frontend mobile Android
+
+Le lot mobile a demarre dans le meme workspace Angular avec Ionic 8.8.17 et
+Capacitor 8.5.0. La cible `merchant-mobile` compile et fournit les premiers
+ecrans Commercant/Commercial raccordes aux API existantes. Le projet Android
+Capacitor est cree sous `sg-frontend/android`. A la demande de l'utilisateur,
+le telechargement du SDK Android vers `E:\Android\Sdk` a ete interrompu. La
+reprise a ensuite installe le SDK API 36 sur `E:`, compile et valide l'APK
+debug. Le binaire de preuve, son SHA-256 et les resultats exacts se trouvent
+dans `tests/frontend/PROOF_OF_TEST_MERCHANT_MOBILE_INCREMENT_1_2026-08-07.md`.
+Les 3 E2E mobiles et les tests Gradle passent. L'installation sur appareil
+reel, le Keystore natif et le deep link Android externe restent a terminer.
+
+### 23.13 Recette integree Commercant, Commercial et Mobile
+
+Trois parcours backend reels ont ete executes avec PostgreSQL : Maker par le
+Commercant Web, Maker par le Commercial Web et Maker depuis le canal Mobile.
+Chaque dossier a passe la revue KYC, un Checker distinct, l'export JSON batch
+et le provisionnement Acquiring. Les trois jobs sont `SUCCEEDED`, avec les MID
+`100000000000004` a `100000000000006` et les TID `10000002` a `10000007`.
+Le guide utilisateur, le harnais et les JSON exacts sont sous
+`tests/merchant-onboarding/`. L'authentification interservices Onboarding vers
+Acquiring reste a industrialiser avant production.
+La non-regression finale du perimetre backend a ensuite confirme `BUILD
+SUCCESS` avec 107 tests, 0 echec, 0 erreur et 0 test ignore. Les trois dossiers
+de preuve faisant foi sont `ONB-29CBB112`, `ONB-405A108D` et `ONB-38832F25` ;
+les essais techniques anterieurs restent en base locale pour audit.

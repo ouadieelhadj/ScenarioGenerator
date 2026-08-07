@@ -1,0 +1,22 @@
+﻿{
+    "onboardingCaseId":  "405a108d-b331-4b6c-b440-3a768eb76909",
+    "onboardingReference":  "ONB-405A108D",
+    "acquirerId":  "ACQTEST",
+    "legalName":  "Commerce Commercial Web 6DD2DA69",
+    "tradingName":  "Boutique Commercial Web",
+    "registrationNumber":  "RC-commercial-web-6DD2DA69",
+    "country":  "MA",
+    "mcc":  "5411",
+    "settlementAccountReference":  "ACC-6DD2DA69",
+    "settlementCurrency":  "504",
+    "productId":  "5480f18c-14a4-4e87-8fe2-13782efc55c9",
+    "acceptanceChannel":  "BOTH",
+    "outlet":  {
+                   "code":  "OUT-6DD2DA69",
+                   "name":  "Point de vente Commercial Web",
+                   "address":  "Casablanca",
+                   "terminalCount":  2
+               },
+    "maker":  "commercial.commercial-web.6dd2da69",
+    "checker":  "checker.validator"
+}

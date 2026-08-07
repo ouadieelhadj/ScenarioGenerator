@@ -1,0 +1,22 @@
+﻿{
+    "onboardingCaseId":  "38832f25-14d5-424c-a916-92f981361acf",
+    "onboardingReference":  "ONB-38832F25",
+    "acquirerId":  "ACQTEST",
+    "legalName":  "Commerce Application Mobile 30EA25C0",
+    "tradingName":  "Boutique Application Mobile",
+    "registrationNumber":  "RC-mobile-30EA25C0",
+    "country":  "MA",
+    "mcc":  "5411",
+    "settlementAccountReference":  "ACC-30EA25C0",
+    "settlementCurrency":  "504",
+    "productId":  "5480f18c-14a4-4e87-8fe2-13782efc55c9",
+    "acceptanceChannel":  "BOTH",
+    "outlet":  {
+                   "code":  "OUT-30EA25C0",
+                   "name":  "Point de vente Application Mobile",
+                   "address":  "Casablanca",
+                   "terminalCount":  3
+               },
+    "maker":  "merchant.mobile.30ea25c0",
+    "checker":  "checker.validator"
+}

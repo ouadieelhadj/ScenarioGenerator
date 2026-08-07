@@ -5,7 +5,7 @@ Derniere mise a jour : 7 aout 2026
 ## Perimetre confirme
 
 - Lot 1 : backend d'onboarding puis portail web.
-- Lot 2 : application mobile, sans code mobile dans le lot courant.
+- Lot 2 : application mobile Android demarree apres le Lot 1 web.
 - Le commercial cree le prospect et l'invitation du compte commercant.
 - Le commercant remplit et soumet son propre dossier.
 - Le Maker/Checker existant du frontend doit etre reutilise.
@@ -19,7 +19,9 @@ Source fonctionnelle non modifiee : le PDF sous
 
 ## Etat implemente
 
-Branche : `codex/AddingBackendPortal`
+Branche backend : `codex/AddingBackendPortal`
+
+Branche frontend courante : `codex/AddingFrontendMerchantPortal`
 
 ### Nouveau module `sg-merchant-onboarding`
 
@@ -117,13 +119,130 @@ E2E utilisent des JWT sandbox signes correctement.
 Les autres modifications et fichiers non suivis du worktree sont hors
 perimetre et doivent etre preserves.
 
+## Frontend - increment 1 termine
+
+Le frontend reutilise l'application Angular partagee existante. Une cible
+dediee `merchant-portal-web` a ete ajoutee sans recopier les infrastructures
+d'authentification, themes, langues, layout ou workflow.
+
+- port de developpement : `4230` ;
+- URL backend onboarding : `http://localhost:8570` en developpement ;
+- activation publique du compte invite ;
+- connexion avec le backend identite existant ;
+- creation d'un prospect par un Commercial, sans choix de mot de passe ;
+- lien d'activation affiche une seule fois apres la reponse API ;
+- tableau de bord adapte aux roles Commercant, Commercial et Checker/BO ;
+- lecture reelle du squelette dossier par UUID et comportement ferme si le
+  contrat de lecture detaille n'est pas disponible ;
+- reutilisation des ecrans Maker/Checker existants ;
+- filtrage des routes et menus par role ou permission, conforme au backend ;
+- bundle separe de Switch et SwitchLab.
+
+Validation du 7 aout 2026 :
+
+- build `merchant-portal-web` : SUCCESS ;
+- non-regression build `futurpayment-switch` : SUCCESS ;
+- non-regression build `futurpayment-switchlab` : SUCCESS ;
+- E2E Chromium : **3 passes, 0 echec** ;
+- recherche dans le bundle : aucun chunk Switch, SwitchLab, Visa,
+  administration ou deploiement ;
+- JSON de configuration/traduction valides et `git diff --check` propre.
+
+Preuve detaillee :
+`tests/frontend/PROOF_OF_TEST_MERCHANT_PORTAL_INCREMENT_1_2026-08-07.md`.
+
 ## Premier travail non termine
 
-Le backend MVP du lot courant est termine. Le prochain travail autorise est le
-frontend web du Portail d'Affiliation, raccorde aux API ci-dessus et au
-Maker/Checker existant. Restent hors MVP backend et devront etre cadres avant
-implementation : multi-PDV avance, QR/SoftPOS, tarification detaillee,
-stockage GED/antivirus reel, notifications et application mobile (lot 2).
+Le prochain increment doit etendre le contrat backend de lecture et mise a
+jour du dossier afin d'implementer l'assistant complet : entreprise,
+representants, activite, points de vente, produits, documents KYC,
+complements, revue et soumission. Restent hors MVP : multi-PDV avance,
+QR/SoftPOS, tarification detaillee, GED/antivirus reel, notifications et
+application mobile (lot 2).
+
+## Mobile Android - premier increment termine
+
+Le 7 aout 2026, l'utilisateur a autorise le demarrage du lot mobile. Une
+premiere interruption a ete demandee pendant le telechargement du SDK, puis le
+travail a repris au point exact consigne.
+
+Etat reel atteint :
+
+- `@ionic/angular` 8.8.17 et Capacitor 8.5.0 installes ;
+- cible Angular `merchant-mobile`, port `4240` ;
+- pages activation, connexion, accueil par role, prospect Commercial et
+  dossier Commercant ;
+- memes contrats/services API que le portail web, sans nouveau backend ;
+- JWT mobile conserve uniquement en memoire dans cet increment, jamais dans
+  `localStorage` ;
+- build development `merchant-mobile` reussi ;
+- projet natif `sg-frontend/android` cree par Capacitor et assets synchronises ;
+- SDK, plateforme API 36 et Build Tools 36 installes sous `E:\Android\Sdk` ;
+- cache Gradle place sous `E:\Android\GradleCache` ;
+- APK debug compile et signe par la cle Android Debug ;
+- package `com.moneycore.merchantportal`, version `1.0`, minSdk 24,
+  targetSdk 36 ;
+- 3 E2E format mobile passes et tests Android Gradle `BUILD SUCCESS` ;
+- bundle mobile controle sans composant Switch, SwitchLab, Visa,
+  administration ou deploiement.
+
+APK de preuve :
+`tests/frontend/artifacts/futurpayment-merchant-mobile-1.0-debug.apk`.
+
+SHA-256 :
+`6FF2231C952A97DDD41956F04E123A28DB7CEFEF691C9D12BE71C38B7A466E5A`.
+
+Preuve detaillee :
+`tests/frontend/PROOF_OF_TEST_MERCHANT_MOBILE_INCREMENT_1_2026-08-07.md`.
+
+Limites explicites : l'APK n'a pas encore ete installe sur un appareil reel ;
+le deep link Android externe attend le domaine final et son intent filter ; le
+stockage persistant securise par Android Keystore n'est pas encore raccorde.
+Dans cet increment, le JWT reste uniquement en memoire et disparait a la
+fermeture de l'application.
+
+Premier travail mobile non termine : ajouter le stockage Keystore, configurer
+le domaine/deep link, installer l'APK sur un appareil de recette, raccorder les
+pieces KYC camera/fichiers lorsque le contrat backend detaille sera disponible,
+puis produire un APK release signe avec la cle de l'organisation.
+
+## Recette integree finale des trois canaux
+
+Un harnais PowerShell reproductible a valide trois parcours complets avec la
+base PostgreSQL locale, Merchant Onboarding et Acquiring : Commercant Web,
+Commercial Web et Mobile. Chaque parcours couvre Maker, trois pieces KYC,
+revue Back-office, validation KYC, Checker distinct, generation du JSON
+canonique batch et provisionnement Acquiring.
+
+Resultat : **3/3 PROVISIONED**, jobs `SUCCEEDED`, MID
+`100000000000004` a `100000000000006` et TID `10000002` a `10000007`.
+
+La non-regression Maven finale, relancee apres la recette sur `sg-common`,
+`sg-deployment-core`, `sg-generator-orchestrator`, `sg-acquiring` et
+`sg-merchant-onboarding`, se termine par **BUILD SUCCESS : 107 tests, 0
+echec, 0 erreur, 0 ignore**.
+
+Harnais, JSON et guide utilisateur/Proof of Test :
+`tests/merchant-onboarding/run-three-channel-e2e.ps1` et
+`tests/merchant-onboarding/GUIDE_UTILISATEUR_PROOF_OF_TEST_3_CANAUX_2026-08-07.md`.
+
+Limite importante : l'instance sandbox Acquiring desactive sa securite Spring
+automatique, car l'adaptateur Onboarding n'a pas encore d'authentification
+service-a-service. mTLS ou OAuth2 client credentials est requis avant
+production. Les instances temporaires `8550`/`8570` ont ete arretees.
+
+Les iterations de mise au point du harnais ont laisse dans la base locale des
+dossiers techniques hors preuve, dont un essai ayant expose le refus HTTP 401
+interservices. Le jeu de recette faisant foi est exclusivement constitue des
+trois references `ONB-29CBB112`, `ONB-405A108D` et `ONB-38832F25` ci-dessus ;
+les donnees techniques n'ont pas ete supprimees afin de conserver l'audit.
+
+Le cadrage de developpement frontend est disponible dans
+`CADRAGE_FRONTEND_MERCHANT_PORTAL.md`. Il couvre le portail Angular du Lot 1 et
+prepare explicitement le Lot 2 mobile Android : Ionic Angular/Capacitor, deux
+profils Commercant/Commercial, contrats partages, securite native et livraison
+APK/AAB signee. Le code mobile reste differe au Lot 2, mais il est inclus dans
+l'architecture et le decoupage.
 
 ## Processus
 
