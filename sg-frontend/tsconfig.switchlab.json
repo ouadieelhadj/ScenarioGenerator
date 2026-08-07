@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "outDir": "./out-tsc/switchlab",
+    "types": []
+  },
+  "files": ["src/main.switchlab.ts"],
+  "include": ["src/**/*.d.ts"]
+}

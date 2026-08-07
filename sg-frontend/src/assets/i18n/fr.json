@@ -15,6 +15,12 @@
   },
   "menu": {
     "dashboard": "Tableau de bord",
+    "switchLabPos": "TPE & POS",
+    "switchLabTestCenter": "Campagnes & Tests",
+    "switchLabOnline": "Réseaux Online",
+    "switchLabClearing": "Réseaux Clearing",
+    "switchLabEcommerce": "E-commerce & 3DS",
+    "switchLabIndustrialization": "Industrialisation",
     "campaignGeneration": "Génération de campagne",
     "campaignOrchestration": "Orchestration de campagne",
     "executions": "Consultation des exécutions",
@@ -32,7 +38,21 @@
     "users": "Utilisateurs",
     "roles": "Rôles",
     "businessModules": "Modules métier",
-    "deployments": "Déploiements"
+    "deployments": "Déploiements",
+    "campaignsTests": "Campagnes & Tests",
+    "simulators": "Simulateurs",
+    "transactions": "Transactions",
+    "acquiring": "Acquisition",
+    "issuing": "Émission",
+    "networksClearing": "Réseaux & Clearing",
+    "operations": "Exploitation",
+    "interfaces": "Interfaces"
+  },
+  "product": {
+    "switchLabSubtitle": "Portail de simulation et de certification monétique",
+    "switchSubtitle": "Portail du switch monétique bancaire",
+    "foundationTitle": "Fondation du produit disponible",
+    "foundationDescription": "Les fonctions opérationnelles de ce domaine seront raccordées aux API réelles dans le lot métier correspondant."
   },
   "topbar": {
     "theme": "Thème",

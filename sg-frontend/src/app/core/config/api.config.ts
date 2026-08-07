@@ -11,6 +11,12 @@ const PORTS_KEY = 'sg-ports';
 // des fichiers (environment.ts). Utile pour repartir sur une base propre.
 const USE_LOCALSTORAGE_PORTS = false;
 
+const BASE_URLS = {
+  orchestrator: environment.apiOrchestrator.replace(/\/$/, ''),
+  acquirer: environment.apiAcquirer.replace(/\/$/, ''),
+  issuer: environment.apiIssuer.replace(/\/$/, ''),
+};
+
 // Ports par defaut (extraits des URL de l'environnement)
 function defaultPort(u: string): number {
   const m = u.match(/:(\d+)/);
@@ -55,12 +61,67 @@ export function setPort(service: ServiceKey, port: number): void {
 }
 
 export function baseUrl(service: ServiceKey): string {
+  if (!USE_LOCALSTORAGE_PORTS || !/^https?:\/\//i.test(BASE_URLS[service])) {
+    return BASE_URLS[service];
+  }
   return `${HOSTS[service]}:${getPort(service)}`;
 }
 
 /** Chemins des endpoints, groupes par domaine. */
 export const ENDPOINTS = {
+  switch: {
+    interfaces: '/api/switch/v1/interfaces',
+    interfaceCapabilities: '/api/switch/v1/interfaces/capabilities',
+    acquiringOverview: '/api/switch/v1/acquiring/overview',
+    domainOverview: (domain: string) => `/api/switch/v1/domains/${domain}`,
+  },
   auth: { login: '/auth/login' },
+  switchLab: {
+    environments: '/api/switchlab/v1/environments',
+    overview: '/api/switchlab/v1/overview',
+    traces: '/api/switchlab/v1/traces',
+    pos: {
+      catalog: '/api/switchlab/v1/pos/catalog',
+      history: '/api/switchlab/v1/pos/history',
+      transactions: '/api/switchlab/v1/pos/transactions',
+      fieldMap: '/api/switchlab/v1/pos/field-map',
+      repeat: '/api/switchlab/v1/pos/repeat',
+      rki: '/api/switchlab/v1/pos/rki',
+      rkiConfirm: '/api/switchlab/v1/pos/rki/confirm',
+      sentinel: '/api/switchlab/v1/pos/sentinel',
+    },
+    testCenter: {
+      catalog: '/api/switchlab/v1/test-center/catalog',
+      profiles: '/api/switchlab/v1/test-center/profiles',
+      campaigns: '/api/switchlab/v1/test-center/campaigns',
+      runCampaign: (id: string) => `/api/switchlab/v1/test-center/campaigns/${id}/run`,
+      reports: '/api/switchlab/v1/test-center/reports',
+      exportReport: (id: string) => `/api/switchlab/v1/test-center/reports/${id}/export`,
+      evidence: '/api/switchlab/v1/test-center/evidence',
+      analyzeCertification: '/api/switchlab/v1/test-center/certification/analyze',
+    },
+    online: {
+      networks: '/api/switchlab/v1/online/networks',
+      session: (code: string) => `/api/switchlab/v1/online/networks/${code}/session`,
+      keys: (code: string) => `/api/switchlab/v1/online/networks/${code}/keys`,
+      scenarios: '/api/switchlab/v1/online/scenarios',
+      runScenario: (code: string) => `/api/switchlab/v1/online/scenarios/${code}/run`,
+    },
+    clearing: {
+      networks: '/api/switchlab/v1/clearing/networks',
+      artifacts: '/api/switchlab/v1/clearing/artifacts',
+      upload: (code: string) => `/api/switchlab/v1/clearing/networks/${code}/files`,
+      eod: '/api/switchlab/v1/clearing/eod',
+    },
+    ecommerce: {
+      components: '/api/switchlab/v1/ecommerce/components',
+      scenarios: '/api/switchlab/v1/ecommerce/scenarios',
+    },
+    industrialization: {
+      readiness: '/api/switchlab/v1/industrialization/readiness',
+      backup: '/api/switchlab/v1/industrialization/backup',
+    },
+  },
   me: { navigation: '/api/me/navigation' },
   campaigns: {
     base: '/api/campaigns',

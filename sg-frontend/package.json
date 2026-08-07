@@ -5,7 +5,12 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "start:switchlab": "ng serve futurpayment-switchlab",
+    "start:switch": "ng serve futurpayment-switch",
     "build": "ng build",
+    "build:switchlab": "ng build futurpayment-switchlab",
+    "build:switch": "ng build futurpayment-switch",
+    "build:products": "npm run build:switchlab && npm run build:switch",
     "watch": "ng build --watch --configuration development",
     "test:e2e": "ng build && node ./tools/run-playwright.mjs",
     "test:e2e:report": "playwright show-report"

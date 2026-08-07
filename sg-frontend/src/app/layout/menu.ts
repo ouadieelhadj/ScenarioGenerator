@@ -1,4 +1,5 @@
 import { Permission } from '../core/models/auth.models';
+import { PortalProductCode } from '../core/product/product.config';
 
 export interface MenuItem {
   code: string;
@@ -123,3 +124,59 @@ export const COMMON_MENU_ITEMS: MenuItem[] = [
     route: '/help',
   },
 ];
+
+function commonItem(code: string): MenuItem {
+  const item = COMMON_MENU_ITEMS.find(candidate => candidate.code === code);
+  if (!item) throw new Error(`Missing common menu item: ${code}`);
+  return item;
+}
+
+const SWITCHLAB_MENU_ITEMS: MenuItem[] = [
+  commonItem('DASHBOARD'),
+  { code: 'SWITCHLAB_POS', labelKey: 'menu.switchLabPos', icon: 'pi pi-desktop', route: '/lab/pos' },
+  { code: 'SWITCHLAB_TEST_CENTER', labelKey: 'menu.switchLabTestCenter', icon: 'pi pi-chart-bar', route: '/lab/test-center' },
+  { code: 'SWITCHLAB_ONLINE', labelKey: 'menu.switchLabOnline', icon: 'pi pi-globe', route: '/lab/online' },
+  { code: 'SWITCHLAB_CLEARING', labelKey: 'menu.switchLabClearing', icon: 'pi pi-file-import', route: '/lab/clearing' },
+  { code: 'SWITCHLAB_ECOMMERCE', labelKey: 'menu.switchLabEcommerce', icon: 'pi pi-shopping-cart', route: '/lab/ecommerce' },
+  { code: 'SWITCHLAB_INDUSTRIALIZATION', labelKey: 'menu.switchLabIndustrialization', icon: 'pi pi-shield', route: '/lab/industrialization' },
+  { ...commonItem('CAMPAIGNS'), labelKey: 'menu.campaignsTests' },
+  { code: 'OPERATIONS', labelKey: 'menu.operations', icon: 'pi pi-desktop', route: '/product/operations' },
+  commonItem('ADMINISTRATION'),
+  commonItem('HELP'),
+];
+
+const switchAdministration: MenuItem = {
+  ...commonItem('ADMINISTRATION'),
+  children: [
+    {
+      code: 'INTERFACES',
+      labelKey: 'menu.interfaces',
+      icon: 'pi pi-link',
+      route: '/product/interfaces',
+      permissions: [Permission.CATALOG_MANAGE],
+    },
+    ...(commonItem('ADMINISTRATION').children ?? []),
+  ],
+};
+
+const SWITCH_MENU_ITEMS: MenuItem[] = [
+  commonItem('DASHBOARD'),
+  { code: 'ACQUIRING', labelKey: 'menu.acquiring', icon: 'pi pi-shopping-cart', route: '/product/acquiring' },
+  { code: 'ISSUING', labelKey: 'menu.issuing', icon: 'pi pi-credit-card', route: '/product/issuing' },
+  { code: 'NETWORKS_CLEARING', labelKey: 'menu.networksClearing', icon: 'pi pi-sitemap', children: [
+    { code: 'NETWORKS', labelKey: 'menu.switchLabOnline', icon: 'pi pi-globe', route: '/product/networks' },
+    { code: 'CLEARING', labelKey: 'menu.switchLabClearing', icon: 'pi pi-file-import', route: '/product/clearing' },
+  ] },
+  { code: 'ECOMMERCE', labelKey: 'menu.switchLabEcommerce', icon: 'pi pi-shopping-bag', route: '/product/ecommerce' },
+  { code: 'INDUSTRIALIZATION', labelKey: 'menu.switchLabIndustrialization', icon: 'pi pi-shield', route: '/product/industrialization' },
+  { code: 'TRANSACTIONS', labelKey: 'menu.transactions', icon: 'pi pi-arrow-right-arrow-left', route: '/product/transactions' },
+  { code: 'OPERATIONS', labelKey: 'menu.operations', icon: 'pi pi-desktop', route: '/product/operations' },
+  switchAdministration,
+  commonItem('HELP'),
+];
+
+export function menuItemsFor(product: PortalProductCode): MenuItem[] {
+  if (product === 'SWITCHLAB') return SWITCHLAB_MENU_ITEMS;
+  if (product === 'SWITCH') return SWITCH_MENU_ITEMS;
+  return COMMON_MENU_ITEMS;
+}

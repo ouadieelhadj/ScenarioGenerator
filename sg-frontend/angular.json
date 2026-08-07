@@ -22,26 +22,16 @@
           },
           "configurations": {
             "production": {
-              "optimization": {
-                "scripts": true,
-                "styles": {
-                  "minify": true,
-                  "inlineCritical": true
-                },
-                "fonts": false
-              },
-              "budgets": [
-                { "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }
-              ],
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }],
               "outputHashing": "all",
-              "fileReplacements": [
-                { "replace": "src/environments/environment.ts", "with": "src/environments/environment.prod.ts" }
-              ]
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switchlab.prod.ts" }]
             },
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switchlab.ts" }]
             }
           },
           "defaultConfiguration": "production"
@@ -51,6 +41,96 @@
           "configurations": {
             "production": { "buildTarget": "sg-frontend:build:production" },
             "development": { "buildTarget": "sg-frontend:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "futurpayment-switchlab": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/futurpayment-switchlab",
+            "index": "src/index.html",
+            "browser": "src/main.switchlab.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.switchlab.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }],
+              "outputHashing": "all",
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switchlab.prod.ts" }]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switchlab.ts" }]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "port": 4210 },
+          "configurations": {
+            "production": { "buildTarget": "futurpayment-switchlab:build:production" },
+            "development": { "buildTarget": "futurpayment-switchlab:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "futurpayment-switch": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/futurpayment-switch",
+            "index": "src/index.html",
+            "browser": "src/main.switch.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.switch.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }],
+              "outputHashing": "all",
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switch.prod.ts" }]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switch.ts" }]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "port": 4220 },
+          "configurations": {
+            "production": { "buildTarget": "futurpayment-switch:build:production" },
+            "development": { "buildTarget": "futurpayment-switch:build:development" }
           },
           "defaultConfiguration": "development"
         }

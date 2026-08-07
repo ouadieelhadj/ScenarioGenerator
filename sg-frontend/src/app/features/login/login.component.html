@@ -2,8 +2,8 @@
   <div class="login-card">
     <div class="login-head">
       <i class="pi pi-bolt"></i>
-      <h1>ScenarioGenerator</h1>
-      <p>{{ 'login.subtitle' | translate }}</p>
+      <h1>{{ product.brand }}</h1>
+      <p>{{ product.subtitleKey | translate }}</p>
     </div>
 
     <form (ngSubmit)="submit()" class="login-form">
@@ -29,4 +29,3 @@
     </form>
   </div>
 </div>
-

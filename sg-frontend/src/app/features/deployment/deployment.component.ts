@@ -9,6 +9,7 @@ import {
   DeploymentExecution, DeploymentLicense, DeploymentModule, PreflightReport, ShellType, TargetOs,
 } from '../../core/models/deployment.models';
 import { HasPermissionDirective } from '../../shared/directives/has-permission.directive';
+import { PORTAL_PRODUCT } from '../../core/product/product.config';
 
 type Section = 'overview' | 'clients' | 'environments' | 'modules' | 'licenses' | 'executions';
 
@@ -22,6 +23,8 @@ type Section = 'overview' | 'clients' | 'environments' | 'modules' | 'licenses' 
 export class DeploymentComponent implements OnInit {
   private service = inject(DeploymentService);
   private route = inject(ActivatedRoute);
+  private product = inject(PORTAL_PRODUCT);
+  readonly isSwitchLab = this.product.code === 'SWITCHLAB';
 
   readonly section = this.route.snapshot.data['section'] as Section;
   readonly catalog = signal<DeploymentCatalog | null>(null);
@@ -94,6 +97,10 @@ export class DeploymentComponent implements OnInit {
     if (!clientId) { this.error.set('deployment.errors.clientRequired'); return; }
     try {
       this.environmentForm.clientId = clientId;
+      if (this.isSwitchLab) {
+        this.environmentForm.memberModules = [];
+        this.environmentForm.membersBundlePath = '';
+      }
       this.environmentForm.variableReferences = this.parseVariableReferences(this.variableReferencesText);
     } catch {
       this.error.set('deployment.errors.variables');
@@ -163,6 +170,7 @@ export class DeploymentComponent implements OnInit {
 
   databaseTypes(): DatabaseType[] { return this.catalog()?.databaseTypes ?? []; }
   modules(side: 'MEMBER' | 'SIMULATOR'): DeploymentModule[] {
+    if (this.isSwitchLab && side === 'MEMBER') return [];
     return this.catalog()?.modules.filter(module => module.side === side) ?? [];
   }
 

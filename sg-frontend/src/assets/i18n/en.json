@@ -15,6 +15,12 @@
   },
   "menu": {
     "dashboard": "Dashboard",
+    "switchLabPos": "Terminal & POS",
+    "switchLabTestCenter": "Campaigns & Tests",
+    "switchLabOnline": "Online Networks",
+    "switchLabClearing": "Clearing Networks",
+    "switchLabEcommerce": "E-commerce & 3DS",
+    "switchLabIndustrialization": "Industrialization",
     "campaignGeneration": "Campaign generation",
     "campaignOrchestration": "Campaign orchestration",
     "executions": "Execution monitoring",
@@ -26,7 +32,16 @@
     "core": "Home",
     "config": "Configuration",
     "campaigns": "Campaigns", "workflow": "Workflow", "myOperations": "My operations",
-    "myApprovals": "My approvals", "users": "Users", "roles": "Roles", "businessModules": "Business modules", "deployments": "Deployments"
+    "myApprovals": "My approvals", "users": "Users", "roles": "Roles", "businessModules": "Business modules", "deployments": "Deployments",
+    "campaignsTests": "Campaigns & Tests", "simulators": "Simulators", "transactions": "Transactions",
+    "acquiring": "Acquiring", "issuing": "Issuing", "networksClearing": "Networks & Clearing",
+    "operations": "Operations", "interfaces": "Interfaces"
+  },
+  "product": {
+    "switchLabSubtitle": "Payment simulation and certification portal",
+    "switchSubtitle": "Banking payment switch portal",
+    "foundationTitle": "Product foundation available",
+    "foundationDescription": "Operational functions for this area will be connected to real APIs in the corresponding business delivery."
   },
   "topbar": {
     "theme": "Theme",

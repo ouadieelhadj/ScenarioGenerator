@@ -5,9 +5,10 @@ import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../core/auth/auth.service';
 import { ThemeService } from '../core/theme/theme.service';
 import { LanguageService } from '../core/i18n/language.service';
-import { COMMON_MENU_ITEMS, MenuItem } from './menu';
+import { menuItemsFor, MenuItem } from './menu';
 import { NavigationService } from '../core/services/navigation.service';
 import { ModuleNavigation, NavigationItem } from '../core/models/navigation.models';
+import { PORTAL_PRODUCT } from '../core/product/product.config';
 
 @Component({
   selector: 'app-main-layout',
@@ -22,6 +23,7 @@ export class MainLayoutComponent implements OnInit {
   private lang = inject(LanguageService);
   private router = inject(Router);
   private navigation = inject(NavigationService);
+  readonly product = inject(PORTAL_PRODUCT);
 
   readonly user = this.auth.user;
   readonly themes = this.theme.available;
@@ -29,7 +31,10 @@ export class MainLayoutComponent implements OnInit {
   readonly languages = this.lang.available;
   readonly currentLang = this.lang.current;
 
-  readonly menu = computed(() => this.filterCommonMenu(COMMON_MENU_ITEMS));
+  private readonly configuredMenu = menuItemsFor(this.product.code);
+  readonly menu = computed(() => this.filterCommonMenu(this.configuredMenu));
+  readonly leadingMenu = computed(() => this.menu().filter(item => this.product.leadingMenuCodes.includes(item.code)));
+  readonly trailingMenu = computed(() => this.menu().filter(item => !this.product.leadingMenuCodes.includes(item.code)));
   readonly modules = computed(() => this.navigation.modules().filter(module =>
     !['CORE', 'CORE_PORTAL'].includes(module.code.toUpperCase())
   ));
@@ -38,6 +43,13 @@ export class MainLayoutComponent implements OnInit {
     this.modules().find(module => module.code === this.selectedModuleCode()) ?? null
   );
   readonly dynamicMenu = computed(() => this.selectedModule()?.children ?? []);
+  readonly moduleGroups = computed(() => this.product.moduleGroups.map(group => {
+    const accepted = new Set(group.moduleCodes.map(code => code.toUpperCase()));
+    const modules = accepted.size
+      ? this.modules().filter(module => accepted.has(module.code.toUpperCase()))
+      : this.modules();
+    return { ...group, modules };
+  }).filter(group => group.modules.length));
 
   ngOnInit(): void {
     this.navigation.load().subscribe(() => {

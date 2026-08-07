@@ -1,5 +1,7 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { RouterOutlet } from '@angular/router';
+import { PORTAL_PRODUCT } from './core/product/product.config';
 
 @Component({
   selector: 'app-root',
@@ -7,4 +9,11 @@ import { RouterOutlet } from '@angular/router';
   imports: [RouterOutlet],
   template: '<router-outlet />',
 })
-export class AppComponent {}
+export class AppComponent {
+  private readonly title = inject(Title);
+  private readonly product = inject(PORTAL_PRODUCT);
+
+  constructor() {
+    this.title.setTitle(this.product.brand);
+  }
+}

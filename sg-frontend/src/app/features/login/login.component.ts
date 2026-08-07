@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { TranslatePipe } from '@ngx-translate/core';
 import { AuthService } from '../../core/auth/auth.service';
+import { PORTAL_PRODUCT } from '../../core/product/product.config';
 
 @Component({
   selector: 'app-login',
@@ -14,6 +15,7 @@ import { AuthService } from '../../core/auth/auth.service';
 export class LoginComponent {
   private auth = inject(AuthService);
   private router = inject(Router);
+  readonly product = inject(PORTAL_PRODUCT);
 
   login = '';
   password = '';
@@ -41,4 +43,3 @@ export class LoginComponent {
     });
   }
 }
-

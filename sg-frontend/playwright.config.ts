@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env['E2E_BASE_URL'] ?? 'http://127.0.0.1:4217';
+const reportFolder = process.env['E2E_REPORT_FOLDER'] ?? 'playwright-report';
 
 export default defineConfig({
   testDir: './e2e',
@@ -8,7 +9,7 @@ export default defineConfig({
   expect: { timeout: 8_000 },
   fullyParallel: false,
   retries: 0,
-  reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
+  reporter: [['list'], ['html', { outputFolder: reportFolder, open: 'never' }]],
   use: {
     baseURL,
     trace: 'retain-on-failure',

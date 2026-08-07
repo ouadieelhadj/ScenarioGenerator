@@ -1,0 +1,29 @@
+server:
+  port: ${SWITCHLAB_BFF_PORT:8090}
+spring:
+  application:
+    name: sg-switchlab-bff
+switchlab:
+  backend:
+    # Seul backend applicatif autorisé pour SwitchLab.
+    base-url: ${SWITCHLAB_BACKEND_BASE_URL:http://localhost:8080}
+  pos:
+    base-url: ${SWITCHLAB_POS_BASE_URL:http://localhost:8532}
+  test-center:
+    store-path: ${SWITCHLAB_TEST_CENTER_STORE_PATH:runtime/switchlab/test-center.json}
+  online:
+    dmas-base-url: ${SWITCHLAB_ONLINE_DMAS_BASE_URL:}
+    visa-base-url: ${SWITCHLAB_ONLINE_VISA_BASE_URL:http://localhost:8565}
+    swam-base-url: ${SWITCHLAB_ONLINE_SWAM_BASE_URL:}
+  clearing:
+    visa-base-url: ${SWITCHLAB_CLEARING_VISA_BASE_URL:http://localhost:8566}
+    swam-base-url: ${SWITCHLAB_CLEARING_SWAM_BASE_URL:}
+    dmcs-base-url: ${SWITCHLAB_CLEARING_DMCS_BASE_URL:}
+  ecommerce:
+    merchant-base-url: ${SWITCHLAB_ECOMMERCE_MERCHANT_BASE_URL:http://localhost:8551}
+    gateway-base-url: ${SWITCHLAB_ECOMMERCE_GATEWAY_BASE_URL:http://localhost:8563}
+    three-ds-base-url: ${SWITCHLAB_ECOMMERCE_3DS_BASE_URL:http://localhost:8561}
+  security:
+    issuer: ${SWITCHLAB_JWT_ISSUER:futurpayment-switchlab}
+    audience: ${SWITCHLAB_JWT_AUDIENCE:futurpayment-switchlab-bff}
+    secret: ${SWITCHLAB_JWT_SECRET:}

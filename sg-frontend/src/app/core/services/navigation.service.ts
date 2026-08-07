@@ -3,10 +3,12 @@ import { HttpClient } from '@angular/common/http';
 import { catchError, map, Observable, of, tap } from 'rxjs';
 import { ENDPOINTS, url } from '../config/api.config';
 import { ModuleNavigation, NavigationItem, NavigationResponse } from '../models/navigation.models';
+import { PORTAL_PRODUCT } from '../product/product.config';
 
 @Injectable({ providedIn: 'root' })
 export class NavigationService {
   private http = inject(HttpClient);
+  private product = inject(PORTAL_PRODUCT);
   readonly modules = signal<ModuleNavigation[]>([]);
   readonly loaded = signal(false);
   readonly legacyFallback = signal(false);
@@ -14,7 +16,10 @@ export class NavigationService {
   load(): Observable<NavigationResponse> {
     return this.http.get<NavigationResponse>(url.orchestrator(ENDPOINTS.me.navigation)).pipe(
       tap(response => {
-        this.modules.set(response.modules);
+        const allowed = new Set(this.product.allowedModuleCodes.map(code => code.toUpperCase()));
+        this.modules.set(allowed.size
+          ? response.modules.filter(module => allowed.has(module.code.toUpperCase()))
+          : response.modules);
         this.legacyFallback.set(response.legacyFallback);
         this.loaded.set(true);
       }),

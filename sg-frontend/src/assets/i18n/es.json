@@ -15,6 +15,12 @@
   },
   "menu": {
     "dashboard": "Panel de control",
+    "switchLabPos": "Terminal y POS",
+    "switchLabTestCenter": "Campañas y pruebas",
+    "switchLabOnline": "Redes Online",
+    "switchLabClearing": "Redes de clearing",
+    "switchLabEcommerce": "Comercio electrónico y 3DS",
+    "switchLabIndustrialization": "Industrialización",
     "campaignGeneration": "Generación de campaña",
     "campaignOrchestration": "Orquestación de campaña",
     "executions": "Consulta de ejecuciones",
@@ -26,7 +32,16 @@
     "core": "Inicio",
     "config": "Configuración",
     "campaigns": "Campañas", "workflow": "Workflow", "myOperations": "Mis operaciones",
-    "myApprovals": "Mis aprobaciones", "users": "Usuarios", "roles": "Roles", "businessModules": "Módulos de negocio", "deployments": "Despliegues"
+    "myApprovals": "Mis aprobaciones", "users": "Usuarios", "roles": "Roles", "businessModules": "Módulos de negocio", "deployments": "Despliegues",
+    "campaignsTests": "Campañas y pruebas", "simulators": "Simuladores", "transactions": "Transacciones",
+    "acquiring": "Adquirencia", "issuing": "Emisión", "networksClearing": "Redes y clearing",
+    "operations": "Operación", "interfaces": "Interfaces"
+  },
+  "product": {
+    "switchLabSubtitle": "Portal de simulación y certificación de pagos",
+    "switchSubtitle": "Portal del switch de pagos bancarios",
+    "foundationTitle": "Base del producto disponible",
+    "foundationDescription": "Las funciones operativas de esta área se conectarán a las APIs reales en la entrega funcional correspondiente."
   },
   "topbar": {
     "theme": "Tema",

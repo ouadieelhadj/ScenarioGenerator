@@ -38,7 +38,7 @@ import org.springframework.orm.jpa.persistenceunit.PersistenceManagedTypes;
                         + "BinRangeRepository|CampaignExecutionRepository|CampaignExecutionResultRepository|"
                         + "CampaignLoadStepRepository|"
                         + "CampaignRepository|ExecutionRepository|IsoFieldCatalogRepository|"
-                        + "MessageTypeRepository|NetworkRepository|ResultRepository|RoleRepository|"
+                        + "MessageTypeRepository|NetworkRepository|PermissionRepository|ResultRepository|RoleRepository|"
                         + "SgOrchestratorCardDmasRepository|TestRepository|TpsStepRepository|"
                         + "UserRepository)$).*"))
 public class OrchestratorPersistenceConfiguration {

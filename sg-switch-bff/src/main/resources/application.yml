@@ -1,0 +1,24 @@
+server:
+  port: ${SWITCH_BFF_PORT:8091}
+spring:
+  application:
+    name: sg-switch-bff
+switch:
+  backend:
+    base-url: ${SWITCH_BACKEND_BASE_URL:}
+  member:
+    acquiring-base-url: ${SWITCH_ACQUIRING_BASE_URL:}
+    way-pos-base-url: ${SWITCH_WAY_POS_BASE_URL:}
+    issuing-base-url: ${SWITCH_ISSUING_BASE_URL:}
+    dmas-base-url: ${SWITCH_DMAS_BASE_URL:}
+    sms-base-url: ${SWITCH_SMS_BASE_URL:}
+    swam-base-url: ${SWITCH_SWAM_BASE_URL:}
+    visa-online-base-url: ${SWITCH_VISA_ONLINE_BASE_URL:}
+    dmcs-base-url: ${SWITCH_DMCS_BASE_URL:}
+    swam-lis-base-url: ${SWITCH_SWAM_LIS_BASE_URL:}
+    visa-base2-base-url: ${SWITCH_VISA_BASE2_BASE_URL:}
+    three-ds-base-url: ${SWITCH_THREE_DS_BASE_URL:}
+  security:
+    issuer: ${SWITCH_JWT_ISSUER:futurpayment-switch}
+    audience: ${SWITCH_JWT_AUDIENCE:futurpayment-switch-bff}
+    secret: ${SWITCH_JWT_SECRET:}

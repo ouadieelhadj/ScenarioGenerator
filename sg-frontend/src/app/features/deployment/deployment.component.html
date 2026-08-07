@@ -18,7 +18,7 @@
       <section class="metrics">
         <article><i class="pi pi-building"></i><strong>{{ clients().length }}</strong><span>{{ 'deployment.metrics.clients' | translate }}</span></article>
         <article><i class="pi pi-server"></i><strong>{{ environments().length }}</strong><span>{{ 'deployment.metrics.environments' | translate }}</span></article>
-        <article><i class="pi pi-box"></i><strong>2</strong><span>{{ 'deployment.metrics.bundles' | translate }}</span></article>
+        <article><i class="pi pi-box"></i><strong>{{ isSwitchLab ? 1 : 2 }}</strong><span>{{ 'deployment.metrics.bundles' | translate }}</span></article>
       </section>
       <section class="card dual-mode">
         <div><i class="pi pi-desktop"></i><h2>{{ 'deployment.overview.menuMode' | translate }}</h2><p>{{ 'deployment.overview.menuModeDetail' | translate }}</p></div>
@@ -88,7 +88,7 @@
 
     @case ('modules') {
       <div class="module-columns">
-        <section class="card"><h2>{{ 'deployment.modules.members' | translate }}</h2>@for (module of modules('MEMBER'); track module.code) { <div class="module-row"><i class="pi pi-building"></i><div><strong>{{ module.label }}</strong><span>{{ module.artifactId }}</span></div><code>{{ module.defaultPort || 'DB/ENV' }}</code></div> }</section>
+        @if (!isSwitchLab) { <section class="card"><h2>{{ 'deployment.modules.members' | translate }}</h2>@for (module of modules('MEMBER'); track module.code) { <div class="module-row"><i class="pi pi-building"></i><div><strong>{{ module.label }}</strong><span>{{ module.artifactId }}</span></div><code>{{ module.defaultPort || 'DB/ENV' }}</code></div> }</section> }
         <section class="card"><h2>{{ 'deployment.modules.simulators' | translate }}</h2>@for (module of modules('SIMULATOR'); track module.code) { <div class="module-row"><i class="pi pi-bolt"></i><div><strong>{{ module.label }}</strong><span>{{ module.artifactId }}</span></div><code>{{ module.defaultPort || 'DB/ENV' }}</code></div> }</section>
       </div>
     }
@@ -162,12 +162,12 @@
       }
     </div>
     <div class="module-picker">
-      <fieldset><legend>{{ 'deployment.modules.members' | translate }}</legend>@for (module of modules('MEMBER'); track module.code) { <label><input type="checkbox" [checked]="hasModule('MEMBER', module.code)" (change)="toggleModule('MEMBER', module.code, $any($event.target).checked)" /> {{ module.label }}</label> }</fieldset>
+      @if (!isSwitchLab) { <fieldset><legend>{{ 'deployment.modules.members' | translate }}</legend>@for (module of modules('MEMBER'); track module.code) { <label><input type="checkbox" [checked]="hasModule('MEMBER', module.code)" (change)="toggleModule('MEMBER', module.code, $any($event.target).checked)" /> {{ module.label }}</label> }</fieldset> }
       <fieldset><legend>{{ 'deployment.modules.simulators' | translate }}</legend>@for (module of modules('SIMULATOR'); track module.code) { <label><input type="checkbox" [checked]="hasModule('SIMULATOR', module.code)" (change)="toggleModule('SIMULATOR', module.code, $any($event.target).checked)" /> {{ module.label }}</label> }</fieldset>
     </div>
     <div class="form-grid">
       <label class="full"><span>{{ 'deployment.fields.variableReferences' | translate }}</span><textarea name="variables" [(ngModel)]="variableReferencesText" rows="5" placeholder="VARIABLE=secret://provider/reference"></textarea></label>
-      <label class="full"><span>Members bundle</span><input name="membersBundle" [(ngModel)]="environmentForm.membersBundlePath" /></label>
+      @if (!isSwitchLab) { <label class="full"><span>Members bundle</span><input name="membersBundle" [(ngModel)]="environmentForm.membersBundlePath" /></label> }
       <label class="full"><span>Simulators bundle</span><input name="simulatorsBundle" [(ngModel)]="environmentForm.simulatorsBundlePath" /></label>
       <label class="full"><span>license.json.sig</span><input name="licensePath" [(ngModel)]="environmentForm.licensePath" /></label>
       <label class="full"><span>license-public.pem</span><input name="publicKey" [(ngModel)]="environmentForm.licensePublicKeyPath" /></label>

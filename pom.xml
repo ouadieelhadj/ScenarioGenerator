@@ -20,6 +20,10 @@
 
     <modules>
         <module>sg-common</module>
+        <module>sg-switchlab-api-contracts</module>
+        <module>sg-switch-api-contracts</module>
+        <module>sg-switchlab-bff</module>
+        <module>sg-switch-bff</module>
         <module>sg-generator-orchestrator</module>
         <module>sg-dmcs-issuer</module>
         <module>sg-dmcs-acquirer</module>
@@ -69,6 +73,16 @@
             <dependency>
                 <groupId>com.staging</groupId>
                 <artifactId>sg-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.staging</groupId>
+                <artifactId>sg-switchlab-api-contracts</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.staging</groupId>
+                <artifactId>sg-switch-api-contracts</artifactId>
                 <version>${project.version}</version>
             </dependency>
             <dependency>

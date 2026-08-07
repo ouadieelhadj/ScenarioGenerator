@@ -4,7 +4,7 @@ import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { TranslatePipe } from '@ngx-translate/core';
 import { NavigationService } from '../../core/services/navigation.service';
-import { loadRegisteredScreen } from '../../core/navigation/screen-registry';
+import { SCREEN_LOADER } from '../../core/navigation/screen-loader';
 
 @Component({
   selector: 'app-dynamic-screen-host',
@@ -33,6 +33,7 @@ import { loadRegisteredScreen } from '../../core/navigation/screen-registry';
 export class DynamicScreenHostComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private navigation = inject(NavigationService);
+  private screenLoader = inject(SCREEN_LOADER);
   private subscription?: Subscription;
 
   readonly component = signal<Type<unknown> | null>(null);
@@ -45,7 +46,7 @@ export class DynamicScreenHostComponent implements OnInit, OnDestroy {
       const screen = this.navigation.findScreen(
         params.get('moduleCode') ?? '', params.get('screen') ?? ''
       );
-      this.component.set(await loadRegisteredScreen(screen?.componentKey));
+      this.component.set(await this.screenLoader(screen?.componentKey));
       this.loading.set(false);
     });
   }

@@ -2,32 +2,38 @@
   <aside class="sidebar">
     <div class="brand">
       <i class="pi pi-bolt"></i>
-      <span>ScenarioGenerator</span>
+      <span>{{ product.brand }}</span>
     </div>
 
     <nav class="menu common-menu" aria-label="Navigation commune">
-      <ng-container *ngTemplateOutlet="commonTree; context: { $implicit: menu(), level: 0 }" />
+      <ng-container *ngTemplateOutlet="commonTree; context: { $implicit: leadingMenu(), level: 0 }" />
     </nav>
 
-    @if (modules().length) {
-      <div class="menu-separator"><span>{{ 'menu.businessModules' | translate }}</span></div>
-      <nav class="module-menu" aria-label="Modules métier">
-        @for (module of modules(); track module.code) {
-          <button class="menu-item module-item"
-                  [class.active]="selectedModuleCode() === module.code"
-                  [attr.data-module-code]="module.code"
-                  (click)="selectModule(module)">
-            <i [class]="module.icon || 'pi pi-box'"></i>
-            <span>{{ module.labelKey | translate }}</span>
-          </button>
+    @for (group of moduleGroups(); track group.code) {
+      <div class="menu-separator"><span>{{ group.labelKey | translate }}</span></div>
+      <nav class="module-menu" [attr.aria-label]="group.labelKey | translate">
+        @for (module of group.modules; track module.code) {
+        <button class="menu-item module-item"
+                [class.active]="selectedModuleCode() === module.code"
+                [attr.data-module-code]="module.code"
+                (click)="selectModule(module)">
+          <i [class]="module.icon || group.icon"></i>
+          <span>{{ module.labelKey | translate }}</span>
+        </button>
         }
       </nav>
+    }
+    @if (modules().length) {
       @if (selectedModule()) {
         <nav class="menu screen-menu" aria-label="Écrans du module">
           <ng-container *ngTemplateOutlet="dynamicTree; context: { $implicit: dynamicMenu(), level: 0 }" />
         </nav>
       }
     }
+
+    <nav class="menu common-menu" aria-label="Navigation support">
+      <ng-container *ngTemplateOutlet="commonTree; context: { $implicit: trailingMenu(), level: 0 }" />
+    </nav>
   </aside>
 
   <ng-template #commonTree let-items let-level="level">

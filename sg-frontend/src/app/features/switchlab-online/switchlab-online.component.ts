@@ -1,0 +1,24 @@
+import { DatePipe } from '@angular/common';
+import { Component, inject, OnInit, signal } from '@angular/core';
+import { finalize, forkJoin } from 'rxjs';
+import { SwitchLabOnlineKeyStatus, SwitchLabOnlineNetwork, SwitchLabOnlineScenario, SwitchLabOnlineScenarioResult, SwitchLabOnlineSession } from '../../core/models/product-contracts.models';
+import { SwitchLabOnlineService } from '../../core/services/switchlab-online.service';
+
+@Component({
+  selector:'app-switchlab-online', standalone:true, imports:[DatePipe],
+  template:`
+    <div class="page-header"><p class="eyebrow">SwitchLab · Lot 4</p><h1><i class="pi pi-globe"></i> Réseaux Online</h1><p>Sessions, clés assainies et scénarios des simulateurs réseau.</p></div>
+    @if(error()){<div class="notice error"><i class="pi pi-exclamation-triangle"></i>{{error()}}</div>}
+    <section class="grid">@for(network of networks();track network.code){<button type="button" class="card" [class.selected]="selected()?.code===network.code" (click)="select(network)"><header><strong>{{network.label}}</strong><span>{{network.status}}</span></header><code>{{network.moduleCode}}</code>@for(limit of network.limitations;track limit){<small>{{limit}}</small>}</button>}</section>
+    @if(selected()){<section class="details"><article class="card"><h2>Session</h2>@if(session()){<p><strong>{{session()!.status}}</strong> · {{session()!.mode}}</p><p>Rôle {{session()!.role}} · {{session()!.observedAt|date:'medium'}}</p>}@else{<p>État indisponible.</p>}</article><article class="card"><h2>Clés</h2>@if(keys()){<p><strong>{{keys()!.keyType}} — {{keys()!.status}}</strong></p><p>KCV {{keys()!.kcv||'—'}} · <code>{{keys()!.keyReference||'—'}}</code></p><small>{{keys()!.limitation}}</small>}@else{<p>Statut assaini indisponible.</p>}</article></section>
+    <section class="list"><h2>Scénarios</h2>@for(item of filteredScenarios();track item.code){<article class="card scenario"><div><strong>{{item.label}}</strong><p>{{item.code}} · {{item.outcome}}</p><small>{{item.limitation}}</small></div><button type="button" [disabled]="!item.executable||running()" (click)="run(item)"><i class="pi pi-play"></i> Exécuter</button></article>}@if(lastResult()){<div class="notice" [class.error]="!lastResult()!.successful">{{lastResult()!.scenarioCode}} : {{lastResult()!.status}} · RC {{lastResult()!.responseCode||'—'}}</div>}</section>}
+  `,
+  styles:[`.page-header h1{display:flex;gap:10px;align-items:center;margin:0}.page-header i{color:var(--sg-color-primary)}.page-header p,.card p,small{color:var(--sg-text-muted)}.eyebrow{text-transform:uppercase;font-size:11px;letter-spacing:.08em}.grid,.details{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}.card,.notice{padding:16px;margin-top:12px;border:1px solid var(--sg-border);border-radius:var(--sg-radius);background:var(--sg-bg-surface);color:var(--sg-text-primary);text-align:left}.card header,.scenario{display:flex;justify-content:space-between;gap:12px}.card small{display:block;margin-top:7px}.selected{border-color:var(--sg-color-primary)}.list{margin-top:18px}.scenario{align-items:center}.scenario button{padding:9px;border:1px solid var(--sg-border-strong);border-radius:var(--sg-radius)}.error{color:#b42318}code{overflow-wrap:anywhere}`]
+})
+export class SwitchLabOnlineComponent implements OnInit{
+  private readonly service=inject(SwitchLabOnlineService); readonly networks=signal<SwitchLabOnlineNetwork[]>([]); readonly scenarios=signal<SwitchLabOnlineScenario[]>([]); readonly selected=signal<SwitchLabOnlineNetwork|null>(null); readonly session=signal<SwitchLabOnlineSession|null>(null); readonly keys=signal<SwitchLabOnlineKeyStatus|null>(null); readonly lastResult=signal<SwitchLabOnlineScenarioResult|null>(null); readonly running=signal(false); readonly error=signal<string|null>(null);
+  ngOnInit():void{forkJoin({networks:this.service.networks(),scenarios:this.service.scenarios()}).subscribe({next:data=>{this.networks.set(data.networks);this.scenarios.set(data.scenarios);if(data.networks.length)this.select(data.networks[0])},error:()=>this.error.set('Le cockpit Online est indisponible.')})}
+  select(network:SwitchLabOnlineNetwork):void{this.selected.set(network);this.session.set(null);this.keys.set(null);forkJoin({session:this.service.session(network.code),keys:this.service.keys(network.code)}).subscribe({next:data=>{this.session.set(data.session);this.keys.set(data.keys)},error:()=>this.error.set('Le simulateur sélectionné ne répond pas ou son adaptateur est incomplet.')})}
+  filteredScenarios():SwitchLabOnlineScenario[]{const code=this.selected()?.code;return this.scenarios().filter(item=>item.networkCode===code)}
+  run(item:SwitchLabOnlineScenario):void{this.running.set(true);this.service.run(item.code).pipe(finalize(()=>this.running.set(false))).subscribe({next:value=>this.lastResult.set(value),error:()=>this.error.set('Le scénario Online a échoué ou aucune session membre n’est active.')})}
+}

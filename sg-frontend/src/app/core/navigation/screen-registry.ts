@@ -1,17 +1,17 @@
 import { Type } from '@angular/core';
 
-type ScreenLoader = () => Promise<Type<unknown>>;
+type RegisteredScreenLoader = () => Promise<Type<unknown>>;
 
-const clearingWorkspace: ScreenLoader = () => import('../../features/clearing/clearing-workspace.component')
+const clearingWorkspace: RegisteredScreenLoader = () => import('../../features/clearing/clearing-workspace.component')
   .then(module => module.ClearingWorkspaceComponent);
 
-const moduleWorkspace: ScreenLoader = () => import('../../features/module-workspace/module-workspace.component')
+const moduleWorkspace: RegisteredScreenLoader = () => import('../../features/module-workspace/module-workspace.component')
   .then(module => module.ModuleWorkspaceComponent);
 
-const visaWorkspace: ScreenLoader = () => import('../../features/visa/visa-workspace.component')
+const visaWorkspace: RegisteredScreenLoader = () => import('../../features/visa/visa-workspace.component')
   .then(module => module.VisaWorkspaceComponent);
 
-const REGISTRY: Record<string, ScreenLoader> = {
+const REGISTRY: Record<string, RegisteredScreenLoader> = {
   CLEARING_TRANSACTIONS: clearingWorkspace,
   CLEARING_FILES: clearingWorkspace,
   CLEARING_RECONCILIATION: clearingWorkspace,
@@ -26,3 +26,5 @@ export function loadRegisteredScreen(componentKey?: string): Promise<Type<unknow
   const loader = componentKey ? REGISTRY[componentKey] : undefined;
   return loader ? loader() : Promise.resolve(null);
 }
+
+export const legacyScreenLoader = loadRegisteredScreen;
