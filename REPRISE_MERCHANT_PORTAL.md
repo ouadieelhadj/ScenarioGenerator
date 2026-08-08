@@ -1,6 +1,6 @@
 # Reprise - Portail d'Affiliation Commercant
 
-Derniere mise a jour : 7 aout 2026
+Derniere mise a jour : 8 aout 2026
 
 ## Perimetre confirme
 
@@ -250,3 +250,34 @@ Les instances temporaires E2E Acquiring `8550` et Merchant Onboarding `8570`
 ont ete lancees uniquement pour la validation et arretees en fin de session.
 Les services utilisateur deja actifs sur 8080, 8090, 4210 et 4220 n'ont pas
 ete modifies.
+
+## Increment complet Web et Mobile du 8 aout 2026
+
+Le MVP frontal est maintenant raccorde aux contrats backend complets : dossier
+du compte courant, saisie entreprise/activite/reglement/produit/PDV/TPE, upload
+binaire de pieces, soumission KYC, revue Back-office avec consultation des
+fichiers, complements/rejet/validation, Maker/Checker et provisioning
+immediat ou batch avec affichage MID/TID.
+
+Le backend stocke les fichiers PDF/JPEG/PNG dans un repertoire configurable
+avec references opaques, limite de 20 Mo, empreinte SHA-256 calculee cote
+serveur, controle de chemin et autorisations proprietaire/relecteur.
+
+Le mobile reutilise le meme dossier et les memes API. Il accepte camera ou
+fichier, chiffre la session au moyen d'Android Keystore/AES-GCM dans un plugin
+Capacitor natif et bloque captures et apercus recents avec `FLAG_SECURE`.
+
+Validation finale : **109 tests Maven**, **5 E2E Web**, **3 E2E Mobile** et
+Gradle `testDebugUnitTest assembleDebug`, tous sans echec. APK Wi-Fi :
+`tests/frontend/artifacts/futurpayment-merchant-mobile-wifi-192.168.1.86-debug.apk`,
+SHA-256 `9EAA9253D1CCE9BC5D3C14896450A44EAB3378CD5398C62B6BF55BA35A65E094`.
+
+La recette integree PostgreSQL/Acquiring du 7 aout reste la preuve bout en bout
+des trois canaux. Elle n'a pas ete rejouee le 8 aout, les secrets d'environnement
+requis n'etant pas charges. Voir
+`tests/frontend/PROOF_OF_TEST_MERCHANT_PORTAL_COMPLETE_2026-08-08.md`.
+
+Reste avant production : auth interservices, notification SMS/e-mail,
+GED/antivirus, referentiels et fonctions avancees (multi-PDV, tarification,
+contrats/signature), gateway HTTPS/session Web durcie, deep link verifie,
+signature release/AAB et recette appareils reels.

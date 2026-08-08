@@ -45,7 +45,7 @@
     "foundationDescription": "Operational functions for this area will be connected to real APIs in the corresponding business delivery."
   },
   "merchantPortal": {
-    "menu": { "dashboard": "My onboarding", "newProspect": "New prospect" }
+    "menu": { "dashboard": "My onboarding", "newProspect": "New prospect", "dossier": "My application", "kycReview": "KYC review" }
   },
   "topbar": {
     "theme": "Theme",

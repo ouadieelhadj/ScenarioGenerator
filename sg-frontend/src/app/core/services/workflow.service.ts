@@ -21,4 +21,12 @@ export class WorkflowService {
   myApprovals(): Observable<WorkflowRequestSummary[]> {
     return this.http.get<WorkflowRequestSummary[]>(this.endpoint(ENDPOINTS.workflow.myApprovals));
   }
+
+  approve(id: number): Observable<unknown> {
+    return this.http.post(this.endpoint(`/api/workflow/approvals/${id}/approve`), null);
+  }
+
+  reject(id: number, reason: string): Observable<unknown> {
+    return this.http.post(this.endpoint(`/api/workflow/approvals/${id}/reject`), { reason });
+  }
 }

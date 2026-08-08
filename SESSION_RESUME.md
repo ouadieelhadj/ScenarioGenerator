@@ -320,7 +320,7 @@ buildAuth0100 (DE4). Teste E2E (40 tx, 12 montants distincts dans la plage).
 A SUIVRE : etendre VARIABLE_FIELDS a ENTRY_MODE (DE22), puis PROC_CODE (DE3) et DE43.
 
 ### Infos pratiques back (rappel)
-- Canal SQL : `PGPASSWORD=postgres123 "/d/MoneyCore/PostgreSQL/18/bin/psql.exe" -U postgres -h localhost -d scenariogenerator`
+- Canal SQL : `PGPASSWORD=<redacted> "/d/MoneyCore/PostgreSQL/18/bin/psql.exe" -U postgres -h localhost -d scenariogenerator`
 - Prerequis jPOS : sign-on issuer AVANT toute transaction. Pour WITH_PIN : PEK ACTIVE (TESTGRP01).
 - Config campagne (JSON) : DE002_PAN, DE002_PAN_MODE=RANDOM, DE004_AMOUNT, WITH_PIN, ENTRY_MODE,
   VARIABLE_FIELDS. Colonnes : sla_p95_max_ms, sla_error_rate_max, sla_approval_min, stop_on_error_rate.
@@ -490,7 +490,7 @@ precedent de duplication pour un autre reseau.) jpos.version=2.1.9.
 - swam_cards, swam_iss_transactions, swam_iss_keys -> swam_issuer_user
 - swam_acq_transactions (l'acquereur persiste AUSSI), swam_acq_keys -> swam_acquirer_user
 - swam_kek -> postgres (partagee)
-- users swam_issuer_user / swam_acquirer_user (mdp postgres123) + grants miroir DMAS
+- users swam_issuer_user / swam_acquirer_user (mot de passe non consigne) + grants miroir DMAS
 - ports en networks : ISO 8510, REST issuer 8511, REST acq 8094
 - yml SWAM : users dedies + liquibase OFF (les modules LISENT le schema)
 
@@ -788,7 +788,7 @@ curl -s -X POST "$BASE/purchase?pan=$PAN&amount=000000010000&pin=9999"
 
 ```bash
 PSQL="/d/MoneyCore/PostgreSQL/18/bin/psql.exe"
-export PGPASSWORD=postgres123
+export PGPASSWORD=<redacted>
 
 # KEK chargee (KCV doit etre F6EE59 si vraie ZMK)
 "$PSQL" -U postgres -d scenariogenerator -c \
@@ -826,7 +826,7 @@ cd /f/ScenarioGenerator && git checkout feature/multi-network
 PGDATA="/f/MoneyCore/pgsql/data"
 # Si initdb pas encore fait :
 "/f/MoneyCore/pgsql/bin/initdb.exe" -D "$PGDATA" -U postgres --pwprompt
-# mot de passe : postgres123
+# mot de passe : <redacted>
 # Demarrer :
 "/f/MoneyCore/pgsql/bin/pg_ctl.exe" -D "$PGDATA" -l "/f/MoneyCore/pgsql/pgsql.log" start
 
@@ -974,7 +974,7 @@ done
 - Lancement du switch (CMD, pas PowerShell — PowerShell casse les backslash du -D) :
   `D:\jdk-26\jdk-26.0.1\bin\java.exe -Ddmas.lmk.file=D:/swam-issuer/keys/dmas-lmk.lmk
    -Dspring.datasource.url=jdbc:postgresql://127.0.0.1:5432/scenariogenerator
-   -Dspring.datasource.username=swam_issuer_user -Dspring.datasource.password=postgres123
+   -Dspring.datasource.username=swam_issuer_user -Dspring.datasource.password=<redacted>
    -jar D:\swam-issuer\sg-swam-issuer-1.0.0-SNAPSHOT.jar`
 - Bootstrap KEK avec la VRAIE ZMK (section 17) :
   `curl -X POST http://localhost:8511/api/admin/swam/kek/bootstrap -H "Content-Type: application/json"
@@ -1197,7 +1197,7 @@ bash /f/MoneyCore/swam-e2e-f.sh
 # 1. JAR issuer sur .126 (D:\swam-issuer\), lancer depuis CMD :
 D:\jdk-26\jdk-26.0.1\bin\java.exe -Ddmas.lmk.file=D:/swam-issuer/keys/dmas-lmk.lmk ^
   -Dspring.datasource.url=jdbc:postgresql://127.0.0.1:5432/scenariogenerator ^
-  -Dspring.datasource.username=swam_issuer_user -Dspring.datasource.password=postgres123 ^
+  -Dspring.datasource.username=swam_issuer_user -Dspring.datasource.password=<redacted> ^
   -jar D:\swam-issuer\sg-swam-issuer-1.0.0-SNAPSHOT.jar
 # Controle demarrage : "ISOServer demarre sur :8510 — keyPush=true macLen=4o"
 
@@ -1561,3 +1561,20 @@ La non-regression finale du perimetre backend a ensuite confirme `BUILD
 SUCCESS` avec 107 tests, 0 echec, 0 erreur et 0 test ignore. Les trois dossiers
 de preuve faisant foi sont `ONB-29CBB112`, `ONB-405A108D` et `ONB-38832F25` ;
 les essais techniques anterieurs restent en base locale pour audit.
+
+### 23.14 Parcours complet Merchant Portal Web et Mobile
+
+Le 8 aout 2026, le MVP Web/Mobile a ete complete : saisie du dossier,
+documents binaires KYC, revue Back-office, complements, Maker/Checker,
+provisioning immediat/batch et resultats MID/TID. Le mobile partage les memes
+API, prend les pieces par camera/fichier, protege sa session via Android
+Keystore et interdit les captures avec `FLAG_SECURE`.
+
+Validation : 109 tests Maven, 5 E2E Web, 3 E2E Mobile et build Gradle APK, tous
+verts. L'APK Wi-Fi et son SHA-256 sont consignes dans
+`tests/frontend/PROOF_OF_TEST_MERCHANT_PORTAL_COMPLETE_2026-08-08.md`.
+La recette Acquiring des trois canaux du 7 aout n'a pas ete rejouee faute de
+secrets charges ; aucun secret fictif n'a ete utilise. Les ecarts restants
+avant production sont l'authentification interservices, la notification, la
+GED/antivirus, les referentiels et contrats avances, la gateway/session Web,
+le deep link verifie, la signature release et la recette appareils reels.

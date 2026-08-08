@@ -2,13 +2,17 @@ package com.staging.sg.onboarding.api;
 
 import com.staging.sg.onboarding.domain.*;
 import com.staging.sg.onboarding.service.MerchantOnboardingService;
+import com.staging.sg.onboarding.service.OnboardingDocumentStorage;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.io.Resource;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.List;
@@ -18,8 +22,13 @@ import java.util.UUID;
 @RequestMapping("/api/merchant-onboarding/v1")
 public class MerchantOnboardingController {
     private final MerchantOnboardingService service;
+    private final OnboardingDocumentStorage storage;
 
-    public MerchantOnboardingController(MerchantOnboardingService service) { this.service = service; }
+    public MerchantOnboardingController(MerchantOnboardingService service,
+            OnboardingDocumentStorage storage) {
+        this.service = service;
+        this.storage = storage;
+    }
 
     @PostMapping("/prospects")
     @PreAuthorize("hasAnyRole('ADMIN','COMMERCIAL') or hasAuthority('ONBOARDING_PROSPECT_CREATE')")
@@ -53,6 +62,18 @@ public class MerchantOnboardingController {
         return DossierView.from(service.get(id, authentication.getName()));
     }
 
+    @GetMapping("/dossiers/mine")
+    @PreAuthorize("hasAnyRole('ADMIN','MERCHANT','COMMERCANT')")
+    public DossierView mine(Authentication authentication) {
+        return DossierView.from(service.myDossier(authentication.getName()));
+    }
+
+    @GetMapping("/review/dossiers")
+    @PreAuthorize("hasAnyRole('ADMIN','CHECKER','BACK_OFFICE') or hasAnyAuthority('ONBOARDING_KYC_REVIEW','ONBOARDING_APPROVE')")
+    public List<DossierView> reviewQueue() {
+        return service.reviewQueue().stream().map(DossierView::from).toList();
+    }
+
     @GetMapping("/review/dossiers/{id}")
     @PreAuthorize("hasAnyRole('ADMIN','CHECKER','BACK_OFFICE') or hasAnyAuthority('ONBOARDING_KYC_REVIEW','ONBOARDING_APPROVE')")
     public DossierView getForReview(@PathVariable UUID id) {
@@ -73,9 +94,32 @@ public class MerchantOnboardingController {
         return ResponseEntity.status(HttpStatus.CREATED).body(DocumentView.from(value));
     }
 
+    @PostMapping(value = "/dossiers/{id}/document-files", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<DocumentView> uploadDocument(@PathVariable UUID id,
+            @RequestParam DocumentType type, @RequestPart("file") MultipartFile file,
+            Authentication authentication) {
+        var stored = storage.store(id, file);
+        OnboardingDocument value = service.addDocument(id, type, stored.storageReference(),
+                stored.contentType(), stored.contentLength(), stored.sha256(), authentication.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(DocumentView.from(value));
+    }
+
     @GetMapping("/dossiers/{id}/documents")
     public List<DocumentView> documents(@PathVariable UUID id, Authentication authentication) {
         return service.documents(id, authentication.getName()).stream().map(DocumentView::from).toList();
+    }
+
+    @GetMapping("/dossiers/{id}/documents/{documentId}/content")
+    public ResponseEntity<Resource> documentContent(@PathVariable UUID id,
+            @PathVariable UUID documentId, Authentication authentication) {
+        OnboardingDocument document = service.documentContent(id, documentId, authentication.getName());
+        return content(document);
+    }
+
+    @GetMapping("/review/documents/{documentId}/content")
+    @PreAuthorize("hasAnyRole('ADMIN','CHECKER','BACK_OFFICE') or hasAnyAuthority('ONBOARDING_KYC_REVIEW','ONBOARDING_APPROVE')")
+    public ResponseEntity<Resource> reviewDocumentContent(@PathVariable UUID documentId) {
+        return content(service.documentContentForReview(documentId));
     }
 
     @PostMapping("/dossiers/{id}/kyc/submit")
@@ -158,14 +202,18 @@ public class MerchantOnboardingController {
     }
     public record DossierView(UUID id, String reference, UUID accountId, String acquirerId,
             String legalName, String tradingName, String registrationNumber, String country,
-            String mcc, String acceptanceChannel, int terminalCount, OnboardingStatus status,
+            String mcc, String settlementAccountReference, String settlementCurrency,
+            UUID productId, String acceptanceChannel, String outletCode, String outletName,
+            String outletAddress, int terminalCount, OnboardingStatus status,
             KycStatus kycStatus, String kycSubmittedBy, String kycReviewedBy, String complementReason,
             String submittedBy, String checkedBy, String rejectionReason,
             UUID acquiringMerchantId, String merchantAcceptorId, Instant createdAt) {
         static DossierView from(MerchantOnboardingCase value) {
             return new DossierView(value.id(), value.reference(), value.accountId(), value.acquirerId(),
                     value.legalName(), value.tradingName(), value.registrationNumber(), value.country(),
-                    value.mcc(), value.acceptanceChannel(), value.terminalCount(), value.status(),
+                    value.mcc(), value.settlementAccountReference(), value.settlementCurrency(),
+                    value.productId(), value.acceptanceChannel(), value.outletCode(), value.outletName(),
+                    value.outletAddress(), value.terminalCount(), value.status(),
                     value.kycStatus(), value.kycSubmittedBy(), value.kycReviewedBy(), value.complementReason(),
                     value.submittedBy(), value.checkedBy(), value.rejectionReason(),
                     value.acquiringMerchantId(), value.merchantAcceptorId(), value.createdAt());
@@ -181,10 +229,10 @@ public class MerchantOnboardingController {
                     value.reviewStatus(), value.uploadedBy(), value.reviewedBy(), value.rejectionReason());
         }
     }
-    public record WorkflowView(Long id, String moduleCode, String operationType,
+    public record WorkflowView(Long id, UUID caseId, String moduleCode, String operationType,
             String objectReference, String status, String createdBy, Instant createdAt) {
         static WorkflowView from(WorkflowApprovalRequest value) {
-            return new WorkflowView(value.id(), value.moduleCode(), value.operationType(),
+            return new WorkflowView(value.id(), value.caseId(), value.moduleCode(), value.operationType(),
                     value.objectReference(), value.status(), value.createdBy(), value.createdAt());
         }
     }
@@ -195,5 +243,12 @@ public class MerchantOnboardingController {
                     value.job() == null ? null : value.job().id(),
                     value.job() == null ? null : value.job().status().name(), value.result(), value.error());
         }
+    }
+
+    private ResponseEntity<Resource> content(OnboardingDocument document) {
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(document.contentType()))
+                .header("Content-Disposition", "inline; filename=\"" + document.type().name().toLowerCase() + "-v" + document.documentVersion() + "\"")
+                .body(storage.load(document.storageReference()));
     }
 }

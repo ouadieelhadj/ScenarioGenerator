@@ -1,6 +1,7 @@
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
+import { registerPlugin } from '@capacitor/core';
 import { ENDPOINTS, url } from '../../app/core/config/api.config';
 import { CurrentUser, JwtClaims, LoginRequest, LoginResponse } from '../../app/core/models/auth.models';
 
@@ -13,7 +14,7 @@ export class MobileAuthService {
 
   login(request: LoginRequest): Observable<LoginResponse> {
     return this.http.post<LoginResponse>(url.orchestrator(ENDPOINTS.auth.login), request)
-      .pipe(tap(response => this.openSession(response.token)));
+      .pipe(tap(response => { this.openSession(response.token); void secureSession.set({ value: response.token }).catch(() => undefined); }));
   }
 
   token(): string | null {
@@ -23,6 +24,17 @@ export class MobileAuthService {
   logout(): void {
     this.accessToken.set(null);
     this.user.set(null);
+    void secureSession.clear().catch(() => undefined);
+  }
+
+  async restore(): Promise<boolean> {
+    if (this.authenticated()) return true;
+    try {
+      const result = await secureSession.get();
+      if (!result.value) return false;
+      this.openSession(result.value);
+      return this.authenticated();
+    } catch { return false; }
   }
 
   private openSession(token: string): void {
@@ -41,3 +53,11 @@ export class MobileAuthService {
     }
   }
 }
+
+interface SecureSessionPlugin {
+  set(options: { value: string }): Promise<void>;
+  get(): Promise<{ value: string | null }>;
+  clear(): Promise<void>;
+}
+
+const secureSession = registerPlugin<SecureSessionPlugin>('SecureSession');

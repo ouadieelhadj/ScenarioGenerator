@@ -2,7 +2,13 @@
 
 Date : 7 aout 2026
 
-Statut : pret pour decoupage et developpement
+Statut : MVP Web/Mobile implemente et valide ; industrialisation production restante
+
+Mise a jour du 8 aout 2026 : le parcours MVP Web et Mobile, les pieces KYC,
+la revue Back-office, Maker/Checker, le provisioning immediat/batch, le
+stockage Keystore Android et l'APK debug Wi-Fi sont implementes. La preuve et
+les ecarts de production sont consolides dans
+`tests/frontend/PROOF_OF_TEST_MERCHANT_PORTAL_COMPLETE_2026-08-08.md`.
 
 ## 1. Objet et lots
 

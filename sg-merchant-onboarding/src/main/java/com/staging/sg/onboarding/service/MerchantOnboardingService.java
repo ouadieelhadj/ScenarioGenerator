@@ -175,6 +175,19 @@ public class MerchantOnboardingService {
     }
 
     @Transactional(readOnly = true)
+    public MerchantOnboardingCase myDossier(String caller) {
+        MerchantPortalAccount account = accounts.findByLogin(caller)
+                .orElseThrow(() -> new IllegalArgumentException("Merchant account not found for caller"));
+        return cases.findFirstByAccountIdOrderByCreatedAtDesc(account.id())
+                .orElseThrow(() -> new IllegalArgumentException("Onboarding dossier not found for caller"));
+    }
+
+    @Transactional(readOnly = true)
+    public List<MerchantOnboardingCase> reviewQueue() {
+        return cases.findByKycStatusOrderByCreatedAtAsc(KycStatus.PENDING_REVIEW);
+    }
+
+    @Transactional(readOnly = true)
     public MerchantOnboardingCase getForReview(UUID id) {
         return dossier(id);
     }
@@ -183,6 +196,22 @@ public class MerchantOnboardingService {
     public List<OnboardingDocument> documentsForReview(UUID id) {
         dossier(id);
         return documents.findByCaseIdOrderByTypeAscDocumentVersionDesc(id);
+    }
+
+    @Transactional(readOnly = true)
+    public OnboardingDocument documentContent(UUID caseId, UUID documentId, String caller) {
+        MerchantOnboardingCase dossier = dossier(caseId);
+        requireViewer(dossier, caller);
+        OnboardingDocument value = document(documentId);
+        if (!value.caseId().equals(caseId)) throw new IllegalArgumentException("Document does not belong to dossier");
+        return value;
+    }
+
+    @Transactional(readOnly = true)
+    public OnboardingDocument documentContentForReview(UUID documentId) {
+        OnboardingDocument value = document(documentId);
+        dossier(value.caseId());
+        return value;
     }
 
     @Transactional(readOnly = true)

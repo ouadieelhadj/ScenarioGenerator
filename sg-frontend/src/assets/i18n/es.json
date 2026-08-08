@@ -45,7 +45,7 @@
     "foundationDescription": "Las funciones operativas de esta área se conectarán a las APIs reales en la entrega funcional correspondiente."
   },
   "merchantPortal": {
-    "menu": { "dashboard": "Mi afiliación", "newProspect": "Nuevo prospecto" }
+    "menu": { "dashboard": "Mi afiliación", "newProspect": "Nuevo prospecto", "dossier": "Mi expediente", "kycReview": "Revisión KYC" }
   },
   "topbar": {
     "theme": "Tema",

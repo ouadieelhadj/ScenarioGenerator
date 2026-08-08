@@ -211,6 +211,12 @@
               "extractLicenses": false,
               "sourceMap": true,
               "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.merchant-portal.ts" }]
+            },
+            "wifi": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": false,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.merchant-mobile.wifi.ts" }]
             }
           },
           "defaultConfiguration": "production"
@@ -220,7 +226,8 @@
           "options": { "port": 4240 },
           "configurations": {
             "production": { "buildTarget": "merchant-mobile:build:production" },
-            "development": { "buildTarget": "merchant-mobile:build:development" }
+            "development": { "buildTarget": "merchant-mobile:build:development" },
+            "wifi": { "buildTarget": "merchant-mobile:build:wifi" }
           },
           "defaultConfiguration": "development"
         }

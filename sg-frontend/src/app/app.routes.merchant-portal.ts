@@ -6,11 +6,24 @@ import { authGuard } from './core/guards/auth.guard';
 
 const MERCHANT_ROUTES: Routes = [
   {
+    path: 'merchant/dossier',
+    canActivate: [productGuard],
+    data: { products: ['MERCHANT_PORTAL'] },
+    loadComponent: () => import('./features/merchant-dossier/merchant-dossier.component')
+      .then(m => m.MerchantDossierComponent),
+  },
+  {
     path: 'merchant/dashboard',
     canActivate: [productGuard],
     data: { products: ['MERCHANT_PORTAL'] },
     loadComponent: () => import('./features/merchant-dashboard/merchant-dashboard.component')
       .then(m => m.MerchantDashboardComponent),
+  },
+  {
+    path: 'backoffice/onboarding',
+    canActivate: [permissionGuard],
+    data: { permissions: [Permission.ONBOARDING_KYC_REVIEW], roles: ['BACK_OFFICE', 'CHECKER', 'ADMIN'] },
+    loadComponent: () => import('./features/merchant-review/merchant-review.component').then(m => m.MerchantReviewComponent),
   },
   {
     path: 'merchant/dossier/:id',

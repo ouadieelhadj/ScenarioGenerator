@@ -18,12 +18,12 @@ import { Permission } from '../../core/models/auth.models';
         <article><i class="pi pi-user-plus"></i><h2>Nouveau prospect</h2><p>Creer le compte initial et son dossier sans saisir de mot de passe.</p><a routerLink="/commercial/prospects/new">Creer une invitation</a></article>
       }
       @if (isMerchant) {
-        <article><i class="pi pi-file-edit"></i><h2>Mon dossier</h2><p>La reprise automatique par utilisateur sera activee des que l'API <code>/me/dossier</code> sera disponible.</p><span class="blocked">API de liste fermee - aucune donnee fictive</span></article>
+        <article><i class="pi pi-file-edit"></i><h2>Mon dossier</h2><p>Reprendre la saisie, deposer les pieces KYC et soumettre le dossier.</p><a routerLink="/merchant/dossier">Continuer mon onboarding</a></article>
       }
       @if (canReview) {
         <article><i class="pi pi-check-square"></i><h2>Maker / Checker</h2><p>Consulter les demandes reelles d'onboarding en attente de decision.</p><a routerLink="/workflow/my-approvals">Ouvrir mes validations</a></article>
       }
-      <article><i class="pi pi-mobile"></i><h2>Application mobile</h2><p>Le futur APK reutilisera ces contrats et les memes regles, sans dupliquer le backend.</p><span class="planned">Planifiee au Lot 2</span></article>
+      <article><i class="pi pi-mobile"></i><h2>Application mobile</h2><p>L'APK Android reutilise le meme dossier et les memes regles de validation.</p><span class="planned">Disponible en recette</span></article>
     </section>
   `,
   styles: [`

@@ -43,6 +43,7 @@ test('le Commercial cree le prospect dans les ecrans mobiles', async ({ page }) 
   await login(page, 'COMMERCIAL');
   await expect(page.getByText('Nouveau prospect')).toBeVisible();
   await page.getByRole('button', { name: 'Creer le prospect' }).click();
+  await expect(page).toHaveURL(/\/commercial\/prospect$/);
   await page.route('http://localhost:8570/api/merchant-onboarding/v1/prospects', route => route.fulfill({
     status: 201,
     contentType: 'application/json',
@@ -52,31 +53,33 @@ test('le Commercial cree le prospect dans les ecrans mobiles', async ({ page }) 
       identityInvitation: { userId: 99, invitationId: 'inv-1', activationToken: 'once-only', expiresAt: '2026-08-09T20:00:00Z' },
     }),
   }));
-  await page.locator('ion-input[formcontrolname="login"] input').last().fill('merchant.one');
-  await page.locator('ion-input[formcontrolname="email"] input').fill('merchant@example.test');
-  await page.locator('ion-input[formcontrolname="acquirerId"] input').fill('ACQ-001');
+  await page.locator('ion-input[formcontrolname="login"] input:visible').fill('merchant.one');
+  await page.locator('ion-input[formcontrolname="email"] input:visible').fill('merchant@example.test');
+  await page.locator('ion-input[formcontrolname="acquirerId"] input:visible').fill('ACQ-001');
   await page.getByRole('button', { name: 'Creer et inviter' }).click();
   await expect(page.getByText(/Dossier ONB-MOBILE-001 cree/)).toBeVisible();
   await expect(page.locator('ion-input[readonly] input')).toHaveValue(/activation\?token=once-only/);
 });
 
-test('le Commercant consulte le meme dossier que le portail web', async ({ page }) => {
+test('le Commercant reprend et modifie le meme dossier depuis le mobile', async ({ page }) => {
   await login(page, 'MERCHANT');
-  await page.getByRole('button', { name: 'Ouvrir mon dossier' }).click();
-  await page.route('http://localhost:8570/api/merchant-onboarding/v1/dossiers/dossier-mobile', route => route.fulfill({
+  const dossier = {
+      id: 'dossier-mobile', reference: 'ONB-MOBILE-002', accountId: 'account-2', acquirerId: 'ACQ-001',
+      legalName: 'Commerce Mobile', tradingName: 'Mobile Shop', registrationNumber: 'RC123', country: 'MA',
+      mcc: '5411', settlementAccountReference: 'ACC-MOBILE', settlementCurrency: '504', productId: '5480f18c-14a4-4e87-8fe2-13782efc55c9',
+      acceptanceChannel: 'TPE', outletCode: 'MOB-01', outletName: 'Mobile', outletAddress: 'Rabat', terminalCount: 2,
+      status: 'DRAFT', kycStatus: 'NOT_STARTED', kycSubmittedBy: null, kycReviewedBy: null, complementReason: null, submittedBy: null, checkedBy: null,
+      rejectionReason: null, acquiringMerchantId: null, merchantAcceptorId: null, createdAt: '2026-08-07T20:00:00Z',
+  };
+  await page.route('http://localhost:8570/api/merchant-onboarding/v1/dossiers/mine', route => route.fulfill({
     status: 200,
     contentType: 'application/json',
-    body: JSON.stringify({
-      id: 'dossier-mobile', reference: 'ONB-MOBILE-002', accountId: 'account-2', acquirerId: 'ACQ-001',
-      legalName: 'Commerce Mobile', tradingName: null, registrationNumber: 'RC123', country: 'MA',
-      mcc: '5411', acceptanceChannel: 'POS', terminalCount: 2, status: 'DRAFT', kycStatus: 'NOT_STARTED',
-      kycSubmittedBy: null, kycReviewedBy: null, complementReason: null, submittedBy: null, checkedBy: null,
-      rejectionReason: null, acquiringMerchantId: null, merchantAcceptorId: null, createdAt: '2026-08-07T20:00:00Z',
-    }),
+    body: JSON.stringify(dossier),
   }));
-  await page.locator('ion-input[formcontrolname="id"] input').fill('dossier-mobile');
-  await page.getByRole('button', { name: 'Consulter' }).click();
+  await page.route('http://localhost:8570/api/merchant-onboarding/v1/dossiers/dossier-mobile/documents', route => route.fulfill({ json: [] }));
+  await page.getByRole('button', { name: 'Ouvrir mon dossier' }).click();
   await expect(page.getByText('ONB-MOBILE-002')).toBeVisible();
   await expect(page.getByText('Commerce Mobile')).toBeVisible();
   await expect(page.getByText('KYC NOT_STARTED')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Enregistrer' })).toBeVisible();
 });

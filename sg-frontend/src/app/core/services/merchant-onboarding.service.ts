@@ -6,6 +6,10 @@ import {
   CreateMerchantProspectRequest,
   MerchantActivationResponse,
   MerchantDossier,
+  MerchantDossierUpdate,
+  MerchantDocument,
+  MerchantDocumentType,
+  MerchantProvisioningView,
   MerchantProspect,
 } from '../models/merchant-onboarding.models';
 
@@ -25,5 +29,78 @@ export class MerchantOnboardingService {
 
   dossier(id: string): Observable<MerchantDossier> {
     return this.http.get<MerchantDossier>(url.onboarding(ENDPOINTS.merchantPortal.dossier(id)));
+  }
+
+  myDossier(): Observable<MerchantDossier> {
+    return this.http.get<MerchantDossier>(url.onboarding(ENDPOINTS.merchantPortal.myDossier));
+  }
+
+  updateDossier(id: string, request: MerchantDossierUpdate): Observable<MerchantDossier> {
+    return this.http.put<MerchantDossier>(url.onboarding(ENDPOINTS.merchantPortal.dossier(id)), request);
+  }
+
+  documents(id: string): Observable<MerchantDocument[]> {
+    return this.http.get<MerchantDocument[]>(url.onboarding(ENDPOINTS.merchantPortal.documents(id)));
+  }
+
+  uploadDocument(id: string, type: MerchantDocumentType, file: File): Observable<MerchantDocument> {
+    const body = new FormData();
+    body.append('type', type);
+    body.append('file', file, file.name);
+    return this.http.post<MerchantDocument>(url.onboarding(ENDPOINTS.merchantPortal.documentFiles(id)), body);
+  }
+
+  submitKyc(id: string): Observable<MerchantDossier> {
+    return this.http.post<MerchantDossier>(url.onboarding(ENDPOINTS.merchantPortal.submitKyc(id)), null);
+  }
+
+  submit(id: string): Observable<unknown> {
+    return this.http.post(url.onboarding(ENDPOINTS.merchantPortal.submit(id)), null);
+  }
+
+  reviewQueue(): Observable<MerchantDossier[]> {
+    return this.http.get<MerchantDossier[]>(url.onboarding(ENDPOINTS.merchantPortal.reviewQueue));
+  }
+
+  reviewDossier(id: string): Observable<MerchantDossier> {
+    return this.http.get<MerchantDossier>(url.onboarding(ENDPOINTS.merchantPortal.reviewDossier(id)));
+  }
+
+  reviewDocuments(id: string): Observable<MerchantDocument[]> {
+    return this.http.get<MerchantDocument[]>(url.onboarding(ENDPOINTS.merchantPortal.reviewDocuments(id)));
+  }
+
+  reviewDocumentContent(documentId: string): Observable<Blob> {
+    return this.http.get(url.onboarding(ENDPOINTS.merchantPortal.reviewDocumentContent(documentId)), {
+      responseType: 'blob',
+    });
+  }
+
+  reviewDocument(documentId: string, accepted: boolean, reason: string | null): Observable<MerchantDocument> {
+    return this.http.post<MerchantDocument>(url.onboarding(ENDPOINTS.merchantPortal.reviewDocument(documentId)), { accepted, reason });
+  }
+
+  validateKyc(id: string): Observable<MerchantDossier> {
+    return this.http.post<MerchantDossier>(url.onboarding(ENDPOINTS.merchantPortal.validateKyc(id)), null);
+  }
+
+  requestComplements(id: string, reason: string): Observable<MerchantDossier> {
+    return this.http.post<MerchantDossier>(url.onboarding(ENDPOINTS.merchantPortal.kycComplements(id)), { reason });
+  }
+
+  rejectKyc(id: string, reason: string): Observable<MerchantDossier> {
+    return this.http.post<MerchantDossier>(url.onboarding(ENDPOINTS.merchantPortal.rejectKyc(id)), { reason });
+  }
+
+  provision(id: string, mode: 'IMMEDIATE' | 'BATCH'): Observable<MerchantProvisioningView> {
+    return this.http.post<MerchantProvisioningView>(url.onboarding(ENDPOINTS.merchantPortal.provision(id, mode)), null, {
+      headers: { 'X-Correlation-ID': `merchant-portal-${crypto.randomUUID()}` },
+    });
+  }
+
+  runBatch(): Observable<MerchantProvisioningView[]> {
+    return this.http.post<MerchantProvisioningView[]>(url.onboarding(`${ENDPOINTS.merchantPortal.runBatch}?limit=100&retryFailed=false`), null, {
+      headers: { 'X-Correlation-ID': `merchant-portal-batch-${crypto.randomUUID()}` },
+    });
   }
 }

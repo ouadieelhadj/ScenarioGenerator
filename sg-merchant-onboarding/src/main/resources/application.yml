@@ -16,8 +16,10 @@ spring:
     enabled: false
 
 merchant-onboarding:
+  documents:
+    root: ${MERCHANT_ONBOARDING_DOCUMENT_ROOT:${user.dir}/runtime/merchant-onboarding/documents}
   cors:
-    allowed-origins: ${MERCHANT_ONBOARDING_CORS_ORIGINS:http://localhost:4210,http://localhost:4220}
+    allowed-origins: ${MERCHANT_ONBOARDING_CORS_ORIGINS:http://localhost:4210,http://localhost:4220,http://localhost:4230,http://localhost:4240,https://localhost}
   acquiring:
     enabled: ${MERCHANT_ONBOARDING_ACQUIRING_ENABLED:false}
     base-url: ${MERCHANT_ONBOARDING_ACQUIRING_BASE_URL:http://127.0.0.1:8550}
@@ -26,7 +28,7 @@ merchant-onboarding:
     base-url: ${MERCHANT_ONBOARDING_IDENTITY_BASE_URL:http://127.0.0.1:8080}
 
 jwt:
-  secret: ${JWT_SECRET:ScenarioGeneratorSecretKey2026ScenarioGeneratorSecretKey2026}
+  secret: ${JWT_SECRET}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}
 
 logging:
