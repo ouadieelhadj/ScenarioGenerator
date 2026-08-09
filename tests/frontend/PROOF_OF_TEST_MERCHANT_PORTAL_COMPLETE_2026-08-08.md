@@ -60,15 +60,27 @@ JSON canonique et au provisioning Acquiring : 3/3 dossiers `PROVISIONED`, jobs
 `SUCCEEDED`, MID et TID reels de la sandbox. La preuve detaillee est dans
 `tests/merchant-onboarding/GUIDE_UTILISATEUR_PROOF_OF_TEST_3_CANAUX_2026-08-07.md`.
 
-Cette recette n'a pas ete rejouee le 8 aout : les variables secretes
-`MERCHANT_E2E_DB_PASSWORD` et `MERCHANT_E2E_JWT_SECRET` etaient absentes. Aucun
-secret fictif n'a ete substitue. Pour la relancer, charger ces variables dans
-le terminal sans les inscrire dans Git puis executer :
+La recette a ete rejouee integralement le 9 aout avec les prerequis verifies
+avant le premier test et une cle JWT aleatoire temporaire. Resultat : **3/3
+PROVISIONED**, jobs `SUCCEEDED`, dossiers `ONB-198B8A1C`, `ONB-D9DAE641` et
+`ONB-64B09020`, MID `100000000000010` a `100000000000012` et TID `10000014` a
+`10000019`. Aucun secret n'a ete inscrit dans Git.
+
+Pour une nouvelle relance, charger les variables dans le terminal sans les
+inscrire dans Git puis executer :
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File `
   tests/merchant-onboarding/run-three-channel-e2e.ps1
 ```
+
+## Captures d'ecran
+
+Dix captures de reussite sont integrees au
+`GUIDE_UTILISATEUR_PROOF_OF_TEST_3_CANAUX_2026-08-07.md` : activation Web et
+Mobile, Commercial Web et Mobile, dossier Commercant Web et Mobile, KYC
+Back-office, Checker, batch et resultat MID/TID. Les suites dediees donnent
+**5/5 Web et 3/3 Mobile**.
 
 ## Ecarts restant avant conformite de production
 

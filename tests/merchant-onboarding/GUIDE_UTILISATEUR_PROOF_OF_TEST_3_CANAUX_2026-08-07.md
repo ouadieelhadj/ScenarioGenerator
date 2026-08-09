@@ -1,6 +1,7 @@
 # Guide utilisateur et Proof of Test - Affiliation commercant 3 canaux
 
-Date de recette : 7 aout 2026
+Date de recette initiale : 7 aout 2026
+Derniere reexecution complete : 9 aout 2026
 
 Branche : `codex/AddingFrontendMerchantPortal`
 
@@ -29,9 +30,9 @@ flowchart LR
 
 | Canal | Maker | Checker | Dossier | KYC | Statut final | MID | TID |
 |---|---|---|---|---|---|---|---|
-| Commercant Web | `merchant.merchant-web.743d4abe` | `checker.validator` | `ONB-29CBB112` | `VALIDATED` | `PROVISIONED` | `100000000000004` | `10000002` |
-| Commercial Web | `commercial.commercial-web.6dd2da69` | `checker.validator` | `ONB-405A108D` | `VALIDATED` | `PROVISIONED` | `100000000000005` | `10000003`, `10000004` |
-| Application Mobile | `merchant.mobile.30ea25c0` | `checker.validator` | `ONB-38832F25` | `VALIDATED` | `PROVISIONED` | `100000000000006` | `10000005`, `10000006`, `10000007` |
+| Commercant Web | `merchant.merchant-web.5dc9528c` | `checker.validator` | `ONB-198B8A1C` | `VALIDATED` | `PROVISIONED` | `100000000000010` | `10000014` |
+| Commercial Web | `commercial.commercial-web.27b851cf` | `checker.validator` | `ONB-D9DAE641` | `VALIDATED` | `PROVISIONED` | `100000000000011` | `10000015`, `10000016` |
+| Application Mobile | `merchant.mobile.1c3919ee` | `checker.validator` | `ONB-64B09020` | `VALIDATED` | `PROVISIONED` | `100000000000012` | `10000017`, `10000018`, `10000019` |
 
 Dans les trois cas, le job de provisionnement est `SUCCEEDED`. Le Maker et le
 Checker sont differents et sont recopies dans le JSON transmis a Acquiring.
@@ -115,7 +116,45 @@ Acquiring realise dans une transaction :
 
 ## 4. Preuves techniques
 
-### 4.1 Harnais reproductible
+### 4.1 Captures des parcours utilisateur
+
+Les captures suivantes ont ete generees le 9 aout 2026 par deux suites
+Playwright dediees. Elles utilisent les references MID/TID de la recette E2E
+reelle ci-dessus, avec des reponses HTTP controlees pour rendre les ecrans de
+maniere reproductible. Elles prouvent les IHM ; les JSON et recus PostgreSQL
+prouvent separement l'integration backend reelle.
+
+#### Activation et Commercial Web
+
+![Activation Web reussie](evidence/three-channels/screenshots/01-web-activation-reussie.png)
+
+![Prospect cree par le Commercial Web](evidence/three-channels/screenshots/02-web-commercial-prospect-cree.png)
+
+#### Commercant Web et KYC
+
+![Dossier du Commercant Web](evidence/three-channels/screenshots/03-web-commercant-dossier.png)
+
+![Pieces KYC dans la file Back-office](evidence/three-channels/screenshots/04-web-backoffice-pieces-kyc.png)
+
+![KYC valide par le Back-office](evidence/three-channels/screenshots/05-web-backoffice-kyc-valide.png)
+
+#### Checker, batch et Acquiring
+
+![Demande en attente du Checker](evidence/three-channels/screenshots/06-web-checker-demande.png)
+
+![Batch termine avec MID et TID](evidence/three-channels/screenshots/07-web-batch-mid-tid.png)
+
+#### Application Mobile
+
+![Activation Mobile reussie](evidence/three-channels/screenshots/08-mobile-activation-reussie.png)
+
+![Prospect cree par le Commercial Mobile](evidence/three-channels/screenshots/09-mobile-commercial-prospect-cree.png)
+
+![Dossier valide du Commercant Mobile](evidence/three-channels/screenshots/10-mobile-commercant-dossier-valide.png)
+
+Resultat des suites de capture : **5/5 Web et 3/3 Mobile, sans echec**.
+
+### 4.2 Harnais reproductible
 
 Le test est automatise par :
 
@@ -137,20 +176,20 @@ Resultat final observe :
 THREE_CHANNEL_E2E_OK
 ```
 
-### 4.2 Resultats structures
+### 4.3 Resultats structures
 
 - [Synthese des trois canaux](evidence/three-channels/summary.json) ;
 - [Resultat Commercant Web](evidence/three-channels/merchant-web-result.json) ;
 - [Resultat Commercial Web](evidence/three-channels/commercial-web-result.json) ;
 - [Resultat Mobile](evidence/three-channels/mobile-result.json).
 
-### 4.3 Preuve Acquiring PostgreSQL
+### 4.4 Preuve Acquiring PostgreSQL
 
 Trois recus existent dans `acquiring_onboarding_receipt` avec les cles :
 
-- `merchant-onboarding:29cbb112-8def-4044-b5ce-5646136b32a4` ;
-- `merchant-onboarding:405a108d-b331-4b6c-b440-3a768eb76909` ;
-- `merchant-onboarding:38832f25-14d5-424c-a916-92f981361acf`.
+- `merchant-onboarding:198b8a1c-b686-4981-972a-ad7c7f383d04` ;
+- `merchant-onboarding:d9dae641-7d7b-44ac-a597-6abbe3e14b51` ;
+- `merchant-onboarding:64b09020-a764-4d43-9477-8394379c87e5`.
 
 Les recus portent chacun une empreinte SHA-256 du payload et le resultat JSON
 persistant avec le Merchant ID, le MID et les TID. Aucun MID/TID n'est invente
@@ -162,11 +201,12 @@ Cette recette est un **E2E backend integre reel** : PostgreSQL, Merchant
 Onboarding et Acquiring ont ete utilises. Les trois canaux sont representes par
 leurs acteurs et leurs contrats API reels.
 
-Elle ne constitue pas encore un clic-a-clic complet dans les IHM pour les
-etapes dossier/KYC/Checker : le premier increment frontend expose actuellement
-l'activation, la connexion, la creation du prospect, le tableau de bord et la
-lecture du dossier. Les ecrans de saisie KYC complets restent le prochain
-increment.
+Les IHM actuelles couvrent desormais activation, Commercial, dossier
+Commercant, pieces KYC, revue Back-office, Checker, batch et resultat MID/TID.
+Les captures sont des tests IHM reproductibles avec appels HTTP controles ;
+elles ne sont pas presentees comme des captures d'un navigateur connecte en
+direct aux services. Le harnais E2E backend fournit la preuve complementaire
+de PostgreSQL jusqu'a Acquiring.
 
 ## 6. Limite de securite observee
 
@@ -181,7 +221,7 @@ Ce point est une condition de mise en production, pas un echec du parcours
 metier teste.
 
 La non-regression Maven finale du perimetre backend confirme `BUILD SUCCESS` :
-**107 tests, 0 echec, 0 erreur, 0 ignore**.
+**109 tests, 0 echec, 0 erreur, 0 ignore**.
 
 ## 7. Processus et donnees apres recette
 
@@ -192,5 +232,5 @@ restent volontairement dans la base locale de recette pour audit.
 Les iterations de mise au point ont egalement laisse des dossiers techniques
 hors preuve, notamment l'essai qui a revele le refus HTTP 401 entre les deux
 services. Ils n'ont pas ete supprimes afin de conserver l'audit. Seules les
-trois references `ONB-29CBB112`, `ONB-405A108D` et `ONB-38832F25` constituent
+trois references `ONB-198B8A1C`, `ONB-D9DAE641` et `ONB-64B09020` constituent
 le jeu d'acceptation de ce document.

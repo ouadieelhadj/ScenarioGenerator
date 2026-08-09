@@ -1,22 +1,22 @@
 ﻿{
-    "onboardingCaseId":  "29cbb112-8def-4044-b5ce-5646136b32a4",
-    "onboardingReference":  "ONB-29CBB112",
+    "onboardingCaseId":  "198b8a1c-b686-4981-972a-ad7c7f383d04",
+    "onboardingReference":  "ONB-198B8A1C",
     "acquirerId":  "ACQTEST",
-    "legalName":  "Commerce Commercant Web 743D4ABE",
+    "legalName":  "Commerce Commercant Web 5DC9528C",
     "tradingName":  "Boutique Commercant Web",
-    "registrationNumber":  "RC-merchant-web-743D4ABE",
+    "registrationNumber":  "RC-merchant-web-5DC9528C",
     "country":  "MA",
     "mcc":  "5411",
-    "settlementAccountReference":  "ACC-743D4ABE",
+    "settlementAccountReference":  "ACC-5DC9528C",
     "settlementCurrency":  "504",
     "productId":  "5480f18c-14a4-4e87-8fe2-13782efc55c9",
     "acceptanceChannel":  "BOTH",
     "outlet":  {
-                   "code":  "OUT-743D4ABE",
+                   "code":  "OUT-5DC9528C",
                    "name":  "Point de vente Commercant Web",
                    "address":  "Casablanca",
                    "terminalCount":  1
                },
-    "maker":  "merchant.merchant-web.743d4abe",
+    "maker":  "merchant.merchant-web.5dc9528c",
     "checker":  "checker.validator"
 }

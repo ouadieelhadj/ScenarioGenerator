@@ -108,7 +108,7 @@ LMK : `D:/MoneyCore/ScenarioGenerator/keys/dmas-lmk.lmk`.
   `/api/admin/tests/**` authenticated ; `/api/admin/**` hasRole("ADMIN") ; `/api/**` authenticated.
   `@EnableMethodSecurity` actif. CORS configure pour `http://localhost:4200` (GET/POST/PUT/DELETE/OPTIONS).
 
-Login : admin / Admin123! (POST /auth/login, champ `login`, reponse champ `token`).
+Login : admin / `<redacted>` (POST /auth/login, champ `login`, reponse champ `token`).
 Comptes test : obs1 / Test123! (OBSERVATEUR) ; mohamed / Test123! (EXPLOITATION).
 
 ---
@@ -1578,3 +1578,18 @@ secrets charges ; aucun secret fictif n'a ete utilise. Les ecarts restants
 avant production sont l'authentification interservices, la notification, la
 GED/antivirus, les referentiels et contrats avances, la gateway/session Web,
 le deep link verifie, la signature release et la recette appareils reels.
+
+### 23.15 Reexecution des trois parcours et captures
+
+Le 9 aout 2026, apres preflight des prerequis, les parcours Commercant Web,
+Commercial Web et Mobile ont ete rejoues jusqu'a PostgreSQL et Acquiring :
+3/3 `PROVISIONED`, jobs `SUCCEEDED`, dossiers `ONB-198B8A1C`, `ONB-D9DAE641`
+et `ONB-64B09020`, MID `100000000000010` a `100000000000012` et TID
+`10000014` a `10000019`. Une cle JWT aleatoire a ete utilisee uniquement en
+memoire et aucun secret n'a ete consigne.
+
+Dix captures de reussite ont ensuite ete generees : 5 tests Playwright Web et
+3 tests Playwright Mobile, tous verts. Elles couvrent activation, Commercial,
+dossier Commercant, KYC Back-office, Checker, batch, MID/TID et Mobile. Elles
+sont integrees au guide
+`tests/merchant-onboarding/GUIDE_UTILISATEUR_PROOF_OF_TEST_3_CANAUX_2026-08-07.md`.

@@ -8,7 +8,12 @@
 Ce fichier identifie le chantier. L'etat reel doit toujours etre reconstruit
 depuis Git, les fichiers, les processus, les ports, les artefacts et les tests.
 
-## Etat au 8 aout 2026
+## Etat au 9 aout 2026
+
+- Regle permanente de campagne : effectuer le preflight complet des acces,
+  secrets, services et donnees avant le premier test ; demander tout element
+  manquant immediatement, jamais dans le bilan final. Ne pas consigner les
+  valeurs secretes en clair.
 
 - Web : activation, Commercial, dossier Commercant complet, upload documentaire
   binaire, KYC Back-office, Maker/Checker, provisioning immediat/batch et
@@ -23,9 +28,11 @@ depuis Git, les fichiers, les processus, les ports, les artefacts et les tests.
   `testDebugUnitTest assembleDebug`, tous sans echec.
 - Preuve :
   `tests/frontend/PROOF_OF_TEST_MERCHANT_PORTAL_COMPLETE_2026-08-08.md`.
-- La recette PostgreSQL/Acquiring precedente des trois canaux reste validee
-  dans son guide du 7 aout. Elle n'a pas ete rejouee le 8 aout car les secrets
-  `MERCHANT_E2E_DB_PASSWORD` et `MERCHANT_E2E_JWT_SECRET` n'etaient pas charges.
+- La recette PostgreSQL/Acquiring des trois canaux a ete rejouee le 9 aout :
+  3/3 `PROVISIONED`, jobs `SUCCEEDED`, MID `100000000000010` a
+  `100000000000012`, TID `10000014` a `10000019`.
+- Dix captures de reussite ont ete generees par 5 tests Web et 3 tests Mobile
+  et integrees au guide utilisateur/Proof of Test des trois canaux.
 - Premier travail non termine : industrialisation production (authentification
   interservices, notification, GED/antivirus, referentiels/contrats, gateway
   HTTPS, signature release et recette appareils reels).

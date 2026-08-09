@@ -4,6 +4,13 @@ Derniere mise a jour : 8 aout 2026
 
 ## Perimetre confirme
 
+Regle de recette demandee par l'utilisateur le 9 aout 2026 : avant toute
+campagne, verifier des le debut les services, ports, donnees, comptes et
+variables secretes necessaires. Demander immediatement tout prerequis absent,
+avant d'executer les tests, et ne jamais decouvrir ou signaler cette absence
+seulement dans le bilan final. Les valeurs secretes ne sont pas consignees en
+clair ; seuls leurs noms et leur disponibilite sont notes.
+
 - Lot 1 : backend d'onboarding puis portail web.
 - Lot 2 : application mobile Android demarree apres le Lot 1 web.
 - Le commercial cree le prospect et l'invitation du compte commercant.
@@ -272,10 +279,11 @@ Gradle `testDebugUnitTest assembleDebug`, tous sans echec. APK Wi-Fi :
 `tests/frontend/artifacts/futurpayment-merchant-mobile-wifi-192.168.1.86-debug.apk`,
 SHA-256 `9EAA9253D1CCE9BC5D3C14896450A44EAB3378CD5398C62B6BF55BA35A65E094`.
 
-La recette integree PostgreSQL/Acquiring du 7 aout reste la preuve bout en bout
-des trois canaux. Elle n'a pas ete rejouee le 8 aout, les secrets d'environnement
-requis n'etant pas charges. Voir
-`tests/frontend/PROOF_OF_TEST_MERCHANT_PORTAL_COMPLETE_2026-08-08.md`.
+La recette integree PostgreSQL/Acquiring a ete rejouee le 9 aout apres
+preflight des prerequis : 3/3 dossiers `PROVISIONED`, jobs `SUCCEEDED`, MID
+`100000000000010` a `100000000000012` et TID `10000014` a `10000019`.
+Dix captures de reussite (Web et Mobile) sont integrees au guide des trois
+canaux. Voir `tests/frontend/PROOF_OF_TEST_MERCHANT_PORTAL_COMPLETE_2026-08-08.md`.
 
 Reste avant production : auth interservices, notification SMS/e-mail,
 GED/antivirus, referentiels et fonctions avancees (multi-PDV, tarification,
