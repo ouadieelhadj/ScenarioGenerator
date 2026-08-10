@@ -206,6 +206,45 @@ public class AcquiringAdministrationService {
     }
 
     @Transactional
+    public AcquiringContract createDeviceContractFromRequest(String acquirerId,
+            String externalReference, UUID merchantId, UUID parentContractId,
+            UUID productId, UUID outletId, String terminalId,
+            AcceptanceChannel channel, String caller, String idempotencyKey,
+            String correlationId, UUID sourceTerminalRequestId, int ordinal,
+            String modelCode, String connectivityCode, String optionCodes) {
+        Merchant merchant = ownedActiveMerchant(merchantId, acquirerId);
+        MerchantOutlet outlet = outlet(outletId);
+        require(outlet.isActive() && outlet.merchantId().equals(merchantId),
+                "An active outlet owned by the merchant is required");
+        AcquiringContract parent = ownedContract(parentContractId, acquirerId);
+        require(parent.contractType() == PaymentContractType.ACQUIRING_MERCHANT
+                        && parent.status() == PaymentContractStatus.ACTIVE,
+                "An active merchant acquiring contract is required");
+        AcceptanceProduct product = activeProduct(productId, acquirerId);
+        require(product.channel().supportsTpe() && channel.supportsTpe(),
+                "A TPE-enabled product and channel are required");
+        String fingerprint = AcquiringFingerprint.of(acquirerId, externalReference, merchantId,
+                parentContractId, productId, outletId, terminalId, channel,
+                sourceTerminalRequestId, ordinal, modelCode, connectivityCode, optionCodes);
+        var existing = contracts.findByInstitutionIdAndCreatedByAndCreationIdempotencyKey(
+                acquirerId, caller, idempotencyKey);
+        if (existing.isPresent()) {
+            if (!existing.get().creationMatches(fingerprint))
+                throw new IllegalStateException("Idempotency key already used with another TPE payload");
+            return existing.get();
+        }
+        AcquiringContract contract = AcquiringContract.device(acquirerId, externalReference,
+                merchant.id(), parentContractId, productId, caller, idempotencyKey, fingerprint);
+        contracts.save(contract);
+        deviceDetails.save(AcquiringDeviceContractDetail.ofRequest(contract.id(), acquirerId,
+                outletId, terminalId, channel, true, "HEX", true, sourceTerminalRequestId,
+                ordinal, modelCode, connectivityCode, optionCodes));
+        emit("PaymentContract", contract.id(), "DeviceContractCreated", correlationId,
+                contractPayload(contract));
+        return contract;
+    }
+
+    @Transactional
     public AcquiringContract submitContract(UUID id, String acquirerId) {
         AcquiringContract contract = ownedContract(id, acquirerId);
         contract.submit();
@@ -216,7 +255,8 @@ public class AcquiringAdministrationService {
     public AcquiringContract approveContract(UUID id, String acquirerId,
             String checker, String correlationId) {
         AcquiringContract contract = ownedContract(id, acquirerId);
-        if (contract.contractType() == PaymentContractType.ACQUIRING_DEVICE) {
+        if (contract.contractType() == PaymentContractType.ACQUIRING_DEVICE
+                || contract.contractType() == PaymentContractType.ACQUIRING_ECOMMERCE) {
             AcquiringContract parent = ownedContract(contract.parentContractId(), acquirerId);
             require(parent.status() == PaymentContractStatus.ACTIVE,
                     "The parent contract must remain active");
@@ -266,8 +306,22 @@ public class AcquiringAdministrationService {
     public EcommerceStore createStore(UUID merchantId, String storeCode,
             String name, String allowedDomain, String returnUrl,
             String notificationUrl, String correlationId) {
+        MerchantOutlet principal = outlets.findFirstByMerchantIdAndPrincipalTrueAndActiveTrue(merchantId)
+                .orElseThrow(() -> new IllegalStateException(
+                        "ECOM-001: an active principal outlet is required"));
+        return createStore(merchantId, principal.id(), storeCode, name, allowedDomain,
+                returnUrl, notificationUrl, correlationId);
+    }
+
+    @Transactional
+    public EcommerceStore createStore(UUID merchantId, UUID outletId, String storeCode,
+            String name, String allowedDomain, String returnUrl,
+            String notificationUrl, String correlationId) {
         require(merchant(merchantId).isActive(), "An active merchant is required");
-        EcommerceStore store = EcommerceStore.draft(merchantId, storeCode, name,
+        MerchantOutlet outlet = outlet(outletId);
+        require(outlet.isActive() && outlet.merchantId().equals(merchantId),
+                "ECOM-001: an active outlet owned by the merchant is required");
+        EcommerceStore store = EcommerceStore.draft(merchantId, outletId, storeCode, name,
                 allowedDomain, returnUrl, notificationUrl);
         stores.save(store);
         emit("EcommerceStore", store.id(), "EcommerceStoreCreated", correlationId,
@@ -300,13 +354,9 @@ public class AcquiringAdministrationService {
         require(store.status() == EcommerceStatus.ACTIVE,
                 "An active ecommerce store is required");
         AcquiringContract contract = ownedContract(contractId, acquirerId);
-        require(contract.contractType() == PaymentContractType.ACQUIRING_MERCHANT
+        require(contract.contractType() == PaymentContractType.ACQUIRING_ECOMMERCE
                         && contract.status() == PaymentContractStatus.ACTIVE,
-                "An active merchant contract is required");
-        AcquiringContractDetail detail = contractDetails.findById(contractId)
-                .orElseThrow(() -> new IllegalStateException("Missing acquiring contract detail"));
-        require(detail.channel().supportsEcommerce(),
-                "The contract does not authorize ecommerce");
+                "An active ecommerce contract is required");
         EcommerceAcceptanceProfile profile = EcommerceAcceptanceProfile.active(
                 acquirerId, storeId, contractId, logicalTerminalId, currency, captureMode);
         ecommerceProfiles.save(profile);

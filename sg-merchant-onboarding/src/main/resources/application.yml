@@ -23,6 +23,19 @@ merchant-onboarding:
   acquiring:
     enabled: ${MERCHANT_ONBOARDING_ACQUIRING_ENABLED:false}
     base-url: ${MERCHANT_ONBOARDING_ACQUIRING_BASE_URL:http://127.0.0.1:8550}
+  acquiring-v2:
+    enabled: ${MERCHANT_ONBOARDING_ACQUIRING_V2_ENABLED:false}
+    base-url: ${MERCHANT_ONBOARDING_ACQUIRING_V2_BASE_URL:http://127.0.0.1:8550}
+    oauth2:
+      token-url: ${MERCHANT_ONBOARDING_OAUTH2_TOKEN_URL:}
+      client-id: ${MERCHANT_ONBOARDING_OAUTH2_CLIENT_ID:}
+      client-secret: ${MERCHANT_ONBOARDING_OAUTH2_CLIENT_SECRET:}
+      scope: ${MERCHANT_ONBOARDING_OAUTH2_SCOPE:merchant.provision}
+  outbox:
+    enabled: ${MERCHANT_ONBOARDING_OUTBOX_ENABLED:false}
+    batch-size: ${MERCHANT_ONBOARDING_OUTBOX_BATCH_SIZE:20}
+    poll-delay-ms: ${MERCHANT_ONBOARDING_OUTBOX_POLL_DELAY_MS:5000}
+    worker-id: ${MERCHANT_ONBOARDING_OUTBOX_WORKER_ID:${spring.application.name}}
   identity:
     enabled: ${MERCHANT_ONBOARDING_IDENTITY_ENABLED:false}
     base-url: ${MERCHANT_ONBOARDING_IDENTITY_BASE_URL:http://127.0.0.1:8080}

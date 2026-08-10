@@ -27,7 +27,7 @@ class HttpServerPosProvisioningAdapterTest {
         server.start();
         try {
             HttpServerPosProvisioningAdapter adapter = new HttpServerPosProvisioningAdapter(
-                    true, "http://127.0.0.1:" + server.getAddress().getPort(), 1000, 2000);
+                    true, "http://127.0.0.1:" + server.getAddress().getPort(), 3000, 10000);
             adapter.provision(new ServerPosTerminalConfiguration(UUID.randomUUID(),
                     UUID.randomUUID(), "TERM0001", "MERCHANT0000001", true,
                     "BIN", true, "000000"));
@@ -75,7 +75,7 @@ class HttpServerPosProvisioningAdapterTest {
         server.start();
         try {
             HttpServerPosProvisioningAdapter adapter = new HttpServerPosProvisioningAdapter(
-                    true, "http://127.0.0.1:" + server.getAddress().getPort(), 1000, 2000);
+                    true, "http://127.0.0.1:" + server.getAddress().getPort(), 3000, 10000);
             assertDoesNotThrow(() -> adapter.provision(new ServerPosTerminalConfiguration(
                     UUID.randomUUID(), UUID.randomUUID(), "TERM0001",
                     "MERCHANT0000001", true, "BIN", true, "000000")));

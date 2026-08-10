@@ -83,6 +83,8 @@ export const ENDPOINTS = {
     activate: '/auth/merchant-invitations/activate',
     prospects: '/api/merchant-onboarding/v1/prospects',
     dossier: (id: string) => `/api/merchant-onboarding/v1/dossiers/${id}`,
+    dossierV2: (id: string) => `/api/merchant-onboarding/v2/dossiers/${id}`,
+    referencesV2: (category: string) => `/api/merchant-onboarding/v2/references/${category}`,
     myDossier: '/api/merchant-onboarding/v1/dossiers/mine',
     documents: (id: string) => `/api/merchant-onboarding/v1/dossiers/${id}/documents`,
     documentFiles: (id: string) => `/api/merchant-onboarding/v1/dossiers/${id}/document-files`,

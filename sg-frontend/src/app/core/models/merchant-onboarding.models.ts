@@ -59,6 +59,54 @@ export interface MerchantDossierUpdate {
   terminalCount: number;
 }
 
+export type MerchantType = 'PP' | 'PM' | 'AE' | 'ASSOCIATION_FOUNDATION';
+export type OrganizationLegalNature = 'ASSOCIATION' | 'FOUNDATION';
+
+export interface MerchantAddressV2 {
+  line1: string; line2: string | null; district: string | null; city: string;
+  region: string | null; postalCode: string | null; country: string;
+}
+export interface MerchantRepresentativeV2 {
+  title: string | null; firstName: string; lastName: string; birthDate: string | null;
+  phone: string; email: string; idType: string; idNumber: string;
+  residenceCountry: string; nationality: string;
+}
+export interface MerchantOutletProductV2 {
+  productId: string; pricingPackCode: string | null; pricingPackVersion: number | null;
+  pricingSnapshotJson: string | null;
+}
+export interface MerchantTerminalRequestV2 {
+  id: string | null; productId: string; quantity: number; modelCode: string;
+  connectivityCode: string; optionCodes: string[]; status?: string; externalReference: string | null;
+}
+export interface MerchantEcommerceStoreV2 {
+  id: string | null; productId: string; storeCode: string; name: string;
+  allowedDomain: string; returnUrl: string; notificationUrl: string; currency: string;
+  captureMode: string; optionCodes: string[]; status?: string; externalReference: string | null;
+}
+export interface MerchantOutletV2 {
+  id: string | null; code: string; name: string; principal: boolean; active: boolean;
+  address: MerchantAddressV2; contactPhone: string; contactEmail: string;
+  responsible: MerchantRepresentativeV2; products: MerchantOutletProductV2[];
+  terminalRequests: MerchantTerminalRequestV2[]; ecommerceStores: MerchantEcommerceStoreV2[];
+  version?: number;
+}
+export interface MerchantDossierV2 {
+  id: string; reference: string; merchantType: MerchantType;
+  organizationLegalNature: OrganizationLegalNature | null; legalName: string; tradingName: string;
+  registrationNumber: string; taxIdentifier: string | null; ice: string | null;
+  legalForm: string | null; businessActivity: string | null; associationPurpose: string | null;
+  primaryPhone: string; primaryEmail: string; headquartersAddress: MerchantAddressV2;
+  mcc: string; rib: string; representative: MerchantRepresentativeV2;
+  beneficialOwners: Array<{ id: string | null; firstName: string; lastName: string; active: boolean }>;
+  outlets: MerchantOutletV2[]; status: OnboardingStatus; version: number;
+}
+export type MerchantDossierV2Update = Omit<MerchantDossierV2, 'id' | 'reference' | 'status'>;
+
+export interface MerchantReferenceValue {
+  category: string; code: string; label: string;
+}
+
 export type MerchantDocumentType = 'LEGAL_EXISTENCE' | 'REPRESENTATIVE_IDENTITY' |
   'BANK_ACCOUNT_PROOF' | 'TAX_REGISTRATION' | 'ADDRESS_PROOF' |
   'SIGNED_TPE_CONTRACT' | 'SIGNED_ECOMMERCE_CONTRACT' | 'SIGNED_CRC';

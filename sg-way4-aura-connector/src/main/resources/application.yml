@@ -1,0 +1,29 @@
+server:
+  port: ${WAY4_AURA_CONNECTOR_PORT:8580}
+spring:
+  application:
+    name: sg-way4-aura-connector
+  datasource:
+    url: ${WAY4_AURA_DB_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${WAY4_AURA_DB_USER:way4_aura_user}
+    password: ${WAY4_AURA_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    enabled: false
+way4-aura:
+  generation-enabled: ${WAY4_AURA_GENERATION_ENABLED:false}
+  submission-enabled: ${WAY4_AURA_SUBMISSION_ENABLED:false}
+  xsd-root: ${WAY4_AURA_XSD_ROOT:}
+  main-xsd: ${WAY4_AURA_MAIN_XSD:offline/WAY4ApplFile.xsd}
+  expected-main-xsd-sha256: ${WAY4_AURA_MAIN_XSD_SHA256:F76E4927B2365B6A7B9FA9B7EE1B0CF28C87313CDE724BD6C6484673D0E8A680}
+  staging-directory: ${WAY4_AURA_STAGING_DIRECTORY:}
+  mid-authority: ${WAY4_AURA_MID_AUTHORITY:UNDECIDED}
+  tid-authority: ${WAY4_AURA_TID_AUTHORITY:UNDECIDED}
+  security:
+    oauth2:
+      issuer-uri: ${WAY4_AURA_OAUTH2_ISSUER_URI:http://127.0.0.1:8090/realms/futurpayment}
+      jwk-set-uri: ${WAY4_AURA_OAUTH2_JWK_SET_URI:http://127.0.0.1:8090/realms/futurpayment/protocol/openid-connect/certs}
+      audience: ${WAY4_AURA_OAUTH2_AUDIENCE:way4-aura-connector}

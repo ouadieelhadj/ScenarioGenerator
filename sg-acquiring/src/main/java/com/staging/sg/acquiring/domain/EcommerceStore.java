@@ -13,6 +13,8 @@ public class EcommerceStore {
     private UUID id;
     @Column(name = "merchant_id", nullable = false, updatable = false)
     private UUID merchantId;
+    @Column(name = "outlet_id", nullable = false, updatable = false)
+    private UUID outletId;
     @Column(name = "store_code", nullable = false, length = 64, updatable = false)
     private String storeCode;
     @Column(nullable = false, length = 160)
@@ -37,7 +39,13 @@ public class EcommerceStore {
 
     public static EcommerceStore draft(UUID merchantId, String storeCode, String name,
             String allowedDomain, String returnUrl, String notificationUrl) {
-        if (merchantId == null || AcceptanceProduct.blank(storeCode)
+        return draft(merchantId, merchantId, storeCode, name, allowedDomain, returnUrl,
+                notificationUrl);
+    }
+
+    public static EcommerceStore draft(UUID merchantId, UUID outletId, String storeCode, String name,
+            String allowedDomain, String returnUrl, String notificationUrl) {
+        if (merchantId == null || outletId == null || AcceptanceProduct.blank(storeCode)
                 || AcceptanceProduct.blank(name) || !host(allowedDomain)
                 || !https(returnUrl) || !https(notificationUrl)) {
             throw new IllegalArgumentException("Invalid ecommerce store");
@@ -45,6 +53,7 @@ public class EcommerceStore {
         EcommerceStore value = new EcommerceStore();
         value.id = UUID.randomUUID();
         value.merchantId = merchantId;
+        value.outletId = outletId;
         value.storeCode = storeCode;
         value.name = name;
         value.allowedDomain = allowedDomain.toLowerCase();
@@ -70,9 +79,12 @@ public class EcommerceStore {
 
     public UUID id() { return id; }
     public UUID merchantId() { return merchantId; }
+    public UUID outletId() { return outletId; }
     public String storeCode() { return storeCode; }
     public String name() { return name; }
     public String allowedDomain() { return allowedDomain; }
+    public String returnUrl() { return returnUrl; }
+    public String notificationUrl() { return notificationUrl; }
     public EcommerceStatus status() { return status; }
 
     private void require(EcommerceStatus expected, String message) {

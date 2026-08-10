@@ -26,6 +26,11 @@ public class AcquiringDeviceContractDetail {
     private String macData;
     @Column(name = "mac_required", nullable = false)
     private boolean macRequired;
+    @Column(name = "source_terminal_request_id") private UUID sourceTerminalRequestId;
+    @Column(name = "request_ordinal") private Integer requestOrdinal;
+    @Column(name = "requested_model_code", length = 64) private String requestedModelCode;
+    @Column(name = "requested_connectivity_code", length = 64) private String requestedConnectivityCode;
+    @Column(name = "requested_option_codes", length = 1000) private String requestedOptionCodes;
 
     protected AcquiringDeviceContractDetail() {}
 
@@ -50,6 +55,24 @@ public class AcquiringDeviceContractDetail {
         return value;
     }
 
+    public static AcquiringDeviceContractDetail ofRequest(UUID contractId, String acquirerId,
+            UUID outletId, String terminalId, AcceptanceChannel channel,
+            boolean extendedSet, String macData, boolean macRequired,
+            UUID sourceTerminalRequestId, int requestOrdinal, String modelCode,
+            String connectivityCode, String optionCodes) {
+        AcquiringDeviceContractDetail value = of(contractId, acquirerId, outletId, terminalId,
+                channel, extendedSet, macData, macRequired);
+        if (sourceTerminalRequestId == null || requestOrdinal < 1
+                || AcceptanceProduct.blank(modelCode) || AcceptanceProduct.blank(connectivityCode))
+            throw new IllegalArgumentException("TPE-001/TPE-002/TPE-003: invalid source request");
+        value.sourceTerminalRequestId = sourceTerminalRequestId;
+        value.requestOrdinal = requestOrdinal;
+        value.requestedModelCode = modelCode;
+        value.requestedConnectivityCode = connectivityCode;
+        value.requestedOptionCodes = optionCodes == null ? "" : optionCodes;
+        return value;
+    }
+
     public UUID contractId() { return contractId; }
     public UUID outletId() { return outletId; }
     public String terminalId() { return terminalId; }
@@ -57,4 +80,9 @@ public class AcquiringDeviceContractDetail {
     public boolean extendedSet() { return extendedSet; }
     public String macData() { return macData; }
     public boolean macRequired() { return macRequired; }
+    public UUID sourceTerminalRequestId() { return sourceTerminalRequestId; }
+    public Integer requestOrdinal() { return requestOrdinal; }
+    public String requestedModelCode() { return requestedModelCode; }
+    public String requestedConnectivityCode() { return requestedConnectivityCode; }
+    public String requestedOptionCodes() { return requestedOptionCodes; }
 }

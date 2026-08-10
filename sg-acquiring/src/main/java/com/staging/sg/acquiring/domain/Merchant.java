@@ -27,6 +27,10 @@ public class Merchant {
     private String country;
     @Column(nullable = false, length = 4)
     private String mcc;
+    @Column(name = "merchant_type", length = 32)
+    private String merchantType;
+    @Column(name = "organization_legal_nature", length = 24)
+    private String organizationLegalNature;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 24)
     private ApprovalStatus status;
@@ -96,6 +100,20 @@ public class Merchant {
     }
 
     public boolean creationMatches(String fingerprint) { return creationFingerprint.equals(fingerprint); }
+    public void enrichLegalType(String merchantType, String organizationLegalNature) {
+        if (merchantType == null || !merchantType.matches("PP|PM|AE|ASSOCIATION_FOUNDATION"))
+            throw new IllegalArgumentException("MER-001: invalid merchant type");
+        if ("ASSOCIATION_FOUNDATION".equals(merchantType)) {
+            if (!"ASSOCIATION".equals(organizationLegalNature)
+                    && !"FOUNDATION".equals(organizationLegalNature))
+                throw new IllegalArgumentException("MER-001: legal nature is required");
+        } else if (organizationLegalNature != null) {
+            throw new IllegalArgumentException("MER-001: legal nature is not applicable");
+        }
+        this.merchantType = merchantType;
+        this.organizationLegalNature = organizationLegalNature;
+        this.updatedAt = Instant.now();
+    }
     public UUID id() { return id; }
     public String acquirerId() { return acquirerId; }
     public String legalName() { return legalName; }
@@ -103,6 +121,8 @@ public class Merchant {
     public String registrationNumber() { return registrationNumber; }
     public String country() { return country; }
     public String mcc() { return mcc; }
+    public String merchantType() { return merchantType; }
+    public String organizationLegalNature() { return organizationLegalNature; }
     public ApprovalStatus status() { return status; }
     public boolean isActive() { return status == ApprovalStatus.ACTIVE; }
     public String createdBy() { return createdBy; }

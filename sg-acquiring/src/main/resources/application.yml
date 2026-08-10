@@ -16,6 +16,23 @@ spring:
     enabled: false
 
 acquiring:
+  security:
+    oauth2:
+      issuer-uri: ${ACQUIRING_OAUTH2_ISSUER_URI:http://127.0.0.1:8090/realms/futurpayment}
+      jwk-set-uri: ${ACQUIRING_OAUTH2_JWK_SET_URI:http://127.0.0.1:8090/realms/futurpayment/protocol/openid-connect/certs}
+      audience: ${ACQUIRING_OAUTH2_AUDIENCE:futurpayment-acquiring}
+  way4:
+    enabled: ${ACQUIRING_WAY4_ENABLED:false}
+    dispatch-enabled: ${ACQUIRING_WAY4_DISPATCH_ENABLED:false}
+    base-url: ${ACQUIRING_WAY4_BASE_URL:http://127.0.0.1:8580}
+    batch-size: ${ACQUIRING_WAY4_BATCH_SIZE:10}
+    poll-delay-ms: ${ACQUIRING_WAY4_POLL_DELAY_MS:5000}
+    worker-id: ${ACQUIRING_WAY4_WORKER_ID:${HOSTNAME:way4-dispatcher}}
+    oauth2:
+      token-url: ${ACQUIRING_WAY4_OAUTH2_TOKEN_URL:}
+      client-id: ${ACQUIRING_WAY4_OAUTH2_CLIENT_ID:}
+      client-secret: ${ACQUIRING_WAY4_OAUTH2_CLIENT_SECRET:}
+      scope: ${ACQUIRING_WAY4_OAUTH2_SCOPE:way4.generate}
   three-ds:
     enabled: ${ACQUIRING_THREE_DS_ENABLED:false}
     base-url: ${ACQUIRING_THREE_DS_BASE_URL:http://127.0.0.1:8560}

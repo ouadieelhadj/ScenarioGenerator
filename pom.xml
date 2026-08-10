@@ -40,6 +40,7 @@
         <module>sg-card-issuing</module>
         <module>sg-acquiring</module>
         <module>sg-merchant-onboarding</module>
+        <module>sg-way4-aura-connector</module>
         <module>sg-way-pos-server</module>
         <module>sg-way-pos-simulator</module>
         <module>sg-merchant-site-simulator</module>

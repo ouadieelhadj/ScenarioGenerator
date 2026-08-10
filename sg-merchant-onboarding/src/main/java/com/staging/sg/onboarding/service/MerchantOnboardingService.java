@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,6 +21,14 @@ public class MerchantOnboardingService {
     private final WorkflowApprovalRequestRepository workflows;
     private final ProvisioningJobRepository jobs;
     private final OnboardingDocumentRepository documents;
+    private final OnboardingOutletRepository outlets;
+    private final OnboardingBeneficialOwnerRepository beneficialOwners;
+    private final OnboardingReferenceValueRepository references;
+    private final OnboardingFieldRuleRepository fieldRules;
+    private final OnboardingOutletProductRepository outletProducts;
+    private final TerminalRequestRepository terminalRequests;
+    private final EcommerceStoreRequestRepository ecommerceStoreRequests;
+    private final OnboardingOutboxService outbox;
     private final AcquiringProvisioningPort acquiring;
     private final IdentityInvitationPort identity;
     private final ObjectMapper objectMapper;
@@ -28,6 +38,14 @@ public class MerchantOnboardingService {
             WorkflowApprovalRequestRepository workflows,
             ProvisioningJobRepository jobs,
             OnboardingDocumentRepository documents,
+            OnboardingOutletRepository outlets,
+            OnboardingBeneficialOwnerRepository beneficialOwners,
+            OnboardingReferenceValueRepository references,
+            OnboardingFieldRuleRepository fieldRules,
+            OnboardingOutletProductRepository outletProducts,
+            TerminalRequestRepository terminalRequests,
+            EcommerceStoreRequestRepository ecommerceStoreRequests,
+            OnboardingOutboxService outbox,
             AcquiringProvisioningPort acquiring,
             IdentityInvitationPort identity,
             ObjectMapper objectMapper) {
@@ -36,6 +54,14 @@ public class MerchantOnboardingService {
         this.workflows = workflows;
         this.jobs = jobs;
         this.documents = documents;
+        this.outlets = outlets;
+        this.beneficialOwners = beneficialOwners;
+        this.references = references;
+        this.fieldRules = fieldRules;
+        this.outletProducts = outletProducts;
+        this.terminalRequests = terminalRequests;
+        this.ecommerceStoreRequests = ecommerceStoreRequests;
+        this.outbox = outbox;
         this.acquiring = acquiring;
         this.identity = identity;
         this.objectMapper = objectMapper;
@@ -72,7 +98,119 @@ public class MerchantOnboardingService {
                 data.country(), data.mcc(), data.settlementAccountReference(),
                 data.settlementCurrency(), data.productId(), data.acceptanceChannel(),
                 data.outletCode(), data.outletName(), data.outletAddress(), data.terminalCount());
-        return cases.save(dossier);
+        MerchantOnboardingCase saved = cases.save(dossier);
+        adaptLegacyOutlet(saved);
+        return saved;
+    }
+
+    @Transactional
+    public DossierV2Snapshot updateDossierV2(UUID id, DossierV2Data data, String caller) {
+        MerchantOnboardingCase dossier = dossier(id);
+        requireEditor(dossier, caller);
+        if (data != null && data.version() != dossier.version())
+            throw new IllegalStateException("CONCURRENCY: dossier version is stale");
+        if (data == null || data.headquartersAddress() == null || data.representative() == null)
+            throw new IllegalArgumentException("MER-002: legal profile is incomplete");
+        if (data.outlets() == null || data.outlets().isEmpty())
+            throw new IllegalArgumentException("PDV-001: at least one outlet is required");
+        long principals = data.outlets().stream().filter(OutletData::active).filter(OutletData::principal).count();
+        if (principals != 1)
+            throw new IllegalArgumentException("PDV-002: exactly one active principal outlet is required");
+        HashSet<String> codes = new HashSet<>();
+        for (OutletData outlet : data.outlets()) {
+            if (!codes.add(outlet.code().trim()))
+                throw new IllegalArgumentException("PDV-003: duplicate outlet code");
+        }
+        AddressData address = data.headquartersAddress();
+        RepresentativeData representative = data.representative();
+        requireReference("COUNTRY", address.country(), "ADR-001: headquartersAddress.country");
+        requireReference("COUNTRY", representative.residenceCountry(), "MER-004: representative.residenceCountry");
+        requireReference("COUNTRY", representative.nationality(), "MER-004: representative.nationality");
+        requireReference("MCC", data.mcc(), "REF-002: mcc");
+        for (OutletData outlet : data.outlets())
+            requireReference("COUNTRY", outlet.address().country(), "ADR-001: outlets.address.country");
+        validateConfiguredFieldRules(data);
+        dossier.updateLegalProfile(data.merchantType(), data.organizationLegalNature(),
+                data.legalName(), data.tradingName(), data.registrationNumber(),
+                data.taxIdentifier(), data.ice(), data.legalForm(), data.businessActivity(),
+                data.associationPurpose(), data.primaryPhone(), data.primaryEmail(),
+                address.line1(), address.line2(), address.district(), address.city(),
+                address.region(), address.postalCode(), address.country(), data.mcc(), data.rib(),
+                representative.title(), representative.firstName(), representative.lastName(),
+                representative.birthDate(), representative.phone(), representative.email(),
+                representative.idType(), representative.idNumber(),
+                representative.residenceCountry(), representative.nationality());
+        cases.saveAndFlush(dossier);
+
+        List<UUID> retainedOutletIds = new ArrayList<>();
+        for (OutletData input : data.outlets()) {
+            OnboardingOutlet outlet = input.id() == null ? null : outlets.findById(input.id()).orElse(null);
+            AddressData outletAddress = input.address();
+            RepresentativeData responsible = input.responsible();
+            if (outlet != null && !outlet.caseId().equals(id))
+                throw new IllegalArgumentException("PDV-003: outlet does not belong to dossier");
+            if (outlet == null) {
+                outlet = OnboardingOutlet.create(id, input.id(), input.code(), input.name(),
+                        input.principal(), input.active(), outletAddress.line1(), outletAddress.line2(),
+                        outletAddress.district(), outletAddress.city(), outletAddress.region(),
+                        outletAddress.postalCode(), outletAddress.country(), input.contactPhone(),
+                        input.contactEmail(), responsible.title(), responsible.firstName(),
+                        responsible.lastName(), responsible.birthDate(), responsible.phone(),
+                        responsible.email(), responsible.idType(), responsible.idNumber(),
+                        responsible.residenceCountry(), responsible.nationality());
+            } else {
+                outlet.change(input.code(), input.name(), input.principal(), input.active(),
+                        outletAddress.line1(), outletAddress.line2(), outletAddress.district(),
+                        outletAddress.city(), outletAddress.region(), outletAddress.postalCode(),
+                        outletAddress.country(), input.contactPhone(), input.contactEmail(),
+                        responsible.title(), responsible.firstName(), responsible.lastName(),
+                        responsible.birthDate(), responsible.phone(), responsible.email(),
+                        responsible.idType(), responsible.idNumber(), responsible.residenceCountry(),
+                        responsible.nationality());
+            }
+            outlets.save(outlet);
+            retainedOutletIds.add(outlet.id());
+            replaceOutletProducts(id, outlet.id(), input.products());
+            replaceTerminalRequests(id, outlet.id(), input.terminalRequests());
+            replaceEcommerceStores(id, outlet.id(), input.ecommerceStores());
+        }
+        for (OnboardingOutlet existing : outlets.findByCaseIdOrderByCreatedAtAsc(id)) {
+            if (!retainedOutletIds.contains(existing.id()) && existing.active()) {
+                existing.deactivate();
+                outlets.save(existing);
+            }
+        }
+
+        List<OnboardingBeneficialOwner> currentOwners =
+                beneficialOwners.findByCaseIdOrderByCreatedAtAsc(id);
+        List<UUID> retainedOwnerIds = new ArrayList<>();
+        if (data.beneficialOwners() != null) {
+            for (BeneficialOwnerData owner : data.beneficialOwners()) {
+                OnboardingBeneficialOwner value = owner.id() == null ? null
+                        : beneficialOwners.findById(owner.id()).orElse(null);
+                if (value != null && !value.caseId().equals(id))
+                    throw new IllegalArgumentException("MER-005: beneficial owner does not belong to dossier");
+                if (value == null) value = OnboardingBeneficialOwner.create(id, owner.id(),
+                        owner.firstName(), owner.lastName(), owner.active());
+                else value.change(owner.firstName(), owner.lastName(), owner.active());
+                beneficialOwners.save(value);
+                retainedOwnerIds.add(value.id());
+            }
+        }
+        for (OnboardingBeneficialOwner existing : currentOwners) {
+            if (!retainedOwnerIds.contains(existing.id()) && existing.active()) {
+                existing.deactivate();
+                beneficialOwners.save(existing);
+            }
+        }
+        return snapshot(dossier);
+    }
+
+    @Transactional(readOnly = true)
+    public DossierV2Snapshot getV2(UUID id, String caller) {
+        MerchantOnboardingCase dossier = dossier(id);
+        requireViewer(dossier, caller);
+        return snapshot(dossier);
     }
 
     @Transactional
@@ -154,7 +292,9 @@ public class MerchantOnboardingService {
         dossier.approve(checker);
         workflow.approve(checker);
         workflows.save(workflow);
-        return cases.save(dossier);
+        MerchantOnboardingCase saved = cases.save(dossier);
+        outbox.enqueueApproved(saved);
+        return saved;
     }
 
     @Transactional
@@ -303,6 +443,136 @@ public class MerchantOnboardingService {
                 dossier.submittedBy(), dossier.checkedBy());
     }
 
+    private void adaptLegacyOutlet(MerchantOnboardingCase dossier) {
+        List<OnboardingOutlet> current = outlets.findByCaseIdOrderByCreatedAtAsc(dossier.id());
+        if (current.size() > 1)
+            throw new IllegalStateException("MIG-002: a multi-outlet dossier must be updated through API v2");
+        if (current.isEmpty()) {
+            outlets.save(OnboardingOutlet.fromLegacy(dossier.id(), dossier.outletCode(),
+                    dossier.outletName(), dossier.outletAddress(), dossier.country()));
+            return;
+        }
+        OnboardingOutlet outlet = current.get(0);
+        outlet.change(dossier.outletCode(), dossier.outletName(), true, true,
+                dossier.outletAddress(), null, null, "LEGACY", null, null, dossier.country(),
+                "LEGACY", "legacy@invalid.local", null, "LEGACY", "LEGACY",
+                null, "LEGACY", "legacy@invalid.local", null, null, null, null);
+        outlets.save(outlet);
+    }
+
+    private DossierV2Snapshot snapshot(MerchantOnboardingCase dossier) {
+        return new DossierV2Snapshot(dossier,
+                outlets.findByCaseIdOrderByCreatedAtAsc(dossier.id()),
+                beneficialOwners.findByCaseIdAndActiveTrueOrderByCreatedAtAsc(dossier.id()),
+                outletProducts.findByCaseIdAndActiveTrueOrderByOutletIdAscProductIdAsc(dossier.id()),
+                terminalRequests.findByCaseIdOrderByCreatedAtAsc(dossier.id()),
+                ecommerceStoreRequests.findByCaseIdOrderByCreatedAtAsc(dossier.id()));
+    }
+
+    private void replaceOutletProducts(UUID caseId, UUID outletId, List<OutletProductData> requested) {
+        List<OnboardingOutletProduct> existing =
+                outletProducts.findByOutletIdAndActiveTrueOrderByProductIdAsc(outletId);
+        List<UUID> retained = new ArrayList<>();
+        for (OutletProductData input : requested == null ? List.<OutletProductData>of() : requested) {
+            if (input.productId() == null)
+                throw new IllegalArgumentException("PDV-005: productId is required");
+            OnboardingOutletProduct current = existing.stream()
+                    .filter(value -> value.productId().equals(input.productId())).findFirst().orElse(null);
+            if (current == null) current = outletProducts.save(OnboardingOutletProduct.create(caseId,
+                    outletId, input.productId(), input.pricingPackCode(), input.pricingPackVersion(),
+                    input.pricingSnapshotJson()));
+            retained.add(current.id());
+        }
+        for (OnboardingOutletProduct current : existing) {
+            if (!retained.contains(current.id())) { current.deactivate(); outletProducts.save(current); }
+        }
+    }
+
+    private void replaceTerminalRequests(UUID caseId, UUID outletId, List<TerminalRequestData> requested) {
+        List<TerminalRequest> existing = terminalRequests.findByOutletIdOrderByCreatedAtAsc(outletId);
+        List<UUID> retained = new ArrayList<>();
+        for (TerminalRequestData input : requested == null ? List.<TerminalRequestData>of() : requested) {
+            requireReference("TPE_MODEL", input.modelCode(), "TPE-002: modelCode");
+            requireReference("TPE_CONNECTIVITY", input.connectivityCode(), "TPE-003: connectivityCode");
+            for (String option : input.optionCodes() == null ? List.<String>of() : input.optionCodes())
+                requireReference("TPE_OPTION", option, "TPE-004: optionCode");
+            TerminalRequest current = input.id() == null ? null : terminalRequests.findById(input.id()).orElse(null);
+            if (current != null && (!current.caseId().equals(caseId) || !current.outletId().equals(outletId)))
+                throw new IllegalArgumentException("TPE-001: request does not belong to outlet");
+            if (current == null) current = terminalRequests.save(TerminalRequest.create(caseId, input.id(),
+                    outletId, input.productId(), input.quantity(), input.modelCode(),
+                    input.connectivityCode(), input.optionCodes(), input.externalReference()));
+            retained.add(current.id());
+        }
+        for (TerminalRequest current : existing) {
+            if (!retained.contains(current.id()) && current.status() == TerminalRequestStatus.REQUESTED) {
+                current.cancel(); terminalRequests.save(current);
+            }
+        }
+    }
+
+    private void replaceEcommerceStores(UUID caseId, UUID outletId, List<EcommerceStoreData> requested) {
+        List<EcommerceStoreRequest> existing = ecommerceStoreRequests.findByOutletIdOrderByCreatedAtAsc(outletId);
+        List<UUID> retained = new ArrayList<>();
+        for (EcommerceStoreData input : requested == null ? List.<EcommerceStoreData>of() : requested) {
+            requireReference("CAPTURE_MODE", input.captureMode(), "ECOM-003: captureMode");
+            for (String option : input.optionCodes() == null ? List.<String>of() : input.optionCodes())
+                requireReference("ECOMMERCE_OPTION", option, "ECOM-003: optionCode");
+            EcommerceStoreRequest current = input.id() == null ? null
+                    : ecommerceStoreRequests.findById(input.id()).orElse(null);
+            if (current != null && (!current.caseId().equals(caseId) || !current.outletId().equals(outletId)))
+                throw new IllegalArgumentException("ECOM-001: store does not belong to outlet");
+            if (current == null) current = ecommerceStoreRequests.save(EcommerceStoreRequest.create(
+                    caseId, input.id(), outletId, input.productId(), input.storeCode(), input.name(),
+                    input.allowedDomain(), input.returnUrl(), input.notificationUrl(), input.currency(),
+                    input.captureMode(), input.optionCodes(), input.externalReference()));
+            retained.add(current.id());
+        }
+        for (EcommerceStoreRequest current : existing) {
+            if (!retained.contains(current.id()) && current.status() == EcommerceStoreRequestStatus.REQUESTED) {
+                current.cancel(); ecommerceStoreRequests.save(current);
+            }
+        }
+    }
+
+    private void requireReference(String category, String code, String field) {
+        if (!references.existsByIdCategoryAndIdCodeAndActiveTrue(category, code))
+            throw new IllegalArgumentException(field + " is unknown or inactive");
+    }
+
+    private void validateConfiguredFieldRules(DossierV2Data data) {
+        for (OnboardingFieldRule rule : fieldRules
+                .findByIdMerchantTypeAndActiveTrueOrderByIdFieldPathAsc(data.merchantType().name())) {
+            String value = switch (rule.fieldPath()) {
+                case "legalName" -> data.legalName();
+                case "tradingName" -> data.tradingName();
+                case "registrationNumber" -> data.registrationNumber();
+                case "taxIdentifier" -> data.taxIdentifier();
+                case "ice" -> data.ice();
+                case "legalForm" -> data.legalForm();
+                case "businessActivity" -> data.businessActivity();
+                case "associationPurpose" -> data.associationPurpose();
+                case "primaryPhone" -> data.primaryPhone();
+                case "primaryEmail" -> data.primaryEmail();
+                case "rib" -> data.rib();
+                case "organizationLegalNature" -> data.organizationLegalNature() == null
+                        ? null : data.organizationLegalNature().name();
+                case "headquartersAddress.line1" -> data.headquartersAddress().line1();
+                case "headquartersAddress.city" -> data.headquartersAddress().city();
+                case "headquartersAddress.country" -> data.headquartersAddress().country();
+                case "representative.firstName" -> data.representative().firstName();
+                case "representative.lastName" -> data.representative().lastName();
+                case "representative.phone" -> data.representative().phone();
+                case "representative.email" -> data.representative().email();
+                default -> null;
+            };
+            if (rule.required() && (value == null || value.isBlank()))
+                throw new IllegalArgumentException("MER-002: " + rule.fieldPath() + " is required");
+            if (value != null && rule.maxLength() != null && value.trim().length() > rule.maxLength())
+                throw new IllegalArgumentException("MER-002: " + rule.fieldPath() + " exceeds configured length");
+        }
+    }
+
     private String json(MerchantProvisioningCommand command) {
         try { return objectMapper.writeValueAsString(command); }
         catch (JsonProcessingException exception) { throw new IllegalStateException("Cannot serialize provisioning command", exception); }
@@ -368,6 +638,42 @@ public class MerchantOnboardingService {
             String country, String mcc, String settlementAccountReference,
             String settlementCurrency, UUID productId, String acceptanceChannel,
             String outletCode, String outletName, String outletAddress, int terminalCount) {}
+    public record AddressData(String line1, String line2, String district, String city,
+            String region, String postalCode, String country) {}
+    public record RepresentativeData(String title, String firstName, String lastName,
+            LocalDate birthDate, String phone, String email, String idType,
+            String idNumber, String residenceCountry, String nationality) {}
+    public record BeneficialOwnerData(UUID id, String firstName, String lastName, boolean active) {}
+    public record OutletProductData(UUID productId, String pricingPackCode,
+            Integer pricingPackVersion, String pricingSnapshotJson) {}
+    public record TerminalRequestData(UUID id, UUID productId, int quantity, String modelCode,
+            String connectivityCode, List<String> optionCodes, String externalReference) {}
+    public record EcommerceStoreData(UUID id, UUID productId, String storeCode, String name,
+            String allowedDomain, String returnUrl, String notificationUrl, String currency,
+            String captureMode, List<String> optionCodes, String externalReference) {}
+    public record OutletData(UUID id, String code, String name, boolean principal, boolean active,
+            AddressData address, String contactPhone, String contactEmail,
+            RepresentativeData responsible, List<OutletProductData> products,
+            List<TerminalRequestData> terminalRequests, List<EcommerceStoreData> ecommerceStores) {
+        public OutletData(UUID id, String code, String name, boolean principal, boolean active,
+                AddressData address, String contactPhone, String contactEmail,
+                RepresentativeData responsible) {
+            this(id, code, name, principal, active, address, contactPhone, contactEmail,
+                    responsible, List.of(), List.of(), List.of());
+        }
+    }
+    public record DossierV2Data(MerchantType merchantType,
+            OrganizationLegalNature organizationLegalNature, String legalName,
+            String tradingName, String registrationNumber, String taxIdentifier,
+            String ice, String legalForm, String businessActivity, String associationPurpose,
+            String primaryPhone, String primaryEmail, AddressData headquartersAddress,
+            String mcc, String rib, RepresentativeData representative,
+            List<BeneficialOwnerData> beneficialOwners, List<OutletData> outlets, long version) {}
+    public record DossierV2Snapshot(MerchantOnboardingCase dossier,
+            List<OnboardingOutlet> outlets, List<OnboardingBeneficialOwner> beneficialOwners,
+            List<OnboardingOutletProduct> outletProducts,
+            List<TerminalRequest> terminalRequests,
+            List<EcommerceStoreRequest> ecommerceStores) {}
     public record ProvisioningOutcome(MerchantOnboardingCase dossier, ProvisioningJob job,
             MerchantProvisioningResult result, String error) {
         static ProvisioningOutcome queued(MerchantOnboardingCase dossier, ProvisioningJob job) {

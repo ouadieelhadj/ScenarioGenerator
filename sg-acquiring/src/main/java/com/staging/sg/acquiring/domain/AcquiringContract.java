@@ -71,6 +71,16 @@ public class AcquiringContract {
                 createdBy, idempotencyKey, fingerprint);
     }
 
+    public static AcquiringContract ecommerce(String institutionId,
+            String externalReference, UUID merchantId, UUID parentContractId,
+            UUID productId, String createdBy, String idempotencyKey, String fingerprint) {
+        if (parentContractId == null)
+            throw new IllegalArgumentException("An ecommerce contract requires a parent contract");
+        return draft(institutionId, externalReference, merchantId, null, productId,
+                PaymentContractType.ACQUIRING_ECOMMERCE, parentContractId,
+                createdBy, idempotencyKey, fingerprint);
+    }
+
     private static AcquiringContract draft(String institutionId,
             String externalReference, UUID merchantId, String fundingReference,
             UUID productId, PaymentContractType type, UUID parentContractId,

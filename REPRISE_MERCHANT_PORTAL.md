@@ -289,3 +289,105 @@ Reste avant production : auth interservices, notification SMS/e-mail,
 GED/antivirus, referentiels et fonctions avancees (multi-PDV, tarification,
 contrats/signature), gateway HTTPS/session Web durcie, deep link verifie,
 signature release/AAB et recette appareils reels.
+
+## Increment juridique et multi-PDV du 10 aout 2026
+
+### Retour d'experience obligatoire
+
+La campagne a d'abord assimile a tort la reussite des 121 tests Java a une
+validation presque complete de l'increment, alors que la migration n'avait pas
+encore ete executee sur PostgreSQL reel. Cette conclusion prematuree a reporte
+la detection de l'anomalie metier Acquiring.
+
+Regle permanente issue de cette erreur : lorsqu'un increment contient une
+migration ou un backfill, les tests Java ne suffisent jamais a prononcer sa
+validation. Le verdict exige, avant communication au validateur, le preflight
+des prerequis, une sauvegarde, la premiere application, le rejeu, les
+comptages/empreintes avant-apres, les controles d'absence de perte et de
+doublon, puis toutes les invariantes metier sur les donnees PostgreSQL reelles.
+Si une seule invariance reste en anomalie, le verdict est `NO-GO`.
+
+La session `Developpement Portal Commercant`
+(`019fd736-217b-7560-8fe4-44efbe97bcda`) a repris l'increment 1 du plan
+Commercant/PDV. Elle a implemente le modele juridique complet, le profil legal,
+les representants et beneficiaires, les adresses structurees, le multi-PDV,
+l'adaptation sans doublon du PDV v1, l'API v2, les referentiels minimaux et les
+migrations V3/V4 Merchant Onboarding/Acquiring.
+
+La reprise a corrige la restitution du RIB et de l'identite du responsable de
+PDV, puis a separe le format d'erreur v2 enrichi du contrat historique v1.
+
+Validation executee :
+
+- porte ciblee : 15 tests, 0 echec, 0 erreur, 0 ignore ;
+- non-regression `sg-common`, `sg-acquiring`, `sg-merchant-onboarding` :
+  121 tests, 0 echec, 0 erreur, 0 ignore ;
+- `git diff --check` propre hors avertissements de conversion LF/CRLF.
+
+Preuve et matrice :
+`tests/merchant-onboarding/PROOF_OF_TEST_MERCHANT_INCREMENT_1_2026-08-10.md`.
+
+PostgreSQL 18 a ensuite ete demarre directement depuis
+`D:\MoneyCore\PostgreSQL\18`. Une sauvegarde `pg_dump` a ete prise, puis V3 et
+V4 ont ete appliquees et rejouees en transaction avec arret sur erreur.
+
+Resultat : 16 dossiers historiques, 16 PDV et 16 mappings distincts ; au rejeu,
+0 creation, 16 ignores, 0 erreur ; aucune empreinte historique modifiee et
+aucun doublon. Tous les dossiers Onboarding ont exactement un principal actif.
+
+Une anomalie reelle bloque toutefois la porte : le commercant Acquiring actif
+`885d1af8-2f05-465a-832a-6a91ae613da3` possede un contrat et une boutique
+e-commerce mais aucun PDV. Il n'est lie a aucun dossier Onboarding ni recu de
+provisioning permettant de reconstruire une adresse et des contacts reels.
+Aucun PDV fictif n'a ete cree. Premier travail non termine : obtenir la donnee
+metier du PDV, la reconcilier, puis rejouer la requete d'unicite du principal.
+Le verdict reste NO-GO increment 2 et l'increment 2 n'a pas commence.
+
+Apres reconciliation, la campagne complete doit etre reprise de bout en bout :
+porte ciblee, non-regression agregee, controle PostgreSQL V3/V4 reproductible
+et verification finale de zero anomalie. Aucun GO ne doit etre deduit d'un
+rejeu effectue avant la correction de la donnee metier.
+
+## Developpement des increments 2 a 5 du 10 aout 2026
+
+Sur decision explicite de l'utilisateur, le developpement des increments 2 a
+5 a continue malgre la porte metier non levee de l'increment 1. Cette decision
+ne transforme pas le NO-GO de validation en GO.
+
+Le perimetre livre comprend les produits et demandes TPE/e-commerce par PDV,
+le provisionnement v2 objet par objet, les outbox transactionnelles, OAuth2
+Client Credentials entre services, les referentiels administrables, les packs
+tarifaires versionnes, les derogations Maker/Checker et le module dedie
+`sg-way4-aura-connector`. Celui-ci resout des bindings AURA dates/versionnes,
+genere un XML deterministe, controle l'empreinte du XSD avant validation et
+persiste les empreintes de fichier/application. Acquiring alimente le
+connecteur par une outbox avec reservation courte, bail de deux minutes,
+reprise apres crash, backoff et finalisation transactionnelle distincte de
+l'appel HTTP. La soumission dans WAY4 reste desactivee par defaut.
+
+Le profil de recette est `runtime/merchant-portal-e2e/.env`. Il ne contient
+aucun secret et reference le runtime plateforme pour charger les identifiants
+DB en memoire.
+
+Validation automatique : 134 tests, aucun echec ni erreur. La validation
+PostgreSQL a utilise une sauvegarde restauree dans une base temporaire pour
+comparer toutes les tables : 135 avant, 153 apres, aucune table en diminution,
+18 nouvelles tables et uniquement le referentiel Onboarding passant de 8 a 17
+lignes. La chaine de six migrations V4 a V6 et WAY4 V1 a passe deux replays.
+
+La recette positive Portal vers Acquiring vers WAY4 ne peut pas encore etre
+executee sans inventer de donnees : un commercant actif reste sans PDV
+principal, une anomalie Acquiring reste non reconciliee, aucun binding AURA
+actif n'est present et les autorites MID/TID restent `UNDECIDED`. Les fichiers
+runtime inspectes ne contiennent pas non plus la configuration d'un issuer
+OAuth2 de recette. Aucun contournement de securite et aucune donnee fictive ne
+doivent etre utilises pour masquer ces absences.
+
+Document de cadrage increment 5 :
+`D:\LanaCash\OpenWay\installationOCI\commercial-portal-conformite\CADRAGE_INCREMENT_5_ADAPTATION_MERCHANT_PORTAL_WAY4_AURA.md`.
+XSD principal : `offline/WAY4ApplFile.xsd`, sous
+`D:\LanaCash\OpenWay\installationOCI\chargementxmlway4\schemas\xsd\xsd`,
+SHA-256 `F76E4927B2365B6A7B9FA9B7EE1B0CF28C87313CDE724BD6C6484673D0E8A680`.
+
+Preuve detaillee :
+`tests/merchant-onboarding/PROOF_OF_TEST_MERCHANT_INCREMENTS_2_5_2026-08-10.md`.

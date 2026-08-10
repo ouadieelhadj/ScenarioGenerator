@@ -3,6 +3,7 @@ package com.staging.sg.onboarding.domain;
 import jakarta.persistence.*;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -31,6 +32,60 @@ public class MerchantOnboardingCase {
     private String country;
     @Column(length = 4)
     private String mcc;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "merchant_type", length = 32)
+    private MerchantType merchantType;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "organization_legal_nature", length = 24)
+    private OrganizationLegalNature organizationLegalNature;
+    @Column(name = "tax_identifier", length = 64)
+    private String taxIdentifier;
+    @Column(length = 64)
+    private String ice;
+    @Column(name = "legal_form", length = 96)
+    private String legalForm;
+    @Column(name = "business_activity", length = 255)
+    private String businessActivity;
+    @Column(name = "association_purpose", length = 500)
+    private String associationPurpose;
+    @Column(name = "primary_phone", length = 32)
+    private String primaryPhone;
+    @Column(name = "primary_email", length = 254)
+    private String primaryEmail;
+    @Column(name = "headquarters_address_line1", length = 255)
+    private String headquartersAddressLine1;
+    @Column(name = "headquarters_address_line2", length = 255)
+    private String headquartersAddressLine2;
+    @Column(name = "headquarters_district", length = 120)
+    private String headquartersDistrict;
+    @Column(name = "headquarters_city", length = 120)
+    private String headquartersCity;
+    @Column(name = "headquarters_region", length = 120)
+    private String headquartersRegion;
+    @Column(name = "headquarters_postal_code", length = 24)
+    private String headquartersPostalCode;
+    @Column(name = "representative_title", length = 32)
+    private String representativeTitle;
+    @Column(name = "representative_first_name", length = 96)
+    private String representativeFirstName;
+    @Column(name = "representative_last_name", length = 96)
+    private String representativeLastName;
+    @Column(name = "representative_birth_date")
+    private LocalDate representativeBirthDate;
+    @Column(name = "representative_phone", length = 32)
+    private String representativePhone;
+    @Column(name = "representative_email", length = 254)
+    private String representativeEmail;
+    @Column(name = "representative_id_type", length = 32)
+    private String representativeIdType;
+    @Column(name = "representative_id_number", length = 64)
+    private String representativeIdNumber;
+    @Column(name = "representative_residence_country", length = 2)
+    private String representativeResidenceCountry;
+    @Column(name = "representative_nationality", length = 2)
+    private String representativeNationality;
+    @Column(name = "rib", length = 24)
+    private String rib;
     @Column(name = "settlement_account_reference", length = 96)
     private String settlementAccountReference;
     @Column(name = "settlement_currency", length = 3)
@@ -129,6 +184,103 @@ public class MerchantOnboardingCase {
         this.outletAddress = outletAddress.trim();
         this.terminalCount = terminalCount;
         this.updatedAt = Instant.now();
+    }
+
+    public void updateLegalProfile(MerchantType merchantType,
+            OrganizationLegalNature organizationLegalNature, String legalName,
+            String tradingName, String registrationNumber, String taxIdentifier,
+            String ice, String legalForm, String businessActivity,
+            String associationPurpose, String primaryPhone, String primaryEmail,
+            String addressLine1, String addressLine2, String district, String city,
+            String region, String postalCode, String country, String mcc, String rib,
+            String representativeTitle, String representativeFirstName,
+            String representativeLastName, LocalDate representativeBirthDate,
+            String representativePhone, String representativeEmail,
+            String representativeIdType, String representativeIdNumber,
+            String representativeResidenceCountry, String representativeNationality) {
+        requireStatus(OnboardingStatus.DRAFT, "Only a draft dossier can be updated");
+        if (merchantType == null) throw new IllegalArgumentException("MER-001: merchantType is required");
+        if (merchantType == MerchantType.ASSOCIATION_FOUNDATION && organizationLegalNature == null)
+            throw new IllegalArgumentException("MER-001: organizationLegalNature is required");
+        if (merchantType != MerchantType.ASSOCIATION_FOUNDATION && organizationLegalNature != null)
+            throw new IllegalArgumentException("MER-001: organizationLegalNature is not applicable");
+        require(legalName, "MER-006: legalName", 160);
+        require(tradingName, "MER-006: tradingName", 160);
+        require(registrationNumber, "MER-006: registrationNumber", 64);
+        if (merchantType == MerchantType.PM) require(ice, "MER-003: ice", 64);
+        if (merchantType == MerchantType.ASSOCIATION_FOUNDATION)
+            require(associationPurpose, "MER-006: associationPurpose", 500);
+        else require(businessActivity, "MER-006: businessActivity", 255);
+        require(primaryPhone, "MER-006: primaryPhone", 32);
+        email(primaryEmail, "MER-006: primaryEmail");
+        require(addressLine1, "ADR-001: headquarters.line1", 255);
+        require(city, "ADR-001: headquarters.city", 120);
+        country(country, "ADR-001: headquarters.country");
+        if (mcc == null || !mcc.matches("\\d{4}")) throw new IllegalArgumentException("REF-002: invalid mcc");
+        String normalizedRib = require(rib, "MER-007: rib", 24).replace(" ", "");
+        if (normalizedRib.length() > 24) throw new IllegalArgumentException("MER-007: rib exceeds 24 characters");
+        require(representativeFirstName, "MER-004: representative.firstName", 96);
+        require(representativeLastName, "MER-004: representative.lastName", 96);
+        require(representativePhone, "MER-004: representative.phone", 32);
+        email(representativeEmail, "MER-004: representative.email");
+        require(representativeIdType, "MER-004: representative.idType", 32);
+        require(representativeIdNumber, "MER-004: representative.idNumber", 64);
+        country(representativeResidenceCountry, "MER-004: representative.residenceCountry");
+        country(representativeNationality, "MER-004: representative.nationality");
+
+        this.merchantType = merchantType;
+        this.organizationLegalNature = organizationLegalNature;
+        this.legalName = legalName.trim();
+        this.tradingName = tradingName.trim();
+        this.registrationNumber = registrationNumber.trim();
+        this.taxIdentifier = optional(taxIdentifier, 64);
+        this.ice = optional(ice, 64);
+        this.legalForm = optional(legalForm, 96);
+        this.businessActivity = optional(businessActivity, 255);
+        this.associationPurpose = optional(associationPurpose, 500);
+        this.primaryPhone = primaryPhone.trim();
+        this.primaryEmail = primaryEmail.trim();
+        this.headquartersAddressLine1 = addressLine1.trim();
+        this.headquartersAddressLine2 = optional(addressLine2, 255);
+        this.headquartersDistrict = optional(district, 120);
+        this.headquartersCity = city.trim();
+        this.headquartersRegion = optional(region, 120);
+        this.headquartersPostalCode = optional(postalCode, 24);
+        this.country = country;
+        this.mcc = mcc;
+        this.rib = normalizedRib;
+        this.settlementAccountReference = normalizedRib;
+        this.representativeTitle = optional(representativeTitle, 32);
+        this.representativeFirstName = representativeFirstName.trim();
+        this.representativeLastName = representativeLastName.trim();
+        this.representativeBirthDate = representativeBirthDate;
+        this.representativePhone = representativePhone.trim();
+        this.representativeEmail = representativeEmail.trim();
+        this.representativeIdType = representativeIdType.trim();
+        this.representativeIdNumber = representativeIdNumber.trim();
+        this.representativeResidenceCountry = representativeResidenceCountry;
+        this.representativeNationality = representativeNationality;
+        this.updatedAt = Instant.now();
+    }
+
+    private static String require(String value, String field, int max) {
+        if (value == null || value.trim().isEmpty() || value.trim().length() > max)
+            throw new IllegalArgumentException(field + " is invalid");
+        return value.trim();
+    }
+    private static String optional(String value, int max) {
+        if (value == null || value.isBlank()) return null;
+        if (value.trim().length() > max) throw new IllegalArgumentException("Value is too long");
+        return value.trim();
+    }
+    private static void email(String value, String field) {
+        String normalized = require(value, field, 254);
+        if (!normalized.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$"))
+            throw new IllegalArgumentException(field + " is invalid");
+    }
+    private static void country(String value, String field) {
+        if (value == null || !value.matches("[A-Z]{2}"))
+            throw new IllegalArgumentException(field + " is invalid");
     }
 
     public void submit(String maker) {
@@ -251,6 +403,32 @@ public class MerchantOnboardingCase {
     public String registrationNumber() { return registrationNumber; }
     public String country() { return country; }
     public String mcc() { return mcc; }
+    public MerchantType merchantType() { return merchantType; }
+    public OrganizationLegalNature organizationLegalNature() { return organizationLegalNature; }
+    public String taxIdentifier() { return taxIdentifier; }
+    public String ice() { return ice; }
+    public String legalForm() { return legalForm; }
+    public String businessActivity() { return businessActivity; }
+    public String associationPurpose() { return associationPurpose; }
+    public String primaryPhone() { return primaryPhone; }
+    public String primaryEmail() { return primaryEmail; }
+    public String headquartersAddressLine1() { return headquartersAddressLine1; }
+    public String headquartersAddressLine2() { return headquartersAddressLine2; }
+    public String headquartersDistrict() { return headquartersDistrict; }
+    public String headquartersCity() { return headquartersCity; }
+    public String headquartersRegion() { return headquartersRegion; }
+    public String headquartersPostalCode() { return headquartersPostalCode; }
+    public String rib() { return rib; }
+    public String representativeTitle() { return representativeTitle; }
+    public String representativeFirstName() { return representativeFirstName; }
+    public String representativeLastName() { return representativeLastName; }
+    public LocalDate representativeBirthDate() { return representativeBirthDate; }
+    public String representativePhone() { return representativePhone; }
+    public String representativeEmail() { return representativeEmail; }
+    public String representativeIdType() { return representativeIdType; }
+    public String representativeIdNumber() { return representativeIdNumber; }
+    public String representativeResidenceCountry() { return representativeResidenceCountry; }
+    public String representativeNationality() { return representativeNationality; }
     public String settlementAccountReference() { return settlementAccountReference; }
     public String settlementCurrency() { return settlementCurrency; }
     public UUID productId() { return productId; }
@@ -270,4 +448,5 @@ public class MerchantOnboardingCase {
     public UUID acquiringMerchantId() { return acquiringMerchantId; }
     public String merchantAcceptorId() { return merchantAcceptorId; }
     public Instant createdAt() { return createdAt; }
+    public long version() { return version; }
 }

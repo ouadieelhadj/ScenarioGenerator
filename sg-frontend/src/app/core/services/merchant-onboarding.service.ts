@@ -7,10 +7,13 @@ import {
   MerchantActivationResponse,
   MerchantDossier,
   MerchantDossierUpdate,
+  MerchantDossierV2,
+  MerchantDossierV2Update,
   MerchantDocument,
   MerchantDocumentType,
   MerchantProvisioningView,
   MerchantProspect,
+  MerchantReferenceValue,
 } from '../models/merchant-onboarding.models';
 
 @Injectable({ providedIn: 'root' })
@@ -37,6 +40,20 @@ export class MerchantOnboardingService {
 
   updateDossier(id: string, request: MerchantDossierUpdate): Observable<MerchantDossier> {
     return this.http.put<MerchantDossier>(url.onboarding(ENDPOINTS.merchantPortal.dossier(id)), request);
+  }
+
+  dossierV2(id: string): Observable<MerchantDossierV2> {
+    return this.http.get<MerchantDossierV2>(url.onboarding(ENDPOINTS.merchantPortal.dossierV2(id)));
+  }
+
+  updateDossierV2(id: string, request: MerchantDossierV2Update): Observable<MerchantDossierV2> {
+    return this.http.put<MerchantDossierV2>(
+      url.onboarding(ENDPOINTS.merchantPortal.dossierV2(id)), request);
+  }
+
+  references(category: string): Observable<MerchantReferenceValue[]> {
+    return this.http.get<MerchantReferenceValue[]>(
+      url.onboarding(ENDPOINTS.merchantPortal.referencesV2(category)));
   }
 
   documents(id: string): Observable<MerchantDocument[]> {
