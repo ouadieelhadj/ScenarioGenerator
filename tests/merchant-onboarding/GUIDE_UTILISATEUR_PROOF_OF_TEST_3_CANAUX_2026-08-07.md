@@ -26,6 +26,103 @@ flowchart LR
     H --> I["Commercant + contrats + MID/TID"]
 ```
 
+### 1.1 Diagramme de sequence - auto-onboarding Mobile
+
+Dans le parcours d'auto-onboarding Mobile, **le Commercant est le Maker** :
+il saisit, documente puis soumet son propre dossier. Le Back-office controle le
+KYC et le Checker prend la decision finale. La regle obligatoire est toujours
+**Maker different du Checker**. Dans un parcours assiste, le Commercial peut
+devenir Maker s'il saisit et soumet le dossier pour le Commercant.
+
+```mermaid
+sequenceDiagram
+    autonumber
+
+    actor Commercial
+    actor Commercant
+    participant Mobile as Application Mobile
+    participant Identite as Backend Identite
+    participant Onboarding as Merchant Onboarding
+    actor BO as Back-office KYC
+    actor Checker
+    participant Batch as Traitement Batch
+    participant Acquiring as Module Acquiring
+
+    Commercial->>Mobile: Saisit le prospect
+    Mobile->>Onboarding: Cree prospect (login, e-mail, acquereur)
+    Onboarding->>Identite: Cree le compte inactif et l'invitation
+    Identite-->>Onboarding: Token d'activation a usage unique
+    Onboarding-->>Mobile: Reference dossier et lien d'activation
+
+    Note over Commercial,Commercant: Le lien est transmis par SMS ou e-mail
+
+    Commercant->>Mobile: Ouvre le lien d'activation
+    Mobile->>Identite: Envoie token et nouveau mot de passe
+    Identite-->>Mobile: Compte active
+
+    Commercant->>Mobile: Se connecte
+    Mobile->>Identite: Identifiant et mot de passe
+    Identite-->>Mobile: JWT et habilitations
+    Mobile->>Mobile: Protege la session via Android Keystore
+
+    Mobile->>Onboarding: Charge le dossier du compte courant
+    Onboarding-->>Mobile: Brouillon du dossier
+    Commercant->>Mobile: Saisit entreprise, activite, PDV et TPE
+    Mobile->>Onboarding: Enregistre le dossier
+
+    Commercant->>Mobile: Photographie ou selectionne les pieces
+    Mobile->>Onboarding: Upload PDF, JPEG ou PNG
+    Onboarding->>Onboarding: Controle type, taille et SHA-256
+    Commercant->>Mobile: Soumet le KYC
+    Mobile->>Onboarding: Place le dossier en revue KYC
+
+    BO->>Onboarding: Consulte dossier et justificatifs
+    BO->>Onboarding: Accepte ou rejette chaque piece
+
+    alt Complements demandes
+        BO->>Onboarding: Motive la demande de complements
+        Onboarding-->>Mobile: COMPLEMENTS_REQUIRED et motif
+        Commercant->>Mobile: Corrige et remplace les pieces
+        Mobile->>Onboarding: Nouvelle version des documents
+    else KYC conforme
+        BO->>Onboarding: Valide le KYC
+        Onboarding-->>Mobile: KYC VALIDATED
+    end
+
+    Note over Commercant,Onboarding: Le Commercant agit comme Maker
+    Commercant->>Mobile: Soumet la demande d'affiliation
+    Mobile->>Onboarding: Soumission Maker
+    Onboarding-->>Checker: Demande en attente
+    Checker->>Onboarding: Approuve ou rejette
+
+    alt Provisionnement immediat
+        Onboarding->>Acquiring: JSON canonique approuve
+    else Provisionnement differe
+        Onboarding->>Batch: Met le JSON canonique en file
+        BO->>Batch: Lance le lot
+        Batch->>Acquiring: JSON canonique approuve
+    end
+
+    Acquiring->>Acquiring: Cree commercant, PDV et contrats
+    Acquiring->>Acquiring: Attribue MID et TID
+    Acquiring-->>Onboarding: Resultat du provisionnement
+    Onboarding-->>Mobile: PROVISIONED avec MID et TID
+    Mobile-->>Commercant: Affiche la confirmation d'affiliation
+```
+
+Responsabilites principales :
+
+- **Commercial** : cree le prospect et declenche l'invitation ;
+- **Commercant/Maker** : active son compte, remplit, documente et soumet ;
+- **Application Mobile** : interface securisee, sans decision KYC ni creation
+  de MID/TID ;
+- **Identite** : compte, mot de passe, activation et JWT ;
+- **Merchant Onboarding** : dossier, documents, workflow et JSON canonique ;
+- **Back-office** : controle et decision KYC ;
+- **Checker** : approbation independante du Maker ;
+- **Batch** : traite uniquement les dossiers deja approuves ;
+- **Acquiring** : cree le commercant, les contrats, le MID et les TID.
+
 ## 2. Resultats certifies
 
 | Canal | Maker | Checker | Dossier | KYC | Statut final | MID | TID |
