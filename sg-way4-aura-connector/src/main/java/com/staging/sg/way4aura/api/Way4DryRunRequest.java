@@ -1,21 +1,28 @@
 package com.staging.sg.way4aura.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.util.List;
 import java.util.UUID;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record Way4DryRunRequest(String schemaVersion, UUID onboardingCaseId,
-        UUID merchantId, UUID merchantContractId, Merchant merchant,
-        AccountContract accountContract, List<DeviceContract> deviceContracts,
-        String idempotencyKey) {
+        String applicationRegNumber, UUID accountProductId, Merchant merchant,
+        Settlement settlement, List<Outlet> outlets, String idempotencyKey) {
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public record Merchant(String merchantType, String registrationNumber,
-            String taxpayerIdentifier, String legalName, String tradingName,
+            String taxIdentifier, String legalName, String tradingName,
             Address headquartersAddress, String mcc) {}
-    public record Address(String country, String city, String postalCode,
-            String line1, String location) {}
-    public record AccountContract(String contractNumber, String sourceProductCode,
-            String currencyCode) {}
-    public record DeviceContract(UUID outletId, UUID terminalRequestId, UUID contractId,
-            String contractNumber, String terminalId, String merchantId,
-            String sourceProductCode, String sourceDeviceType, String currencyCode,
-            String mcc, String location) {}
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Address(String line1, String line2, String district, String city,
+            String region, String postalCode, String country) {}
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Settlement(String accountReference, String currency) {}
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record Outlet(UUID sourceOutletId, String code, String name, boolean principal,
+            Address address, List<OutletProduct> products, List<TerminalRequest> terminalRequests) {}
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record OutletProduct(UUID productId) {}
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record TerminalRequest(UUID sourceRequestId, UUID productId, int quantity,
+            String modelCode, String connectivityCode, List<String> optionCodes) {}
 }

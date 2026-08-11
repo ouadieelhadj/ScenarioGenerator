@@ -150,7 +150,7 @@
             "browser": "src/main.merchant-portal.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.merchant-portal.json",
-            "assets": ["src/assets"],
+            "assets": ["src/assets", {"glob": "assetlinks.json", "input": "src/.well-known", "output": "/.well-known"}],
             "styles": ["src/styles.scss"],
             "scripts": []
           },
@@ -195,7 +195,7 @@
             "browser": "src/main.merchant-mobile.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.merchant-mobile.json",
-            "assets": ["src/assets"],
+            "assets": ["src/assets", {"glob": "assetlinks.json", "input": "src/.well-known", "output": "/.well-known"}],
             "styles": ["src/mobile/mobile.scss"],
             "scripts": []
           },

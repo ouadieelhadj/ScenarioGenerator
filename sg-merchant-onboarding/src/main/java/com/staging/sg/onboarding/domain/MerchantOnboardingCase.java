@@ -94,6 +94,9 @@ public class MerchantOnboardingCase {
     private UUID productId;
     @Column(name = "acceptance_channel", length = 16)
     private String acceptanceChannel;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "provisioning_destination", length = 16)
+    private ProvisioningDestination provisioningDestination;
     @Column(name = "outlet_code", length = 64)
     private String outletCode;
     @Column(name = "outlet_name", length = 160)
@@ -183,6 +186,15 @@ public class MerchantOnboardingCase {
         this.outletName = outletName.trim();
         this.outletAddress = outletAddress.trim();
         this.terminalCount = terminalCount;
+        this.updatedAt = Instant.now();
+    }
+
+    public void selectProvisioningDestination(ProvisioningDestination destination) {
+        requireStatus(OnboardingStatus.DRAFT,
+                "Provisioning destination can only be selected on a draft dossier");
+        if (destination == null)
+            throw new IllegalArgumentException("PROV-001: provisioning destination is required");
+        this.provisioningDestination = destination;
         this.updatedAt = Instant.now();
     }
 
@@ -286,6 +298,10 @@ public class MerchantOnboardingCase {
     public void submit(String maker) {
         requireStatus(OnboardingStatus.DRAFT, "Only a draft dossier can be submitted");
         if (legalName == null) throw new IllegalStateException("Dossier is incomplete");
+        if (provisioningDestination == null)
+            throw new IllegalStateException("PROV-001: provisioning destination is required before submission");
+        if (provisioningDestination.includesWay4() && merchantType == null)
+            throw new IllegalStateException("PROV-002: WAY4 requires the complete v2 legal profile");
         if (kycStatus != KycStatus.VALIDATED) throw new IllegalStateException("KYC must be validated before Maker/Checker");
         MerchantPortalAccount.requireText(maker, "maker");
         submittedBy = maker.trim();
@@ -340,6 +356,8 @@ public class MerchantOnboardingCase {
 
     public void approve(String checker) {
         requireStatus(OnboardingStatus.PENDING_APPROVAL, "Dossier is not pending approval");
+        if (provisioningDestination == null)
+            throw new IllegalStateException("PROV-001: provisioning destination is required before approval");
         MerchantPortalAccount.requireText(checker, "checker");
         if (checker.trim().equals(submittedBy)) throw new IllegalStateException("Maker and checker must be different");
         checkedBy = checker.trim();
@@ -433,6 +451,7 @@ public class MerchantOnboardingCase {
     public String settlementCurrency() { return settlementCurrency; }
     public UUID productId() { return productId; }
     public String acceptanceChannel() { return acceptanceChannel; }
+    public ProvisioningDestination provisioningDestination() { return provisioningDestination; }
     public String outletCode() { return outletCode; }
     public String outletName() { return outletName; }
     public String outletAddress() { return outletAddress; }

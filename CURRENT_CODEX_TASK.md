@@ -100,3 +100,52 @@ depuis Git, les fichiers, les processus, les ports, les artefacts et les tests.
   `NO-GO` pour une integration WAY4 positive et pour tout GO formel.
 - Preuve :
   `tests/merchant-onboarding/PROOF_OF_TEST_MERCHANT_INCREMENTS_2_5_2026-08-10.md`.
+
+## Découplage direct Portal vers WAY4 du 11 août 2026
+
+- Architecture corrigée : le parcours WAY4 est désormais
+  `Portal -> Connecteur WAY4/AURA -> XML -> WAY4 Acquiring`; FuturPayment
+  Acquiring n'intervient plus dans ce parcours.
+- Le parcours `Portal -> FuturPayment Acquiring` est conservé séparément.
+- Les outbox, types d'événement et clés d'idempotence sont distincts. Un rejet
+  WAY4 ne marque plus le provisionnement Acquiring en échec.
+- Le Portal transmet les données métier et un `Application/RegNumber` stable.
+  Les identifiants client/contrats/TID ne sont pas préremplis dans le XML.
+- L'allocation MID côté connecteur est implémentée mais désactivée jusqu'à
+  réception des règles, plages et préfixes AURA approuvés.
+- Validation consolidée : 135 tests courants réussis, 0 échec, 0 erreur.
+- PostgreSQL réel : sauvegarde, première application et rejeu de V7/V2 OK ;
+  16 dossiers avant/après, aucun doublon, aucune perte, aucune donnée fictive.
+- Premier travail non terminé : raccorder le format/canal réel du fichier
+  retour WAY4 et le callback OAuth2 vers le Portal, puis exécuter l'unique E2E
+  seulement après levée des prérequis métier et techniques.
+- Preuve :
+`tests/merchant-onboarding/PROOF_OF_TEST_PORTAL_DIRECT_WAY4_2026-08-11.md`.
+
+## Corrections des six remarques validateur du 11 aout 2026
+
+- Les evenements WAY4 restent `PENDING` lorsque le connecteur est desactive ;
+  un traitement deja reserve est libere sans echec final.
+- Les erreurs WAY4 sont tracees dans `onboarding_way4_export_state` sans
+  modifier le provisionnement FuturPayment Acquiring.
+- La securite OAuth2 du connecteur couvre jeton absent/invalide, audience,
+  scope et cas valide.
+- La destination `FUTURPAYMENT`, `WAY4` ou `BOTH` est obligatoire avant la
+  soumission et pilote uniquement les outbox selectionnees. Le payload v1
+  reste identique ; l'API v1 dispose d'un endpoint dedie de selection et l'API
+  v2 transporte directement la destination.
+- Un seul lien HTTPS d'activation est genere. Le Web publie `assetlinks.json`
+  et l'APK Android integre un App Link verifie et le plugin `@capacitor/app`.
+- Campagne finale : 147 tests Java, 0 echec, 0 erreur, 0 ignore ; builds Web et
+  mobile reussis ; APK debug assemblee et signature controlee.
+- PostgreSQL 18.4 : sauvegarde prise, V7/V2/V8 appliquees puis rejouees ; 16
+  dossiers conserves, 0 doublon, 0 orphelin et aucune donnee fictive.
+- Le commercant actif `885d1af8-2f05-465a-832a-6a91ae613da3` reste sans PDV
+  reel. Le DNS public `portal.futurpayment.com` ne se resout pas encore ; la
+  verification App Link sur domaine deploye reste donc impossible localement.
+- Le validateur a accorde le GO technique pour cloturer le developpement et
+  effectuer un commit/push strictement selectif de ce perimetre.
+- Premier travail non termine apres publication : lever le PDV reel et le
+  deploiement DNS/HTTPS avant l'unique E2E. Aucun import WAY4 n'a ete effectue.
+- Preuve :
+  `tests/merchant-onboarding/PROOF_OF_TEST_VALIDATOR_SIX_REMARKS_2026-08-11.md`.

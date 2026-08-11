@@ -10,7 +10,7 @@ public class Way4DryRunController {
     private final Way4DryRunService service;
     public Way4DryRunController(Way4DryRunService service) { this.service = service; }
     @PostMapping("/dry-runs")
-    @PreAuthorize("hasAuthority('WAY4_DRY_RUN')")
+    @PreAuthorize("hasAuthority('SCOPE_way4.generate')")
     public Way4DryRunService.DryRunResult dryRun(@RequestBody Way4DryRunRequest request) {
         return service.generate(request);
     }

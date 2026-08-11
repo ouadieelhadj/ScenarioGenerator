@@ -52,7 +52,7 @@ public class Way4XmlGenerator {
 
     private void clientApplication(Document doc, Element list, ResolvedWay4Application r) {
         Way4DryRunRequest request = r.request(); Way4DryRunRequest.Merchant merchant = request.merchant();
-        Element application = application(doc, list, reg("CLIENT", request.merchantId()), r, "Client");
+        Element application = application(doc, list, Way4RegNumbers.client(request.applicationRegNumber()), r, "Client");
         Element data = element(doc, application, "Data", null);
         Element client = element(doc, data, "Client", null);
         element(doc, client, "ClientType", r.clientType());
@@ -60,8 +60,8 @@ public class Way4XmlGenerator {
         Element info = element(doc, client, "ClientInfo", null);
         element(doc, info, "RegNumber", merchant.registrationNumber());
         element(doc, info, "ShortName", merchant.tradingName());
-        if (merchant.taxpayerIdentifier() != null && !merchant.taxpayerIdentifier().isBlank())
-            element(doc, info, "TaxpayerIdentifier", merchant.taxpayerIdentifier());
+        if (merchant.taxIdentifier() != null && !merchant.taxIdentifier().isBlank())
+            element(doc, info, "TaxpayerIdentifier", merchant.taxIdentifier());
         element(doc, info, "CompanyName", merchant.legalName());
         element(doc, info, "CompanyTradeName", merchant.tradingName());
         address(doc, client, "BaseAddress", merchant.headquartersAddress(), null, r.headquartersCountry());
@@ -71,13 +71,12 @@ public class Way4XmlGenerator {
 
     private void accountApplication(Document doc, Element parent, ResolvedWay4Application r) {
         Way4DryRunRequest request = r.request();
-        Element application = application(doc, parent, reg("ACCOUNT", request.merchantContractId()), r, "Contract");
+        Element application = application(doc, parent, Way4RegNumbers.account(request.applicationRegNumber()), r, "Contract");
         Element data = element(doc, application, "Data", null);
         Element contract = element(doc, data, "Contract", null);
         element(doc, contract, "ClientType", r.clientType());
         element(doc, contract, "ClientCategory", r.clientCategory());
         Element idt = element(doc, contract, "ContractIDT", null);
-        element(doc, idt, "ContractNumber", request.accountContract().contractNumber());
         element(doc, contract, "Currency", r.accountCurrency());
         element(doc, contract, "ContractName", request.merchant().legalName());
         Element product = element(doc, contract, "Product", null);
@@ -85,7 +84,7 @@ public class Way4XmlGenerator {
         element(doc, product, "AccountScheme", r.accountScheme());
         element(doc, product, "ServicePack", r.servicePack());
         Element sub = element(doc, application, "SubApplList", null);
-        Element addressApp = application(doc, sub, reg("ADDRESS", request.merchantContractId()), r, "ContractAddress");
+        Element addressApp = application(doc, sub, Way4RegNumbers.address(request.applicationRegNumber()), r, "ContractAddress");
         Element addressData = element(doc, addressApp, "Data", null);
         address(doc, addressData, "Address", request.merchant().headquartersAddress(),
                 r.paymentAddressType(), r.headquartersCountry());
@@ -95,23 +94,22 @@ public class Way4XmlGenerator {
     private void deviceApplication(Document doc, Element parent, ResolvedWay4Application r,
             ResolvedWay4Application.ResolvedDevice device) {
         var source = device.source();
-        Element application = application(doc, parent, reg("DEVICE", source.contractId()), r, "Contract");
+        Element application = application(doc, parent, device.applicationRegNumber(), r, "Contract");
         Element data = element(doc, application, "Data", null);
         Element contract = element(doc, data, "Contract", null);
         element(doc, contract, "ClientType", r.clientType());
         element(doc, contract, "ClientCategory", r.clientCategory());
         Element idt = element(doc, contract, "ContractIDT", null);
-        element(doc, idt, "ContractNumber", source.contractNumber());
         element(doc, contract, "Currency", device.currency());
-        element(doc, contract, "ContractName", "POS " + source.terminalId());
+        element(doc, contract, "ContractName", "POS " + device.outlet().code() + " " + device.ordinal());
         Element product = element(doc, contract, "Product", null);
         element(doc, product, "ProductCode1", device.product());
         Element deviceInfo = element(doc, contract, "DeviceInfo", null);
         element(doc, deviceInfo, "SIC", device.sic());
-        element(doc, deviceInfo, "MerchantID", source.merchantId());
+        element(doc, deviceInfo, "MerchantID", r.mid());
         Element record = element(doc, deviceInfo, "DeviceRecord", null);
         element(doc, record, "DeviceType", device.deviceType());
-        element(doc, record, "Location", source.location());
+        element(doc, record, "Location", device.outlet().address().city());
         element(doc, record, "DefaultCurr", device.currency());
         Element config = element(doc, record, "DeviceConfig", null);
         element(doc, config, "Status", "NotConfigured");
@@ -134,12 +132,8 @@ public class Way4XmlGenerator {
         if (addressType != null) element(doc, address, "AddressType", addressType);
         element(doc, address, "Country", resolvedCountry); element(doc, address, "City", source.city());
         if (source.postalCode() != null) element(doc, address, "PostalCode", source.postalCode());
-        if (addressType != null) element(doc, address, "AddressLocation", source.location());
+        if (addressType != null) element(doc, address, "AddressLocation", source.city());
         element(doc, address, "AddressLine1", source.line1());
-    }
-    private static String reg(String type, UUID id) {
-        if (id == null) throw new AuraMappingBlockedException(type + " source identifier is missing");
-        return "FP-" + type + "-" + id.toString().replace("-", "").toUpperCase();
     }
     private static Element element(Document doc, Node parent, String name, String value) {
         Element result = doc.createElement(name); if (value != null) result.setTextContent(value);

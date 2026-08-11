@@ -16,30 +16,35 @@ public class OnboardingOutboxReservationService {
     private final String workerId;
 
     public OnboardingOutboxReservationService(OnboardingOutboxEventRepository events,
-            @Value("${merchant-onboarding.outbox.worker-id:${spring.application.name}}") String workerId) {
+            @Value("${merchant-onboarding.outbox.worker-id:sg-merchant-onboarding}") String workerId) {
         this.events = events;
         this.workerId = workerId;
     }
 
     @Transactional
-    public List<ReservedEvent> reserve(int limit) {
+    public List<ReservedEvent> reserve(int limit, boolean way4Enabled) {
         if (limit < 1 || limit > 100)
             throw new IllegalArgumentException("Outbox reservation limit must be between 1 and 100");
         Instant now = Instant.now();
-        for (OnboardingOutboxEvent exhausted : events.lockExpiredExhausted(now, limit)) {
+        for (OnboardingOutboxEvent exhausted : events.lockExpiredExhausted(now, limit, way4Enabled)) {
             exhausted.fail("LEASE_EXPIRED_AFTER_MAX_ATTEMPTS",
                     "Processing lease expired after the eighth attempt", false);
             events.save(exhausted);
         }
-        return events.lockDispatchable(now, limit).stream().map(event -> {
+        return events.lockDispatchable(now, limit, way4Enabled).stream().map(event -> {
             String correlationId = "onboarding-outbox-" + UUID.randomUUID();
             event.reserve(workerId, correlationId, now);
             events.save(event);
-            return new ReservedEvent(event.id(), event.aggregateId(), event.idempotencyKey(),
+            return new ReservedEvent(event.id(), event.aggregateId(), event.eventType(), event.idempotencyKey(),
                     event.payloadJson(), correlationId);
         }).toList();
     }
 
-    public record ReservedEvent(UUID eventId, UUID caseId, String idempotencyKey,
+    @Transactional
+    public void holdWay4() {
+        events.releaseWay4Processing(Instant.now());
+    }
+
+    public record ReservedEvent(UUID eventId, UUID caseId, String eventType, String idempotencyKey,
             String payloadJson, String correlationId) {}
 }

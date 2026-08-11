@@ -98,9 +98,20 @@ public class MerchantOnboardingService {
                 data.country(), data.mcc(), data.settlementAccountReference(),
                 data.settlementCurrency(), data.productId(), data.acceptanceChannel(),
                 data.outletCode(), data.outletName(), data.outletAddress(), data.terminalCount());
+        if (data.provisioningDestination() != null)
+            dossier.selectProvisioningDestination(data.provisioningDestination());
         MerchantOnboardingCase saved = cases.save(dossier);
         adaptLegacyOutlet(saved);
         return saved;
+    }
+
+    @Transactional
+    public MerchantOnboardingCase selectProvisioningDestination(UUID id,
+            ProvisioningDestination destination, String caller) {
+        MerchantOnboardingCase dossier = dossier(id);
+        requireEditor(dossier, caller);
+        dossier.selectProvisioningDestination(destination);
+        return cases.save(dossier);
     }
 
     @Transactional
@@ -111,6 +122,8 @@ public class MerchantOnboardingService {
             throw new IllegalStateException("CONCURRENCY: dossier version is stale");
         if (data == null || data.headquartersAddress() == null || data.representative() == null)
             throw new IllegalArgumentException("MER-002: legal profile is incomplete");
+        if (data.provisioningDestination() == null)
+            throw new IllegalArgumentException("PROV-001: provisioning destination is required");
         if (data.outlets() == null || data.outlets().isEmpty())
             throw new IllegalArgumentException("PDV-001: at least one outlet is required");
         long principals = data.outlets().stream().filter(OutletData::active).filter(OutletData::principal).count();
@@ -140,6 +153,7 @@ public class MerchantOnboardingService {
                 representative.birthDate(), representative.phone(), representative.email(),
                 representative.idType(), representative.idNumber(),
                 representative.residenceCountry(), representative.nationality());
+        dossier.selectProvisioningDestination(data.provisioningDestination());
         cases.saveAndFlush(dossier);
 
         List<UUID> retainedOutletIds = new ArrayList<>();
@@ -637,7 +651,18 @@ public class MerchantOnboardingService {
     public record DossierData(String legalName, String tradingName, String registrationNumber,
             String country, String mcc, String settlementAccountReference,
             String settlementCurrency, UUID productId, String acceptanceChannel,
-            String outletCode, String outletName, String outletAddress, int terminalCount) {}
+            String outletCode, String outletName, String outletAddress, int terminalCount,
+            ProvisioningDestination provisioningDestination) {
+        public DossierData(String legalName, String tradingName, String registrationNumber,
+                String country, String mcc, String settlementAccountReference,
+                String settlementCurrency, UUID productId, String acceptanceChannel,
+                String outletCode, String outletName, String outletAddress, int terminalCount) {
+            this(legalName, tradingName, registrationNumber, country, mcc,
+                    settlementAccountReference, settlementCurrency, productId,
+                    acceptanceChannel, outletCode, outletName, outletAddress, terminalCount,
+                    ProvisioningDestination.FUTURPAYMENT);
+        }
+    }
     public record AddressData(String line1, String line2, String district, String city,
             String region, String postalCode, String country) {}
     public record RepresentativeData(String title, String firstName, String lastName,
@@ -663,12 +688,27 @@ public class MerchantOnboardingService {
         }
     }
     public record DossierV2Data(MerchantType merchantType,
+            ProvisioningDestination provisioningDestination,
             OrganizationLegalNature organizationLegalNature, String legalName,
             String tradingName, String registrationNumber, String taxIdentifier,
             String ice, String legalForm, String businessActivity, String associationPurpose,
             String primaryPhone, String primaryEmail, AddressData headquartersAddress,
             String mcc, String rib, RepresentativeData representative,
-            List<BeneficialOwnerData> beneficialOwners, List<OutletData> outlets, long version) {}
+            List<BeneficialOwnerData> beneficialOwners, List<OutletData> outlets, long version) {
+        public DossierV2Data(MerchantType merchantType,
+                OrganizationLegalNature organizationLegalNature, String legalName,
+                String tradingName, String registrationNumber, String taxIdentifier,
+                String ice, String legalForm, String businessActivity, String associationPurpose,
+                String primaryPhone, String primaryEmail, AddressData headquartersAddress,
+                String mcc, String rib, RepresentativeData representative,
+                List<BeneficialOwnerData> beneficialOwners, List<OutletData> outlets, long version) {
+            this(merchantType, ProvisioningDestination.FUTURPAYMENT,
+                    organizationLegalNature, legalName, tradingName, registrationNumber,
+                    taxIdentifier, ice, legalForm, businessActivity, associationPurpose,
+                    primaryPhone, primaryEmail, headquartersAddress, mcc, rib, representative,
+                    beneficialOwners, outlets, version);
+        }
+    }
     public record DossierV2Snapshot(MerchantOnboardingCase dossier,
             List<OnboardingOutlet> outlets, List<OnboardingBeneficialOwner> beneficialOwners,
             List<OnboardingOutletProduct> outletProducts,

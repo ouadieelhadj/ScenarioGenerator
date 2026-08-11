@@ -391,3 +391,65 @@ SHA-256 `F76E4927B2365B6A7B9FA9B7EE1B0CF28C87313CDE724BD6C6484673D0E8A680`.
 
 Preuve detaillee :
 `tests/merchant-onboarding/PROOF_OF_TEST_MERCHANT_INCREMENTS_2_5_2026-08-10.md`.
+
+## Découplage Portal vers WAY4 du 11 août 2026
+
+Le parcours WAY4 ne traverse plus FuturPayment Acquiring. Le code d'export et
+l'outbox WAY4 ont été retirés de `sg-acquiring`. Merchant Onboarding émet
+désormais directement un événement `way4.export.requested` vers le connecteur,
+indépendamment de `merchant.provisioning.requested` destiné à Acquiring.
+
+Le contrat direct fournit le commerçant, le règlement, les PDV, les demandes
+TPE et un `Application/RegNumber` stable. Le XML ne renseigne ni identifiant
+client WAY4, ni numéro de contrat commerçant, ni `ContractNumber` TPE/TID. Le
+connecteur possède une allocation MID persistante, fermée par défaut jusqu'à
+approbation des règles AURA réelles. Les dossiers v1 incomplets restent sur le
+flux Acquiring historique sans valeur juridique inventée.
+
+La validation courante totalise 135 tests réussis sans échec : `sg-common` 77,
+`sg-acquiring` 26, `sg-merchant-onboarding` 30 et connecteur 2. Les migrations
+V7 Onboarding et V2 Connecteur ont été appliquées puis rejouées sur PostgreSQL
+18 après sauvegarde : 16 dossiers avant/après, 0 doublon, 0 orphelin et aucune
+allocation MID ou donnée métier fictive.
+
+Le raccordement du fichier retour reste le premier travail non terminé : le
+format et le canal réels, les habilitations et le callback OAuth2 doivent être
+confirmés. Aucun import WAY4 ni E2E positif n'a été exécuté. Voir
+`tests/merchant-onboarding/PROOF_OF_TEST_PORTAL_DIRECT_WAY4_2026-08-11.md`.
+
+## Corrections des remarques validateur du 11 aout 2026
+
+Les six demandes ont ete implementees sans reintegrer WAY4 dans Acquiring :
+maintien des exports WAY4 en attente lorsque le connecteur est desactive,
+trace des erreurs dans l'etat WAY4, tests OAuth2 complets, destination metier
+`FUTURPAYMENT`/`WAY4`/`BOTH`, routage selectif et lien HTTPS unique avec Android
+App Link et repli Web. Le contrat de mise a jour v1 reste inchangé ; un endpoint
+dedie selectionne la destination et la v2 la porte dans son contrat.
+
+La campagne reconstruite depuis des repertoires `target` supprimes totalise
+147 tests Java reussis sans echec ni erreur : common 77, Acquiring 26,
+Onboarding 37, connecteur 7. Les builds Web et mobile sont reussis. Capacitor a
+ete synchronise et l'APK debug a ete assemblee ; le manifeste fusionne contient
+`autoVerify=true`, le package `com.moneycore.merchantportal` et la route HTTPS
+`/activation`. L'empreinte du certificat debug correspond a `assetlinks.json`.
+
+PostgreSQL 18.4 a ete sauvegarde dans
+`runtime/merchant-portal-e2e/backups/before-validator-six-fixes-20260811-121740.dump`.
+V7 Onboarding, V2 Connecteur et V8 Onboarding ont passe la premiere application
+et le rejeu. Les comptages sont restes 16 dossiers, 0 outbox, 0 etat WAY4 et 0
+allocation MID. Les controles donnent 0 doublon RegNumber/MID/idempotence, 0
+orphelin et 0 dossier Onboarding sans exactement un principal actif.
+
+Deux portes externes restent explicites : le commercant Acquiring actif
+`885d1af8-2f05-465a-832a-6a91ae613da3` n'a toujours aucun PDV reel, et le DNS
+public `portal.futurpayment.com` ne se resout pas encore. Aucun backfill fictif
+ni import WAY4 n'a ete lance.
+
+Le validateur a accorde le GO technique pour cloturer le developpement et
+publier ce perimetre par commit/push selectif. Le NO-GO E2E reel reste
+maintenu. Premier travail non termine apres publication : fourniture du PDV
+reel et deploiement DNS/HTTPS de `assetlinks.json`, puis une seule recette E2E
+apres levee de tous les prerequis WAY4/AURA et OAuth2.
+
+Preuve detaillee :
+`tests/merchant-onboarding/PROOF_OF_TEST_VALIDATOR_SIX_REMARKS_2026-08-11.md`.

@@ -9,6 +9,7 @@ import {
   MerchantDossierUpdate,
   MerchantDossierV2,
   MerchantDossierV2Update,
+  ProvisioningDestination,
   MerchantDocument,
   MerchantDocumentType,
   MerchantProvisioningView,
@@ -40,6 +41,11 @@ export class MerchantOnboardingService {
 
   updateDossier(id: string, request: MerchantDossierUpdate): Observable<MerchantDossier> {
     return this.http.put<MerchantDossier>(url.onboarding(ENDPOINTS.merchantPortal.dossier(id)), request);
+  }
+
+  selectDestination(id: string, destination: ProvisioningDestination): Observable<MerchantDossier> {
+    return this.http.put<MerchantDossier>(
+      url.onboarding(`${ENDPOINTS.merchantPortal.dossier(id)}/destination`), { destination });
   }
 
   dossierV2(id: string): Observable<MerchantDossierV2> {

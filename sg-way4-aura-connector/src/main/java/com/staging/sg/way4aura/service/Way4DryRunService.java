@@ -64,26 +64,27 @@ public class Way4DryRunService {
 
     private List<Way4ApplicationState> states(Way4DryRunRequest request, String hash) {
         List<Source> sources = new ArrayList<>();
-        sources.add(new Source("CLIENT", request.merchantId()));
-        sources.add(new Source("ACCOUNT", request.merchantContractId()));
-        sources.add(new Source("ADDRESS", request.merchantContractId()));
-        if (request.deviceContracts() != null) request.deviceContracts().forEach(
-                value -> sources.add(new Source("DEVICE", value.contractId())));
+        sources.add(new Source("CLIENT",request.onboardingCaseId(),Way4RegNumbers.client(request.applicationRegNumber())));
+        sources.add(new Source("ACCOUNT",stable(request.onboardingCaseId()+":ACCOUNT"),Way4RegNumbers.account(request.applicationRegNumber())));
+        sources.add(new Source("ADDRESS",stable(request.onboardingCaseId()+":ADDRESS"),Way4RegNumbers.address(request.applicationRegNumber())));
+        if(request.outlets()!=null)for(var outlet:request.outlets())if(outlet.terminalRequests()!=null)for(var terminal:outlet.terminalRequests())
+            for(int ordinal=1;ordinal<=terminal.quantity();ordinal++)sources.add(new Source("DEVICE",stable(terminal.sourceRequestId()+":"+ordinal),
+                    Way4RegNumbers.device(request.applicationRegNumber(),terminal.sourceRequestId(),ordinal)));
         return sources.stream().map(source -> applications.findBySourceTypeAndSourceId(
                 source.type(), source.id()).map(current -> {
                     if (!current.payloadHash().equals(hash)) throw new IllegalStateException(
                             "APPLICATION_PAYLOAD_CONFLICT: source object changed after generation");
                     return current;
                 }).orElseGet(() -> applications.save(Way4ApplicationState.pending(
-                        source.type(), source.id(), hash)))).toList();
+                        source.type(), source.id(), source.regNumber(), hash)))).toList();
     }
     private long nextFileNumber() {
         return ((Number) entityManager.createNativeQuery("select nextval('way4_file_number_seq')")
                 .getSingleResult()).longValue();
     }
     private void requireRequest(Way4DryRunRequest request) {
-        if (request == null || request.onboardingCaseId() == null || request.merchantId() == null
-                || request.merchantContractId() == null || request.idempotencyKey() == null
+        if (request == null || request.onboardingCaseId() == null || request.applicationRegNumber() == null
+                || !request.applicationRegNumber().matches("[A-Za-z0-9._-]{1,64}") || request.idempotencyKey() == null
                 || request.idempotencyKey().isBlank() || request.idempotencyKey().length() > 160)
             throw new IllegalArgumentException("Incomplete WAY4 dry-run request");
     }
@@ -96,7 +97,8 @@ public class Way4DryRunService {
         try { return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value)); }
         catch (Exception exception) { throw new IllegalStateException("SHA-256 is unavailable", exception); }
     }
-    private record Source(String type, UUID id) {}
+    private static UUID stable(String value){return UUID.nameUUIDFromBytes(value.getBytes(StandardCharsets.UTF_8));}
+    private record Source(String type, UUID id, String regNumber) {}
     public record DryRunResult(UUID fileId, long fileNumber, String fileName, String status,
             String payloadSha256, String xmlSha256, String xsdSha256, int mappingVersion, String xml) {}
 }

@@ -46,11 +46,28 @@ class MerchantOnboardingCaseTest {
                 .hasMessageContaining("terminal");
     }
 
+    @Test
+    void requiresExplicitDestinationBeforeMakerSubmission() {
+        MerchantOnboardingCase dossier = MerchantOnboardingCase.prospect(
+                UUID.randomUUID(), "ACQ-01", "commercial.user");
+        dossier.updateDossier("Merchant Legal", "Merchant Shop", "RC-DEST", "MA", "5411",
+                "ACC-001", "504", UUID.randomUUID(), "BOTH", "OUT-01", "Main outlet", "Rabat", 2);
+        dossier.submitKyc("merchant.user");
+        dossier.validateKyc("kyc.user");
+        assertThatThrownBy(() -> dossier.submit("merchant.user"))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("destination");
+        dossier.selectProvisioningDestination(ProvisioningDestination.FUTURPAYMENT);
+        dossier.submit("merchant.user");
+        assertThat(dossier.status()).isEqualTo(OnboardingStatus.PENDING_APPROVAL);
+    }
+
     private static MerchantOnboardingCase completeDossier() {
         MerchantOnboardingCase dossier = MerchantOnboardingCase.prospect(
                 UUID.randomUUID(), "ACQ-01", "commercial.user");
         dossier.updateDossier("Merchant Legal", "Merchant Shop", "RC-123", "MA", "5411",
                 "ACC-001", "504", UUID.randomUUID(), "BOTH", "OUT-01", "Main outlet", "Rabat", 2);
+        dossier.selectProvisioningDestination(ProvisioningDestination.FUTURPAYMENT);
         return dossier;
     }
 }

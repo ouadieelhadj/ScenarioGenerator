@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.moneycore.merchantportal",
+      "sha256_cert_fingerprints": [
+        "1E:15:47:0E:5D:0D:92:70:87:AE:4C:71:7B:78:D1:03:BA:91:D8:89:C2:0F:09:44:C3:F3:2C:06:30:F9:98:AF"
+      ]
+    }
+  }
+]

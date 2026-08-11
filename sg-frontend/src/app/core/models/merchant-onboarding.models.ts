@@ -3,6 +3,7 @@ export type OnboardingStatus = 'DRAFT' | 'PENDING_APPROVAL' | 'APPROVED' | 'REJE
   'QUEUED_FOR_PROVISIONING' | 'PROVISIONING' | 'PROVISIONED' | 'PROVISIONING_FAILED';
 export type KycStatus = 'NOT_STARTED' | 'PENDING_REVIEW' | 'COMPLEMENTS_REQUIRED' |
   'VALIDATED' | 'REJECTED';
+export type ProvisioningDestination = 'FUTURPAYMENT' | 'WAY4' | 'BOTH';
 
 export interface MerchantPortalAccount {
   id: string;
@@ -30,6 +31,7 @@ export interface MerchantDossier {
   outletName: string | null;
   outletAddress: string | null;
   terminalCount: number;
+  provisioningDestination: ProvisioningDestination | null;
   status: OnboardingStatus;
   kycStatus: KycStatus;
   kycSubmittedBy: string | null;
@@ -93,6 +95,7 @@ export interface MerchantOutletV2 {
 }
 export interface MerchantDossierV2 {
   id: string; reference: string; merchantType: MerchantType;
+  provisioningDestination: ProvisioningDestination;
   organizationLegalNature: OrganizationLegalNature | null; legalName: string; tradingName: string;
   registrationNumber: string; taxIdentifier: string | null; ice: string | null;
   legalForm: string | null; businessActivity: string | null; associationPurpose: string | null;

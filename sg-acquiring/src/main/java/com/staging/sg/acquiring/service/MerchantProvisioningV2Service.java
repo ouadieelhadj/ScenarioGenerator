@@ -6,7 +6,6 @@ import com.staging.sg.acquiring.api.MerchantProvisioningRequestV2;
 import com.staging.sg.acquiring.api.MerchantProvisioningResultV2;
 import com.staging.sg.acquiring.domain.*;
 import com.staging.sg.acquiring.repository.*;
-import com.staging.sg.acquiring.integration.Way4ExportRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,8 +34,6 @@ public class MerchantProvisioningV2Service {
     private final EcommerceStoreRepository stores;
     private final EcommerceAcceptanceProfileRepository ecommerceProfiles;
     private final ProvisioningObjectStateRepository states;
-    private final AcquiringDeviceContractDetailRepository deviceDetails;
-    private final Way4ExportOutboxEventRepository way4Outbox;
     private final ObjectMapper objectMapper;
 
     public MerchantProvisioningV2Service(AcquiringAdministrationService administration,
@@ -49,16 +46,13 @@ public class MerchantProvisioningV2Service {
             MerchantOutletProductRepository outletProducts, AcquiringContractRepository contracts,
             EcommerceStoreRepository stores,
             EcommerceAcceptanceProfileRepository ecommerceProfiles,
-            ProvisioningObjectStateRepository states,
-            AcquiringDeviceContractDetailRepository deviceDetails,
-            Way4ExportOutboxEventRepository way4Outbox, ObjectMapper objectMapper) {
+            ProvisioningObjectStateRepository states, ObjectMapper objectMapper) {
         this.administration = administration; this.ecommerceContracts = ecommerceContracts;
         this.identifiers = identifiers; this.merchants = merchants; this.outlets = outlets;
         this.legalProfiles = legalProfiles; this.representatives = representatives;
         this.beneficialOwners = beneficialOwners; this.products = products;
         this.bindings = bindings; this.outletProducts = outletProducts; this.contracts = contracts;
         this.stores = stores; this.ecommerceProfiles = ecommerceProfiles; this.states = states;
-        this.deviceDetails = deviceDetails; this.way4Outbox = way4Outbox;
         this.objectMapper = objectMapper;
     }
 
@@ -104,48 +98,7 @@ public class MerchantProvisioningV2Service {
         String aggregate = aggregate(results);
         MerchantProvisioningResultV2 response = new MerchantProvisioningResultV2(SCHEMA_VERSION, merchant.id(),
                 contractState.allocatedIdentifier(), aggregate, List.copyOf(results));
-        if ("PROVISIONED".equals(aggregate)) enqueueWay4(request, merchant, merchantContract,
-                contractState.allocatedIdentifier(), idempotencyKey);
         return response;
-    }
-
-    private void enqueueWay4(MerchantProvisioningRequestV2 request, Merchant merchant,
-            AcquiringContract merchantContract, String mid, String baseKey) {
-        String key = baseKey + ":way4-export";
-        if (way4Outbox.findByIdempotencyKey(key).isPresent()) return;
-        var legal = request.merchant(); var address = legal.headquartersAddress();
-        List<Way4ExportRequest.DeviceContract> devices = new ArrayList<>();
-        for (MerchantProvisioningRequestV2.Outlet outlet : request.outlets()) {
-            for (MerchantProvisioningRequestV2.TerminalRequest terminal : safe(outlet.terminalRequests())) {
-                for (int ordinal = 1; ordinal <= terminal.quantity(); ordinal++) {
-                    UUID objectId = stable(terminal.sourceRequestId() + ":" + ordinal);
-                    ProvisioningObjectState state = states.findByObjectTypeAndObjectId(
-                            "TPE_DEVICE_CONTRACT", objectId).orElseThrow();
-                    UUID contractId = UUID.fromString(state.externalReference());
-                    AcquiringContract contract = contracts.findById(contractId).orElseThrow();
-                    AcquiringDeviceContractDetail detail = deviceDetails.findById(contractId).orElseThrow();
-                    devices.add(new Way4ExportRequest.DeviceContract(outlet.sourceOutletId(),
-                            terminal.sourceRequestId(), contractId, contract.externalReference(),
-                            detail.terminalId(), mid, contract.productId().toString(), terminal.modelCode(),
-                            request.settlement().currency(), legal.mcc(), outlet.address().city()));
-                }
-            }
-        }
-        Way4ExportRequest payload = new Way4ExportRequest("1.0", request.onboardingCaseId(),
-                merchant.id(), merchantContract.id(), new Way4ExportRequest.Merchant(
-                legal.merchantType(), legal.registrationNumber(), legal.taxIdentifier(),
-                legal.legalName(), legal.tradingName(), new Way4ExportRequest.Address(
-                address.country(), address.city(), address.postalCode(), address.line1(),
-                address.city()), legal.mcc()), new Way4ExportRequest.AccountContract(
-                merchantContract.externalReference(), merchantContract.productId().toString(),
-                request.settlement().currency()), List.copyOf(devices), key);
-        try {
-            String json = objectMapper.writeValueAsString(payload);
-            way4Outbox.save(Way4ExportOutboxEvent.pending(request.onboardingCaseId(), key,
-                    json, fingerprint(payload)));
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Cannot serialize WAY4 export event", exception);
-        }
     }
 
     private Merchant provisionMerchant(MerchantProvisioningRequestV2 request,

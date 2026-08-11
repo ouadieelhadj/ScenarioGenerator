@@ -7,6 +7,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class OnboardingOutboxEventTest {
     @Test
+    void acquiringAndWay4UseIndependentEventsAndIdempotencyKeys() {
+        UUID caseId=UUID.randomUUID();
+        OnboardingOutboxEvent acquiring=OnboardingOutboxEvent.provisioningRequested(caseId,"{}","a".repeat(64));
+        OnboardingOutboxEvent way4=OnboardingOutboxEvent.way4ExportRequested(caseId,"{}","b".repeat(64));
+        assertEquals("merchant.provisioning.requested",acquiring.eventType());
+        assertEquals("way4.export.requested",way4.eventType());
+        assertNotEquals(acquiring.idempotencyKey(),way4.idempotencyKey());
+    }
+    @Test
     void appliesEightAttemptBudgetAndAllowsAuditedManualRetry() {
         OnboardingOutboxEvent event = OnboardingOutboxEvent.provisioningRequested(
                 UUID.randomUUID(), "{\"schemaVersion\":\"2.0\"}", "a".repeat(64));

@@ -5,6 +5,7 @@ import {
   IonHeader, IonInput, IonItem, IonList, IonTitle, IonToolbar,
 } from '@ionic/angular/standalone';
 import { MerchantOnboardingService } from '../../app/core/services/merchant-onboarding.service';
+import { merchantActivationUrl } from '../../app/core/config/merchant-activation.config';
 
 @Component({
   standalone: true,
@@ -51,7 +52,7 @@ export class MobileCommercialProspectPage {
         this.loading.set(false);
         this.reference.set(prospect.dossier.reference);
         const token = prospect.identityInvitation?.activationToken;
-        this.activationLink.set(token ? `${location.origin}/activation?token=${encodeURIComponent(token)}` : '');
+        this.activationLink.set(token ? merchantActivationUrl(token) : '');
       },
       error: () => { this.loading.set(false); this.error.set('Creation impossible. Verifiez les donnees ou le doublon.'); },
     });

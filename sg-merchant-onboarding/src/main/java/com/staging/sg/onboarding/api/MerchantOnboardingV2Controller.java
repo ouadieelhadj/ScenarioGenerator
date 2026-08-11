@@ -121,6 +121,7 @@ public class MerchantOnboardingV2Controller {
     }
 
     public record DossierV2Request(@NotNull MerchantType merchantType,
+            @NotNull ProvisioningDestination provisioningDestination,
             OrganizationLegalNature organizationLegalNature,
             @NotBlank @Size(max = 160) String legalName,
             @NotBlank @Size(max = 160) String tradingName,
@@ -137,7 +138,7 @@ public class MerchantOnboardingV2Controller {
             @NotEmpty @Valid List<OutletRequest> outlets,
             @PositiveOrZero long version) {
         MerchantOnboardingService.DossierV2Data toData() {
-            return new MerchantOnboardingService.DossierV2Data(merchantType,
+            return new MerchantOnboardingService.DossierV2Data(merchantType, provisioningDestination,
                     organizationLegalNature, legalName, tradingName, registrationNumber,
                     taxIdentifier, ice, legalForm, businessActivity, associationPurpose,
                     primaryPhone, primaryEmail, headquartersAddress.toData(), mcc, rib,
@@ -209,6 +210,7 @@ public class MerchantOnboardingV2Controller {
         }
     }
     public record DossierV2View(UUID id, String reference, MerchantType merchantType,
+            ProvisioningDestination provisioningDestination,
             OrganizationLegalNature organizationLegalNature, String legalName, String tradingName,
             String registrationNumber, String taxIdentifier, String ice, String legalForm,
             String businessActivity, String associationPurpose, String primaryPhone,
@@ -218,6 +220,7 @@ public class MerchantOnboardingV2Controller {
         static DossierV2View from(MerchantOnboardingService.DossierV2Snapshot snapshot) {
             MerchantOnboardingCase value = snapshot.dossier();
             return new DossierV2View(value.id(), value.reference(), value.merchantType(),
+                    value.provisioningDestination(),
                     value.organizationLegalNature(), value.legalName(), value.tradingName(),
                     value.registrationNumber(), value.taxIdentifier(), value.ice(), value.legalForm(),
                     value.businessActivity(), value.associationPurpose(), value.primaryPhone(),

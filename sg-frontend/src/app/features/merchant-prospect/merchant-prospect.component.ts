@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { MerchantProspect } from '../../core/models/merchant-onboarding.models';
 import { MerchantOnboardingService } from '../../core/services/merchant-onboarding.service';
+import { merchantActivationUrl } from '../../core/config/merchant-activation.config';
 
 @Component({
   selector: 'app-merchant-prospect',
@@ -54,6 +55,6 @@ export class MerchantProspectComponent {
 
   activationUrl(prospect: MerchantProspect): string | null {
     const token = prospect.identityInvitation?.activationToken;
-    return token ? `${location.origin}/activation?token=${encodeURIComponent(token)}` : null;
+    return token ? merchantActivationUrl(token) : null;
   }
 }

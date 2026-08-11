@@ -41,13 +41,25 @@ public class OnboardingOutboxEvent {
 
     public static OnboardingOutboxEvent provisioningRequested(UUID caseId,
             String payloadJson, String payloadHash) {
+        return requested(caseId,"merchant.provisioning.requested","2.0",
+                "merchant-onboarding-v2:"+caseId,payloadJson,payloadHash);
+    }
+
+    public static OnboardingOutboxEvent way4ExportRequested(UUID caseId,
+            String payloadJson, String payloadHash) {
+        return requested(caseId,"way4.export.requested","2.0",
+                "merchant-way4-v2:"+caseId,payloadJson,payloadHash);
+    }
+
+    private static OnboardingOutboxEvent requested(UUID caseId,String eventType,
+            String schemaVersion,String idempotencyKey,String payloadJson,String payloadHash) {
         OnboardingOutboxEvent value = new OnboardingOutboxEvent();
         value.id = UUID.randomUUID();
         value.aggregateType = "MERCHANT_ONBOARDING_CASE";
         value.aggregateId = caseId;
-        value.eventType = "merchant.provisioning.requested";
-        value.schemaVersion = "2.0";
-        value.idempotencyKey = "merchant-onboarding-v2:" + caseId;
+        value.eventType = eventType;
+        value.schemaVersion = schemaVersion;
+        value.idempotencyKey = idempotencyKey;
         value.payloadJson = payloadJson;
         value.payloadHash = payloadHash;
         value.status = OnboardingOutboxStatus.PENDING;
@@ -131,6 +143,7 @@ public class OnboardingOutboxEvent {
 
     public UUID id() { return id; }
     public UUID aggregateId() { return aggregateId; }
+    public String eventType() { return eventType; }
     public String idempotencyKey() { return idempotencyKey; }
     public String payloadJson() { return payloadJson; }
     public String payloadHash() { return payloadHash; }

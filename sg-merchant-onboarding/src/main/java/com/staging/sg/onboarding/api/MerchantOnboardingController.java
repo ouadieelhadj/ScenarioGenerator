@@ -53,8 +53,16 @@ public class MerchantOnboardingController {
                 request.legalName(), request.tradingName(), request.registrationNumber(),
                 request.country(), request.mcc(), request.settlementAccountReference(),
                 request.settlementCurrency(), request.productId(), request.acceptanceChannel(),
-                request.outletCode(), request.outletName(), request.outletAddress(), request.terminalCount());
+                request.outletCode(), request.outletName(), request.outletAddress(), request.terminalCount(),
+                null);
         return DossierView.from(service.updateDossier(id, data, authentication.getName()));
+    }
+
+    @PutMapping("/dossiers/{id}/destination")
+    public DossierView selectDestination(@PathVariable UUID id,
+            @Valid @RequestBody DestinationRequest request, Authentication authentication) {
+        return DossierView.from(service.selectProvisioningDestination(
+                id, request.destination(), authentication.getName()));
     }
 
     @GetMapping("/dossiers/{id}")
@@ -176,6 +184,7 @@ public class MerchantOnboardingController {
             @Pattern(regexp = "[0-9a-fA-F]{64}") String sha256) {}
     public record ReviewRequest(@NotBlank String reason) {}
     public record DocumentReviewRequest(boolean accepted, String reason) {}
+    public record DestinationRequest(@NotNull ProvisioningDestination destination) {}
     public record DossierRequest(@NotBlank String legalName, @NotBlank String tradingName,
             @NotBlank String registrationNumber, @Pattern(regexp = "[A-Z]{2}") String country,
             @Pattern(regexp = "\\d{4}") String mcc, @NotBlank String settlementAccountReference,
@@ -204,7 +213,8 @@ public class MerchantOnboardingController {
             String legalName, String tradingName, String registrationNumber, String country,
             String mcc, String settlementAccountReference, String settlementCurrency,
             UUID productId, String acceptanceChannel, String outletCode, String outletName,
-            String outletAddress, int terminalCount, OnboardingStatus status,
+            String outletAddress, int terminalCount, ProvisioningDestination provisioningDestination,
+            OnboardingStatus status,
             KycStatus kycStatus, String kycSubmittedBy, String kycReviewedBy, String complementReason,
             String submittedBy, String checkedBy, String rejectionReason,
             UUID acquiringMerchantId, String merchantAcceptorId, Instant createdAt) {
@@ -213,7 +223,7 @@ public class MerchantOnboardingController {
                     value.legalName(), value.tradingName(), value.registrationNumber(), value.country(),
                     value.mcc(), value.settlementAccountReference(), value.settlementCurrency(),
                     value.productId(), value.acceptanceChannel(), value.outletCode(), value.outletName(),
-                    value.outletAddress(), value.terminalCount(), value.status(),
+                    value.outletAddress(), value.terminalCount(), value.provisioningDestination(), value.status(),
                     value.kycStatus(), value.kycSubmittedBy(), value.kycReviewedBy(), value.complementReason(),
                     value.submittedBy(), value.checkedBy(), value.rejectionReason(),
                     value.acquiringMerchantId(), value.merchantAcceptorId(), value.createdAt());

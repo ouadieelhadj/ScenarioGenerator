@@ -4,7 +4,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { finalize } from 'rxjs';
 import {
   MerchantDocument, MerchantDocumentType, MerchantDossier, MerchantDossierV2,
-  MerchantDossierV2Update, MerchantOutletV2,
+  MerchantDossierV2Update, MerchantOutletV2, ProvisioningDestination,
 } from '../../core/models/merchant-onboarding.models';
 import { MerchantOnboardingService } from '../../core/services/merchant-onboarding.service';
 
@@ -23,6 +23,7 @@ import { MerchantOnboardingService } from '../../core/services/merchant-onboardi
       <form [formGroup]="form" (ngSubmit)="saveV2()">
         <section class="panel form-grid">
           <h2 class="wide">Profil juridique</h2>
+          <label class="wide">Système de destination<select formControlName="provisioningDestination"><option value="" disabled>Choisir une destination</option><option value="FUTURPAYMENT">FuturPayment Acquiring</option><option value="WAY4">WAY4 Acquiring</option><option value="BOTH">FuturPayment + WAY4</option></select></label>
           <label>Type<select formControlName="merchantType"><option value="PP">Personne physique</option><option value="PM">Personne morale</option><option value="AE">Auto-entrepreneur</option><option value="ASSOCIATION_FOUNDATION">Association / Fondation</option></select></label>
           @if (form.controls.merchantType.value === 'ASSOCIATION_FOUNDATION') { <label>Nature<select formControlName="organizationLegalNature"><option value="ASSOCIATION">Association</option><option value="FOUNDATION">Fondation</option></select></label> }
           <label>Raison sociale<input formControlName="legalName" /></label>
@@ -120,6 +121,7 @@ export class MerchantDossierComponent implements OnInit {
   readonly requiredTypes: MerchantDocumentType[] = ['LEGAL_EXISTENCE','REPRESENTATIVE_IDENTITY','BANK_ACCOUNT_PROOF'];
   readonly selected: Partial<Record<MerchantDocumentType, File>> = {};
   readonly form = this.fb.nonNullable.group({
+    provisioningDestination: this.fb.nonNullable.control<ProvisioningDestination | ''>('', Validators.required),
     merchantType: this.fb.nonNullable.control<'PP'|'PM'|'AE'|'ASSOCIATION_FOUNDATION'>('PM'), organizationLegalNature:[''],
     legalName:['',Validators.required], tradingName:['',Validators.required], registrationNumber:['',Validators.required],
     taxIdentifier:[''], ice:[''], legalForm:[''], businessActivity:[''], associationPurpose:[''],
@@ -140,11 +142,11 @@ export class MerchantDossierComponent implements OnInit {
   }
   private openV2(value: MerchantDossierV2): void {
     this.advanced.set(value); this.outlets.set(structuredClone(value.outlets)); this.owners.set(structuredClone(value.beneficialOwners));
-    this.form.patchValue({merchantType:value.merchantType,organizationLegalNature:value.organizationLegalNature??'',legalName:value.legalName,tradingName:value.tradingName,registrationNumber:value.registrationNumber,taxIdentifier:value.taxIdentifier??'',ice:value.ice??'',legalForm:value.legalForm??'',businessActivity:value.businessActivity??'',associationPurpose:value.associationPurpose??'',primaryPhone:value.primaryPhone,primaryEmail:value.primaryEmail,mcc:value.mcc,rib:value.rib,headquartersLine1:value.headquartersAddress.line1,headquartersCity:value.headquartersAddress.city,headquartersCountry:value.headquartersAddress.country,representativeFirstName:value.representative.firstName,representativeLastName:value.representative.lastName,representativePhone:value.representative.phone,representativeEmail:value.representative.email,representativeIdType:value.representative.idType,representativeIdNumber:value.representative.idNumber,representativeResidenceCountry:value.representative.residenceCountry,representativeNationality:value.representative.nationality});
+    this.form.patchValue({provisioningDestination:value.provisioningDestination,merchantType:value.merchantType,organizationLegalNature:value.organizationLegalNature??'',legalName:value.legalName,tradingName:value.tradingName,registrationNumber:value.registrationNumber,taxIdentifier:value.taxIdentifier??'',ice:value.ice??'',legalForm:value.legalForm??'',businessActivity:value.businessActivity??'',associationPurpose:value.associationPurpose??'',primaryPhone:value.primaryPhone,primaryEmail:value.primaryEmail,mcc:value.mcc,rib:value.rib,headquartersLine1:value.headquartersAddress.line1,headquartersCity:value.headquartersAddress.city,headquartersCountry:value.headquartersAddress.country,representativeFirstName:value.representative.firstName,representativeLastName:value.representative.lastName,representativePhone:value.representative.phone,representativeEmail:value.representative.email,representativeIdType:value.representative.idType,representativeIdNumber:value.representative.idNumber,representativeResidenceCountry:value.representative.residenceCountry,representativeNationality:value.representative.nationality});
   }
   saveV2(): void {
     const current=this.advanced(); if(!current||this.form.invalid)return; const raw=this.form.getRawValue();
-    const request:MerchantDossierV2Update={version:current.version,merchantType:raw.merchantType,organizationLegalNature:raw.merchantType==='ASSOCIATION_FOUNDATION'?(raw.organizationLegalNature as 'ASSOCIATION'|'FOUNDATION'):null,legalName:raw.legalName,tradingName:raw.tradingName,registrationNumber:raw.registrationNumber,taxIdentifier:raw.taxIdentifier||null,ice:raw.ice||null,legalForm:raw.legalForm||null,businessActivity:raw.businessActivity||null,associationPurpose:raw.associationPurpose||null,primaryPhone:raw.primaryPhone,primaryEmail:raw.primaryEmail,mcc:raw.mcc,rib:raw.rib,headquartersAddress:{...current.headquartersAddress,line1:raw.headquartersLine1,city:raw.headquartersCity,country:raw.headquartersCountry},representative:{...current.representative,firstName:raw.representativeFirstName,lastName:raw.representativeLastName,phone:raw.representativePhone,email:raw.representativeEmail,idType:raw.representativeIdType,idNumber:raw.representativeIdNumber,residenceCountry:raw.representativeResidenceCountry,nationality:raw.representativeNationality},beneficialOwners:this.owners(),outlets:this.outlets()};
+    const request:MerchantDossierV2Update={version:current.version,provisioningDestination:raw.provisioningDestination as ProvisioningDestination,merchantType:raw.merchantType,organizationLegalNature:raw.merchantType==='ASSOCIATION_FOUNDATION'?(raw.organizationLegalNature as 'ASSOCIATION'|'FOUNDATION'):null,legalName:raw.legalName,tradingName:raw.tradingName,registrationNumber:raw.registrationNumber,taxIdentifier:raw.taxIdentifier||null,ice:raw.ice||null,legalForm:raw.legalForm||null,businessActivity:raw.businessActivity||null,associationPurpose:raw.associationPurpose||null,primaryPhone:raw.primaryPhone,primaryEmail:raw.primaryEmail,mcc:raw.mcc,rib:raw.rib,headquartersAddress:{...current.headquartersAddress,line1:raw.headquartersLine1,city:raw.headquartersCity,country:raw.headquartersCountry},representative:{...current.representative,firstName:raw.representativeFirstName,lastName:raw.representativeLastName,phone:raw.representativePhone,email:raw.representativeEmail,idType:raw.representativeIdType,idNumber:raw.representativeIdNumber,residenceCountry:raw.representativeResidenceCountry,nationality:raw.representativeNationality},beneficialOwners:this.owners(),outlets:this.outlets()};
     this.busy.set(true); this.service.updateDossierV2(current.id,request).subscribe({next:value=>{this.busy.set(false);this.openV2(value);this.message.set('Dossier juridique, PDV, TPE et e-commerce enregistres.');},error:e=>this.fail(e)});
   }
   addOwner():void{this.owners.update(v=>[...v,{id:crypto.randomUUID(),firstName:'',lastName:'',active:true}]);}

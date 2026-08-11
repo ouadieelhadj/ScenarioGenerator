@@ -31,6 +31,14 @@ merchant-onboarding:
       client-id: ${MERCHANT_ONBOARDING_OAUTH2_CLIENT_ID:}
       client-secret: ${MERCHANT_ONBOARDING_OAUTH2_CLIENT_SECRET:}
       scope: ${MERCHANT_ONBOARDING_OAUTH2_SCOPE:merchant.provision}
+  way4-connector:
+    enabled: ${MERCHANT_ONBOARDING_WAY4_ENABLED:false}
+    base-url: ${MERCHANT_ONBOARDING_WAY4_BASE_URL:http://127.0.0.1:8580}
+    oauth2:
+      token-url: ${MERCHANT_ONBOARDING_WAY4_OAUTH2_TOKEN_URL:}
+      client-id: ${MERCHANT_ONBOARDING_WAY4_OAUTH2_CLIENT_ID:}
+      client-secret: ${MERCHANT_ONBOARDING_WAY4_OAUTH2_CLIENT_SECRET:}
+      scope: ${MERCHANT_ONBOARDING_WAY4_OAUTH2_SCOPE:way4.generate}
   outbox:
     enabled: ${MERCHANT_ONBOARDING_OUTBOX_ENABLED:false}
     batch-size: ${MERCHANT_ONBOARDING_OUTBOX_BATCH_SIZE:20}
