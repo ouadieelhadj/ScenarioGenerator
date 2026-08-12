@@ -26,6 +26,13 @@ const MERCHANT_ROUTES: Routes = [
     loadComponent: () => import('./features/merchant-review/merchant-review.component').then(m => m.MerchantReviewComponent),
   },
   {
+    path: 'backoffice/provisioning',
+    canActivate: [permissionGuard],
+    data: { permissions: [Permission.ONBOARDING_PROVISION], roles: ['BACK_OFFICE', 'ADMIN'] },
+    loadComponent: () => import('./features/merchant-provisioning/merchant-provisioning.component')
+      .then(m => m.MerchantProvisioningComponent),
+  },
+  {
     path: 'merchant/dossier/:id',
     canActivate: [productGuard],
     data: { products: ['MERCHANT_PORTAL'] },

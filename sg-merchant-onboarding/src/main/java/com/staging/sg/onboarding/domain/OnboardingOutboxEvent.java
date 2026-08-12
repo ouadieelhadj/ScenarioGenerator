@@ -151,4 +151,7 @@ public class OnboardingOutboxEvent {
     public int attempts() { return attempts; }
     public Instant availableAt() { return availableAt; }
     public String lastCorrelationId() { return lastCorrelationId; }
+    public String lastErrorCode() { return lastErrorCode; }
+    public String lastErrorMessage() { return lastErrorMessage; }
+    public Instant updatedAt() { return updatedAt; }
 }

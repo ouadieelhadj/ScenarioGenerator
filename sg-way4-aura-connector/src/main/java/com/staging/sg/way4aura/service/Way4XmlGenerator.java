@@ -13,10 +13,24 @@ import java.io.ByteArrayOutputStream;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
+import java.util.List;
 
 @Component
 public class Way4XmlGenerator {
     public byte[] generate(ResolvedWay4Application resolved, long fileNumber, Instant generatedAt) {
+        return generate(List.of(resolved), fileNumber, generatedAt);
+    }
+
+    public byte[] generate(List<ResolvedWay4Application> resolvedApplications, long fileNumber,
+            Instant generatedAt) {
+        if (resolvedApplications == null || resolvedApplications.isEmpty())
+            throw new IllegalArgumentException("At least one WAY4 application is required");
+        ResolvedWay4Application headerValues = resolvedApplications.get(0);
+        boolean inconsistentHeader = resolvedApplications.stream().anyMatch(value ->
+                !headerValues.sender().equals(value.sender())
+                        || !headerValues.institution().equals(value.institution()));
+        if (inconsistentHeader)
+            throw new IllegalArgumentException("All applications in a WAY4 file must share sender and institution");
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
@@ -26,14 +40,14 @@ public class Way4XmlGenerator {
             Element root = element(document, document, "ApplicationFile", null);
             Element header = element(document, root, "FileHeader", null);
             element(document, header, "FormatVersion", "2.0");
-            element(document, header, "Sender", resolved.sender());
+            element(document, header, "Sender", headerValues.sender());
             ZonedDateTime time = generatedAt.atZone(ZoneOffset.UTC);
             element(document, header, "CreationDate", time.toLocalDate().toString());
             element(document, header, "CreationTime", time.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
             element(document, header, "Number", Long.toString(fileNumber));
-            element(document, header, "Institution", resolved.institution());
+            element(document, header, "Institution", headerValues.institution());
             Element list = element(document, root, "ApplicationsList", null);
-            clientApplication(document, list, resolved);
+            resolvedApplications.forEach(resolved -> clientApplication(document, list, resolved));
             TransformerFactory transformerFactory = TransformerFactory.newInstance();
             transformerFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
             transformerFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");

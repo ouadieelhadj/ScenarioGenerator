@@ -21,9 +21,9 @@ class OnboardingDestinationRoutingTest {
     @Test void futurPaymentCreatesOnlyAcquiringEvent(){assertRouting(ProvisioningDestination.FUTURPAYMENT,
             List.of("merchant.provisioning.requested"),false);}
     @Test void way4CreatesOnlyWay4Event(){assertRouting(ProvisioningDestination.WAY4,
-            List.of("way4.export.requested"),true);}
+            List.of(),true);}
     @Test void bothCreatesBothIndependentEvents(){assertRouting(ProvisioningDestination.BOTH,
-            List.of("merchant.provisioning.requested","way4.export.requested"),true);}
+            List.of("merchant.provisioning.requested"),true);}
 
     private void assertRouting(ProvisioningDestination destination,List<String> expectedTypes,
             boolean expectsWay4State){

@@ -15,6 +15,9 @@ import {
   MerchantProvisioningView,
   MerchantProspect,
   MerchantReferenceValue,
+  Way4ExportCandidate,
+  Way4BatchResult,
+  FuturPaymentCandidate,
 } from '../models/merchant-onboarding.models';
 
 @Injectable({ providedIn: 'root' })
@@ -125,5 +128,29 @@ export class MerchantOnboardingService {
     return this.http.post<MerchantProvisioningView[]>(url.onboarding(`${ENDPOINTS.merchantPortal.runBatch}?limit=100&retryFailed=false`), null, {
       headers: { 'X-Correlation-ID': `merchant-portal-batch-${crypto.randomUUID()}` },
     });
+  }
+
+  way4Candidates(): Observable<Way4ExportCandidate[]> {
+    return this.http.get<Way4ExportCandidate[]>(url.onboarding(ENDPOINTS.merchantPortal.way4Candidates));
+  }
+
+  generateWay4Batch(caseIds: string[]): Observable<Way4BatchResult> {
+    const operationId = crypto.randomUUID();
+    return this.http.post<Way4BatchResult>(url.onboarding(ENDPOINTS.merchantPortal.way4Batches), { caseIds }, {
+      headers: {
+        'X-Correlation-ID': `portal-way4-batch-${operationId}`,
+      },
+    });
+  }
+
+  futurPaymentCandidates(): Observable<FuturPaymentCandidate[]> {
+    return this.http.get<FuturPaymentCandidate[]>(url.onboarding(ENDPOINTS.merchantPortal.futurPaymentCandidates));
+  }
+
+  resendFuturPayment(eventId: string): Observable<{ eventId: string; status: string; attempts: number }> {
+    return this.http.post<{ eventId: string; status: string; attempts: number }>(
+      url.onboarding(ENDPOINTS.merchantPortal.futurPaymentResend(eventId)), null, {
+        headers: { 'X-Correlation-ID': `merchant-portal-resend-${crypto.randomUUID()}` },
+      });
   }
 }

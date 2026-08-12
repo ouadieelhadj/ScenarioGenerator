@@ -102,6 +102,10 @@ export const ENDPOINTS = {
     provision: (id: string, mode: 'IMMEDIATE' | 'BATCH') => `/api/merchant-onboarding/v1/dossiers/${id}/provision?mode=${mode}`,
     pendingBatch: '/api/merchant-onboarding/v1/batches/pending',
     runBatch: '/api/merchant-onboarding/v1/batches/run',
+    way4Candidates: '/api/merchant-onboarding/v2/operations/way4/candidates',
+    way4Batches: '/api/merchant-onboarding/v2/operations/way4/batches',
+    futurPaymentCandidates: '/api/merchant-onboarding/v2/operations/futurpayment/candidates',
+    futurPaymentResend: (id: string) => `/api/merchant-onboarding/v2/operations/futurpayment/${id}/resend`,
   },
   switchLab: {
     environments: '/api/switchlab/v1/environments',

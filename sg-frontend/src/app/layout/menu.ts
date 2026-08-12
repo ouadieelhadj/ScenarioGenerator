@@ -181,6 +181,7 @@ const MERCHANT_PORTAL_MENU_ITEMS: MenuItem[] = [
   { code: 'MERCHANT_DOSSIER', labelKey: 'merchantPortal.menu.dossier', icon: 'pi pi-file-edit', route: '/merchant/dossier', roles: ['MERCHANT', 'COMMERCANT'] },
   { code: 'COMMERCIAL_PROSPECTS', labelKey: 'merchantPortal.menu.newProspect', icon: 'pi pi-user-plus', route: '/commercial/prospects/new', permissions: [Permission.ONBOARDING_PROSPECT_CREATE], roles: ['COMMERCIAL', 'ADMIN'] },
   { code: 'ONBOARDING_KYC', labelKey: 'merchantPortal.menu.kycReview', icon: 'pi pi-folder-open', route: '/backoffice/onboarding', permissions: [Permission.ONBOARDING_KYC_REVIEW], roles: ['BACK_OFFICE', 'CHECKER', 'ADMIN'] },
+  { code: 'ONBOARDING_PROVISIONING', labelKey: 'merchantPortal.menu.provisioning', icon: 'pi pi-send', route: '/backoffice/provisioning', permissions: [Permission.ONBOARDING_PROVISION], roles: ['BACK_OFFICE', 'ADMIN'] },
   { ...commonItem('WORKFLOW'), permissions: [Permission.ONBOARDING_APPROVE, Permission.ONBOARDING_KYC_REVIEW], roles: ['CHECKER', 'BACK_OFFICE', 'ADMIN'] },
   commonItem('HELP'),
 ];

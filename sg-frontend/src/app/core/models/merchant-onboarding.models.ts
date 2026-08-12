@@ -165,3 +165,18 @@ export interface MerchantActivationResponse {
   userId: number;
   status: string;
 }
+
+export interface Way4ExportCandidate {
+  caseId: string; reference: string; legalName: string; registrationNumber: string;
+  applicationRegNumber: string; status: 'PENDING' | 'REJECTED';
+  lastErrorCode: string | null; lastErrorMessage: string | null;
+}
+export interface Way4BatchResult {
+  fileId: string; fileName: string; merchantCount: number; status: string;
+  xmlSha256: string; xsdSha256: string; xml: string;
+}
+export interface FuturPaymentCandidate {
+  eventId: string; caseId: string; reference: string; legalName: string; registrationNumber: string;
+  status: 'PENDING' | 'PROCESSING' | 'FAILED_FINAL'; attempts: number;
+  lastErrorCode: string | null; lastErrorMessage: string | null;
+}

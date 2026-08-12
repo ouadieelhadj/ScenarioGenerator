@@ -38,8 +38,10 @@ public class OnboardingOutboxDispatcher {
     @Scheduled(fixedDelayString = "${merchant-onboarding.outbox.poll-delay-ms:5000}")
     public void dispatch() {
         if (!enabled) return;
-        if (!way4Enabled) reservations.holdWay4();
-        for (OnboardingOutboxReservationService.ReservedEvent event : reservations.reserve(batchSize, way4Enabled))
+        // WAY4 is now operator-triggered as a multi-merchant file. Historical automatic
+        // events remain pending and are deliberately never reserved by this dispatcher.
+        reservations.holdWay4();
+        for (OnboardingOutboxReservationService.ReservedEvent event : reservations.reserve(batchSize, false))
             dispatch(event);
     }
 

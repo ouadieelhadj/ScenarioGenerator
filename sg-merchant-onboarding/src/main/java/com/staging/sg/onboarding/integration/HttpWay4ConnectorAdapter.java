@@ -9,6 +9,7 @@ import org.springframework.web.client.*;
 
 import java.time.Instant;
 import java.util.Map;
+import java.util.List;
 
 @Component
 public class HttpWay4ConnectorAdapter implements Way4ConnectorPort {
@@ -33,6 +34,22 @@ public class HttpWay4ConnectorAdapter implements Way4ConnectorPort {
                     .header("Idempotency-Key",command.idempotencyKey()).header("X-Correlation-ID",correlationId)
                     .body(command).retrieve().body(Result.class);
             if(result==null || result.fileId()==null) throw new Way4ConnectorTransportException("WAY4 connector returned an empty result",true,null);
+            return result;
+        } catch(Way4ConnectorTransportException e){throw e;}
+        catch(HttpStatusCodeException e){boolean retry=e.getStatusCode().is5xxServerError()||e.getStatusCode().value()==429;
+            throw new Way4ConnectorTransportException("WAY4 connector HTTP status "+e.getStatusCode().value(),retry,e);}
+        catch(ResourceAccessException e){throw new Way4ConnectorTransportException("WAY4 connector is temporarily unreachable",true,e);}
+    }
+    @Override public Result generateBatch(List<PortalWay4ExportCommand> commands,
+            String idempotencyKey, String correlationId) {
+        if(!enabled) throw new Way4ConnectorTransportException("WAY4 connector generation is disabled",true,null);
+        try {
+            Result result=client.post().uri("/api/internal/way4-aura/v1/batches")
+                    .contentType(MediaType.APPLICATION_JSON).headers(h->h.setBearerAuth(accessToken()))
+                    .header("Idempotency-Key",idempotencyKey).header("X-Correlation-ID",correlationId)
+                    .body(Map.of("merchants",commands)).retrieve().body(Result.class);
+            if(result==null || result.fileId()==null || result.xml()==null)
+                throw new Way4ConnectorTransportException("WAY4 connector returned an empty batch",true,null);
             return result;
         } catch(Way4ConnectorTransportException e){throw e;}
         catch(HttpStatusCodeException e){boolean retry=e.getStatusCode().is5xxServerError()||e.getStatusCode().value()==429;

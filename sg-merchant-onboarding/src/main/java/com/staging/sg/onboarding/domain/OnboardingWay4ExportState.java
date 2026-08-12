@@ -31,4 +31,5 @@ public class OnboardingWay4ExportState {
     public UUID caseId(){return caseId;} public String applicationRegNumber(){return applicationRegNumber;}
     public String status(){return status;} public String lastErrorCode(){return lastErrorCode;}
     public String lastErrorMessage(){return lastErrorMessage;} public Boolean lastFailureRetryable(){return lastFailureRetryable;}
+    public UUID connectorFileId(){return connectorFileId;} public Instant updatedAt(){return updatedAt;}
 }

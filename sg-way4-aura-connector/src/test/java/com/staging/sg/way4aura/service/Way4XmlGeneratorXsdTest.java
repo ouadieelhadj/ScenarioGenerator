@@ -36,4 +36,36 @@ class Way4XmlGeneratorXsdTest {
     }
     @Test void blocksWhenXsdRootIsNotConfigured(){var validator=new Way4XsdValidator("","offline/WAY4ApplFile.xsd",HASH);
         assertThrows(AuraMappingBlockedException.class,()->validator.validate("<ApplicationFile/>".getBytes(StandardCharsets.UTF_8)));}
+
+    @Test void generatesTwoMerchantsInOneXsdValidatedFile() throws Exception {
+        Path root=Path.of("D:/LanaCash/OpenWay/installationOCI/chargementxmlway4/schemas/xsd/xsd");
+        Assumptions.assumeTrue(Files.isDirectory(root));
+        var first=resolved("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa","PORTAL-FIRST","RC-FIRST","990000000000001");
+        var second=resolved("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb","PORTAL-SECOND","RC-SECOND","990000000000002");
+        byte[] xml=new Way4XmlGenerator().generate(List.of(first,second),7,Instant.parse("2026-08-12T08:00:00Z"));
+        String text=new String(xml,StandardCharsets.UTF_8);
+        assertEquals(1,count(text,"<ApplicationFile>"));
+        assertTrue(text.contains("<RegNumber>RC-FIRST</RegNumber>"));
+        assertTrue(text.contains("<RegNumber>RC-SECOND</RegNumber>"));
+        assertTrue(new Way4XsdValidator(root.toString(),"offline/WAY4ApplFile.xsd",HASH).validate(xml).valid());
+        String proofOutput=System.getProperty("way4.proof.output");
+        if(proofOutput!=null&&!proofOutput.isBlank()){
+            Path output=Path.of(proofOutput).toAbsolutePath().normalize();
+            Files.createDirectories(output.getParent());Files.write(output,xml);
+        }
+    }
+
+    private static ResolvedWay4Application resolved(String caseId,String reg,String rc,String mid){
+        UUID id=UUID.fromString(caseId);UUID outletId=UUID.nameUUIDFromBytes((caseId+":OUTLET").getBytes(StandardCharsets.UTF_8));
+        UUID requestId=UUID.nameUUIDFromBytes((caseId+":TPE").getBytes(StandardCharsets.UTF_8));UUID productId=UUID.nameUUIDFromBytes("PRODUCT".getBytes(StandardCharsets.UTF_8));
+        var address=new Way4DryRunRequest.Address("Adresse test",null,null,"Casablanca",null,"20000","MAR");
+        var terminal=new Way4DryRunRequest.TerminalRequest(requestId,productId,1,"POS_MODEL","4G",List.of());
+        var outlet=new Way4DryRunRequest.Outlet(outletId,"OUT","PDV",true,address,List.of(),List.of(terminal));
+        var request=new Way4DryRunRequest("2.0",id,reg,productId,new Way4DryRunRequest.Merchant("PM",rc,null,
+                "Merchant "+rc,"Shop "+rc,address,"5411"),new Way4DryRunRequest.Settlement("ACCOUNT","504"),List.of(outlet),"key:"+id);
+        var device=new ResolvedWay4Application.ResolvedDevice(outlet,terminal,1,Way4RegNumbers.device(reg,requestId,1),"POS","POS","MAD","5411",1);
+        return new ResolvedWay4Application("000100","0001","0101","MERCHANT","Commercial","ACQACC","ACQ","STANDARD",
+                "PAYMENT","MAD","MAR",mid,request,List.of(device),1,Instant.parse("2026-08-12T08:00:00Z"));
+    }
+    private static int count(String value,String pattern){int count=0,index=0;while((index=value.indexOf(pattern,index))>=0){count++;index+=pattern.length();}return count;}
 }

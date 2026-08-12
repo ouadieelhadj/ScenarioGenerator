@@ -56,7 +56,7 @@
     "foundationDescription": "Les fonctions opérationnelles de ce domaine seront raccordées aux API réelles dans le lot métier correspondant."
   },
   "merchantPortal": {
-    "menu": { "dashboard": "Mon affiliation", "newProspect": "Nouveau prospect", "dossier": "Mon dossier", "kycReview": "Revue KYC" }
+    "menu": { "dashboard": "Mon affiliation", "newProspect": "Nouveau prospect", "dossier": "Mon dossier", "kycReview": "Revue KYC", "provisioning": "Provisionnement" }
   },
   "topbar": {
     "theme": "Thème",

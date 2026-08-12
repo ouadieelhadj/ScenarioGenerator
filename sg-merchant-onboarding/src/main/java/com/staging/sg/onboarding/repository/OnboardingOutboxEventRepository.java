@@ -1,6 +1,7 @@
 package com.staging.sg.onboarding.repository;
 
 import com.staging.sg.onboarding.domain.OnboardingOutboxEvent;
+import com.staging.sg.onboarding.domain.OnboardingOutboxStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.Modifying;
@@ -13,6 +14,8 @@ import java.util.UUID;
 
 public interface OnboardingOutboxEventRepository extends JpaRepository<OnboardingOutboxEvent, UUID> {
     Optional<OnboardingOutboxEvent> findByIdempotencyKey(String idempotencyKey);
+    List<OnboardingOutboxEvent> findByEventTypeAndStatusInOrderByUpdatedAtAsc(
+            String eventType, List<OnboardingOutboxStatus> statuses);
 
     @Query(value = """
             select * from onboarding_outbox

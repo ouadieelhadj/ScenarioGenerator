@@ -453,3 +453,53 @@ apres levee de tous les prerequis WAY4/AURA et OAuth2.
 
 Preuve detaillee :
 `tests/merchant-onboarding/PROOF_OF_TEST_VALIDATOR_SIX_REMARKS_2026-08-11.md`.
+
+## Lots operateur WAY4 et recyclage FuturPayment du 12 aout 2026
+
+La generation WAY4 n'est plus declenchee automatiquement dossier par dossier.
+L'approbation cree uniquement un etat `PENDING`, visible dans le nouvel ecran
+Back Office `Provisionnement`. L'operateur peut selectionner de 1 a 500
+commercants et produire un seul `ApplicationFile` contenant plusieurs
+applications client. Le connecteur resout les bindings existants, valide le
+fichier contre le XSD AURA reel, l'ecrit atomiquement dans
+`WAY4_AURA_STAGING_DIRECTORY` et conserve ses empreintes et son numero de lot.
+La selection est idempotente et un meme objet source deja genere ne peut pas
+etre inclus dans un autre lot. Un echec reste visible comme `REJECTED` pour
+correction et recyclage.
+
+Le meme ecran expose les outbox FuturPayment `PENDING`, `PROCESSING` et
+`FAILED_FINAL`. Le bouton de renvoi est limite a `FAILED_FINAL` et reutilise le
+mecanisme audite de retry de l'outbox avec son idempotency key initiale. Le
+parcours Portal vers FuturPayment Acquiring reste donc fonctionnellement
+independant du lot WAY4.
+
+Validation ciblee : 5 tests connecteur sans echec (XML multi-commercants XSD,
+determinisme, ecriture/rejeu disque), 6 tests Onboarding sans echec (routage,
+lot unique et maintien de l'independance FuturPayment), et build Angular
+`merchant-portal-web` reussi. Une campagne Portal plus large a compile le
+module et produit 31 resultats sans echec avant expiration du delai d'outil ;
+elle n'est pas presentee comme une campagne complete. Aucun import de fichier
+retour WAY4, aucun envoi WAY4 et aucun E2E reel n'ont ete executes.
+
+Premier travail non termine : import et reconciliation du fichier retour
+WAY4, explicitement reportes a un chantier ulterieur apres fourniture du format
+et du canal reels.
+
+### Portee TPE et cles terminales
+
+L'artefact technique multi-commercants contient, pour chaque demande TPE, un
+contrat `ObjectType=Contract` avec `DeviceInfo`, `DeviceRecord` et
+`DeviceType=POS`. Il demande donc la creation de l'objet/contrat TPE par WAY4,
+sous reserve des produits et mappings AURA valides.
+
+Il ne contient aucune valeur ou reference TAMK, TPMK, TAK ou TPK. Le XSD AURA
+inspecte prevoit une structure optionnelle generique `DeviceKeys`, mais aucun
+champ nomme TAMK/TPMK et aucune `DeviceKeys` n'est emise par le connecteur.
+L'import du fichier ne constitue donc pas une preuve d'association ou de
+distribution des TAMK/TPMK. Cette initialisation doit etre confirmee par
+l'expert WAY4 : profil de cles cote WAY4/HSM ou procedure RKI distincte.
+Aucune cle claire ne doit etre ajoutee au Portal, aux journaux ou au XML.
+
+Artefact de validation technique :
+`tests/merchant-onboarding/artifacts/way4-batch-generation/FP_WAY4_0000000007_TECHNICAL_PROOF.xml`,
+SHA-256 `93FCFA23BA689155268813D6FC3B1F1F68074128E14B636180316E07235B3FDD`.

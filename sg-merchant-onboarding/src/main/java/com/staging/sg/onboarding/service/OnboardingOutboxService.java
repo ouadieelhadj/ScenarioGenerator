@@ -51,16 +51,7 @@ public class OnboardingOutboxService {
             });
         }
         if (destination.includesWay4()) {
-            String way4Key = "merchant-way4-v2:" + dossier.id();
             String reg = "PORTAL-" + dossier.id().toString().replace("-", "").toUpperCase();
-            PortalWay4ExportCommand way4Command = new PortalWay4ExportCommand("2.0", dossier.id(), reg,
-                    dossier.productId(), acquiringCommand.merchant(), acquiringCommand.settlement(),
-                    acquiringCommand.outlets(), way4Key);
-            events.findByIdempotencyKey(way4Key).orElseGet(() -> {
-                String payload = serialize(way4Command);
-                return events.save(OnboardingOutboxEvent.way4ExportRequested(
-                        dossier.id(), payload, sha256(payload)));
-            });
             way4States.findById(dossier.id()).orElseGet(() -> way4States.save(
                     OnboardingWay4ExportState.pending(dossier.id(), reg)));
         }

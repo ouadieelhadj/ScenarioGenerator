@@ -33,6 +33,9 @@ public class Way4FileBatch {
     public void validated(String xmlHash, String xsdHash) { if (status != Way4FileStatus.DRAFT)
         throw new IllegalStateException("File is not a draft"); xmlSha256 = xmlHash; xsdSha256 = xsdHash;
         status = Way4FileStatus.VALIDATED; updatedAt = Instant.now(); }
+    public void staged() { if (status != Way4FileStatus.VALIDATED)
+        throw new IllegalStateException("File is not validated"); status = Way4FileStatus.STAGED;
+        updatedAt = Instant.now(); }
     public UUID id() { return id; } public long fileNumber() { return fileNumber; }
     public String extendedFileName() { return extendedFileName; } public String idempotencyKey() { return idempotencyKey; }
     public String payloadHash() { return payloadHash; } public String xmlSha256() { return xmlSha256; }
