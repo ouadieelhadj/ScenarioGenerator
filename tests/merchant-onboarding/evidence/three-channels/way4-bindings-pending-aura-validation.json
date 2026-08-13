@@ -1,0 +1,22 @@
+{
+  "validatedForImport": false,
+  "mappingVersion": 1,
+  "sender": "000100",
+  "institution": "0001",
+  "orderDepartment": "0101",
+  "clientType": "M_RES",
+  "clientCategory": "Commercial",
+  "groupProduct": "ARGROUP",
+  "chainProduct": "ARCHAIN",
+  "accountProduct": "AROUTLET",
+  "accountScheme": "ARAS",
+  "servicePack": "CAA",
+  "paymentAddressType": "OWS_PS",
+  "posProduct": "ARPOS",
+  "posAccountScheme": "ARAS",
+  "posServicePack": "ARPOS-R-MAIN",
+  "deviceType": "FEITIAN_OW_NATIVE",
+  "country": "MAR",
+  "currency": "MAD",
+  "mcc": "5411"
+}

@@ -15,8 +15,8 @@ class Way4StagingStoreTest {
         byte[] xml="<ApplicationFile/>".getBytes(StandardCharsets.UTF_8);
         String hash=HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(xml));
         var store=new Way4StagingStore(directory.toString());
-        Path first=store.stage("FP_WAY4_0000000001.xml",xml,hash);
-        Path replay=store.stage("FP_WAY4_0000000001.xml",xml,hash);
+        Path first=store.stage("xadvapl000100_00001.225",xml,hash);
+        Path replay=store.stage("xadvapl000100_00001.225",xml,hash);
         assertEquals(first,replay);assertArrayEquals(xml,Files.readAllBytes(first));
         try(var files=Files.list(directory)){assertEquals(1,files.count());}
     }
@@ -24,8 +24,8 @@ class Way4StagingStoreTest {
     @Test void rejectsOverwriteWithDifferentContent() throws Exception {
         byte[] first="first".getBytes(StandardCharsets.UTF_8);byte[] second="second".getBytes(StandardCharsets.UTF_8);
         var store=new Way4StagingStore(directory.toString());
-        store.stage("FP_WAY4_0000000002.xml",first,hash(first));
-        assertThrows(IllegalStateException.class,()->store.stage("FP_WAY4_0000000002.xml",second,hash(second)));
+        store.stage("xadvapl000100_00002.225",first,hash(first));
+        assertThrows(IllegalStateException.class,()->store.stage("xadvapl000100_00002.225",second,hash(second)));
     }
     private static String hash(byte[] value)throws Exception{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value));}
 }

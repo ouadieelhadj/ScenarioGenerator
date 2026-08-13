@@ -503,3 +503,143 @@ Aucune cle claire ne doit etre ajoutee au Portal, aux journaux ou au XML.
 Artefact de validation technique :
 `tests/merchant-onboarding/artifacts/way4-batch-generation/FP_WAY4_0000000007_TECHNICAL_PROOF.xml`,
 SHA-256 `93FCFA23BA689155268813D6FC3B1F1F68074128E14B636180316E07235B3FDD`.
+
+## Correction du lot XML des trois parcours du 13 aout 2026
+
+Le validateur a refuse l'ancien artefact generique a deux commercants et a
+demande un lot unique fonde sur les trois JSON de preuve. Le generateur et ses
+controles ont ete corriges sans modifier les donnees sources ni inventer
+d'identifiants WAY4.
+
+Le nouvel artefact est
+`tests/merchant-onboarding/artifacts/way4-batch-generation/xadvapl000100_00008.225`,
+SHA-256 `CB959214357218A4D6E90DC4C135E21149B10C88B1EF4B79DF486BE0C6C5B164`.
+Il contient 3 applications client racines, 3 contrats commercant et 6 contrats
+TPE, avec 15 `Application/RegNumber` uniques. Les racines sont
+`ONB-198B8A1C`, `ONB-D9DAE641` et `ONB-64B09020`. Aucun `MerchantID`, MID,
+`ContractIDT`, numero de contrat ou TID n'est emis. Les valeurs generiques
+`FIRST`, `SECOND` et le mot `test` sont absents.
+
+Le nom physique est derive automatiquement selon
+`xadvapl<Sender>_<Number sur 5 chiffres>.<jour julien>` et controle contre le
+Sender, le Number et la CreationDate de l'en-tete. Les RegNumber TPE utilisent
+des suffixes stables `-TPE-001` a `-TPE-n`. Les controles avant/apres generation
+verifient les nombres attendus, l'unicite, les valeurs interdites et la
+coherence des champs JSON vers XML.
+
+Les bindings de preuve sont externes au code dans
+`tests/merchant-onboarding/evidence/three-channels/way4-bindings-pending-aura-validation.json`
+et portent `validatedForImport=false`. Le chemin de production continue de
+les resoudre dans la table `aura_binding`. Aucun import n'est autorise avant
+validation des referentiels AURA et de la plage MID.
+
+Validation executee : 5 tests cibles puis 87 tests de non-regression
+(`sg-common` 77, connecteur 10), sans echec, erreur ni test ignore. Le XSD
+officiel, SHA-256
+`F76E4927B2365B6A7B9FA9B7EE1B0CF28C87313CDE724BD6C6484673D0E8A680`,
+valide le nouveau fichier. Les livrables sont
+`RAPPORT_VALIDATION_XSD_LOT_3_PARCOURS_2026-08-13.md` et
+`MATRICE_JSON_XML_LOT_3_PARCOURS_2026-08-13.md` dans le meme repertoire que
+l'artefact.
+
+Premier travail non termine : faire confirmer ou remplacer les bindings de
+preuve depuis les referentiels AURA de recette, configurer une plage MID WAY4
+approuvee si l'allocation revient au connecteur, puis seulement regenerer un
+lot candidat a l'import. Aucun import WAY4 n'a ete execute.
+
+## Candidat minimal CARSDB avec allocations externes du 13 aout 2026
+
+Le validateur a confirme les mappings de recette CARSDB et les plages externes
+MID/TID/contrat. Le connecteur resout maintenant separement le produit, le
+schema et le service pack des contrats commercant et TPE. Le XML place le MID
+dans `DeviceInfo/MerchantID`, le TID dans le `ContractIDT/ContractNumber` du
+TPE et le numero `LCAR` dans celui du contrat commercant. Les identifiants
+internes WAY4 restent absents et la reconciliation future repose sur les
+`Application/RegNumber` stables.
+
+La migration `sql/way4-aura/V3__carsdb_external_identifier_allocator.sql`
+cree trois sequences bornees et la table d'allocation avec unicite de la cle
+metier et de la valeur. L'allocateur prend un verrou transactionnel PostgreSQL,
+reutilise toute allocation existante avant de consulter une sequence et refuse
+de fonctionner sans activation explicite, hors de la base reellement nommee
+`CARSDB`, ou avec un profil contenant `prod`.
+
+Une base locale dediee `CARSDB` a ete creee et les migrations V1 a V3 ont ete
+appliquees. La preuve PostgreSQL reelle a produit puis rejoue exactement : MID
+`990001000000001`, TID `99000001`, contrat `LCAR00000001`. Le rejeu conserve
+3 lignes et n'avance aucune sequence. Le service complet a ensuite resolu 17
+bindings, valide le XSD, stage le fichier et rejoue la meme cle d'idempotence
+avec le meme nom et la meme empreinte.
+
+Artefact candidat :
+`tests/merchant-onboarding/artifacts/way4-carsdb-minimal/xadvapl000100_00001.225`,
+SHA-256 `F36E0C13C72FAA3F1D4EB70F5028DBF0E6464FD0D38921C47531316A8EC7D267`.
+Il contient 1 client, 1 contrat commercant, 1 adresse et 1 contrat TPE.
+
+Validation : campagne PostgreSQL de bout en bout, 2 tests sans echec ; campagne
+ciblee XSD/allocateur, 5 tests sans echec ; non-regression finale `sg-common`
+et connecteur, 92 tests executes, 0 echec, 0 erreur, dont les 2 tests PostgreSQL
+ignores seulement dans la campagne sans activation CARSDB. Les memes 2 tests
+ont ete executes et reussis separement sur CARSDB.
+
+Les rapports XSD, matrice JSON vers XML, preuve d'idempotence et liste des
+valeurs sont dans `tests/merchant-onboarding/artifacts/way4-carsdb-minimal/`.
+`validatedForImport` reste `false`. Premier travail non termine : revue du
+fichier concret par le validateur et GO explicite avant le premier import
+controle dans WAY4 recette. Aucun import WAY4 n'a ete execute.
+
+## Recyclage du rejet SIC vers 5992 du 13 aout 2026
+
+Le premier candidat `xadvapl000100_00001.225` a ete rejete par WAY4 sur le SIC
+`5411`. Le recyclage a ete implemente sans remettre le dossier a zero : un
+payload corrige n'est accepte que lorsque les etats applicatifs sont marques
+`WAY4_REJECTED_RETRYABLE` ou `WAY4_REJECTED_FINAL`. Toute modification d'un
+dossier non rejete reste bloquee. Les allocations MID/TID/contrat sont relues
+avant les sequences et ne changent pas.
+
+Le nouveau fichier est
+`tests/merchant-onboarding/artifacts/way4-carsdb-minimal/xadvapl000100_00002.225`,
+SHA-256 `E6E28016DB56D05302996939831F20B0AD5A041F314DF8B96656150E222E32FF`.
+Il conserve les quatre RegNumber, le MID `990001000000001`, le TID `99000001`
+et le contrat `LCAR00000001`. La seule correction met `SIC=5992`; l'en-tete
+porte `Number=00002`. Le XSD officiel est valide.
+
+La preuve PostgreSQL reelle couvre le rejet, le recyclage, l'absence de nouvelle
+allocation et le rejeu : 3 tests, 0 echec. La non-regression standard recense
+93 tests, dont 90 executes sans echec et 3 tests PostgreSQL volontairement
+ignores hors activation CARSDB.
+
+Deux preuves Oracle restent obligatoires avant validation du fichier : la
+presence de `5992 / Florist` dans `OWS.V_SIC_USED` sur CARSDB et zero objet
+partiel apres le premier rejet. Le script en lecture seule est
+`D:\LanaCash\OpenWay\installationOCI\environnementRecetteLanacash\way4-sql-tool-bindings-aura\CONTROLER_RECYCLAGE_REJET_SIC_5992_CARSDB.sql`.
+`validatedForImport=false` est conserve et aucun nouvel import n'a ete execute.
+
+## Adaptation a la hierarchie CARSDB acceptee du 13 aout 2026
+
+Les trois fichiers CARSDB deja acceptes par WAY4 ont confirme la hierarchie
+`ARGROUP -> ARCHAIN -> AROUTLET -> ARPOS`. Le generateur reproduit maintenant
+cette imbrication. Chaque bloc `Product` contient uniquement `ProductCode1` ;
+aucun `AccountScheme` ni `ServicePack` n'est emis. Le contrat `LCAR` est porte
+par `ARCHAIN`, le MID reste dans `DeviceInfo/MerchantID` et le TID dans le
+`ContractIDT` du contrat `ARPOS`.
+
+Le candidat produit est
+`tests/merchant-onboarding/artifacts/way4-carsdb-minimal/xadvapl000100_00004.225`,
+SHA-256 `EDE5FD42E50E9742C5E5C8768F410C3F5B34AFC633CA4262BD6DACE5494FCF80`.
+Il contient 1 client, 4 contrats et 1 TPE, conserve `SIC=5992`, le MID
+`990001000000001`, le TID `99000001` et `LCAR00000001`, et passe le XSD
+officiel. Les RegNumber `-GROUP` et `-CHAIN` ont ete ajoutes aux references
+metier deja stables.
+
+Le numero `00004` est conserve : deux tentatives annulees ont avance la
+sequence PostgreSQL, qui n'est pas transactionnelle. Aucun reset ni
+renumerotation forcee n'a ete effectue. La preuve CARSDB ciblee confirme que
+les allocations MID/TID/contrat et leurs sequences ne changent pas au rejeu.
+La non-regression compte 94 tests recenses, dont 90 executes sans echec ni
+erreur et 4 tests PostgreSQL ignores hors activation ; le test CARSDB cible
+passe separement.
+
+`validatedForImport=false` reste obligatoire. Aucun import WAY4 n'a ete
+execute. Le rapport est
+`tests/merchant-onboarding/artifacts/way4-carsdb-minimal/RAPPORT_ADAPTATION_HIERARCHIE_CARSDB_2026-08-13.md`.

@@ -20,6 +20,18 @@ way4-aura:
   main-xsd: ${WAY4_AURA_MAIN_XSD:offline/WAY4ApplFile.xsd}
   expected-main-xsd-sha256: ${WAY4_AURA_MAIN_XSD_SHA256:F76E4927B2365B6A7B9FA9B7EE1B0CF28C87313CDE724BD6C6484673D0E8A680}
   staging-directory: ${WAY4_AURA_STAGING_DIRECTORY:}
+  batch:
+    expected-merchants: ${WAY4_AURA_EXPECTED_MERCHANTS:0}
+    expected-terminals: ${WAY4_AURA_EXPECTED_TERMINALS:0}
+  external-allocation:
+    enabled: ${WAY4_AURA_EXTERNAL_ALLOCATION_ENABLED:false}
+    environment: ${WAY4_AURA_EXTERNAL_ALLOCATION_ENVIRONMENT:DISABLED}
+    mid-min: ${WAY4_AURA_EXTERNAL_MID_MIN:990001000000000}
+    mid-max: ${WAY4_AURA_EXTERNAL_MID_MAX:990001999999999}
+    tid-min: ${WAY4_AURA_EXTERNAL_TID_MIN:99000000}
+    tid-max: ${WAY4_AURA_EXTERNAL_TID_MAX:99999999}
+    merchant-contract-prefix: ${WAY4_AURA_MERCHANT_CONTRACT_PREFIX:LCAR}
+    merchant-contract-width: ${WAY4_AURA_MERCHANT_CONTRACT_WIDTH:8}
   mid-generation:
     enabled: ${WAY4_AURA_MID_GENERATION_ENABLED:false}
     prefix: ${WAY4_AURA_MID_PREFIX:}

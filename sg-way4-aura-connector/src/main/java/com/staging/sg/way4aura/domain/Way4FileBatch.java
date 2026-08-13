@@ -2,6 +2,9 @@ package com.staging.sg.way4aura.domain;
 
 import jakarta.persistence.*;
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.util.Objects;
 import java.util.UUID;
 
 @Entity
@@ -23,11 +26,21 @@ public class Way4FileBatch {
     @Column(name = "updated_at", nullable = false) private Instant updatedAt;
     @Version private long version;
     protected Way4FileBatch() {}
-    public static Way4FileBatch draft(long number, String key, String payloadHash, int mappingVersion) {
+    public static Way4FileBatch draft(long number, String sender, String key, String payloadHash, int mappingVersion) {
+        return draft(number, sender, key, payloadHash, mappingVersion, Instant.now());
+    }
+    public static Way4FileBatch draft(long number, String sender, String key, String payloadHash,
+            int mappingVersion, Instant generatedAt) {
+        if (sender == null || !sender.matches("[A-Za-z0-9]{1,32}"))
+            throw new IllegalArgumentException("Invalid WAY4 sender for physical file name");
+        if (number < 0 || number > 99999)
+            throw new IllegalArgumentException("WAY4 file number must fit on five digits");
         Way4FileBatch value = new Way4FileBatch(); value.id = UUID.randomUUID(); value.fileNumber = number;
-        value.extendedFileName = "FP_WAY4_" + String.format("%010d", number) + ".xml";
+        value.generatedAt = Objects.requireNonNull(generatedAt, "generatedAt");
+        String julianDay = DateTimeFormatter.ofPattern("DDD").withZone(ZoneOffset.UTC).format(value.generatedAt);
+        value.extendedFileName = "xadvapl" + sender + "_" + String.format("%05d", number) + "." + julianDay;
         value.idempotencyKey = key; value.payloadHash = payloadHash; value.mappingVersion = mappingVersion;
-        value.status = Way4FileStatus.DRAFT; value.generatedAt = Instant.now(); value.updatedAt = value.generatedAt;
+        value.status = Way4FileStatus.DRAFT; value.updatedAt = value.generatedAt;
         return value;
     }
     public void validated(String xmlHash, String xsdHash) { if (status != Way4FileStatus.DRAFT)

@@ -18,7 +18,9 @@ public class Way4MidAllocator {
             Way4MidAllocationRepository allocations,EntityManager entityManager){this.enabled=enabled;this.prefix=prefix;
         this.numericWidth=numericWidth;this.allocations=allocations;this.entityManager=entityManager;}
     public String allocate(UUID caseId,String reg){return allocations.findByOnboardingCaseId(caseId).map(Way4MidAllocation::mid).orElseGet(()->{
-        if(!enabled)throw new AuraMappingBlockedException("MID generation is disabled until AURA ranges and prefixes are approved");
+        // WAY4 remains authoritative while no approved range is configured.
+        // In that case MerchantID is omitted from the XML; no demo MID is generated.
+        if(!enabled)return null;
         if(numericWidth<1||numericWidth>18||prefix.length()+numericWidth>64)throw new AuraMappingBlockedException("MID generation format is not approved");
         long number=((Number)entityManager.createNativeQuery("select nextval('way4_mid_number_seq')").getSingleResult()).longValue();
         String digits=Long.toString(number);if(digits.length()>numericWidth)throw new AuraMappingBlockedException("Approved MID range is exhausted");

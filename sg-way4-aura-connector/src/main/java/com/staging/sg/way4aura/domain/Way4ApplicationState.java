@@ -13,7 +13,7 @@ public class Way4ApplicationState {
     @Column(name = "source_type", nullable = false, length = 32, updatable = false) private String sourceType;
     @Column(name = "source_id", nullable = false, updatable = false) private UUID sourceId;
     @Column(name = "reg_number", nullable = false, length = 96, updatable = false) private String regNumber;
-    @Column(name = "payload_hash", nullable = false, length = 64, updatable = false) private String payloadHash;
+    @Column(name = "payload_hash", nullable = false, length = 64) private String payloadHash;
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 40) private Way4ApplicationStatus status;
     @Column(name = "way4_reference", length = 160) private String way4Reference;
     @Column(name = "created_at", nullable = false, updatable = false) private Instant createdAt;
@@ -28,5 +28,13 @@ public class Way4ApplicationState {
         value.createdAt = Instant.now(); value.updatedAt = value.createdAt; return value;
     }
     public void generated() { status = Way4ApplicationStatus.GENERATED; updatedAt = Instant.now(); }
+    public void recycleRejected(String correctedPayloadHash) {
+        if (status != Way4ApplicationStatus.WAY4_REJECTED_RETRYABLE
+                && status != Way4ApplicationStatus.WAY4_REJECTED_FINAL)
+            throw new IllegalStateException("Only a rejected WAY4 application can be recycled");
+        if (correctedPayloadHash == null || correctedPayloadHash.isBlank())
+            throw new IllegalArgumentException("Corrected payload hash is required");
+        payloadHash = correctedPayloadHash; status = Way4ApplicationStatus.PENDING; updatedAt = Instant.now();
+    }
     public String payloadHash() { return payloadHash; } public Way4ApplicationStatus status() { return status; }
 }

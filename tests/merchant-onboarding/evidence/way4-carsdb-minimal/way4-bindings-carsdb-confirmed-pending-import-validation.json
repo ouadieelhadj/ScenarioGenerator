@@ -1,0 +1,22 @@
+{
+  "validatedForImport": false,
+  "environment": "CARSDB",
+  "mappingVersion": 2,
+  "sender": "000100",
+  "institution": "0001",
+  "orderDepartment": "0101",
+  "clientType": "M_RES",
+  "clientCategory": "Commercial",
+  "merchantProduct": "AROUTLET",
+  "merchantAccountScheme": "ARAS",
+  "merchantServicePack": "CAA",
+  "terminalProduct": "ARPOS",
+  "terminalAccountScheme": "ARAS",
+  "terminalServicePack": "ARPOS-R-MAIN",
+  "addressType": "OWS_PS",
+  "country": "MAR",
+  "currency": "MAD",
+  "deviceType": "FEITIAN_OW_NATIVE",
+  "alternateDeviceType": "S2M_OW_NATIVE",
+  "mcc": "5411"
+}

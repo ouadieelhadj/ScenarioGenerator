@@ -44,7 +44,7 @@ public class Way4XmlGenerator {
             ZonedDateTime time = generatedAt.atZone(ZoneOffset.UTC);
             element(document, header, "CreationDate", time.toLocalDate().toString());
             element(document, header, "CreationTime", time.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm:ss")));
-            element(document, header, "Number", Long.toString(fileNumber));
+            element(document, header, "Number", String.format("%05d", fileNumber));
             element(document, header, "Institution", headerValues.institution());
             Element list = element(document, root, "ApplicationsList", null);
             resolvedApplications.forEach(resolved -> clientApplication(document, list, resolved));
@@ -80,28 +80,47 @@ public class Way4XmlGenerator {
         element(doc, info, "CompanyTradeName", merchant.tradingName());
         address(doc, client, "BaseAddress", merchant.headquartersAddress(), null, r.headquartersCountry());
         Element sub = element(doc, application, "SubApplList", null);
-        accountApplication(doc, sub, r);
+        groupApplication(doc, sub, r);
     }
 
-    private void accountApplication(Document doc, Element parent, ResolvedWay4Application r) {
+    private void groupApplication(Document doc, Element parent, ResolvedWay4Application r) {
         Way4DryRunRequest request = r.request();
-        Element application = application(doc, parent, Way4RegNumbers.account(request.applicationRegNumber()), r, "Contract");
+        Element application = application(doc, parent, Way4RegNumbers.group(request.applicationRegNumber()), r, "Contract");
         Element data = element(doc, application, "Data", null);
         Element contract = element(doc, data, "Contract", null);
-        element(doc, contract, "ClientType", r.clientType());
-        element(doc, contract, "ClientCategory", r.clientCategory());
-        Element idt = element(doc, contract, "ContractIDT", null);
-        element(doc, contract, "Currency", r.accountCurrency());
         element(doc, contract, "ContractName", request.merchant().legalName());
         Element product = element(doc, contract, "Product", null);
-        element(doc, product, "ProductCode1", r.accountProduct());
-        element(doc, product, "AccountScheme", r.accountScheme());
-        element(doc, product, "ServicePack", r.servicePack());
+        element(doc, product, "ProductCode1", r.groupProduct());
         Element sub = element(doc, application, "SubApplList", null);
         Element addressApp = application(doc, sub, Way4RegNumbers.address(request.applicationRegNumber()), r, "ContractAddress");
         Element addressData = element(doc, addressApp, "Data", null);
         address(doc, addressData, "Address", request.merchant().headquartersAddress(),
                 r.paymentAddressType(), r.headquartersCountry());
+        chainApplication(doc, sub, r);
+    }
+
+    private void chainApplication(Document doc, Element parent, ResolvedWay4Application r) {
+        Way4DryRunRequest request = r.request();
+        Element application = application(doc, parent, Way4RegNumbers.chain(request.applicationRegNumber()), r, "Contract");
+        Element data = element(doc, application, "Data", null);
+        Element contract = element(doc, data, "Contract", null);
+        contractId(doc, contract, r.merchantContractNumber());
+        element(doc, contract, "ContractName", request.merchant().tradingName());
+        Element product = element(doc, contract, "Product", null);
+        element(doc, product, "ProductCode1", r.chainProduct());
+        Element sub = element(doc, application, "SubApplList", null);
+        outletApplication(doc, sub, r);
+    }
+
+    private void outletApplication(Document doc, Element parent, ResolvedWay4Application r) {
+        Way4DryRunRequest request = r.request();
+        Element application = application(doc, parent, Way4RegNumbers.account(request.applicationRegNumber()), r, "Contract");
+        Element data = element(doc, application, "Data", null);
+        Element contract = element(doc, data, "Contract", null);
+        element(doc, contract, "ContractName", request.outlets().get(0).name());
+        Element product = element(doc, contract, "Product", null);
+        element(doc, product, "ProductCode1", r.accountProduct());
+        Element sub = element(doc, application, "SubApplList", null);
         for (ResolvedWay4Application.ResolvedDevice device : r.devices()) deviceApplication(doc, sub, r, device);
     }
 
@@ -111,22 +130,24 @@ public class Way4XmlGenerator {
         Element application = application(doc, parent, device.applicationRegNumber(), r, "Contract");
         Element data = element(doc, application, "Data", null);
         Element contract = element(doc, data, "Contract", null);
-        element(doc, contract, "ClientType", r.clientType());
-        element(doc, contract, "ClientCategory", r.clientCategory());
-        Element idt = element(doc, contract, "ContractIDT", null);
-        element(doc, contract, "Currency", device.currency());
-        element(doc, contract, "ContractName", "POS " + device.outlet().code() + " " + device.ordinal());
+        contractId(doc, contract, device.tid());
+        element(doc, contract, "ContractName", device.outlet().code() + " - "
+                + device.outlet().name() + " - TPE " + String.format("%03d", device.ordinal()));
         Element product = element(doc, contract, "Product", null);
         element(doc, product, "ProductCode1", device.product());
         Element deviceInfo = element(doc, contract, "DeviceInfo", null);
         element(doc, deviceInfo, "SIC", device.sic());
-        element(doc, deviceInfo, "MerchantID", r.mid());
+        element(doc, deviceInfo, "MerchantID", device.mid());
         Element record = element(doc, deviceInfo, "DeviceRecord", null);
         element(doc, record, "DeviceType", device.deviceType());
-        element(doc, record, "Location", device.outlet().address().city());
+        element(doc, record, "Location", device.outlet().address().line1());
         element(doc, record, "DefaultCurr", device.currency());
         Element config = element(doc, record, "DeviceConfig", null);
         element(doc, config, "Status", "NotConfigured");
+    }
+    private void contractId(Document doc, Element contract, String number) {
+        Element idt = element(doc, contract, "ContractIDT", null);
+        element(doc, idt, "ContractNumber", number);
     }
 
     private Element application(Document doc, Element parent, String regNumber,

@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "2.0",
+  "onboardingCaseId": "198b8a1c-b686-4981-972a-ad7c7f383d04",
+  "applicationRegNumber": "ONB-198B8A1C",
+  "accountProductId": "5480f18c-14a4-4e87-8fe2-13782efc55c9",
+  "merchant": {
+    "merchantType": "RESIDENT",
+    "registrationNumber": "RC-merchant-web-5DC9528C",
+    "taxIdentifier": null,
+    "legalName": "Commerce Commercant Web 5DC9528C",
+    "tradingName": "Boutique Commercant Web",
+    "headquartersAddress": {"line1":"Casablanca","line2":null,"district":null,"city":"Casablanca","region":null,"postalCode":null,"country":"MA"},
+    "mcc": "5992"
+  },
+  "settlement": {"accountReference":"ACC-5DC9528C","currency":"504"},
+  "outlets": [{
+    "sourceOutletId": "f8f61ca4-3bf0-3c43-9ec4-b941a6442693",
+    "code": "OUT-5DC9528C",
+    "name": "Point de vente Commercant Web",
+    "principal": true,
+    "address": {"line1":"Casablanca","line2":null,"district":null,"city":"Casablanca","region":null,"postalCode":null,"country":"MA"},
+    "products": [],
+    "terminalRequests": [{
+      "sourceRequestId": "14904900-9615-3bad-a19b-41a26d241348",
+      "productId": "5480f18c-14a4-4e87-8fe2-13782efc55c9",
+      "quantity": 1,
+      "modelCode": "FEITIAN",
+      "connectivityCode": null,
+      "optionCodes": []
+    }]
+  }],
+  "idempotencyKey": "way4-carsdb-recycle-sic-5992:ONB-198B8A1C"
+}

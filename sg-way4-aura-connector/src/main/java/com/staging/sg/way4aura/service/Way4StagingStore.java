@@ -20,7 +20,8 @@ public class Way4StagingStore {
     public Path stage(String fileName, byte[] xml, String expectedSha256) {
         if (configuredDirectory == null || configuredDirectory.isBlank())
             throw new AuraMappingBlockedException("WAY4 staging directory is not configured");
-        if (fileName == null || !fileName.matches("FP_WAY4_\\d{10}\\.xml"))
+        if (fileName == null || !(fileName.matches("xadvapl[A-Za-z0-9]{1,32}_\\d{5}\\.\\d{3}")
+                || fileName.matches("FP_WAY4_\\d{10}\\.xml")))
             throw new IllegalArgumentException("Invalid WAY4 staging file name");
         try {
             Path directory = Path.of(configuredDirectory).toAbsolutePath().normalize();

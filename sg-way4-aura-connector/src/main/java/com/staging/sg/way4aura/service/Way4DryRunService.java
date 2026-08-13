@@ -25,13 +25,16 @@ public class Way4DryRunService {
     private final EntityManager entityManager;
     private final ObjectMapper objectMapper;
     private final Way4StagingStore stagingStore;
+    private final Way4BatchIntegrityValidator integrity;
     public Way4DryRunService(@Value("${way4-aura.generation-enabled:false}") boolean generationEnabled,
             Way4MappingService mapping, Way4XmlGenerator generator, Way4XsdValidator validator,
             Way4FileBatchRepository files, Way4ApplicationStateRepository applications,
-            EntityManager entityManager, ObjectMapper objectMapper, Way4StagingStore stagingStore) {
+            EntityManager entityManager, ObjectMapper objectMapper, Way4StagingStore stagingStore,
+            Way4BatchIntegrityValidator integrity) {
         this.generationEnabled = generationEnabled; this.mapping = mapping; this.generator = generator;
         this.validator = validator; this.files = files; this.applications = applications;
         this.entityManager = entityManager; this.objectMapper = objectMapper; this.stagingStore = stagingStore;
+        this.integrity = integrity;
     }
 
     @Transactional
@@ -43,6 +46,7 @@ public class Way4DryRunService {
         if (idempotencyKey == null || idempotencyKey.isBlank() || idempotencyKey.length() > 160)
             throw new IllegalArgumentException("Invalid WAY4 batch idempotency key");
         requests.forEach(this::requireRequest);
+        integrity.validateSources(requests);
         if (requests.stream().map(Way4DryRunRequest::onboardingCaseId).distinct().count() != requests.size())
             throw new IllegalArgumentException("A merchant can occur only once in a WAY4 batch");
         String payloadHash = sha256(canonical(requests));
@@ -52,13 +56,15 @@ public class Way4DryRunService {
         List<ResolvedWay4Application> resolved = requests.stream().map(mapping::resolve).toList();
         int mappingVersion = resolved.stream().mapToInt(ResolvedWay4Application::mappingVersion).max().orElseThrow();
         Way4FileBatch file = existing == null
-                ? files.save(Way4FileBatch.draft(nextFileNumber(), idempotencyKey, payloadHash, mappingVersion))
+                ? files.save(Way4FileBatch.draft(nextFileNumber(), resolved.get(0).sender(),
+                        idempotencyKey, payloadHash, mappingVersion))
                 : existing;
         List<Way4ApplicationState> states = new ArrayList<>();
         for (Way4DryRunRequest request : requests)
             states.addAll(states(request, sha256(canonical(request)), existing != null));
         applications.flush();
         byte[] xml = generator.generate(resolved, file.fileNumber(), file.generatedAt());
+        integrity.validateGeneratedXml(xml, requests);
         Way4XsdValidator.ValidationResult validation = validator.validate(xml);
         String xmlHash = sha256(xml);
         if (existing != null && existing.xmlSha256() != null && !existing.xmlSha256().equals(xmlHash))
@@ -77,17 +83,19 @@ public class Way4DryRunService {
         if (!generationEnabled) throw new AuraMappingBlockedException(
                 "WAY4 generation is disabled until the 5A gate is formally lifted");
         requireRequest(request);
+        integrity.validateSources(List.of(request));
         String payloadHash = sha256(canonical(request));
         Way4FileBatch existing = files.findByIdempotencyKey(request.idempotencyKey()).orElse(null);
         if (existing != null && !existing.payloadHash().equals(payloadHash))
             throw new IllegalStateException("IDEMPOTENCY_CONFLICT: same key with a different payload");
         ResolvedWay4Application resolved = mapping.resolve(request);
         Way4FileBatch file = existing == null
-                ? files.save(Way4FileBatch.draft(nextFileNumber(), request.idempotencyKey(),
+                ? files.save(Way4FileBatch.draft(nextFileNumber(), resolved.sender(), request.idempotencyKey(),
                         payloadHash, resolved.mappingVersion())) : existing;
         List<Way4ApplicationState> states = states(request, payloadHash, existing != null);
         applications.flush();
         byte[] xml = generator.generate(resolved, file.fileNumber(), file.generatedAt());
+        integrity.validateGeneratedXml(xml, List.of(request));
         Way4XsdValidator.ValidationResult validation = validator.validate(xml);
         String xmlHash = sha256(xml);
         if (existing != null && existing.xmlSha256() != null && !existing.xmlSha256().equals(xmlHash))
@@ -106,15 +114,27 @@ public class Way4DryRunService {
             boolean idempotentReplay) {
         List<Source> sources = new ArrayList<>();
         sources.add(new Source("CLIENT",request.onboardingCaseId(),Way4RegNumbers.client(request.applicationRegNumber())));
+        sources.add(new Source("GROUP",stable(request.onboardingCaseId()+":GROUP"),Way4RegNumbers.group(request.applicationRegNumber())));
+        sources.add(new Source("CHAIN",stable(request.onboardingCaseId()+":CHAIN"),Way4RegNumbers.chain(request.applicationRegNumber())));
         sources.add(new Source("ACCOUNT",stable(request.onboardingCaseId()+":ACCOUNT"),Way4RegNumbers.account(request.applicationRegNumber())));
         sources.add(new Source("ADDRESS",stable(request.onboardingCaseId()+":ADDRESS"),Way4RegNumbers.address(request.applicationRegNumber())));
+        int deviceOrdinal=0;
         if(request.outlets()!=null)for(var outlet:request.outlets())if(outlet.terminalRequests()!=null)for(var terminal:outlet.terminalRequests())
             for(int ordinal=1;ordinal<=terminal.quantity();ordinal++)sources.add(new Source("DEVICE",stable(terminal.sourceRequestId()+":"+ordinal),
-                    Way4RegNumbers.device(request.applicationRegNumber(),terminal.sourceRequestId(),ordinal)));
+                    Way4RegNumbers.device(request.applicationRegNumber(),++deviceOrdinal)));
         return sources.stream().map(source -> applications.findBySourceTypeAndSourceId(
                 source.type(), source.id()).map(current -> {
-                    if (!current.payloadHash().equals(hash)) throw new IllegalStateException(
-                            "APPLICATION_PAYLOAD_CONFLICT: source object changed after generation");
+                    if (!current.payloadHash().equals(hash)) {
+                        if (current.status() == Way4ApplicationStatus.WAY4_REJECTED_RETRYABLE
+                                || current.status() == Way4ApplicationStatus.WAY4_REJECTED_FINAL)
+                            current.recycleRejected(hash);
+                        else throw new IllegalStateException(
+                                "APPLICATION_PAYLOAD_CONFLICT: source object changed outside rejected recycling");
+                    } else if (!idempotentReplay
+                            && (current.status() == Way4ApplicationStatus.WAY4_REJECTED_RETRYABLE
+                            || current.status() == Way4ApplicationStatus.WAY4_REJECTED_FINAL)) {
+                        current.recycleRejected(hash);
+                    }
                     if (!idempotentReplay && current.status() != Way4ApplicationStatus.PENDING)
                         throw new IllegalStateException(
                                 "APPLICATION_ALREADY_GENERATED: use the original batch idempotency key");
