@@ -43,6 +43,11 @@ const SWITCHLAB_ROUTES: Routes = [
     loadComponent: () => import('./features/switchlab-test-center/switchlab-test-center.component').then(m => m.SwitchLabTestCenterComponent),
   },
   {
+    path: 'lab/fraud-monitoring', canActivate: [productGuard],
+    data: { products: ['SWITCHLAB'], workspace: 'SWITCHLAB' },
+    loadComponent: () => import('./features/fraud-workspace/fraud-workspace.component').then(m => m.FraudWorkspaceComponent),
+  },
+  {
     path: 'lab/online',
     canActivate: [productGuard], data: { products: ['SWITCHLAB'] },
     loadComponent: () => import('./features/switchlab-online/switchlab-online.component').then(m => m.SwitchLabOnlineComponent),

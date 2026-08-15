@@ -22,6 +22,7 @@ public class SwitchSecurityConfig {
                                 "/api/me/navigation", "/api/admin/users/**", "/api/admin/roles/**",
                                 "/api/admin/deployments/**", "/api/switch/v1/interfaces/**",
                                 "/api/switch/v1/acquiring/**", "/api/switch/v1/domains/**").permitAll()
+                        .requestMatchers("/api/switch/v1/fraud/**").permitAll()
                         .anyRequest().denyAll())
                 .build();
     }

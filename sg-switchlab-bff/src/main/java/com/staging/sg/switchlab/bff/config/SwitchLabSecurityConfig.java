@@ -37,6 +37,7 @@ public class SwitchLabSecurityConfig {
                                 "/api/switchlab/v1/traces").permitAll()
                         .requestMatchers("/api/switchlab/v1/pos/**").permitAll()
                         .requestMatchers("/api/switchlab/v1/test-center/**").permitAll()
+                        .requestMatchers("/api/switchlab/v1/fraud/**").permitAll()
                         .anyRequest().denyAll())
                 .build();
     }

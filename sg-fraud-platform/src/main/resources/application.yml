@@ -1,0 +1,27 @@
+server:
+  port: ${FRAUD_PLATFORM_PORT:8570}
+spring:
+  application:
+    name: sg-fraud-platform
+  datasource:
+    url: ${FRAUD_DB_URL:jdbc:postgresql://localhost:5432/scenariogenerator}
+    username: ${FRAUD_DB_USER:fraud_user}
+    password: ${FRAUD_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  liquibase:
+    enabled: false
+fraud:
+  security:
+    issuer-uri: ${FRAUD_OAUTH2_ISSUER_URI:http://127.0.0.1:8090/realms/futurpayment}
+    jwk-set-uri: ${FRAUD_OAUTH2_JWK_SET_URI:http://127.0.0.1:8090/realms/futurpayment/protocol/openid-connect/certs}
+    allowed-audiences: ${FRAUD_OAUTH2_ALLOWED_AUDIENCES:futurpayment-fraud,futurpayment-switch-bff,futurpayment-switchlab-bff}
+    member-claim: ${FRAUD_MEMBER_CLAIM:member_id}
+  scoring:
+    alert-threshold: ${FRAUD_ALERT_THRESHOLD:650}
+    high-amount-minor: ${FRAUD_HIGH_AMOUNT_MINOR:1000000}
+logging:
+  file:
+    name: ${FRAUD_LOG_FILE:${user.dir}/runtime/fraud/logs/fraud-platform.log}

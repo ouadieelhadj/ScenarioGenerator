@@ -1,0 +1,19 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:fraud;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+  liquibase:
+    enabled: false
+fraud:
+  security:
+    issuer-uri: http://issuer.test
+    jwk-set-uri: http://127.0.0.1:1/jwks
+    allowed-audiences: futurpayment-fraud
+    member-claim: member_id
+  scoring:
+    alert-threshold: 650
+    high-amount-minor: 1000000

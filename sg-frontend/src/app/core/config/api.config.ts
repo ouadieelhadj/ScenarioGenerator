@@ -77,6 +77,7 @@ export const ENDPOINTS = {
     interfaceCapabilities: '/api/switch/v1/interfaces/capabilities',
     acquiringOverview: '/api/switch/v1/acquiring/overview',
     domainOverview: (domain: string) => `/api/switch/v1/domains/${domain}`,
+    fraudOverview: '/api/switch/v1/fraud/overview',
   },
   auth: { login: '/auth/login' },
   merchantPortal: {
@@ -108,6 +109,7 @@ export const ENDPOINTS = {
     futurPaymentResend: (id: string) => `/api/merchant-onboarding/v2/operations/futurpayment/${id}/resend`,
   },
   switchLab: {
+    fraudOverview: '/api/switchlab/v1/fraud/overview',
     environments: '/api/switchlab/v1/environments',
     overview: '/api/switchlab/v1/overview',
     traces: '/api/switchlab/v1/traces',

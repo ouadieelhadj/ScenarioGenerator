@@ -136,6 +136,7 @@ const SWITCHLAB_MENU_ITEMS: MenuItem[] = [
   commonItem('DASHBOARD'),
   { code: 'SWITCHLAB_POS', labelKey: 'menu.switchLabPos', icon: 'pi pi-desktop', route: '/lab/pos' },
   { code: 'SWITCHLAB_TEST_CENTER', labelKey: 'menu.switchLabTestCenter', icon: 'pi pi-chart-bar', route: '/lab/test-center' },
+  { code: 'SWITCHLAB_FRAUD', labelKey: 'Fraud Monitoring', icon: 'pi pi-shield', route: '/lab/fraud-monitoring' },
   { code: 'SWITCHLAB_ONLINE', labelKey: 'menu.switchLabOnline', icon: 'pi pi-globe', route: '/lab/online' },
   { code: 'SWITCHLAB_CLEARING', labelKey: 'menu.switchLabClearing', icon: 'pi pi-file-import', route: '/lab/clearing' },
   { code: 'SWITCHLAB_ECOMMERCE', labelKey: 'menu.switchLabEcommerce', icon: 'pi pi-shopping-cart', route: '/lab/ecommerce' },
@@ -162,6 +163,7 @@ const switchAdministration: MenuItem = {
 
 const SWITCH_MENU_ITEMS: MenuItem[] = [
   commonItem('DASHBOARD'),
+  { code: 'FRAUD_MONITORING', labelKey: 'Fraud Monitoring', icon: 'pi pi-shield', route: '/product/fraud-monitoring' },
   { code: 'ACQUIRING', labelKey: 'menu.acquiring', icon: 'pi pi-shopping-cart', route: '/product/acquiring' },
   { code: 'ISSUING', labelKey: 'menu.issuing', icon: 'pi pi-credit-card', route: '/product/issuing' },
   { code: 'NETWORKS_CLEARING', labelKey: 'menu.networksClearing', icon: 'pi pi-sitemap', children: [

@@ -39,6 +39,8 @@
         <module>sg-mc-sms-issuer</module>
         <module>sg-card-issuing</module>
         <module>sg-acquiring</module>
+        <module>sg-fraud-platform</module>
+        <module>sg-fraud-bank-gateway</module>
         <module>sg-merchant-onboarding</module>
         <module>sg-way4-aura-connector</module>
         <module>sg-way-pos-server</module>

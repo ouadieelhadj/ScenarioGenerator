@@ -1,0 +1,10 @@
+package com.staging.sg.fraud.gateway.network;
+
+import com.staging.sg.fraud.gateway.service.PermanentIsoMessageProcessor;import jakarta.annotation.*;import org.jpos.iso.*;import org.jpos.iso.channel.NACChannel;import org.jpos.iso.packager.ISO87APackager;import org.slf4j.*;import org.springframework.beans.factory.annotation.Value;import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;import org.springframework.stereotype.Component;
+@Component @ConditionalOnProperty(name="fraud-gateway.iso.permanent-enabled",havingValue="true")
+public class PermanentIso8583Server{private static final Logger log=LoggerFactory.getLogger(PermanentIso8583Server.class);private final int port;private final PermanentIsoMessageProcessor processor;private ISOServer server;private Thread thread;
+ public PermanentIso8583Server(@Value("${fraud-gateway.iso.listen-port:8572}")int port,PermanentIsoMessageProcessor processor){this.port=port;this.processor=processor;}
+ @PostConstruct public void start()throws Exception{NACChannel channel=new NACChannel(new ISO87APackager(),null);server=new ISOServer(port,channel,null);server.addISORequestListener(new Listener());thread=new Thread(server,"fraud-iso-permanent-server");thread.setDaemon(true);thread.start();log.info("[FRAUD-ISO] permanent server started port={} (no message data logged)",port);}
+ @PreDestroy public void stop(){if(server!=null)server.shutdown();if(thread!=null)thread.interrupt();}
+ private final class Listener implements ISORequestListener{public boolean process(ISOSource source,ISOMsg request){try{log.info("[FRAUD-ISO] received MTI={} STAN={}",request.getMTI(),request.hasField(11)?request.getString(11):"-");source.send(processor.process(request));return true;}catch(Exception failure){log.warn("[FRAUD-ISO] processing failed: {}",failure.getClass().getSimpleName());try{ISOMsg out=new ISOMsg();out.setPackager(request.getPackager());char[]m=request.getMTI().toCharArray();m[2]=(char)(m[2]+1);out.setMTI(new String(m));if(request.hasField(11))out.set(11,request.getString(11));out.set(39,"96");source.send(out);return true;}catch(Exception ignored){return false;}}}}
+}

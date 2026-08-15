@@ -1,0 +1,33 @@
+server:
+  port: ${FRAUD_GATEWAY_PORT:8571}
+spring:
+  application:
+    name: sg-fraud-bank-gateway
+fraud-gateway:
+  platform-base-url: ${FRAUD_PLATFORM_BASE_URL:http://127.0.0.1:8570}
+  security:
+    issuer-uri: ${FRAUD_GATEWAY_OAUTH2_ISSUER_URI:http://127.0.0.1:8090/realms/futurpayment}
+    jwk-set-uri: ${FRAUD_GATEWAY_OAUTH2_JWK_SET_URI:http://127.0.0.1:8090/realms/futurpayment/protocol/openid-connect/certs}
+    audience: ${FRAUD_GATEWAY_OAUTH2_AUDIENCE:futurpayment-fraud}
+  iso:
+    permanent-enabled: ${FRAUD_ISO_PERMANENT_ENABLED:false}
+    listen-port: ${FRAUD_ISO_LISTEN_PORT:8572}
+    client-enabled: ${FRAUD_ISO_CLIENT_ENABLED:false}
+    remote-host: ${FRAUD_ISO_REMOTE_HOST:127.0.0.1}
+    remote-port: ${FRAUD_ISO_REMOTE_PORT:8572}
+    echo-interval-seconds: ${FRAUD_ISO_ECHO_INTERVAL_SECONDS:30}
+    reconnect-backoff-seconds: ${FRAUD_ISO_RECONNECT_BACKOFF_SECONDS:5}
+    request-tak-on-sign-on: ${FRAUD_ISO_REQUEST_TAK_ON_SIGN_ON:true}
+    member-id: ${FRAUD_ISO_MEMBER_ID:}
+    platform-service-token: ${FRAUD_ISO_PLATFORM_SERVICE_TOKEN:}
+    sign-on-code: ${FRAUD_ISO_SIGN_ON_CODE:001}
+    echo-code: ${FRAUD_ISO_ECHO_CODE:301}
+    key-request-code: ${FRAUD_ISO_KEY_REQUEST_CODE:101}
+    key-delivery-code: ${FRAUD_ISO_KEY_DELIVERY_CODE:161}
+    key-ack-code: ${FRAUD_ISO_KEY_ACK_CODE:162}
+    zmk-reference: ${FRAUD_ISO_ZMK_REFERENCE:}
+    key-envelope-field: ${FRAUD_ISO_KEY_ENVELOPE_FIELD:96}
+    key-kcv-field: ${FRAUD_ISO_KEY_KCV_FIELD:48}
+    token-field: ${FRAUD_ISO_TOKEN_FIELD:62}
+    score-response-field: ${FRAUD_ISO_SCORE_RESPONSE_FIELD:63}
+    sca-marker-field: ${FRAUD_ISO_SCA_MARKER_FIELD:48}

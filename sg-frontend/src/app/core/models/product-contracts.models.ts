@@ -136,6 +136,8 @@ export interface SwitchAcquiringFeature { code: string; label: string; status: '
 export interface SwitchAcquiringOverview { schemaVersion: string; overallStatus: OperationalStatus; services: SwitchMemberServiceStatus[]; features: SwitchAcquiringFeature[]; checkedAt: string; correlationId: string; }
 export interface SwitchDomainFeature { code: string; label: string; status: 'AVAILABLE' | 'BLOCKED' | 'UNAVAILABLE'; backendEndpointAvailable: boolean; consultationAvailable: boolean; actionAvailable: boolean; makerCheckerRequired: boolean; limitation: string | null; }
 export interface SwitchDomainOverview { schemaVersion: string; domain: string; overallStatus: OperationalStatus; services: SwitchMemberServiceStatus[]; features: SwitchDomainFeature[]; checkedAt: string; correlationId: string; }
+export interface FraudFeature { code: string; label: string; status: 'AVAILABLE' | 'UNAVAILABLE'; available: boolean; limitation: string | null; }
+export interface FraudOverview { schemaVersion: string; workspace: 'SWITCH' | 'SWITCHLAB'; operatingMode: string; overallStatus: OperationalStatus; platformConfigured: boolean; features: FraudFeature[]; checkedAt: string; correlationId: string; }
 
 export interface ExecutionResult<T = unknown> {
   executionId: string;
@@ -145,4 +147,11 @@ export interface ExecutionResult<T = unknown> {
   completedAt?: string;
   result?: T;
   error?: ApiErrorContract;
+}
+
+export interface FraudAlertView {
+  id: string; transactionReference: string; score: number; band: string; status: string; createdAt: string;
+}
+export interface FraudCaseView {
+  id: string; alertId: string; title: string; status: string; createdAt: string;
 }

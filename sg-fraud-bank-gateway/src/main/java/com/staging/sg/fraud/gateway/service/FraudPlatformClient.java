@@ -1,0 +1,6 @@
+package com.staging.sg.fraud.gateway.service;
+import com.fasterxml.jackson.databind.JsonNode;import org.springframework.beans.factory.annotation.Value;import org.springframework.http.HttpHeaders;import org.springframework.stereotype.Service;import org.springframework.web.client.RestClient;import java.util.Map;
+@Service public class FraudPlatformClient{private final RestClient client;private final String serviceToken;public FraudPlatformClient(@Value("${fraud-gateway.platform-base-url}")String base,@Value("${fraud-gateway.iso.platform-service-token:}")String serviceToken){client=RestClient.builder().baseUrl(base.replaceAll("/+$","")).build();this.serviceToken=serviceToken;}
+ public JsonNode score(String authorization,Map<String,Object>request){return doScore(authorization,request);}
+ public JsonNode scorePermanentLink(Map<String,Object>request){if(serviceToken.isBlank())throw new IllegalStateException("Permanent ISO service token is not configured");return doScore("Bearer "+serviceToken,request);}
+ private JsonNode doScore(String authorization,Map<String,Object>request){return client.post().uri("/api/fraud/v1/risk/transactions:score").header(HttpHeaders.AUTHORIZATION,authorization).body(request).retrieve().body(JsonNode.class);}}

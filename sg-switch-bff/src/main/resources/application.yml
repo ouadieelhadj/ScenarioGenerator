@@ -18,6 +18,7 @@ switch:
     swam-lis-base-url: ${SWITCH_SWAM_LIS_BASE_URL:}
     visa-base2-base-url: ${SWITCH_VISA_BASE2_BASE_URL:}
     three-ds-base-url: ${SWITCH_THREE_DS_BASE_URL:}
+    fraud-base-url: ${SWITCH_FRAUD_PLATFORM_BASE_URL:}
   security:
     issuer: ${SWITCH_JWT_ISSUER:futurpayment-switch}
     audience: ${SWITCH_JWT_AUDIENCE:futurpayment-switch-bff}
