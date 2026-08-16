@@ -17,10 +17,12 @@ import org.springframework.web.client.RestClientResponseException;
 @Service
 public class SwitchLabFraudService {
     private final String platformBaseUrl;
+    private final String gatewayBaseUrl;
     private final RestClient client;
 
-    public SwitchLabFraudService(@Value("${switchlab.fraud.base-url:}") String platformBaseUrl) {
+    public SwitchLabFraudService(@Value("${switchlab.fraud.base-url:}") String platformBaseUrl,@Value("${switchlab.fraud.gateway-base-url:}")String gatewayBaseUrl) {
         this.platformBaseUrl = normalize(platformBaseUrl);
+        this.gatewayBaseUrl = normalize(gatewayBaseUrl);
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(1500);
         factory.setReadTimeout(2500);
@@ -37,7 +39,8 @@ public class SwitchLabFraudService {
                 feature(capabilities, "alertOnly", "ALERT_ONLY", "Observation sans blocage"),
                 feature(capabilities, "adaptiveControls", "ADAPTIVE_BACKTEST", "Backtest des contrôles candidats"),
                 feature(capabilities, "fraudMetrics", "FRAUD_METRICS", "Précision, rappel et faux positifs"),
-                feature(capabilities, "evidenceExport", "EVIDENCE_EXPORT", "Dossier de preuves POC"));
+                feature(capabilities, "evidenceExport", "EVIDENCE_EXPORT", "Dossier de preuves POC"),
+                feature(capabilities, "collectiveGraph", "COLLECTIVE_GRAPH", "Groupes coordonnés et Fraud Story"));
         String status = !configured ? "UNKNOWN" : reachable ? "UP" : "DOWN";
         return new SwitchLabFraudOverview("1.0", "SWITCHLAB", "LAB_ALERT_ONLY", status, configured,
                 features, Instant.now(), UUID.randomUUID().toString());
@@ -78,6 +81,10 @@ public class SwitchLabFraudService {
         } catch (RestClientResponseException response) {
             return ResponseEntity.status(response.getStatusCode()).body(response.getResponseBodyAsByteArray());
         }
+    }
+    public ResponseEntity<byte[]> forwardGateway(String path,String query,HttpMethod method,HttpHeaders incoming,byte[] body){
+        if(gatewayBaseUrl.isBlank())return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("Fraud gateway is not configured".getBytes());String suffix=query==null||query.isBlank()?"":"?"+query;
+        try{RestClient.RequestBodySpec request=client.method(method).uri(URI.create(gatewayBaseUrl+path+suffix)).headers(h->copy(incoming,h,HttpHeaders.AUTHORIZATION)).headers(h->copy(incoming,h,HttpHeaders.ACCEPT)).headers(h->copy(incoming,h,HttpHeaders.CONTENT_TYPE));if(body!=null&&body.length>0)request.body(body);return request.retrieve().toEntity(byte[].class);}catch(RestClientResponseException response){return ResponseEntity.status(response.getStatusCode()).body(response.getResponseBodyAsByteArray());}
     }
 
     private void copy(HttpHeaders source, HttpHeaders target, String name) {

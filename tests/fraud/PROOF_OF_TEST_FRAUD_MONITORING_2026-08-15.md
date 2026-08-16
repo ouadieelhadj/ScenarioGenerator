@@ -41,3 +41,15 @@ Date : 15 août 2026
 - le moteur livré est le baseline explicable et le pipeline de candidats/backtest. L’entraînement IA industriel nécessite les données labellisées du POC et une validation gouvernée.
 
 Verdict technique local : **GO développement / NO-GO production tant que le profil client, le HSM, les certificats et la campagne POC ne sont pas validés**.
+
+## Mise à niveau Risk Intelligence du 15 août 2026
+
+- plateforme : snapshots `features-v1`, modèle `risk-intelligence-lot1-v1`, graphe relationnel et politique par membre pour `ALERT_ONLY`, `CHALLENGE`, `HOLD` ou `BLOCK` ;
+- Gateway : événements REST/agent normalisés, retour corrélé par canal et cinq scénarios laboratoire désactivés par défaut ;
+- IHM/BFF : politiques et scénarios raccordés sans données fictives ;
+- tests : **97 réussis, zéro échec** (`sg-common` 77, plateforme 9, Gateway 9, BFF 2) ;
+- nouveaux cas prouvés : groupe coordonné de 100 instruments, isolation interbanque, activation de décision par membre et chemin laboratoire via Gateway ;
+- Angular : builds Switch et SwitchLab réussis ;
+- base : migration étendue validée par Hibernate/H2 et PostgreSQL 18 réel ; 10 tables et 10 politiques RLS ont été observées dans une transaction annulée par `ROLLBACK`.
+
+Les codes DE39 restent `00` par défaut jusqu'à validation du profil client. Les actions actives ne sont donc pas autorisées sur une liaison ISO de production à ce stade.

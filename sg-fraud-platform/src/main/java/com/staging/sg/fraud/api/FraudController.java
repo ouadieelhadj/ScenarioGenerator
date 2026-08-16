@@ -14,7 +14,7 @@ public class FraudController {
     private final FraudService service; private final MemberContext members;
     public FraudController(FraudService service,MemberContext members){this.service=service;this.members=members;}
     @GetMapping("/health") public Health health(){return new Health("UP","ALERT_ONLY");}
-    @GetMapping("/capabilities") public Capabilities capabilities(){return new Capabilities("ALERT_ONLY",true,true,true,true,true,true,true,true,true,true,true,true,false);}
+    @GetMapping("/capabilities") public Capabilities capabilities(){return new Capabilities("GOVERNED",true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);}
     @PostMapping("/cards/monitoring-enrollments") @ResponseStatus(HttpStatus.CREATED)
     public EnrollmentResponse enroll(Authentication auth,@Valid @RequestBody EnrollmentRequest request){return service.enroll(members.requireMemberId(auth),request);}
     @PostMapping("/risk/transactions:score")
@@ -31,4 +31,6 @@ public class FraudController {
     public ControlBacktestResponse backtest(Authentication auth,@Valid @RequestBody ControlBacktestRequest request){return service.backtest(members.requireMemberId(auth),request);}
     @PostMapping("/lab/batches:score")
     public BatchScoreResponse batch(Authentication auth,@Valid @RequestBody BatchScoreRequest request){return service.batchScore(members.requireMemberId(auth),request);}
+    @GetMapping("/decision-policy") public DecisionPolicyResponse policy(Authentication auth){return service.getPolicy(members.requireMemberId(auth));}
+    @PutMapping("/decision-policy") public DecisionPolicyResponse policy(Authentication auth,@Valid @RequestBody DecisionPolicyRequest request){return service.updatePolicy(members.requireMemberId(auth),request);}
 }

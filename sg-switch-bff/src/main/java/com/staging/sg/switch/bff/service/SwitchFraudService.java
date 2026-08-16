@@ -17,10 +17,13 @@ import org.springframework.web.client.RestClientResponseException;
 @Service
 public class SwitchFraudService {
     private final String platformBaseUrl;
+    private final String gatewayBaseUrl;
     private final RestClient client;
 
-    public SwitchFraudService(@Value("${switch.member.fraud-base-url:}") String platformBaseUrl) {
+    public SwitchFraudService(@Value("${switch.member.fraud-base-url:}") String platformBaseUrl,
+            @Value("${switch.member.fraud-gateway-base-url:}") String gatewayBaseUrl) {
         this.platformBaseUrl = normalize(platformBaseUrl);
+        this.gatewayBaseUrl = normalize(gatewayBaseUrl);
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(1500);
         factory.setReadTimeout(2500);
@@ -37,7 +40,10 @@ public class SwitchFraudService {
                 feature(capabilities, "alerts", "ALERTS_CASES", "Alertes et dossiers fraude"),
                 feature(capabilities, "analystFeedback", "ANALYST_FEEDBACK", "Feedback analyste"),
                 feature(capabilities, "adaptiveControls", "ADAPTIVE_CONTROLS", "Contrôles adaptatifs"),
-                feature(capabilities, "threatIntelligence", "THREAT_INTELLIGENCE", "Veille fraude mutualisée"));
+                feature(capabilities, "threatIntelligence", "THREAT_INTELLIGENCE", "Veille fraude mutualisée"),
+                feature(capabilities, "collectiveGraph", "COLLECTIVE_GRAPH", "Détection collective par graphe"),
+                feature(capabilities, "versionedFeatureSnapshots", "FEATURE_SNAPSHOTS", "Indicateurs de scoring versionnés"),
+                feature(capabilities, "governedDecisions", "GOVERNED_DECISIONS", "Décisions gouvernées"));
         String status = !configured ? "UNKNOWN" : reachable ? "UP" : "DOWN";
         return new SwitchFraudOverview("1.0", "SWITCH", "ALERT_ONLY", status, configured,
                 features, Instant.now(), UUID.randomUUID().toString());
@@ -78,6 +84,11 @@ public class SwitchFraudService {
         } catch (RestClientResponseException response) {
             return ResponseEntity.status(response.getStatusCode()).body(response.getResponseBodyAsByteArray());
         }
+    }
+    public ResponseEntity<byte[]> forwardGateway(String path,String query,HttpMethod method,HttpHeaders incoming,byte[] body){return forwardTo(gatewayBaseUrl,path,query,method,incoming,body,"Fraud gateway is not configured");}
+    private ResponseEntity<byte[]> forwardTo(String baseUrl,String path,String query,HttpMethod method,HttpHeaders incoming,byte[] body,String missing){
+        if(baseUrl.isBlank())return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(missing.getBytes());String suffix=query==null||query.isBlank()?"":"?"+query;
+        try{RestClient.RequestBodySpec request=client.method(method).uri(URI.create(baseUrl+path+suffix)).headers(h->copy(incoming,h,HttpHeaders.AUTHORIZATION)).headers(h->copy(incoming,h,HttpHeaders.ACCEPT)).headers(h->copy(incoming,h,HttpHeaders.CONTENT_TYPE));if(body!=null&&body.length>0)request.body(body);return request.retrieve().toEntity(byte[].class);}catch(RestClientResponseException response){return ResponseEntity.status(response.getStatusCode()).body(response.getResponseBodyAsByteArray());}
     }
 
     private void copy(HttpHeaders source, HttpHeaders target, String name) {

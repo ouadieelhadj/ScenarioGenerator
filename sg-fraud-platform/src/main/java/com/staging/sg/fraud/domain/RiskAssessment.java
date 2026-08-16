@@ -16,13 +16,17 @@ public class RiskAssessment {
     @Column(name="enforced_action",nullable=false,length=32) private String enforcedAction;
     @Column(name="model_version",nullable=false,length=64) private String modelVersion;
     @Column(name="reasons_json",nullable=false,length=4000) private String reasonsJson;
+    @Column(name="collective_group_size",nullable=false) private int collectiveGroupSize;
+    @Column(name="collective_risk_score",nullable=false) private int collectiveRiskScore;
     @Column(name="created_at",nullable=false,updatable=false) private Instant createdAt;
     protected RiskAssessment() {}
-    public static RiskAssessment create(String memberId,String tx,String tokenHash,int score,String band,String recommended,String reasonsJson){
+    public static RiskAssessment create(String memberId,String tx,String tokenHash,int score,String band,String recommended,String enforced,String modelVersion,String reasonsJson,int groupSize,int collectiveScore){
         RiskAssessment r=new RiskAssessment(); r.id=UUID.randomUUID(); r.memberId=memberId; r.transactionReference=tx; r.tokenHash=tokenHash;
-        r.score=score; r.band=band; r.recommendedAction=recommended; r.enforcedAction="NO_BLOCK_ALERT_ONLY"; r.modelVersion="baseline-explainable-v1"; r.reasonsJson=reasonsJson; r.createdAt=Instant.now(); return r;
+        r.score=score; r.band=band; r.recommendedAction=recommended; r.enforcedAction=enforced; r.modelVersion=modelVersion;
+        r.reasonsJson=reasonsJson; r.collectiveGroupSize=groupSize; r.collectiveRiskScore=collectiveScore; r.createdAt=Instant.now(); return r;
     }
     public UUID id(){return id;} public String memberId(){return memberId;} public String transactionReference(){return transactionReference;}
     public int score(){return score;} public String band(){return band;} public String recommendedAction(){return recommendedAction;}
-    public String enforcedAction(){return enforcedAction;} public String modelVersion(){return modelVersion;} public String reasonsJson(){return reasonsJson;} public Instant createdAt(){return createdAt;}
+    public String enforcedAction(){return enforcedAction;} public String modelVersion(){return modelVersion;} public String reasonsJson(){return reasonsJson;}
+    public int collectiveGroupSize(){return collectiveGroupSize;} public int collectiveRiskScore(){return collectiveRiskScore;} public Instant createdAt(){return createdAt;}
 }

@@ -11,6 +11,7 @@ switchlab:
     base-url: ${SWITCHLAB_POS_BASE_URL:http://localhost:8532}
   fraud:
     base-url: ${SWITCHLAB_FRAUD_PLATFORM_BASE_URL:}
+    gateway-base-url: ${SWITCHLAB_FRAUD_GATEWAY_BASE_URL:}
   test-center:
     store-path: ${SWITCHLAB_TEST_CENTER_STORE_PATH:runtime/switchlab/test-center.json}
   online:

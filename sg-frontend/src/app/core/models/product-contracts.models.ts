@@ -155,3 +155,6 @@ export interface FraudAlertView {
 export interface FraudCaseView {
   id: string; alertId: string; title: string; status: string; createdAt: string;
 }
+export interface FraudDecisionPolicy { mode: 'ALERT_ONLY' | 'ACTIVE_DECISION'; challengeEnabled: boolean; holdEnabled: boolean; blockEnabled: boolean; updatedAt: string; }
+export interface FraudGatewayDecision { transactionReference: string; score: number; recommendedAction: string; enforcedAction: string; band: string; responseChannel: string; correlationReference: string; }
+export interface FraudLabScenarioResult { scenario: string; injected: number; alerts: number; challenged: number; held: number; blocked: number; sample: FraudGatewayDecision[]; }

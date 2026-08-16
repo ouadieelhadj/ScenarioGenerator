@@ -43,4 +43,9 @@ public class SwitchFraudController {
         if (!gateway.authorized(authorization)) throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid product session");
         String path = request.getRequestURI().substring("/api/switch/v1/fraud/platform".length());
         return fraud.forward("/api/fraud/v1" + path, request.getQueryString(), HttpMethod.valueOf(request.getMethod()), headers, body);
+    }
+    @RequestMapping(value = "/gateway/**")
+    public ResponseEntity<byte[]> proxyGateway(HttpServletRequest request,@RequestHeader HttpHeaders headers,@RequestBody(required=false)byte[] body){
+        String authorization=headers.getFirst(HttpHeaders.AUTHORIZATION);if(!gateway.authorized(authorization))throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,"Invalid product session");
+        String path=request.getRequestURI().substring("/api/switch/v1/fraud/gateway".length());return fraud.forwardGateway("/api/fraud-gateway/v1"+path,request.getQueryString(),HttpMethod.valueOf(request.getMethod()),headers,body);
     }}

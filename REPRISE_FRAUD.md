@@ -65,3 +65,28 @@ GO développement local. NO-GO production jusqu’à validation du profil ISO cl
 ## Prochaine action
 
 Obtenir le profil ISO et les paramètres HSM non secrets du premier client pilote, implémenter l’adaptateur constructeur correspondant, puis lancer la recette d’intégration sans données sensibles.
+
+## Adaptation Risk Intelligence lot 1 — 15 août 2026
+
+La plateforme a été adaptée au cadrage commercial validé : snapshots de caractéristiques versionnés, graphe relationnel PostgreSQL, détection collective isolée par membre, score collectif expliqué et politique de décision gouvernée. `ALERT_ONLY` reste le mode initial ; `CHALLENGE`, `HOLD` et `BLOCK` ne deviennent effectifs qu'après activation explicite pour le membre concerné.
+
+La Gateway est maintenue comme frontière obligatoire. Elle accepte le profil ISO permanent et une entrée canonique REST/agent, corrèle les réponses et restitue score, recommandation et décision appliquée sur le canal d'origine. Un générateur laboratoire couvre retrait, TPE, e-commerce, virement mobile et groupe coordonné ; il est désactivé par défaut et n'utilise ni PAN ni routage externe.
+
+Les interfaces Switch et SwitchLab exposent la politique de décision et les scénarios via des BFF séparés vers la plateforme et la Gateway. La campagne consolidée compte **97 tests réussis** : 77 `sg-common`, 9 plateforme, 9 Gateway et 2 BFF. Les builds Angular Switch et SwitchLab réussissent.
+
+La migration étend le schéma de 7 à 10 tables. Elle est validée par Hibernate/H2 et sur PostgreSQL 18 réel : 10 tables et 10 politiques RLS observées dans une transaction ensuite annulée par `ROLLBACK`. Les limites détaillées sont dans `tests/fraud/LIMITES_NON_LIVREES_RISK_INTELLIGENCE_2026-08-15.md`.
+
+Statut : **GO développement local / NO-GO production** jusqu'au POC labellisé, au profil ISO/DE39, au HSM constructeur et à TLS/VPN/OAuth2.
+
+## Document fonctionnel demandé par les validateurs — à produire ultérieurement
+
+Les validateurs demandent un document Markdown fonctionnel, non technique et partageable, fondé uniquement sur les preuves réellement exécutées. Il devra présenter les parcours, rôles, résultats attendus et critères de validation sans divulguer l'architecture interne, les algorithmes de scoring, les règles détaillées, le modèle de données, les contrats API, les champs ISO ni le code.
+
+Le document distinguera obligatoirement :
+
+- les fonctions démontrées par les 97 tests, les builds Angular et la validation PostgreSQL ;
+- les fonctions disponibles mais dépendantes d'une configuration client ;
+- les fonctions futures non encore prouvées : apprentissage IA industriel, génération autonome de contrôles, campagne de plusieurs millions de transactions, profil ISO/DE39 client, adaptateurs BAL/agents sectoriels, HSM constructeur et sécurité de production TLS/VPN/OAuth2 ;
+- les options d'industrialisation non installées : Kafka ou Redpanda, Feature Store spécialisé et base graphe spécialisée.
+
+Aucun détail permettant de reproduire la plateforme ne devra figurer dans ce livrable. Sa rédaction est volontairement reportée à une prochaine demande de l'utilisateur.

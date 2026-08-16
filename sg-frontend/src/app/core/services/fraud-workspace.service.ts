@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ENDPOINTS, url } from '../config/api.config';
-import { FraudAlertView, FraudCaseView, FraudOverview } from '../models/product-contracts.models';
+import { FraudAlertView, FraudCaseView, FraudDecisionPolicy, FraudLabScenarioResult, FraudOverview } from '../models/product-contracts.models';
 
 @Injectable({ providedIn: 'root' })
 export class FraudWorkspaceService {
@@ -21,6 +21,18 @@ export class FraudWorkspaceService {
 
   cases(workspace: 'SWITCH' | 'SWITCHLAB'): Observable<FraudCaseView[]> {
     return this.http.get<FraudCaseView[]>(url.orchestrator(this.platformPath(workspace, '/cases')));
+  }
+
+  decisionPolicy(): Observable<FraudDecisionPolicy> {
+    return this.http.get<FraudDecisionPolicy>(url.orchestrator(this.platformPath('SWITCH', '/decision-policy')));
+  }
+
+  updateDecisionPolicy(policy: Omit<FraudDecisionPolicy, 'updatedAt'>): Observable<FraudDecisionPolicy> {
+    return this.http.put<FraudDecisionPolicy>(url.orchestrator(this.platformPath('SWITCH', '/decision-policy')), policy);
+  }
+
+  runLabScenario(scenario: string, transactionCount: number): Observable<FraudLabScenarioResult> {
+    return this.http.post<FraudLabScenarioResult>(url.orchestrator('/api/switchlab/v1/fraud/gateway/lab/scenarios:run'), { scenario, transactionCount });
   }
 
   private platformPath(workspace: 'SWITCH' | 'SWITCHLAB', suffix: string): string {

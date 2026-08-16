@@ -9,7 +9,7 @@ import org.junit.jupiter.api.Test;
 class SwitchFraudServiceTest {
     @Test
     void remainsFailClosedWhenFraudPlatformIsNotConfigured() {
-        var overview = new SwitchFraudService("").overview();
+        var overview = new SwitchFraudService("", "").overview();
 
         assertEquals("SWITCH", overview.workspace());
         assertEquals("ALERT_ONLY", overview.operatingMode());

@@ -22,11 +22,25 @@ public final class FraudApi {
             @NotBlank @Size(max=32) String channel,
             boolean cardPresent, boolean strongAuthentication,
             @Min(0) @Max(20) int attemptsLastHour,
-            @Size(max=64) String deviceReference) {}
+            @Size(max=128) String deviceReference,
+            @Size(max=128) String customerReference,
+            @Size(max=128) String accountReference,
+            @Size(max=128) String beneficiaryReference,
+            @Size(max=128) String merchantReference,
+            @Size(max=128) String ipReference,
+            @Size(max=64) String sector) {
+        public ScoreRequest(String transactionReference,String tokenReference,long amountMinor,String currency,
+                String country,String mcc,String channel,boolean cardPresent,boolean strongAuthentication,
+                int attemptsLastHour,String deviceReference){
+            this(transactionReference,tokenReference,amountMinor,currency,country,mcc,channel,cardPresent,
+                    strongAuthentication,attemptsLastHour,deviceReference,null,null,null,null,null,"PAYMENTS");
+        }
+    }
     public record RiskReason(String code, int contribution, String explanation) {}
     public record ScoreResponse(UUID assessmentId, int score, String band,
             String recommendedAction, String enforcedAction, String modelVersion,
-            List<RiskReason> reasons, UUID alertId, Instant assessedAt) {}
+            List<RiskReason> reasons, int collectiveGroupSize, int collectiveRiskScore,
+            UUID alertId, Instant assessedAt) {}
     public record AlertView(UUID id, String transactionReference, int score, String band,
             String status, Instant createdAt) {}
     public record FeedbackRequest(@NotBlank @Pattern(regexp="CONFIRMED_FRAUD|LEGITIMATE|INCONCLUSIVE") String outcome,
@@ -46,10 +60,15 @@ public final class FraudApi {
             @NotBlank @Size(max=64) String indicatorHash, @Min(1) @Max(100) int severity,
             @NotBlank @Size(max=64) String source, Instant expiresAt) {}
     public record ThreatSignalResponse(UUID id, String status, Instant createdAt) {}
+    public record DecisionPolicyRequest(@NotBlank @Pattern(regexp="ALERT_ONLY|ACTIVE_DECISION") String mode,
+            boolean challengeEnabled, boolean holdEnabled, boolean blockEnabled) {}
+    public record DecisionPolicyResponse(String mode, boolean challengeEnabled,
+            boolean holdEnabled, boolean blockEnabled, Instant updatedAt) {}
     public record Health(String status, String mode) {}
     public record Capabilities(String mode, boolean cardMonitoringEnrollment,
             boolean transactionScoring, boolean explainableScoring, boolean alertOnly,
             boolean alerts, boolean analystFeedback, boolean adaptiveControls,
             boolean threatIntelligence, boolean syntheticInjection, boolean batchScoring,
-            boolean fraudMetrics, boolean evidenceExport, boolean transactionBlocking) {}
+            boolean fraudMetrics, boolean evidenceExport, boolean transactionBlocking,
+            boolean collectiveGraph, boolean versionedFeatureSnapshots, boolean governedDecisions) {}
 }
