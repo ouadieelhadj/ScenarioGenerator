@@ -3,10 +3,24 @@ server:
 spring:
   application:
     name: sg-fraud-bank-gateway
+  datasource:
+    url: ${FRAUD_GATEWAY_DB_URL:jdbc:postgresql://127.0.0.1:5432/fraud_gateway}
+    username: ${FRAUD_GATEWAY_DB_USER:fraud_gateway_user}
+    password: ${FRAUD_GATEWAY_DB_PASSWORD:}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  flyway:
+    enabled: true
 fraud-gateway:
   platform-base-url: ${FRAUD_PLATFORM_BASE_URL:http://127.0.0.1:8570}
+  routing:
+    dynamic-listeners-enabled: ${FRAUD_GATEWAY_DYNAMIC_LISTENERS_ENABLED:false}
+    enforce-dedicated-rest-ports: ${FRAUD_GATEWAY_ENFORCE_DEDICATED_REST_PORTS:false}
   lab:
     enabled: ${FRAUD_LAB_SCENARIOS_ENABLED:false}
+    multibank-bootstrap-enabled: ${FRAUD_LAB_MULTIBANK_BOOTSTRAP_ENABLED:false}
   security:
     issuer-uri: ${FRAUD_GATEWAY_OAUTH2_ISSUER_URI:http://127.0.0.1:8090/realms/futurpayment}
     jwk-set-uri: ${FRAUD_GATEWAY_OAUTH2_JWK_SET_URI:http://127.0.0.1:8090/realms/futurpayment/protocol/openid-connect/certs}

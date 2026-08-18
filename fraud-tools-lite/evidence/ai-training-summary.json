@@ -1,0 +1,30 @@
+{
+  "status": "AI_LAB_OK",
+  "trackingUri": "sqlite:///D:/LanaCash/OpenWay/installationOCI/fraud-tools-lite/data/mlflow.db",
+  "experiment": "futurpayment-fraud-lite",
+  "runId": "01485109f11f4157980012bffe527f73",
+  "modelUri": "runs:/01485109f11f4157980012bffe527f73/model",
+  "dataset": {
+    "rows": 30000,
+    "positiveCases": 483,
+    "trainRows": 18000,
+    "validationRows": 6000,
+    "testRows": 6000,
+    "synthetic": true
+  },
+  "metricsOnUntouchedTestSet": {
+    "roc_auc": 0.9796871471318879,
+    "pr_auc": 0.43144768735572064,
+    "precision": 0.5,
+    "recall": 0.65625,
+    "f1": 0.5675675675675675,
+    "false_positive_rate": 0.010670731707317074,
+    "threshold": 0.8799999999999999,
+    "true_positive": 63,
+    "false_positive": 63,
+    "true_negative": 5841,
+    "false_negative": 33
+  },
+  "proposalCount": 4,
+  "productionClaimAllowed": false
+}

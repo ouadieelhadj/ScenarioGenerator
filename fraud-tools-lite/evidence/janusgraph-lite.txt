@@ -1,0 +1,15 @@
+﻿12:45:16 INFO  org.apache.commons.beanutils.FluentPropertyBeanIntrospector.introspect - Error when creating PropertyDescriptor for public final void org.apache.commons.configuration2.AbstractConfiguration.setProperty(java.lang.String,java.lang.Object)! Ignoring this property.
+12:45:17 INFO  org.janusgraph.graphdb.idmanagement.UniqueInstanceIdRetriever.getOrGenerateUniqueInstanceId - Generated unique-instance-id=c0a8011a14520-MPG6F7I1
+12:45:18 INFO  org.janusgraph.diskstorage.configuration.ExecutorServiceBuilder.buildFixedExecutorService - Initiated fixed thread pool of size 8
+12:45:18 INFO  org.janusgraph.graphdb.database.StandardJanusGraph.<init> - Gremlin script evaluation is disabled
+12:45:18 INFO  org.janusgraph.diskstorage.log.kcvs.KCVSLog$MessagePuller.initializeTimepoint - Loaded unidentified ReadMarker start time 2026-08-16T11:45:18.272360Z into org.janusgraph.diskstorage.log.kcvs.KCVSLog$MessagePuller@9d3d54e
+12:45:18 WARN  org.janusgraph.graphdb.transaction.StandardJanusGraphTx$3.execute - Query requires iterating over all vertices [[]]. For better performance, use indexes
+12:45:21 WARN  org.janusgraph.graphdb.transaction.StandardJanusGraphTx$3.execute - Query requires iterating over all vertices [[memberId = BANK_LAB_A]]. For better performance, use indexes
+12:45:21 WARN  org.janusgraph.graphdb.transaction.StandardJanusGraphTx$3.execute - Query requires iterating over all vertices [[memberId = BANK_LAB_B]]. For better performance, use indexes
+12:45:21 WARN  org.janusgraph.graphdb.transaction.StandardJanusGraphTx$3.execute - Query requires iterating over all vertices [[token = dev_a_001]]. For better performance, use indexes
+12:45:21 WARN  org.janusgraph.graphdb.transaction.StandardJanusGraphTx$3.execute - Query requires iterating over all vertices [[memberId = BANK_LAB_A]]. For better performance, use indexes
+JANUSGRAPH_LITE_OK
+BANK_LAB_A_VERTICES=4
+BANK_LAB_B_VERTICES=1
+SHARED_DEVICE_CARDS=2
+CROSS_MEMBER_LEAK=0

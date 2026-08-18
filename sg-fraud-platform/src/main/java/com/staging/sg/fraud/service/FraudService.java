@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.staging.sg.fraud.api.FraudApi.*;
 import com.staging.sg.fraud.domain.*;
 import com.staging.sg.fraud.repository.*;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,44 +19,67 @@ public class FraudService {
     private final FraudCaseRepository cases; private final ControlCandidateRepository controls;
     private final FraudEntityLinkRepository entityLinks; private final FraudFeatureSnapshotRepository features;
     private final FraudDecisionPolicyRepository policies; private final FraudCollectiveGraph collectiveGraph;
-    private final FraudScoringEngine engine; private final ObjectMapper json; private final int alertThreshold;
+    private final FraudMonitoringSubjectRepository monitoringSubjects;
+    private final FraudEventOutboxRepository outbox; private final FraudScoringEngine engine; private final IndustrialRiskOrchestrator industrial; private final ObjectMapper json;
     public FraudService(CardProfileRepository cards,RiskAssessmentRepository assessments,FraudAlertRepository alerts,
             FraudFeedbackRepository feedback,ThreatSignalRepository threatSignals,FraudCaseRepository cases,
             ControlCandidateRepository controls,ReferenceProtector protector,
             FraudEntityLinkRepository entityLinks,FraudFeatureSnapshotRepository features,FraudDecisionPolicyRepository policies,
-            FraudCollectiveGraph collectiveGraph,FraudScoringEngine engine,ObjectMapper json,@Value("${fraud.scoring.alert-threshold:650}") int alertThreshold){
+            FraudMonitoringSubjectRepository monitoringSubjects,FraudCollectiveGraph collectiveGraph,FraudEventOutboxRepository outbox,FraudScoringEngine engine,IndustrialRiskOrchestrator industrial,ObjectMapper json){
         this.cards=cards;this.assessments=assessments;this.alerts=alerts;this.feedback=feedback;this.threatSignals=threatSignals;this.cases=cases;this.controls=controls;
-        this.entityLinks=entityLinks;this.features=features;this.policies=policies;this.collectiveGraph=collectiveGraph;
-        this.protector=protector;this.engine=engine;this.json=json;this.alertThreshold=alertThreshold;
+        this.entityLinks=entityLinks;this.features=features;this.policies=policies;this.monitoringSubjects=monitoringSubjects;this.collectiveGraph=collectiveGraph;
+        this.protector=protector;this.outbox=outbox;this.engine=engine;this.industrial=industrial;this.json=json;
     }
     @Transactional
     public EnrollmentResponse enroll(String memberId,EnrollmentRequest request){
+        rejectRawCardNumber(request.tokenReference());
         String tokenHash=protector.hash(request.tokenReference());
-        return cards.findByMemberIdAndTokenHash(memberId,tokenHash).map(this::toEnrollment).orElseGet(()->{
+        EnrollmentResponse response=cards.findByMemberIdAndTokenHash(memberId,tokenHash).map(this::toEnrollment).orElseGet(()->{
             String customerHash=request.customerReference()==null?null:protector.hash(request.customerReference());
             try{return toEnrollment(cards.saveAndFlush(CardProfile.enroll(memberId,tokenHash,request.currency(),request.country(),customerHash)));}
             catch(DataIntegrityViolationException race){return cards.findByMemberIdAndTokenHash(memberId,tokenHash).map(this::toEnrollment).orElseThrow(()->race);}
         });
+        ensureSubject(memberId,"MONETIQUE","CARD_TOKEN",tokenHash);
+        return response;
+    }
+    @Transactional
+    public MonitoringSubjectEnrollmentResponse enrollSubject(String memberId,MonitoringSubjectEnrollmentRequest request){
+        rejectRawCardNumber(request.subjectReference());String sector=FraudSector.normalize(request.sector(),request.channel());String hash=protector.hash(request.subjectReference());
+        FraudMonitoringSubject subject=ensureSubject(memberId,sector,request.subjectType(),hash);
+        return new MonitoringSubjectEnrollmentResponse(subject.id(),request.subjectType(),sector,subject.status(),subject.createdAt());
     }
     @Transactional
     public ScoreResponse score(String memberId,ScoreRequest request){
+        FraudSubjectIdentity subject=FraudSubjectIdentity.resolve(request);String sectorId=subject.sectorId();
         Optional<RiskAssessment> existing=assessments.findByMemberIdAndTransactionReference(memberId,request.transactionReference());
         if(existing.isPresent()) return toScore(memberId,existing.get());
-        String tokenHash=protector.hash(request.tokenReference());
-        if(cards.findByMemberIdAndTokenHash(memberId,tokenHash).isEmpty()) throw new IllegalArgumentException("Card Monitoring Enrollment required");
-        FraudCollectiveGraph.Result collective=collectiveGraph.observeAndEvaluate(memberId,tokenHash,request);
-        FraudScoringEngine.Result result=engine.score(request,collective);
+        String subjectHash=protector.hash(subject.subjectReference());
+        boolean genericEnrollment=monitoringSubjects.findByMemberIdAndSectorIdAndSubjectTypeAndSubjectHash(memberId,sectorId,subject.subjectType(),subjectHash).isPresent();
+        boolean legacyCardEnrollment=request.tokenReference()!=null&&cards.findByMemberIdAndTokenHash(memberId,protector.hash(request.tokenReference())).isPresent();
+        if(!genericEnrollment&&!legacyCardEnrollment)throw new IllegalArgumentException("Monitoring Subject Enrollment required");
+        FraudCollectiveGraph.Result collective=collectiveGraph.observeAndEvaluate(memberId,subject,subjectHash,request);
+        IndustrialRiskOrchestrator.Evaluation industrialResult=industrial.evaluate(memberId,subjectHash,request,collective);
+        FraudScoringEngine.Result result=engine.score(request,collective,industrialResult);
         try{
             String reasons=json.writeValueAsString(result.reasons());
-            String featureJson=json.writeValueAsString(Map.of(
-                    "amountMinor",request.amountMinor(),"attemptsLastHour",request.attemptsLastHour(),"cardPresent",request.cardPresent(),
-                    "strongAuthentication",request.strongAuthentication(),"channel",request.channel(),"sector",request.sector()==null?"PAYMENTS":request.sector(),
-                    "collectiveGroupSize",result.groupSize(),"collectiveRiskScore",result.collectiveScore()));
-            features.save(FraudFeatureSnapshot.create(memberId,request.transactionReference(),"features-v1",featureJson));
+            Map<String,Object> featureSnapshot=new LinkedHashMap<>();
+            featureSnapshot.put("amountMinor",request.amountMinor());featureSnapshot.put("attemptsLastHour",request.attemptsLastHour());
+            featureSnapshot.put("cardPresent",request.cardPresent());featureSnapshot.put("strongAuthentication",request.strongAuthentication());
+            featureSnapshot.put("channel",request.channel());featureSnapshot.put("sector",sectorId);featureSnapshot.put("subjectType",subject.subjectType());
+            featureSnapshot.put("collectiveGroupSize",result.groupSize());featureSnapshot.put("collectiveRiskScore",result.collectiveScore());
+            featureSnapshot.put("observedSignals",request.observedSignals());featureSnapshot.put("industrialFeatures",industrialResult.features());
+            featureSnapshot.put("featureSource",industrialResult.featureSource());featureSnapshot.put("modelStatus",industrialResult.modelStatus());
+            featureSnapshot.put("aiGovernanceMode",industrialResult.governanceMode());featureSnapshot.put("aiFallbackApplied",industrialResult.fallbackApplied());
+            featureSnapshot.put("championShadowScore",industrialResult.championShadowScore());featureSnapshot.put("challengerShadowScore",industrialResult.challengerShadowScore());
+            featureSnapshot.put("challengerModelVersion",industrialResult.challengerModelVersion());featureSnapshot.put("modelExplanation",industrialResult.explanation());
+            String featureJson=json.writeValueAsString(featureSnapshot);
+            features.save(FraudFeatureSnapshot.create(memberId,sectorId,request.transactionReference(),"features-v1",featureJson));
             String enforced=enforcedAction(memberId,result.recommendedAction());
-            RiskAssessment saved=assessments.saveAndFlush(RiskAssessment.create(memberId,request.transactionReference(),tokenHash,result.score(),result.band(),result.recommendedAction(),enforced,"risk-intelligence-lot1-v1",reasons,result.groupSize(),result.collectiveScore()));
+            RiskAssessment saved=assessments.saveAndFlush(RiskAssessment.create(memberId,sectorId,request.transactionReference(),subject.subjectType(),subjectHash,result.score(),result.band(),result.recommendedAction(),enforced,industrialResult.modelVersion(),reasons,result.groupSize(),result.collectiveScore()));
             UUID alertId=null;
-            if(saved.score()>=alertThreshold) alertId=alerts.save(FraudAlert.open(memberId,saved)).id();
+            if(!"ALLOW".equals(saved.recommendedAction())) alertId=alerts.save(FraudAlert.open(memberId,saved)).id();
+            String event=json.writeValueAsString(Map.of("schemaVersion","1.0","memberId",memberId,"sectorId",sectorId,"assessmentId",saved.id(),"transactionReference",saved.transactionReference(),"score",saved.score(),"recommendedAction",saved.recommendedAction(),"enforcedAction",saved.enforcedAction(),"createdAt",saved.createdAt()));
+            outbox.save(FraudEventOutbox.pending(memberId,sectorId,"RISK_ASSESSMENT",saved.transactionReference(),"RiskAssessmentCompleted.v1",event));
             return toScore(saved, result.reasons(), alertId);
         }catch(JsonProcessingException e){throw new IllegalStateException("Risk explanation serialization failed",e);}
         catch(DataIntegrityViolationException race){return assessments.findByMemberIdAndTransactionReference(memberId,request.transactionReference()).map(a->toScore(memberId,a)).orElseThrow(()->race);}
@@ -108,6 +130,30 @@ public class FraudService {
     }
     @Transactional
     public DecisionPolicyResponse getPolicy(String memberId){return toPolicy(policy(memberId));}
+    @Transactional(readOnly=true)
+    public ScoreResponse assessment(String memberId,UUID assessmentId){
+        RiskAssessment value=assessments.findByIdAndMemberId(assessmentId,memberId)
+                .orElseThrow(()->new NoSuchElementException("Assessment not found"));
+        return toScore(memberId,value);
+    }
+    @Transactional(readOnly=true)
+    public OperationsDashboard dashboard(String memberId){
+        List<RiskAssessment> recent=assessments.findTop100ByMemberIdOrderByCreatedAtDesc(memberId);
+        Map<String,Long> risks=count(recent.stream().map(RiskAssessment::band).toList());
+        Map<String,Long> decisions=count(recent.stream().map(RiskAssessment::enforcedAction).toList());
+        List<TopEntity> top=entityLinks.findTop100ByMemberIdOrderByObservationCountDesc(memberId).stream().limit(20).map(this::topEntity).toList();
+        return new OperationsDashboard(assessments.countByMemberId(memberId),alerts.countByMemberId(memberId),cases.countByMemberId(memberId),
+                risks,decisions,top,recent.stream().limit(20).map(this::summary).toList(),java.time.Instant.now());
+    }
+    @Transactional(readOnly=true)
+    public FraudStory story(String memberId,UUID assessmentId){
+        RiskAssessment value=assessments.findByIdAndMemberId(assessmentId,memberId).orElseThrow(()->new NoSuchElementException("Assessment not found"));
+        ScoreResponse score=toScore(memberId,value);List<String> codes=score.reasons().stream().map(RiskReason::code).toList();
+        List<AssessmentSummary> history=assessments.findTop20ByMemberIdAndSubjectHashOrderByCreatedAtDesc(memberId,value.subjectHash()).stream().map(this::summary).toList();
+        List<TopEntity> associated=entityLinks.findTop50ByMemberIdAndSubjectHashOrderByObservationCountDesc(memberId,value.subjectHash()).stream().map(this::topEntity).toList();
+        return new FraudStory(value.id(),value.transactionReference(),(int)Math.round(value.score()/10d),value.score(),value.band(),probableType(codes),
+                value.recommendedAction(),value.enforcedAction(),score.reasons(),history,associated,value.collectiveGroupSize(),value.collectiveRiskScore(),score.alertId(),java.time.Instant.now());
+    }
     private double ratio(int numerator,int denominator){return denominator==0?0d:Math.round((numerator/(double)denominator)*10000d)/10000d;}
     private EnrollmentResponse toEnrollment(CardProfile p){return new EnrollmentResponse(p.id(),p.status(),p.createdAt());}
     private AlertView toAlert(FraudAlert a){return new AlertView(a.id(),a.transactionReference(),a.score(),a.band(),a.status(),a.createdAt());}
@@ -118,6 +164,12 @@ public class FraudService {
     private ScoreResponse toScore(RiskAssessment a,List<RiskReason> reasons,UUID alertId){return new ScoreResponse(a.id(),a.score(),a.band(),a.recommendedAction(),a.enforcedAction(),a.modelVersion(),reasons,a.collectiveGroupSize(),a.collectiveRiskScore(),alertId,a.createdAt());}
     private FraudDecisionPolicy policy(String memberId){return policies.findByMemberId(memberId).orElseGet(()->policies.save(FraudDecisionPolicy.create(memberId)));}
     private DecisionPolicyResponse toPolicy(FraudDecisionPolicy p){return new DecisionPolicyResponse(p.mode(),p.challengeEnabled(),p.holdEnabled(),p.blockEnabled(),p.updatedAt());}
+    private AssessmentSummary summary(RiskAssessment a){return new AssessmentSummary(a.id(),a.transactionReference(),a.score(),a.band(),a.recommendedAction(),a.enforcedAction(),a.createdAt());}
+    private TopEntity topEntity(FraudEntityLink link){String hash=link.entityHash();return new TopEntity(link.entityType(),hash.substring(0,Math.min(12,hash.length())),link.observationCount());}
+    private Map<String,Long> count(List<String> values){Map<String,Long> result=new LinkedHashMap<>();values.forEach(v->result.merge(v,1L,Long::sum));return Collections.unmodifiableMap(result);}
+    private String probableType(List<String> codes){if(codes.stream().anyMatch(Set.of("NEW_DEVICE","NEW_LOCATION","BENEFICIARY_CHANGED","SESSION_RISK")::contains))return "ACCOUNT_TAKEOVER";if(codes.contains("COLLECTIVE_PATTERN"))return "FRAUD_RING";if(codes.contains("ML_ANOMALY")||codes.contains("BEHAVIORAL_DEVIATION"))return "BEHAVIORAL_ANOMALY";return codes.size()==1&&codes.contains("BASELINE")?"NONE":"TRANSACTION_FRAUD";}
+    private void rejectRawCardNumber(String value){if(value!=null&&value.replaceAll("[ -]","").matches("[0-9]{12,19}"))throw new IllegalArgumentException("Raw card numbers are forbidden");}
+    private FraudMonitoringSubject ensureSubject(String memberId,String sector,String type,String hash){return monitoringSubjects.findByMemberIdAndSectorIdAndSubjectTypeAndSubjectHash(memberId,sector,type,hash).orElseGet(()->{try{return monitoringSubjects.saveAndFlush(FraudMonitoringSubject.enroll(memberId,sector,type,hash));}catch(DataIntegrityViolationException race){return monitoringSubjects.findByMemberIdAndSectorIdAndSubjectTypeAndSubjectHash(memberId,sector,type,hash).orElseThrow(()->race);}});}
     private String enforcedAction(String memberId,String recommended){
         FraudDecisionPolicy p=policy(memberId);if("ALLOW".equals(recommended))return "ALLOW";if(!"ACTIVE_DECISION".equals(p.mode()))return "ALERT";
         return switch(recommended){case "CHALLENGE"->p.challengeEnabled()?"CHALLENGE":"ALERT";case "HOLD"->p.holdEnabled()?"HOLD":"ALERT";case "BLOCK"->p.blockEnabled()?"BLOCK":"ALERT";default->"ALERT";};

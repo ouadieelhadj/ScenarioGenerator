@@ -158,3 +158,17 @@ export interface FraudCaseView {
 export interface FraudDecisionPolicy { mode: 'ALERT_ONLY' | 'ACTIVE_DECISION'; challengeEnabled: boolean; holdEnabled: boolean; blockEnabled: boolean; updatedAt: string; }
 export interface FraudGatewayDecision { transactionReference: string; score: number; recommendedAction: string; enforcedAction: string; band: string; responseChannel: string; correlationReference: string; }
 export interface FraudLabScenarioResult { scenario: string; injected: number; alerts: number; challenged: number; held: number; blocked: number; sample: FraudGatewayDecision[]; }
+export interface FraudAssessmentSummary { assessmentId: string; transactionReference: string; score: number; band: string; recommendedAction: string; enforcedAction: string; assessedAt: string; }
+export interface FraudTopEntity { entityType: string; opaqueReference: string; observations: number; }
+export interface FraudOperationsDashboard {
+  assessments: number; alerts: number; cases: number;
+  riskDistribution: Record<string, number>; decisionDistribution: Record<string, number>;
+  topObservedEntities: FraudTopEntity[]; recentDecisions: FraudAssessmentSummary[]; generatedAt: string;
+}
+export interface FraudRiskReason { code: string; contribution: number; explanation: string; }
+export interface FraudStory {
+  assessmentId: string; transactionReference: string; publicRiskScore: number; internalRiskScore: number;
+  riskLevel: string; probableFraudType: string; recommendedAction: string; enforcedAction: string;
+  signals: FraudRiskReason[]; customerHistory: FraudAssessmentSummary[]; associatedEntities: FraudTopEntity[];
+  collectiveGroupSize: number; collectiveRiskScore: number; alertId: string | null; generatedAt: string;
+}

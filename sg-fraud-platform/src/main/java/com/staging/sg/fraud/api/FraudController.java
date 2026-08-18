@@ -3,6 +3,7 @@ package com.staging.sg.fraud.api;
 import com.staging.sg.fraud.api.FraudApi.*;
 import com.staging.sg.fraud.security.MemberContext;
 import com.staging.sg.fraud.service.FraudService;
+import com.staging.sg.fraud.service.IndustrialIntegrationReadiness;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -11,14 +12,24 @@ import java.util.*;
 
 @RestController @RequestMapping("/api/fraud/v1")
 public class FraudController {
-    private final FraudService service; private final MemberContext members;
-    public FraudController(FraudService service,MemberContext members){this.service=service;this.members=members;}
+    private final FraudService service; private final MemberContext members; private final IndustrialIntegrationReadiness integrations;
+    public FraudController(FraudService service,MemberContext members,IndustrialIntegrationReadiness integrations){this.service=service;this.members=members;this.integrations=integrations;}
     @GetMapping("/health") public Health health(){return new Health("UP","ALERT_ONLY");}
     @GetMapping("/capabilities") public Capabilities capabilities(){return new Capabilities("GOVERNED",true,true,true,true,true,true,true,true,true,true,true,true,true,true,true,true);}
     @PostMapping("/cards/monitoring-enrollments") @ResponseStatus(HttpStatus.CREATED)
     public EnrollmentResponse enroll(Authentication auth,@Valid @RequestBody EnrollmentRequest request){return service.enroll(members.requireMemberId(auth),request);}
+    @PostMapping("/subjects/monitoring-enrollments") @ResponseStatus(HttpStatus.CREATED)
+    public MonitoringSubjectEnrollmentResponse enrollSubject(Authentication auth,@Valid@RequestBody MonitoringSubjectEnrollmentRequest request){return service.enrollSubject(members.requireMemberId(auth),request);}
     @PostMapping("/risk/transactions:score")
     public ScoreResponse score(Authentication auth,@Valid @RequestBody ScoreRequest request){return service.score(members.requireMemberId(auth),request);}
+    @GetMapping("/risk/assessments/{assessmentId}")
+    public ScoreResponse assessment(Authentication auth,@PathVariable UUID assessmentId){return service.assessment(members.requireMemberId(auth),assessmentId);}
+    @GetMapping("/operations/dashboard")
+    public OperationsDashboard dashboard(Authentication auth){return service.dashboard(members.requireMemberId(auth));}
+    @GetMapping("/operations/integrations")
+    public IntegrationReadiness integrations(Authentication auth){members.requireMemberId(auth);return integrations.status();}
+    @GetMapping("/risk/assessments/{assessmentId}/story")
+    public FraudStory story(Authentication auth,@PathVariable UUID assessmentId){return service.story(members.requireMemberId(auth),assessmentId);}
     @GetMapping("/alerts") public List<AlertView> alerts(Authentication auth){return service.listAlerts(members.requireMemberId(auth));}
     @PostMapping("/alerts/{alertId}/feedback") @ResponseStatus(HttpStatus.CREATED)
     public FeedbackResponse feedback(Authentication auth,@PathVariable UUID alertId,@Valid @RequestBody FeedbackRequest request){return service.feedback(members.requireMemberId(auth),alertId,request);}

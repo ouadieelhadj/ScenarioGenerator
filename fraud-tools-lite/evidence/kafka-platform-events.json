@@ -1,0 +1,44 @@
+[
+  {
+    "topic": "fraud.risk-assessment-completed.v1",
+    "partition": 0,
+    "offset": 1,
+    "value": {
+      "memberId": "BANK_LAB_A",
+      "transactionReference": "AUTH-REST-001",
+      "riskScore": 962,
+      "recommendedAction": "BLOCK",
+      "enforcedAction": "ALERT",
+      "decisionMode": "ALERT_ONLY",
+      "modelSource": "MLFLOW_HTTP"
+    }
+  },
+  {
+    "topic": "fraud.risk-assessment-completed.v1",
+    "partition": 0,
+    "offset": 2,
+    "value": {
+      "memberId": "BANK_LAB_A",
+      "transactionReference": "AUTH-ISO-001",
+      "riskScore": 962,
+      "recommendedAction": "BLOCK",
+      "enforcedAction": "BLOCK",
+      "decisionMode": "DECISION",
+      "modelSource": "MLFLOW_HTTP"
+    }
+  },
+  {
+    "topic": "fraud.risk-assessment-completed.v1",
+    "partition": 0,
+    "offset": 3,
+    "value": {
+      "memberId": "BANK_LAB_A",
+      "transactionReference": "AUTH-ISO-002",
+      "riskScore": 962,
+      "recommendedAction": "BLOCK",
+      "enforcedAction": "BLOCK",
+      "decisionMode": "DECISION",
+      "modelSource": "MLFLOW_HTTP"
+    }
+  }
+]

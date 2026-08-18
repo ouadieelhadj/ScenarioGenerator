@@ -1,0 +1,16 @@
+# Template only: copy once for every enabled member/sector route. Do not apply unchanged.
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaTopic
+metadata:
+  name: fraud-member-sector-risk-assessment-completed-v1
+  namespace: fraud-streaming
+  labels:
+    strimzi.io/cluster: fraud-kafka
+spec:
+  topicName: fraud.${MEMBER_ID_LOWER}.${SECTOR_ID_LOWER}.risk-assessment-completed.v1
+  partitions: 12
+  replicas: 3
+  config:
+    min.insync.replicas: 2
+    retention.ms: 604800000
+    cleanup.policy: delete

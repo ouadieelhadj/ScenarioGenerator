@@ -2,6 +2,7 @@ package com.staging.sg.fraud;
 
 import com.staging.sg.fraud.api.FraudApi.*;
 import com.staging.sg.fraud.service.FraudService;
+import com.staging.sg.fraud.repository.FraudEventOutboxRepository;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -11,6 +12,7 @@ import static org.assertj.core.api.Assertions.*;
 @SpringBootTest
 class FraudServiceIntegrationTest {
     @Autowired FraudService service;
+    @Autowired FraudEventOutboxRepository outbox;
     @Test void enrollmentAndScoringAreIdempotentAndAlertOnly(){
         EnrollmentRequest enrollment=new EnrollmentRequest("tok_test_abc","MAD","MAR","customer-42");
         var first=service.enroll("BANK_A",enrollment); var replay=service.enroll("BANK_A",enrollment);
@@ -18,6 +20,7 @@ class FraudServiceIntegrationTest {
         ScoreRequest request=new ScoreRequest("tx-001","tok_test_abc",1500000,"MAD","MAR","7995","ECOMMERCE",false,false,8,"device-token");
         var score=service.score("BANK_A",request); var scoreReplay=service.score("BANK_A",request);
         assertThat(scoreReplay.assessmentId()).isEqualTo(score.assessmentId());
+        assertThat(outbox.findByMemberIdAndAggregateTypeAndAggregateIdAndEventType("BANK_A","RISK_ASSESSMENT","tx-001","RiskAssessmentCompleted.v1")).isPresent();
         assertThat(score.score()).isGreaterThanOrEqualTo(650);
         assertThat(score.enforcedAction()).isEqualTo("ALERT");
         assertThat(score.alertId()).isNotNull(); assertThat(score.reasons()).isNotEmpty();
@@ -73,5 +76,15 @@ class FraudServiceIntegrationTest {
         var active=service.score("BANK_DECISION",new ScoreRequest("decision-2","tok_decision",2000000,"MAD","MAR","7995","ECOMMERCE",false,false,10,null));
         assertThat(active.enforcedAction()).isEqualTo("BLOCK");
         assertThat(service.getPolicy("BANK_OTHER_DECISION").mode()).isEqualTo("ALERT_ONLY");
+    }
+    @Test void operationsDashboardAndFraudStoryAreMemberScopedAndExplainable(){
+        service.enroll("BANK_OPS",new EnrollmentRequest("tok-ops","MAD","MAR","customer-ops"));
+        Map<String,Boolean> signals=Map.of("NEW_DEVICE",true,"NEW_LOCATION",true,"SESSION_RISK",true);
+        var scored=service.score("BANK_OPS",new ScoreRequest("ops-tx","tok-ops",2000000,"MAD","MAR","7995","MOBILE_BANKING",false,false,8,"device-ops","customer-ops","account-ops","beneficiary-ops","merchant-ops","ip-ops","MOBILE_BANKING",signals));
+        var dashboard=service.dashboard("BANK_OPS");assertThat(dashboard.assessments()).isEqualTo(1);assertThat(dashboard.alerts()).isEqualTo(1);
+        assertThat(dashboard.riskDistribution()).containsEntry("CRITICAL",1L);assertThat(dashboard.topObservedEntities()).isNotEmpty();
+        var story=service.story("BANK_OPS",scored.assessmentId());assertThat(story.publicRiskScore()).isEqualTo(100);
+        assertThat(story.probableFraudType()).isEqualTo("ACCOUNT_TAKEOVER");assertThat(story.signals()).extracting(RiskReason::code).contains("NEW_DEVICE","NEW_LOCATION","SESSION_RISK");
+        assertThatThrownBy(()->service.story("BANK_OTHER",scored.assessmentId())).isInstanceOf(NoSuchElementException.class);
     }
 }

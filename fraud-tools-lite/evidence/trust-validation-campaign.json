@@ -1,0 +1,351 @@
+{
+  "status": "TRUST_VALIDATION_LAB_OK",
+  "synthetic": true,
+  "productionClaimAllowed": false,
+  "banks": 3,
+  "sectorsPerBank": 2,
+  "totalRows": 1000002,
+  "phases": [
+    "INITIAL_CONTROL_BASELINE",
+    "BLIND_TRUST_VALIDATION",
+    "ADAPTIVE_DISCOVERY"
+  ],
+  "results": [
+    {
+      "memberId": "MEMBER-OUADIE",
+      "bank": "Ouadie Bank",
+      "sectorId": "MONETIQUE",
+      "rows": 166667,
+      "knownLabels": {
+        "suspicious": 50,
+        "confirmedFraud": 3
+      },
+      "blindRows": 25001,
+      "blindLabelsKeptOutOfTraining": true,
+      "modelFrozenBeforeBlindTest": true,
+      "phase1Baseline": {
+        "truePositive": 2,
+        "falsePositive": 26,
+        "trueNegative": 24964,
+        "falseNegative": 9,
+        "recall": 0.181818,
+        "precision": 0.071429,
+        "falsePositiveRate": 0.00104,
+        "confirmedFraudDetected": 0,
+        "confirmedFraudTotal": 1
+      },
+      "phase2TrustValidation": {
+        "truePositive": 11,
+        "falsePositive": 15,
+        "trueNegative": 24975,
+        "falseNegative": 0,
+        "recall": 1.0,
+        "precision": 0.423077,
+        "falsePositiveRate": 0.0006,
+        "confirmedFraudDetected": 1,
+        "confirmedFraudTotal": 1,
+        "threshold": 0.425
+      },
+      "phase3AdaptiveDiscovery": {
+        "futureRows": 10000,
+        "proposals": [
+          {
+            "proposalId": "MEMBER-OUADIE-MONETIQUE-AUTO-01",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "graph_group",
+            "description": "Adaptive control candidate requiring analyst review."
+          },
+          {
+            "proposalId": "MEMBER-OUADIE-MONETIQUE-AUTO-02",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "attempts",
+            "description": "Adaptive control candidate requiring analyst review."
+          }
+        ],
+        "automaticActivation": false
+      }
+    },
+    {
+      "memberId": "MEMBER-OUADIE",
+      "bank": "Ouadie Bank",
+      "sectorId": "MOBILE_BANKING",
+      "rows": 166667,
+      "knownLabels": {
+        "suspicious": 50,
+        "confirmedFraud": 2
+      },
+      "blindRows": 25001,
+      "blindLabelsKeptOutOfTraining": true,
+      "modelFrozenBeforeBlindTest": true,
+      "phase1Baseline": {
+        "truePositive": 3,
+        "falsePositive": 22,
+        "trueNegative": 24968,
+        "falseNegative": 8,
+        "recall": 0.272727,
+        "precision": 0.12,
+        "falsePositiveRate": 0.00088,
+        "confirmedFraudDetected": 0,
+        "confirmedFraudTotal": 1
+      },
+      "phase2TrustValidation": {
+        "truePositive": 11,
+        "falsePositive": 2,
+        "trueNegative": 24988,
+        "falseNegative": 0,
+        "recall": 1.0,
+        "precision": 0.846154,
+        "falsePositiveRate": 8e-05,
+        "confirmedFraudDetected": 1,
+        "confirmedFraudTotal": 1,
+        "threshold": 0.02
+      },
+      "phase3AdaptiveDiscovery": {
+        "futureRows": 10000,
+        "proposals": [
+          {
+            "proposalId": "MEMBER-OUADIE-MOBILE_BANKING-AUTO-01",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "graph_group",
+            "description": "Adaptive control candidate requiring analyst review."
+          },
+          {
+            "proposalId": "MEMBER-OUADIE-MOBILE_BANKING-AUTO-02",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "attempts",
+            "description": "Adaptive control candidate requiring analyst review."
+          }
+        ],
+        "automaticActivation": false
+      }
+    },
+    {
+      "memberId": "MEMBER-TRESOR",
+      "bank": "Tresor Bank",
+      "sectorId": "MONETIQUE",
+      "rows": 166667,
+      "knownLabels": {
+        "suspicious": 50,
+        "confirmedFraud": 3
+      },
+      "blindRows": 25001,
+      "blindLabelsKeptOutOfTraining": true,
+      "modelFrozenBeforeBlindTest": true,
+      "phase1Baseline": {
+        "truePositive": 1,
+        "falsePositive": 26,
+        "trueNegative": 24968,
+        "falseNegative": 6,
+        "recall": 0.142857,
+        "precision": 0.037037,
+        "falsePositiveRate": 0.00104,
+        "confirmedFraudDetected": 0,
+        "confirmedFraudTotal": 1
+      },
+      "phase2TrustValidation": {
+        "truePositive": 7,
+        "falsePositive": 16,
+        "trueNegative": 24978,
+        "falseNegative": 0,
+        "recall": 1.0,
+        "precision": 0.304348,
+        "falsePositiveRate": 0.00064,
+        "confirmedFraudDetected": 1,
+        "confirmedFraudTotal": 1,
+        "threshold": 0.395
+      },
+      "phase3AdaptiveDiscovery": {
+        "futureRows": 10000,
+        "proposals": [
+          {
+            "proposalId": "MEMBER-TRESOR-MONETIQUE-AUTO-01",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "graph_group",
+            "description": "Adaptive control candidate requiring analyst review."
+          },
+          {
+            "proposalId": "MEMBER-TRESOR-MONETIQUE-AUTO-02",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "attempts",
+            "description": "Adaptive control candidate requiring analyst review."
+          }
+        ],
+        "automaticActivation": false
+      }
+    },
+    {
+      "memberId": "MEMBER-TRESOR",
+      "bank": "Tresor Bank",
+      "sectorId": "MOBILE_BANKING",
+      "rows": 166667,
+      "knownLabels": {
+        "suspicious": 50,
+        "confirmedFraud": 2
+      },
+      "blindRows": 25001,
+      "blindLabelsKeptOutOfTraining": true,
+      "modelFrozenBeforeBlindTest": true,
+      "phase1Baseline": {
+        "truePositive": 1,
+        "falsePositive": 29,
+        "trueNegative": 24966,
+        "falseNegative": 5,
+        "recall": 0.166667,
+        "precision": 0.033333,
+        "falsePositiveRate": 0.00116,
+        "confirmedFraudDetected": 0,
+        "confirmedFraudTotal": 1
+      },
+      "phase2TrustValidation": {
+        "truePositive": 4,
+        "falsePositive": 2,
+        "trueNegative": 24993,
+        "falseNegative": 2,
+        "recall": 0.666667,
+        "precision": 0.666667,
+        "falsePositiveRate": 8e-05,
+        "confirmedFraudDetected": 1,
+        "confirmedFraudTotal": 1,
+        "threshold": 0.12
+      },
+      "phase3AdaptiveDiscovery": {
+        "futureRows": 10000,
+        "proposals": [
+          {
+            "proposalId": "MEMBER-TRESOR-MOBILE_BANKING-AUTO-01",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "graph_group",
+            "description": "Adaptive control candidate requiring analyst review."
+          },
+          {
+            "proposalId": "MEMBER-TRESOR-MOBILE_BANKING-AUTO-02",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "attempts",
+            "description": "Adaptive control candidate requiring analyst review."
+          }
+        ],
+        "automaticActivation": false
+      }
+    },
+    {
+      "memberId": "MEMBER-SEDIK",
+      "bank": "Sedik Bank",
+      "sectorId": "MONETIQUE",
+      "rows": 166667,
+      "knownLabels": {
+        "suspicious": 50,
+        "confirmedFraud": 3
+      },
+      "blindRows": 25001,
+      "blindLabelsKeptOutOfTraining": true,
+      "modelFrozenBeforeBlindTest": true,
+      "phase1Baseline": {
+        "truePositive": 0,
+        "falsePositive": 31,
+        "trueNegative": 24965,
+        "falseNegative": 5,
+        "recall": 0.0,
+        "precision": 0.0,
+        "falsePositiveRate": 0.00124,
+        "confirmedFraudDetected": 0,
+        "confirmedFraudTotal": 1
+      },
+      "phase2TrustValidation": {
+        "truePositive": 5,
+        "falsePositive": 217,
+        "trueNegative": 24779,
+        "falseNegative": 0,
+        "recall": 1.0,
+        "precision": 0.022523,
+        "falsePositiveRate": 0.008681,
+        "confirmedFraudDetected": 1,
+        "confirmedFraudTotal": 1,
+        "threshold": 0.315
+      },
+      "phase3AdaptiveDiscovery": {
+        "futureRows": 10000,
+        "proposals": [
+          {
+            "proposalId": "MEMBER-SEDIK-MONETIQUE-AUTO-01",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "amount_deviation",
+            "description": "Adaptive control candidate requiring analyst review."
+          },
+          {
+            "proposalId": "MEMBER-SEDIK-MONETIQUE-AUTO-02",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "graph_group",
+            "description": "Adaptive control candidate requiring analyst review."
+          }
+        ],
+        "automaticActivation": false
+      }
+    },
+    {
+      "memberId": "MEMBER-SEDIK",
+      "bank": "Sedik Bank",
+      "sectorId": "MOBILE_BANKING",
+      "rows": 166667,
+      "knownLabels": {
+        "suspicious": 50,
+        "confirmedFraud": 2
+      },
+      "blindRows": 25001,
+      "blindLabelsKeptOutOfTraining": true,
+      "modelFrozenBeforeBlindTest": true,
+      "phase1Baseline": {
+        "truePositive": 3,
+        "falsePositive": 23,
+        "trueNegative": 24970,
+        "falseNegative": 5,
+        "recall": 0.375,
+        "precision": 0.115385,
+        "falsePositiveRate": 0.00092,
+        "confirmedFraudDetected": 0,
+        "confirmedFraudTotal": 1
+      },
+      "phase2TrustValidation": {
+        "truePositive": 6,
+        "falsePositive": 10,
+        "trueNegative": 24983,
+        "falseNegative": 2,
+        "recall": 0.75,
+        "precision": 0.375,
+        "falsePositiveRate": 0.0004,
+        "confirmedFraudDetected": 1,
+        "confirmedFraudTotal": 1,
+        "threshold": 0.475
+      },
+      "phase3AdaptiveDiscovery": {
+        "futureRows": 10000,
+        "proposals": [
+          {
+            "proposalId": "MEMBER-SEDIK-MOBILE_BANKING-AUTO-01",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "graph_group",
+            "description": "Adaptive control candidate requiring analyst review."
+          },
+          {
+            "proposalId": "MEMBER-SEDIK-MOBILE_BANKING-AUTO-02",
+            "status": "PROPOSED",
+            "automaticActivation": false,
+            "feature": "amount_deviation",
+            "description": "Adaptive control candidate requiring analyst review."
+          }
+        ],
+        "automaticActivation": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+package com.staging.sg.fraud.repository;
+import com.staging.sg.fraud.domain.FraudEventOutbox;import org.springframework.data.jpa.repository.JpaRepository;import java.time.Instant;import java.util.*;
+public interface FraudEventOutboxRepository extends JpaRepository<FraudEventOutbox,UUID>{long countByMemberId(String memberId);Optional<FraudEventOutbox> findByMemberIdAndAggregateTypeAndAggregateIdAndEventType(String memberId,String aggregateType,String aggregateId,String eventType);List<FraudEventOutbox> findTop50ByStatusAndNextAttemptAtLessThanEqualOrderByCreatedAtAsc(String status,Instant dueAt);}

@@ -15,6 +15,7 @@ public class GatewayEvaluationService {
         canonical.put("channel",request.channel());canonical.put("cardPresent",request.cardPresent());canonical.put("strongAuthentication",request.strongAuthentication());canonical.put("attemptsLastHour",request.attemptsLastHour());
         put(canonical,"deviceReference",request.deviceReference());put(canonical,"customerReference",request.customerReference());put(canonical,"accountReference",request.accountReference());
         put(canonical,"beneficiaryReference",request.beneficiaryReference());put(canonical,"merchantReference",request.merchantReference());put(canonical,"ipReference",request.ipReference());put(canonical,"sector",request.sector());
+        canonical.put("observedSignals",request.observedSignals());
         return response(request.transactionReference(),request.channel(),platform.score(authorization,canonical));
     }
     public GatewayDecisionResponse response(String tx,String channel,JsonNode score){return new GatewayDecisionResponse(tx,score.path("score").asInt(),score.path("recommendedAction").asText(),score.path("enforcedAction").asText(),score.path("band").asText(),channel,tx);}

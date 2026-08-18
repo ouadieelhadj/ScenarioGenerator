@@ -26,6 +26,6 @@ public class FraudLabScenarioService {
         boolean atm="ATM_WITHDRAWAL".equals(scenario);String channel=atm?"ATM":ecommerce?"ECOMMERCE":mobile?"MOBILE":"POS";
         long amount=(collective||mobile)?1500000:10000;String mcc=mobile?"4829":ecommerce?"5967":"5411";
         return new CanonicalEventRequest("lab-"+scenario.toLowerCase(Locale.ROOT)+"-"+i,token,amount,"MAD","MAR",mcc,channel,!ecommerce,!collective&&!ecommerce,collective?8:1,
-                collective?"lab-shared-device":"lab-device-"+i,"lab-customer-"+i,"lab-account-"+i,collective?"lab-shared-beneficiary":"lab-beneficiary-"+i,"lab-merchant",collective?"lab-shared-ip":"lab-ip-"+i,mobile?"MOBILE_BANKING":"PAYMENTS");
+                collective?"lab-shared-device":"lab-device-"+i,"lab-customer-"+i,"lab-account-"+i,collective?"lab-shared-beneficiary":"lab-beneficiary-"+i,"lab-merchant",collective?"lab-shared-ip":"lab-ip-"+i,mobile?"MOBILE_BANKING":"MONETIQUE");
     }
 }

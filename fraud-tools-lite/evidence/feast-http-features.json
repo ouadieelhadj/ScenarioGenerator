@@ -1,0 +1,69 @@
+{
+  "metadata": {
+    "feature_names": [
+      "instrument_id",
+      "graph_group_size",
+      "device_novelty",
+      "attempts_last_hour",
+      "amount_deviation"
+    ]
+  },
+  "results": [
+    {
+      "values": [
+        "tok_bank_lab_001"
+      ],
+      "statuses": [
+        "PRESENT"
+      ],
+      "event_timestamps": [
+        "1970-01-01T00:00:00Z"
+      ]
+    },
+    {
+      "values": [
+        12
+      ],
+      "statuses": [
+        "PRESENT"
+      ],
+      "event_timestamps": [
+        "2026-08-16T10:46:42Z"
+      ]
+    },
+    {
+      "values": [
+        1.0
+      ],
+      "statuses": [
+        "PRESENT"
+      ],
+      "event_timestamps": [
+        "2026-08-16T10:46:42Z"
+      ]
+    },
+    {
+      "values": [
+        8
+      ],
+      "statuses": [
+        "PRESENT"
+      ],
+      "event_timestamps": [
+        "2026-08-16T10:46:42Z"
+      ]
+    },
+    {
+      "values": [
+        4.199999809265137
+      ],
+      "statuses": [
+        "PRESENT"
+      ],
+      "event_timestamps": [
+        "2026-08-16T10:46:42Z"
+      ]
+    }
+  ],
+  "status": null
+}

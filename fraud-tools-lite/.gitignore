@@ -1,0 +1,7 @@
+# Runtime state and third-party installers are local laboratory artifacts.
+data/
+downloads/
+runtime/
+logs/
+**/__pycache__/
+*.pyc

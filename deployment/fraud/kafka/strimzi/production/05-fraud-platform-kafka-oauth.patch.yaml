@@ -1,0 +1,33 @@
+# Strategic merge patch. Both referenced Secrets are provisioned by the approved secret manager.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sg-fraud-platform
+  namespace: fraud-platform
+spec:
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sg-fraud-platform
+    spec:
+      containers:
+        - name: sg-fraud-platform
+          env:
+            - {name: SPRING_PROFILES_ACTIVE, value: kafka-oauth}
+            - {name: FRAUD_EVENT_STREAM_ENABLED, value: "true"}
+            - {name: FRAUD_KAFKA_DYNAMIC_ROUTING_REQUIRED, value: "true"}
+            - {name: FRAUD_KAFKA_BOOTSTRAP_SERVERS, value: fraud-kafka-kafka-bootstrap.fraud-streaming.svc:9093}
+            - name: OAUTH_CLIENT_ID
+              valueFrom: {secretKeyRef: {name: fraud-kafka-oauth-client, key: client-id}}
+            - name: OAUTH_CLIENT_SECRET
+              valueFrom: {secretKeyRef: {name: fraud-kafka-oauth-client, key: client-secret}}
+            - name: OAUTH_TOKEN_ENDPOINT_URI
+              valueFrom: {secretKeyRef: {name: fraud-kafka-oauth-client, key: token-endpoint-uri}}
+            - {name: FRAUD_KAFKA_TRUSTSTORE_LOCATION, value: /etc/fraud-kafka-tls/truststore.p12}
+            - name: FRAUD_KAFKA_TRUSTSTORE_PASSWORD
+              valueFrom: {secretKeyRef: {name: fraud-kafka-client-truststore, key: password}}
+          volumeMounts:
+            - {name: fraud-kafka-client-truststore, mountPath: /etc/fraud-kafka-tls, readOnly: true}
+      volumes:
+        - name: fraud-kafka-client-truststore
+          secret: {secretName: fraud-kafka-client-truststore}

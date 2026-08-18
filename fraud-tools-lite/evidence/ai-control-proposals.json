@@ -1,0 +1,114 @@
+[
+  {
+    "proposalId": "AUTO-LAB-001",
+    "status": "PROPOSED",
+    "automaticActivation": false,
+    "feature": "threat_intelligence_signal",
+    "operator": ">=",
+    "threshold": 0.0,
+    "description": "Controle propose automatiquement sur l'indicateur threat_intelligence_signal.",
+    "criticality": "HIGH",
+    "evidence": {
+      "permutationImportance": 0.324925,
+      "support": 6000,
+      "precision": 0.016167,
+      "recall": 1.0,
+      "falsePositiveRate": 1.0
+    },
+    "governance": {
+      "requiredDecision": "APPROVE_OR_REJECT_BY_ANALYST",
+      "allowedLifecycle": [
+        "PROPOSED",
+        "BACKTESTED",
+        "APPROVED",
+        "ACTIVE",
+        "DISABLED"
+      ],
+      "rollbackSupported": true
+    }
+  },
+  {
+    "proposalId": "AUTO-LAB-002",
+    "status": "PROPOSED",
+    "automaticActivation": false,
+    "feature": "amount_deviation",
+    "operator": ">=",
+    "threshold": 1.242725,
+    "description": "Controle propose automatiquement sur l'indicateur amount_deviation.",
+    "criticality": "HIGH",
+    "evidence": {
+      "permutationImportance": 0.091296,
+      "support": 2841,
+      "precision": 0.022175,
+      "recall": 0.649485,
+      "falsePositiveRate": 0.470608
+    },
+    "governance": {
+      "requiredDecision": "APPROVE_OR_REJECT_BY_ANALYST",
+      "allowedLifecycle": [
+        "PROPOSED",
+        "BACKTESTED",
+        "APPROVED",
+        "ACTIVE",
+        "DISABLED"
+      ],
+      "rollbackSupported": true
+    }
+  },
+  {
+    "proposalId": "AUTO-LAB-003",
+    "status": "PROPOSED",
+    "automaticActivation": false,
+    "feature": "location_novelty",
+    "operator": ">=",
+    "threshold": 0.112548,
+    "description": "Controle propose automatiquement sur l'indicateur location_novelty.",
+    "criticality": "MEDIUM",
+    "evidence": {
+      "permutationImportance": 0.013631,
+      "support": 3174,
+      "precision": 0.019849,
+      "recall": 0.649485,
+      "falsePositiveRate": 0.52702
+    },
+    "governance": {
+      "requiredDecision": "APPROVE_OR_REJECT_BY_ANALYST",
+      "allowedLifecycle": [
+        "PROPOSED",
+        "BACKTESTED",
+        "APPROVED",
+        "ACTIVE",
+        "DISABLED"
+      ],
+      "rollbackSupported": true
+    }
+  },
+  {
+    "proposalId": "AUTO-LAB-004",
+    "status": "PROPOSED",
+    "automaticActivation": false,
+    "feature": "device_novelty",
+    "operator": ">=",
+    "threshold": 0.114487,
+    "description": "Controle propose automatiquement sur l'indicateur device_novelty.",
+    "criticality": "MEDIUM",
+    "evidence": {
+      "permutationImportance": 0.011006,
+      "support": 3800,
+      "precision": 0.016579,
+      "recall": 0.649485,
+      "falsePositiveRate": 0.633068
+    },
+    "governance": {
+      "requiredDecision": "APPROVE_OR_REJECT_BY_ANALYST",
+      "allowedLifecycle": [
+        "PROPOSED",
+        "BACKTESTED",
+        "APPROVED",
+        "ACTIVE",
+        "DISABLED"
+      ],
+      "rollbackSupported": true
+    }
+  }
+]

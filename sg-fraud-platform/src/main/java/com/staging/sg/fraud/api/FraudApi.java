@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 public final class FraudApi {
@@ -13,8 +14,11 @@ public final class FraudApi {
             @NotBlank @Pattern(regexp="[A-Z]{3}") String country,
             @Size(max=64) String customerReference) {}
     public record EnrollmentResponse(UUID enrollmentId, String status, Instant createdAt) {}
+    public record MonitoringSubjectEnrollmentRequest(@NotBlank@Pattern(regexp="CARD_TOKEN|ACCOUNT|WALLET|CUSTOMER")String subjectType,
+            @NotBlank@Size(max=128)String subjectReference,@NotBlank@Size(max=64)String sector,@NotBlank@Size(max=32)String channel){}
+    public record MonitoringSubjectEnrollmentResponse(UUID enrollmentId,String subjectType,String sector,String status,Instant createdAt){}
     public record ScoreRequest(@NotBlank @Size(max=128) String transactionReference,
-            @NotBlank @Size(max=128) String tokenReference,
+            @Size(max=128) String tokenReference,
             @PositiveOrZero long amountMinor,
             @NotBlank @Pattern(regexp="[A-Z]{3}") String currency,
             @NotBlank @Pattern(regexp="[A-Z]{3}") String country,
@@ -28,12 +32,29 @@ public final class FraudApi {
             @Size(max=128) String beneficiaryReference,
             @Size(max=128) String merchantReference,
             @Size(max=128) String ipReference,
-            @Size(max=64) String sector) {
+            @Size(max=64) String sector,
+            Map<@Size(max=64) String, Boolean> observedSignals,
+            @Pattern(regexp="CARD_TOKEN|ACCOUNT|WALLET|CUSTOMER")String subjectType,
+            @Size(max=128)String subjectReference) {
         public ScoreRequest(String transactionReference,String tokenReference,long amountMinor,String currency,
                 String country,String mcc,String channel,boolean cardPresent,boolean strongAuthentication,
                 int attemptsLastHour,String deviceReference){
             this(transactionReference,tokenReference,amountMinor,currency,country,mcc,channel,cardPresent,
-                    strongAuthentication,attemptsLastHour,deviceReference,null,null,null,null,null,"PAYMENTS");
+                    strongAuthentication,attemptsLastHour,deviceReference,null,null,null,null,null,"PAYMENTS",Map.of(),null,null);
+        }
+        public ScoreRequest(String transactionReference,String tokenReference,long amountMinor,String currency,
+                String country,String mcc,String channel,boolean cardPresent,boolean strongAuthentication,
+                int attemptsLastHour,String deviceReference,String customerReference,String accountReference,
+                String beneficiaryReference,String merchantReference,String ipReference,String sector){
+            this(transactionReference,tokenReference,amountMinor,currency,country,mcc,channel,cardPresent,
+                    strongAuthentication,attemptsLastHour,deviceReference,customerReference,accountReference,
+                    beneficiaryReference,merchantReference,ipReference,sector,Map.of(),null,null);
+        }
+        public ScoreRequest(String transactionReference,String tokenReference,long amountMinor,String currency,String country,String mcc,String channel,boolean cardPresent,boolean strongAuthentication,int attemptsLastHour,String deviceReference,String customerReference,String accountReference,String beneficiaryReference,String merchantReference,String ipReference,String sector,Map<String,Boolean> observedSignals){this(transactionReference,tokenReference,amountMinor,currency,country,mcc,channel,cardPresent,strongAuthentication,attemptsLastHour,deviceReference,customerReference,accountReference,beneficiaryReference,merchantReference,ipReference,sector,observedSignals,null,null);}
+        public ScoreRequest {
+            observedSignals = observedSignals == null ? Map.of() : Map.copyOf(observedSignals);
+            if((subjectReference==null||subjectReference.isBlank())&&(tokenReference==null||tokenReference.isBlank()))throw new IllegalArgumentException("A monitored subject reference is required");
+            if(subjectReference!=null&&!subjectReference.isBlank()&&(subjectType==null||subjectType.isBlank()))throw new IllegalArgumentException("subjectType is required with subjectReference");
         }
     }
     public record RiskReason(String code, int contribution, String explanation) {}
@@ -64,6 +85,18 @@ public final class FraudApi {
             boolean challengeEnabled, boolean holdEnabled, boolean blockEnabled) {}
     public record DecisionPolicyResponse(String mode, boolean challengeEnabled,
             boolean holdEnabled, boolean blockEnabled, Instant updatedAt) {}
+    public record AssessmentSummary(UUID assessmentId,String transactionReference,int score,String band,
+            String recommendedAction,String enforcedAction,Instant assessedAt) {}
+    public record TopEntity(String entityType,String opaqueReference,long observations) {}
+    public record OperationsDashboard(long assessments,long alerts,long cases,
+            Map<String,Long> riskDistribution,Map<String,Long> decisionDistribution,
+            List<TopEntity> topObservedEntities,List<AssessmentSummary> recentDecisions,Instant generatedAt) {}
+    public record FraudStory(UUID assessmentId,String transactionReference,int publicRiskScore,int internalRiskScore,
+            String riskLevel,String probableFraudType,String recommendedAction,String enforcedAction,
+            List<RiskReason> signals,List<AssessmentSummary> customerHistory,List<TopEntity> associatedEntities,
+            int collectiveGroupSize,int collectiveRiskScore,UUID alertId,Instant generatedAt) {}
+    public record IntegrationComponent(String code,boolean enabled,String status,String binding) {}
+    public record IntegrationReadiness(List<IntegrationComponent> components,Instant checkedAt) {}
     public record Health(String status, String mode) {}
     public record Capabilities(String mode, boolean cardMonitoringEnrollment,
             boolean transactionScoring, boolean explainableScoring, boolean alertOnly,

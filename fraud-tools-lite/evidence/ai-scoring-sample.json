@@ -1,0 +1,14 @@
+[
+  {
+    "amount_deviation":1.4531826699,
+    "attempts_last_hour":2,
+    "device_novelty":0.1524522459,
+    "location_novelty":0.0353121055,
+    "beneficiary_age_minutes":495.717904492,
+    "graph_group_size":1,
+    "behavioral_deviation":0.4506123513,
+    "threat_intelligence_signal":0,
+    "score":0.0257287408,
+    "decision":"ALLOW"
+  }
+]

@@ -1,0 +1,19 @@
+# Activate with SPRING_PROFILES_ACTIVE=kafka-oauth in production.
+# Secrets are injected through environment variables or a Kubernetes Secret; never commit them here.
+spring:
+  kafka:
+    security:
+      protocol: SASL_SSL
+    properties:
+      sasl.mechanism: OAUTHBEARER
+      sasl.login.callback.handler.class: io.strimzi.kafka.oauth.client.JaasClientOauthLoginCallbackHandler
+      sasl.jaas.config: org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required;
+      ssl.truststore.location: ${FRAUD_KAFKA_TRUSTSTORE_LOCATION}
+      ssl.truststore.password: ${FRAUD_KAFKA_TRUSTSTORE_PASSWORD}
+      ssl.truststore.type: ${FRAUD_KAFKA_TRUSTSTORE_TYPE:PKCS12}
+      ssl.endpoint.identification.algorithm: HTTPS
+fraud:
+  integrations:
+    event-stream:
+      enabled: true
+      dynamic-routing-required: true

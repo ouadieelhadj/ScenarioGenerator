@@ -13,6 +13,13 @@ spring:
     open-in-view: false
   liquibase:
     enabled: false
+  kafka:
+    bootstrap-servers: ${FRAUD_KAFKA_BOOTSTRAP_SERVERS:127.0.0.1:9092}
+    producer:
+      acks: all
+      properties:
+        enable.idempotence: true
+        max.in.flight.requests.per.connection: 5
 fraud:
   security:
     issuer-uri: ${FRAUD_OAUTH2_ISSUER_URI:http://127.0.0.1:8090/realms/futurpayment}
@@ -22,6 +29,26 @@ fraud:
   scoring:
     alert-threshold: ${FRAUD_ALERT_THRESHOLD:650}
     high-amount-minor: ${FRAUD_HIGH_AMOUNT_MINOR:1000000}
+  integrations:
+    timeout-ms: ${FRAUD_INTEGRATION_TIMEOUT_MS:1500}
+    event-stream:
+      enabled: ${FRAUD_EVENT_STREAM_ENABLED:false}
+      topic: ${FRAUD_KAFKA_ASSESSMENT_TOPIC:fraud.{memberId}.{sectorId}.risk-assessment-completed.v1}
+      dynamic-routing-required: ${FRAUD_KAFKA_DYNAMIC_ROUTING_REQUIRED:false}
+      max-attempts: ${FRAUD_KAFKA_MAX_ATTEMPTS:8}
+      send-timeout-ms: ${FRAUD_KAFKA_SEND_TIMEOUT_MS:5000}
+      poll-delay-ms: ${FRAUD_KAFKA_POLL_DELAY_MS:1000}
+    feature-store:
+      enabled: ${FRAUD_FEATURE_STORE_ENABLED:false}
+      url: ${FRAUD_FEAST_URL:http://127.0.0.1:6566}
+      feature-service: ${FRAUD_FEAST_SERVICE:fraud_scoring_v1}
+    model-inference:
+      enabled: ${FRAUD_MODEL_INFERENCE_ENABLED:false}
+      url: ${FRAUD_MODEL_URL:http://127.0.0.1:5001/invocations}
+      model-name: ${FRAUD_MODEL_NAME:fraud-risk}
+      amount-baseline-minor: ${FRAUD_MODEL_AMOUNT_BASELINE_MINOR:250000}
+    graph:
+      enabled: ${FRAUD_GRAPH_ENABLED:false}
 logging:
   file:
     name: ${FRAUD_LOG_FILE:${user.dir}/runtime/fraud/logs/fraud-platform.log}

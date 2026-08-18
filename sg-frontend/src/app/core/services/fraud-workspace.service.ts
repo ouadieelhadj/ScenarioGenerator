@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import { ENDPOINTS, url } from '../config/api.config';
-import { FraudAlertView, FraudCaseView, FraudDecisionPolicy, FraudLabScenarioResult, FraudOverview } from '../models/product-contracts.models';
+import { FraudAlertView, FraudCaseView, FraudDecisionPolicy, FraudLabScenarioResult, FraudOperationsDashboard, FraudOverview, FraudStory } from '../models/product-contracts.models';
 
 @Injectable({ providedIn: 'root' })
 export class FraudWorkspaceService {
@@ -21,6 +21,14 @@ export class FraudWorkspaceService {
 
   cases(workspace: 'SWITCH' | 'SWITCHLAB'): Observable<FraudCaseView[]> {
     return this.http.get<FraudCaseView[]>(url.orchestrator(this.platformPath(workspace, '/cases')));
+  }
+
+  dashboard(): Observable<FraudOperationsDashboard> {
+    return this.http.get<FraudOperationsDashboard>(url.orchestrator(this.platformPath('SWITCH', '/operations/dashboard')));
+  }
+
+  story(assessmentId: string): Observable<FraudStory> {
+    return this.http.get<FraudStory>(url.orchestrator(this.platformPath('SWITCH', `/risk/assessments/${encodeURIComponent(assessmentId)}/story`)));
   }
 
   decisionPolicy(): Observable<FraudDecisionPolicy> {

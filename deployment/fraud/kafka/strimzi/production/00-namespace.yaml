@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fraud-streaming
+  labels:
+    app.kubernetes.io/part-of: futurpayment-fraud
+    fraud-kafka-access: allowed

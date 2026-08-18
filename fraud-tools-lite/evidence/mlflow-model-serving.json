@@ -1,0 +1,14 @@
+﻿{
+    "status":  "MLFLOW_MODEL_SERVING_OK",
+    "modelUri":  "runs:/01485109f11f4157980012bffe527f73/model",
+    "response":  {
+                     "predictions":  [
+                                         {
+                                             "riskScore":  962,
+                                             "riskProbability":  0.9623303802745263,
+                                             "recommendedAction":  "BLOCK",
+                                             "alertThreshold":  0.8799999999999999
+                                         }
+                                     ]
+                 }
+}

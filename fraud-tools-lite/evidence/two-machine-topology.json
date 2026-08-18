@@ -1,0 +1,69 @@
+﻿{
+    "sharedDatabase":  false,
+    "gatewayMachine":  {
+                           "port":  8090,
+                           "processId":  15828,
+                           "address":  "127.0.0.2"
+                       },
+    "persistentIsoConnectionReused":  true,
+    "isoSecondResult":  {
+                            "memberId":  "BANK_LAB_A",
+                            "transactionReference":  "AUTH-ISO-002",
+                            "riskScore":  962,
+                            "recommendedAction":  "BLOCK",
+                            "enforcedAction":  "BLOCK",
+                            "decisionMode":  "DECISION",
+                            "modelSource":  "MLFLOW_HTTP",
+                            "featureSource":  "FEAST_HTTP",
+                            "eventPublication":  {
+                                                     "topic":  "fraud.risk-assessment-completed.v1",
+                                                     "partition":  0,
+                                                     "offset":  9
+                                                 },
+                            "isoConnectionId":  "c1c0a598-c231-4b90-a094-c4a349d0a878",
+                            "transport":  "ISO8583_PERSISTENT_LAB",
+                            "gatewayTransport":  "ISO8583_PERSISTENT_LAB"
+                        },
+    "platformMachine":  {
+                            "processId":  8656,
+                            "isoPort":  8583,
+                            "restPort":  8089,
+                            "address":  "127.0.0.3"
+                        },
+    "restResult":  {
+                       "memberId":  "BANK_LAB_A",
+                       "transactionReference":  "AUTH-REST-001",
+                       "riskScore":  962,
+                       "recommendedAction":  "BLOCK",
+                       "enforcedAction":  "ALERT",
+                       "decisionMode":  "ALERT_ONLY",
+                       "modelSource":  "MLFLOW_HTTP",
+                       "featureSource":  "FEAST_HTTP",
+                       "eventPublication":  {
+                                                "topic":  "fraud.risk-assessment-completed.v1",
+                                                "partition":  0,
+                                                "offset":  7
+                                            },
+                       "gatewayTransport":  "REST"
+                   },
+    "isoFirstResult":  {
+                           "memberId":  "BANK_LAB_A",
+                           "transactionReference":  "AUTH-ISO-001",
+                           "riskScore":  962,
+                           "recommendedAction":  "BLOCK",
+                           "enforcedAction":  "BLOCK",
+                           "decisionMode":  "DECISION",
+                           "modelSource":  "MLFLOW_HTTP",
+                           "featureSource":  "FEAST_HTTP",
+                           "eventPublication":  {
+                                                    "topic":  "fraud.risk-assessment-completed.v1",
+                                                    "partition":  0,
+                                                    "offset":  8
+                                                },
+                           "isoConnectionId":  "c1c0a598-c231-4b90-a094-c4a349d0a878",
+                           "transport":  "ISO8583_PERSISTENT_LAB",
+                           "gatewayTransport":  "ISO8583_PERSISTENT_LAB"
+                       },
+    "status":  "TWO_MACHINE_TOPOLOGY_OK",
+    "directInProcessCall":  false
+}

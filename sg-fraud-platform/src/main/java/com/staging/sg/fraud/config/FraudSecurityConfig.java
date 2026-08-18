@@ -20,7 +20,14 @@ public class FraudSecurityConfig {
         Set<String> audiences = Set.of(audienceCsv.split(",")).stream().map(String::trim).collect(Collectors.toUnmodifiableSet());
         http.csrf(csrf -> csrf.disable()).authorizeHttpRequests(requests -> requests
                 .requestMatchers("/api/fraud/v1/health", "/api/fraud/v1/capabilities").permitAll()
-                .requestMatchers("/api/fraud/v1/**").access((authentication, context) -> {
+                .requestMatchers("/api/fraud/v1/admin/**").access((authentication, context) -> {
+                    var current = authentication.get();
+                    boolean allowed = current instanceof JwtAuthenticationToken jwt
+                            && jwt.getToken().getAudience().stream().anyMatch(audiences::contains)
+                            && current.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("SCOPE_fraud.admin"));
+                    return new AuthorizationDecision(allowed);
+                })
+                .requestMatchers("/api/fraud/v1/**", "/v1/**").access((authentication, context) -> {
                     var current = authentication.get();
                     boolean allowed = current instanceof JwtAuthenticationToken jwt
                             && jwt.getToken().getAudience().stream().anyMatch(audiences::contains)

@@ -1,0 +1,54 @@
+apiVersion: kafka.strimzi.io/v1
+kind: Kafka
+metadata:
+  name: fraud-kafka
+  namespace: fraud-streaming
+  labels:
+    app.kubernetes.io/part-of: futurpayment-fraud
+spec:
+  kafka:
+    version: 4.3.0
+    rack:
+      type: topology-label
+      topologyKey: topology.kubernetes.io/zone
+    listeners:
+      - name: tls
+        port: 9092
+        type: internal
+        tls: true
+        authentication: {type: tls}
+      - name: oauth
+        port: 9093
+        type: internal
+        tls: true
+        authentication:
+          type: custom
+          sasl: true
+          listenerConfig:
+            sasl.enabled.mechanisms: OAUTHBEARER
+            oauthbearer.sasl.server.callback.handler.class: io.strimzi.kafka.oauth.server.JaasServerOauthValidatorCallbackHandler
+            oauthbearer.sasl.jaas.config: |
+              org.apache.kafka.common.security.oauthbearer.OAuthBearerLoginModule required
+                oauth.valid.issuer.uri="${FRAUD_OAUTH_ISSUER_URI}"
+                oauth.jwks.endpoint.uri="${FRAUD_OAUTH_JWKS_URI}"
+                oauth.username.claim="preferred_username";
+            connections.max.reauth.ms: 3600000
+    authorization:
+      type: simple
+      superUsers:
+        - CN=fraud-kafka-operations
+    config:
+      principal.builder.class: io.strimzi.kafka.oauth.server.OAuthKafkaPrincipalBuilder
+      auto.create.topics.enable: "false"
+      default.replication.factor: 3
+      min.insync.replicas: 2
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      unclean.leader.election.enable: "false"
+      num.partitions: 6
+      log.retention.hours: 168
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+  cruiseControl: {}

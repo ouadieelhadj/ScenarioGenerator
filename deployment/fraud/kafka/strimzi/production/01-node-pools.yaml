@@ -1,0 +1,60 @@
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: controllers
+  namespace: fraud-streaming
+  labels:
+    strimzi.io/cluster: fraud-kafka
+spec:
+  replicas: 3
+  roles: [controller]
+  storage:
+    type: persistent-claim
+    size: 20Gi
+    class: ${FRAUD_KAFKA_STORAGE_CLASS}
+    deleteClaim: false
+  resources:
+    requests: {cpu: "1", memory: 4Gi}
+    limits: {cpu: "2", memory: 4Gi}
+  template:
+    pod:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              strimzi.io/cluster: fraud-kafka
+              strimzi.io/controller-role: "true"
+---
+apiVersion: kafka.strimzi.io/v1
+kind: KafkaNodePool
+metadata:
+  name: brokers
+  namespace: fraud-streaming
+  labels:
+    strimzi.io/cluster: fraud-kafka
+spec:
+  replicas: 3
+  roles: [broker]
+  storage:
+    type: jbod
+    volumes:
+      - id: 0
+        type: persistent-claim
+        size: ${FRAUD_KAFKA_BROKER_VOLUME_SIZE}
+        class: ${FRAUD_KAFKA_STORAGE_CLASS}
+        deleteClaim: false
+  resources:
+    requests: {cpu: "2", memory: 8Gi}
+    limits: {cpu: "4", memory: 8Gi}
+  template:
+    pod:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: topology.kubernetes.io/zone
+          whenUnsatisfiable: DoNotSchedule
+          labelSelector:
+            matchLabels:
+              strimzi.io/cluster: fraud-kafka
+              strimzi.io/broker-role: "true"
