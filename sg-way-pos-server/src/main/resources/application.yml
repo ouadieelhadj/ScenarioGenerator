@@ -25,6 +25,7 @@ way-pos:
   rki-way4-key-id: ${WAY_POS_RKI_WAY4_KEY_ID:27}
   rki-way4-tak-block-ascii: ${WAY_POS_RKI_WAY4_TAK_BLOCK_ASCII:}
   rki-way4-tpk-block-ascii: ${WAY_POS_RKI_WAY4_TPK_BLOCK_ASCII:}
+  softpos-lab-credentials-enabled: ${WAY_POS_SOFTPOS_LAB_CREDENTIALS_ENABLED:false}
   pan-pepper: ${WAY_POS_PAN_PEPPER:change-me-in-production}
   outbox-key-hex: ${WAY_POS_OUTBOX_KEY_HEX:}
   connectors:

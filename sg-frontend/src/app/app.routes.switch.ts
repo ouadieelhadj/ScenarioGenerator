@@ -17,6 +17,11 @@ const SWITCH_ROUTES: Routes = [
     data: { products: ['SWITCH'], workspace: 'SWITCH' },
     loadComponent: () => import('./features/fraud-workspace/fraud-workspace.component').then(m => m.FraudWorkspaceComponent),
   },
+  {
+    path: 'product/softpos', canActivate: [productGuard],
+    data: { products: ['SWITCH'], title: 'SoftPOS', icon: 'pi pi-mobile' },
+    loadComponent: () => import('./features/softpos-workspace/softpos-workspace.component').then(m => m.SoftPosWorkspaceComponent),
+  },
   ...[
     { path: 'product/issuing', domain: 'issuing', title: 'Issuing membre', description: 'Produits, contrats, cartes, interfaces et autorisations issuing.', icon: 'pi pi-credit-card' },
     { path: 'product/networks', domain: 'networks', title: 'Réseaux temps réel', description: 'Mastercard DMAS/SMS, SWAM et Visa Online côté membre.', icon: 'pi pi-sitemap' },

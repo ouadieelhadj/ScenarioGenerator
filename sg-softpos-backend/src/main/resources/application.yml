@@ -1,0 +1,22 @@
+server:
+  port: ${SOFTPOS_BACKEND_PORT:8550}
+spring:
+  application:
+    name: FuturPaymentSoftPOS
+  datasource:
+    url: ${SOFTPOS_DB_URL}
+    username: ${SOFTPOS_DB_USER}
+    password: ${SOFTPOS_DB_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SOFTPOS_OIDC_ISSUER}
+          jwk-set-uri: ${SOFTPOS_OIDC_JWKS}
+softpos:
+  security:
+    allow-laboratory-headers: false

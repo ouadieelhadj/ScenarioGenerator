@@ -1,0 +1,10 @@
+ALTER TABLE pos_terminal_profiles ADD COLUMN IF NOT EXISTS member_id varchar(64);
+ALTER TABLE pos_terminal_profiles ADD COLUMN IF NOT EXISTS outlet_id varchar(64);
+ALTER TABLE pos_terminal_profiles ADD COLUMN IF NOT EXISTS terminal_type varchar(16);
+UPDATE pos_terminal_profiles SET member_id = 'DEFAULT' WHERE member_id IS NULL;
+UPDATE pos_terminal_profiles SET outlet_id = 'DEFAULT' WHERE outlet_id IS NULL;
+UPDATE pos_terminal_profiles SET terminal_type = 'PHYSICAL_POS' WHERE terminal_type IS NULL;
+ALTER TABLE pos_terminal_profiles ALTER COLUMN member_id SET NOT NULL;
+ALTER TABLE pos_terminal_profiles ALTER COLUMN outlet_id SET NOT NULL;
+ALTER TABLE pos_terminal_profiles ALTER COLUMN terminal_type SET NOT NULL;
+ALTER TABLE pos_terminal_profiles ADD CONSTRAINT ck_pos_terminal_type CHECK (terminal_type IN ('PHYSICAL_POS','SOFTPOS'));

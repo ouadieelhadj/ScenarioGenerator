@@ -31,11 +31,17 @@ public class WayPosTerminalProfileController {
                 return ResponseEntity.status(HttpStatus.CONFLICT)
                         .body(Map.of("error", "Terminal already exists"));
             }
-            PosTerminalProfile terminal = PosTerminalProfile.provisioned(
-                    request.terminalId(), request.merchantId(), request.extendedSet(),
-                    request.macData(), request.macRequired(),
-                    request.initialBatchId() == null
-                            ? "000000" : request.initialBatchId());
+            String batch = request.initialBatchId() == null ? "000000" : request.initialBatchId();
+            PosTerminalProfile terminal = "SOFTPOS".equals(request.terminalType())
+                    ? PosTerminalProfile.provisionedSoftPos(
+                            request.terminalId(), request.merchantId(),
+                            request.memberId(), request.outletId(),
+                            request.extendedSet(), request.macData(),
+                            request.macRequired(), batch)
+                    : PosTerminalProfile.provisioned(
+                            request.terminalId(), request.merchantId(),
+                            request.extendedSet(), request.macData(),
+                            request.macRequired(), batch);
             terminals.save(terminal);
             return ResponseEntity.status(HttpStatus.CREATED).body(view(terminal));
         } catch (IllegalArgumentException e) {
@@ -62,19 +68,23 @@ public class WayPosTerminalProfileController {
     }
 
     private static Map<String, Object> view(PosTerminalProfile value) {
-        return Map.of(
-                "terminalId", value.getTerminalId(),
-                "merchantId", value.getMerchantId(),
-                "enabled", value.isEnabled(),
-                "extendedSet", value.isExtendedSet(),
-                "macData", value.getMacData(),
-                "macRequired", value.isMacRequired(),
-                "batchId", value.getBatchId(),
-                "batchStatus", value.getBatchStatus());
+        return Map.ofEntries(
+                Map.entry("terminalId", value.getTerminalId()),
+                Map.entry("merchantId", value.getMerchantId()),
+                Map.entry("memberId", value.getMemberId()),
+                Map.entry("outletId", value.getOutletId()),
+                Map.entry("terminalType", value.getTerminalType()),
+                Map.entry("enabled", value.isEnabled()),
+                Map.entry("extendedSet", value.isExtendedSet()),
+                Map.entry("macData", value.getMacData()),
+                Map.entry("macRequired", value.isMacRequired()),
+                Map.entry("batchId", value.getBatchId()),
+                Map.entry("batchStatus", value.getBatchStatus()));
     }
 
     public record TerminalRequest(
-            String terminalId, String merchantId, boolean extendedSet,
+            String terminalId, String merchantId, String memberId,
+            String outletId, String terminalType, boolean extendedSet,
             String macData, boolean macRequired, String initialBatchId) {}
 
     public record EnabledRequest(boolean enabled) {}

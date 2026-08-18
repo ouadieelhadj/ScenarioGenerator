@@ -20,6 +20,7 @@ switch:
     three-ds-base-url: ${SWITCH_THREE_DS_BASE_URL:}
     fraud-base-url: ${SWITCH_FRAUD_PLATFORM_BASE_URL:}
     fraud-gateway-base-url: ${SWITCH_FRAUD_GATEWAY_BASE_URL:}
+    softpos-base-url: ${SWITCH_SOFTPOS_BASE_URL:}
   security:
     issuer: ${SWITCH_JWT_ISSUER:futurpayment-switch}
     audience: ${SWITCH_JWT_AUDIENCE:futurpayment-switch-bff}

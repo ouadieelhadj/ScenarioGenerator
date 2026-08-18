@@ -14,6 +14,12 @@ public class PosTerminalProfile {
     private String terminalId;
     @Column(name = "merchant_id", nullable = false, length = 15)
     private String merchantId;
+    @Column(name = "member_id", nullable = false, length = 64)
+    private String memberId;
+    @Column(name = "outlet_id", nullable = false, length = 64)
+    private String outletId;
+    @Column(name = "terminal_type", nullable = false, length = 16)
+    private String terminalType;
     @Column(name = "enabled", nullable = false)
     private boolean enabled;
     @Column(name = "extended_set", nullable = false)
@@ -55,6 +61,9 @@ public class PosTerminalProfile {
         PosTerminalProfile value = new PosTerminalProfile();
         value.terminalId = terminalId;
         value.merchantId = merchantId;
+        value.memberId = "DEFAULT";
+        value.outletId = "DEFAULT";
+        value.terminalType = "PHYSICAL_POS";
         value.enabled = true;
         value.extendedSet = extendedSet;
         value.macData = macData;
@@ -64,8 +73,27 @@ public class PosTerminalProfile {
         return value;
     }
 
+    public static PosTerminalProfile provisionedSoftPos(
+            String terminalId, String merchantId, String memberId,
+            String outletId, boolean extendedSet, String macData,
+            boolean macRequired, String batchId) {
+        PosTerminalProfile value = provisioned(terminalId, merchantId,
+                extendedSet, macData, macRequired, batchId);
+        if (memberId == null || memberId.isBlank()
+                || outletId == null || outletId.isBlank()) {
+            throw new IllegalArgumentException("Invalid SoftPOS ownership");
+        }
+        value.memberId = memberId;
+        value.outletId = outletId;
+        value.terminalType = "SOFTPOS";
+        return value;
+    }
+
     public String getTerminalId() { return terminalId; }
     public String getMerchantId() { return merchantId; }
+    public String getMemberId() { return memberId; }
+    public String getOutletId() { return outletId; }
+    public String getTerminalType() { return terminalType; }
     public boolean isEnabled() { return enabled; }
     public boolean isExtendedSet() { return extendedSet; }
     public String getBatchId() { return batchId; }

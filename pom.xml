@@ -45,6 +45,9 @@
         <module>sg-way4-aura-connector</module>
         <module>sg-way-pos-server</module>
         <module>sg-way-pos-simulator</module>
+        <module>sg-softpos-api-contracts</module>
+        <module>sg-softpos-sdk-simulator</module>
+        <module>sg-softpos-backend</module>
         <module>sg-merchant-site-simulator</module>
         <module>sg-3ds-member</module>
         <module>sg-3ds-network-simulator</module>
@@ -107,6 +110,16 @@
             <dependency>
                 <groupId>com.staging</groupId>
                 <artifactId>sg-visa-base2-common</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.staging</groupId>
+                <artifactId>sg-softpos-api-contracts</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.staging</groupId>
+                <artifactId>sg-softpos-sdk-simulator</artifactId>
                 <version>${project.version}</version>
             </dependency>
 
