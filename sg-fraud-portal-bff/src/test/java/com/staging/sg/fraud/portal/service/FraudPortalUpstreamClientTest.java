@@ -21,4 +21,12 @@ class FraudPortalUpstreamClientTest {
         assertThatThrownBy(() -> client.target("https://attacker.example", null))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void keepsColonActionsUnderTheirConfiguredApiRoot() {
+        assertThat(client.target("/batch-jobs:prevalidate", null))
+                .hasToString("https://fraud.example/api/fraud/v1/batch-jobs:prevalidate");
+        assertThat(client.target("/risk/transactions:score", "dryRun=true"))
+                .hasToString("https://fraud.example/api/fraud/v1/risk/transactions:score?dryRun=true");
+    }
 }

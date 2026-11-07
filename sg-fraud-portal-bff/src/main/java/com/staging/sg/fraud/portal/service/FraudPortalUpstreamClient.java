@@ -80,7 +80,9 @@ public class FraudPortalUpstreamClient {
         if (clean.contains("..") || clean.contains("\\\\") || clean.contains("://")) {
             throw new IllegalArgumentException("Invalid upstream path");
         }
-        URI target = apiRoot.resolve(clean + (query == null || query.isBlank() ? "" : "?" + query));
+        // Force a relative path: RFC URI resolution otherwise treats an action
+        // such as batch-jobs:prevalidate as a scheme instead of an API segment.
+        URI target = apiRoot.resolve("./" + clean + (query == null || query.isBlank() ? "" : "?" + query));
         String root = apiRoot.normalize().toString();
         if (!target.normalize().toString().startsWith(root)) throw new IllegalArgumentException("Invalid upstream target");
         return target;
