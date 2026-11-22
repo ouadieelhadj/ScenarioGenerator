@@ -35,9 +35,10 @@ test('traversal encoded path changes and protected fragments are never forwarded
   '/api-merchant-portal/%2e%2e/auth/login','/api-merchant-portal/auth/login#token=forbidden'])
   assert.throws(()=>nativeGatewayRequest(value,gateway),{message:'Adresse API mobile invalide.'});
 });
-test('packaged public runtime config and Capacitor both enforce the declared secure default',()=>{
+test('packaged public runtime config and Capacitor both enforce the declared secure default',async()=>{
  const config=JSON.parse(readFileSync(new URL('../src/assets/merchant-mobile-runtime.json',import.meta.url),'utf8'));
  assert.equal(nativeGatewayConfiguration(config),gateway);
- const capacitor=JSON.parse(readFileSync(new URL('../android/app/src/main/assets/capacitor.config.json',import.meta.url),'utf8'));
+ const compiledConfig=ts.transpileModule(readFileSync(new URL('../capacitor.config.ts',import.meta.url),'utf8'), {compilerOptions:{module:ts.ModuleKind.ES2022,target:ts.ScriptTarget.ES2022}}).outputText;
+ const capacitor=(await import('data:text/javascript;base64,'+Buffer.from(compiledConfig).toString('base64'))).default;
  assert.equal(capacitor.server.cleartext,false);assert.equal(capacitor.server.androidScheme,'https');
 });
