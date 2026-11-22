@@ -23,6 +23,7 @@ mkdir -p "$OUT"
 cd "$ROOT"
 export npm_config_cache="${npm_config_cache:-$HOME/Library/Caches/futurpayment-npm}"
 npm ci --ignore-scripts --no-audit --no-fund
+node --test tools/test-mobile-session-security.mjs tools/test-mobile-session-revocation.mjs tools/test-mobile-native-gateway.mjs tools/test-merchant-native-links.mjs tools/test-incident-file-export.mjs
 npm run build:merchant-mobile -- --configuration production --source-map=false
 node node_modules/@capacitor/cli/bin/capacitor sync ios
 python3 tools/ios/configure-ios.py --version "$VERSION" --build "$BUILD"
