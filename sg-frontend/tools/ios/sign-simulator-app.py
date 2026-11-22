@@ -11,6 +11,14 @@ def sign(app,output):
         raise RuntimeError('Refusing to modify a physical-device or distribution build')
     identifier=info.get('CFBundleIdentifier')
     if identifier!='com.moneycore.merchantportal.test':raise RuntimeError('Unexpected test bundle')
+    if list(app.glob('PlugIns/*.appex')):
+        raise RuntimeError('Unexpected app extension: review its signing separately')
+    nested=list(app.glob('Frameworks/*.framework'))+list(app.glob('Frameworks/*.dylib'))
+    for component in nested:
+        if not component.resolve().is_relative_to(app):
+            raise RuntimeError('Embedded simulator component escapes this bundle')
+        # Libraries have no session entitlement: grant only the executable app access.
+        subprocess.run(['codesign','--force','--sign','-',str(component)],capture_output=True,check=True)
     # An unsigned simulator application has no access-group identity and Security
     # returns errSecMissingEntitlement (-34018). Use only this bundle's own group.
     # There is no invented Apple Team ID, shared group, certificate or device profile.
@@ -18,7 +26,7 @@ def sign(app,output):
     with tempfile.TemporaryDirectory(prefix='fp-simulator-sign-') as directory:
         profile=Path(directory)/'simulator.plist';profile.write_bytes(plistlib.dumps(entitlements))
         subprocess.run(['codesign','--force','--sign','-','--entitlements',str(profile),'--generate-entitlement-der',str(app)],capture_output=True,check=True)
-    subprocess.run(['codesign','--verify','--strict',str(app)],capture_output=True,check=True)
+    subprocess.run(['codesign','--verify','--deep','--strict',str(app)],capture_output=True,check=True)
     actual=subprocess.run(['codesign','--display','--entitlements','-',str(app)],capture_output=True,check=True).stdout
     signed=plistlib.loads(actual)
     if signed!=entitlements:raise RuntimeError('Simulator entitlements do not match the isolated bundle')
