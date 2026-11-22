@@ -23,6 +23,11 @@ info.update(CFBundleDisplayName='FuturPayment Test',CFBundleDevelopmentRegion='f
     UIFileSharingEnabled=False,LSSupportsOpeningDocumentsInPlace=False,
     NSAppTransportSecurity={'NSAllowsArbitraryLoads':False,'NSAllowsArbitraryLoadsInWebContent':False})
 info['UIRequiredDeviceCapabilities']=['arm64']
+# SceneDelegate creates the single bridge window programmatically. Do not also
+# instantiate a storyboard window during scene connection.
+info.pop('UIMainStoryboardFile',None)
+for entries in info.get('UIApplicationSceneManifest',{}).get('UISceneConfigurations',{}).values():
+    for configuration in entries:configuration.pop('UISceneStoryboardFile',None)
 save_plist('Info.plist',info)
 save_plist('App.entitlements',{'com.apple.developer.associated-domains':['applinks:merchant.futurpayment.com']})
 types=['UserID','EmailAddress','Name','PhoneNumber','PhysicalAddress','OtherFinancialInfo','PhotosorVideos','OtherUserContent','CustomerSupport']

@@ -8,6 +8,9 @@ final class MerchantUITests: XCTestCase {
         app.launchArguments = ["-AppleLanguages", "(fr)", "-AppleLocale", "fr_FR"]
         app.launch()
         XCTAssertTrue(app.webViews.firstMatch.waitForExistence(timeout: 30))
+        let cover = app.otherElements["merchant-privacy-cover"]
+        let foreground = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: cover)
+        XCTAssertEqual(XCTWaiter.wait(for: [foreground], timeout: 15), .completed, "La protection doit se retirer quand la scène redevient active.")
         return app
     }
     @MainActor private func element(_ app: XCUIApplication, _ label: String) -> XCUIElement {
@@ -49,8 +52,20 @@ final class MerchantUITests: XCTestCase {
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         _ = XCTWaiter.wait(for: [], timeout: 0.5)
         secret.typeText(password)
-        tap(app, "Se connecter")
-        XCTAssertTrue(element(app, "Bonjour " + user).waitForExistence(timeout: 30), "Connexion ou accueil attendu indisponible.")
+        XCTAssertTrue((login.value as? String) == user, "Identifiant saisi non confirmé.")
+        let button = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Se connecter")).firstMatch
+        XCTAssertTrue(button.exists && button.isEnabled, "Le formulaire doit être valide avant envoi.")
+        for _ in 0..<4 {
+            let keyboard = app.keyboards.firstMatch
+            if button.isHittable && (!keyboard.exists || button.frame.maxY < keyboard.frame.minY - 8) { break }
+            viewport.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.40))
+                .press(forDuration: 0.05, thenDragTo: viewport.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.18)))
+        }
+        screenshot(app, "diagnostic-formulaire-avant-envoi")
+        button.tap()
+        let authenticated = element(app, "Bonjour " + user).waitForExistence(timeout: 30)
+        screenshot(app, "diagnostic-resultat-connexion")
+        XCTAssertTrue(authenticated, "Connexion ou accueil attendu indisponible.")
     }
     @MainActor private func screenshot(_ app: XCUIApplication, _ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())

@@ -41,6 +41,8 @@ jobs:
         run: |
           mkdir -p "$FP_IOS_OUTPUT"
           git rev-parse HEAD > "$FP_IOS_OUTPUT/source-commit.txt"
+      - name: Observer la connectivite API sans compte reel
+        run: python3 tools/ios/probe-native-gateway.py
       - name: Amorcer le simulateur iPhone
         run: python3 tools/ios/prepare-simulator.py
       - name: Compiler le client, tester les politiques Swift et construire pour simulateur
@@ -64,6 +66,7 @@ jobs:
             preuves-mac/swift-policy-tests.log
             preuves-mac/preuves-iphone-chiffrees.cms
             preuves-mac/preuves-chiffrees-manifeste.json
+            preuves-mac/connectivite-api.json
             preuves-mac/source-commit.txt
             preuves-mac/preuves-publiables/resultats-ui.json
           if-no-files-found: warn
