@@ -42,7 +42,12 @@ for sample in 1...4 {
     session.invalidateAndCancel()
     rows.append(completed ? result.read() : ["sample": sample, "probeDeadlineExceeded": true, "secureResponseReceived": false])
 }
-let report: [String: Any] = ["nativeMacURLSession": true, "nativeIPhoneTested": false,
+#if targetEnvironment(simulator)
+let simulator = true
+#else
+let simulator = false
+#endif
+let report: [String: Any] = ["nativeMacURLSession": !simulator, "nativeIPhoneSimulatorURLSession": simulator, "nativeIPhoneTested": false,
     "credentialsUsed": false, "requestBodiesSent": false, "trustOrTLSChanged": false,
     "observations": rows]
 let output = try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys])

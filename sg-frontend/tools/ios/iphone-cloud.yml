@@ -19,6 +19,10 @@ on:
         description: Diagnostic HTTPS Apple sans compte, compilation application ou changement serveur
         type: boolean
         default: false
+      transport_simulator:
+        description: Exécuter la sonde anonyme dans iOS Simulator plutôt que macOS
+        type: boolean
+        default: false
       ui_focus:
         description: Lot natif complet ou complément session, Fichiers et réinstallation
         type: choice
@@ -62,7 +66,15 @@ jobs:
           git rev-parse HEAD > "$FP_IOS_OUTPUT/source-commit.txt"
       - name: Diagnostiquer HTTPS Apple sans compte
         if: ${{ inputs.transport_only }}
-        run: python3 tools/ios/probe-native-https.py
+        env:
+          FP_TRANSPORT_SIMULATOR: ${{ inputs.transport_simulator }}
+        run: |
+          if [[ "$FP_TRANSPORT_SIMULATOR" == true ]]; then
+            python3 tools/ios/prepare-simulator.py
+            python3 tools/ios/probe-native-https.py --simulator
+          else
+            python3 tools/ios/probe-native-https.py
+          fi
       - name: Verifier les outils et compiler les sources XCTest avant le client
         if: ${{ !inputs.transport_only }}
         run: python3 tools/ios/probe-simulator-signature.py
@@ -100,6 +112,7 @@ jobs:
         with:
           name: iphone-resultats-${{ github.run_number }}
           path: |
+            preuves-mac/diagnostic-https-apple-simulateur.json
             preuves-mac/diagnostic-https-apple.json
             preuves-mac/preparation.json
             preuves-mac/simulator-tool-preflight.json
