@@ -18,7 +18,7 @@ requested=json.loads((OUT/'simulator.json').read_text()) if (OUT/'simulator.json
 chosen=next((d for runtime,devices in listing['devices'].items() if 'iOS' in runtime for d in devices if d.get('isAvailable') and d['name'].startswith('iPhone') and (not requested or d['udid']==requested['udid'])),None)
 if not chosen:raise SystemExit('Aucun simulateur iPhone utilisable sur ce runner.')
 destination='platform=iOS Simulator,id='+chosen['udid']
-common=['xcodebuild','-project',str(F/'ios/App/App.xcodeproj'),'-scheme','App','-configuration','Release','-derivedDataPath',str(OUT/'UITestBuild'),'-destination',destination,'CODE_SIGNING_ALLOWED=NO','-parallel-testing-enabled','NO']
+common=['xcodebuild','-project',str(F/'ios/App/App.xcodeproj'),'-scheme','App','-configuration','Release','-derivedDataPath',str(OUT/'DerivedData'),'-destination',destination,'CODE_SIGNING_ALLOWED=NO','-parallel-testing-enabled','NO']
 report={'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'nativeUIExecutionStarted':False,'authenticatedRequested':authenticated,'simulatorName':chosen['name'],'realIPhoneDeviceTested':False,'fullAcceptanceCompleted':False,'pentestExecuted':False}
 raw=OUT/'xcode-ui-private.log'
 bundle=OUT/'native-results.xcresult'
@@ -30,7 +30,13 @@ try:
         report['simulatorBootConfirmed']=True
         build=subprocess.run(common+['build-for-testing'],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=600)
     if build.returncode:raise RuntimeError('Build-for-testing failed')
-    runs=list((OUT/'UITestBuild/Build/Products').glob('*.xctestrun'))
+    # Xcode builds above are unsigned and cannot access Keychain. Sign only the
+    # simulator app with its own access group, without an Apple distribution identity.
+    appBundle=OUT/'DerivedData/Build/Products/Release-iphonesimulator/App.app'
+    signatureReport=OUT/'simulator-signature.json'
+    subprocess.run([sys.executable,str(F/'tools/ios/sign-simulator-app.py'),str(appBundle),'--report',str(signatureReport)],capture_output=True,check=True)
+    report['simulatorSignature']=json.loads(signatureReport.read_text())
+    runs=list((OUT/'DerivedData/Build/Products').glob('*.xctestrun'))
     if len(runs)!=1:raise RuntimeError('No unique xctestrun file')
     data=plistlib.loads(runs[0].read_bytes());targets=[]
     for key,value in data.items():
@@ -39,7 +45,7 @@ try:
     if not targets:raise RuntimeError('UI test target missing from xctestrun')
     for target in targets:
         target.setdefault('EnvironmentVariables',{}).update(FP_IOS_AUTHENTICATED_TESTS='true' if authenticated else 'false',FP_IOS_TEST_USER=os.environ.get('FP_IOS_TEST_USER','bim.amina'),FP_IOS_TEST_PASSWORD=password)
-    with tempfile.NamedTemporaryFile(prefix='fp-ui-',suffix='.xctestrun',dir=OUT/'UITestBuild/Build/Products',delete=False) as file:
+    with tempfile.NamedTemporaryFile(prefix='fp-ui-',suffix='.xctestrun',dir=OUT/'DerivedData/Build/Products',delete=False) as file:
         private=Path(file.name);file.write(plistlib.dumps(data))
     private.chmod(0o600)
     bundle=OUT/'native-results.xcresult'
@@ -109,9 +115,12 @@ finally:
                 recover(document)
             report['curatedScreenshotFiles']=sorted(p.name for p in (SAFE/'captures').glob('*') if p.is_file())
             report['screenshotsAwaitingReview']=bool(report['curatedScreenshotFiles'])
-    diagnostic = subprocess.run(['xcrun','simctl','spawn',chosen['udid'],'log','show','--last','20m','--style','compact','--predicate','eventMessage BEGINSWITH "FP_SESSION_DIAGNOSTIC"'],capture_output=True,text=True,timeout=60)
-    if diagnostic.returncode == 0:
-        codes = re.findall(r'FP_SESSION_DIAGNOSTIC operation=([a-zA-Z]+) code=(-?\d+)',diagnostic.stdout)
-        report['nativeSessionDiagnostic']=[{'operation':name,'code':int(code)} for name,code in codes]
+    try:
+        diagnostic = subprocess.run(['xcrun','simctl','spawn',chosen['udid'],'log','show','--last','20m','--style','compact','--predicate','eventMessage BEGINSWITH "FP_SESSION_DIAGNOSTIC"'],capture_output=True,text=True,timeout=60)
+        if diagnostic.returncode == 0:
+            codes = re.findall(r'FP_SESSION_DIAGNOSTIC operation=([a-zA-Z]+) code=(-?\d+)',diagnostic.stdout)
+            report['nativeSessionDiagnostic']=[{'operation':name,'code':int(code)} for name,code in codes]
+    except subprocess.TimeoutExpired:
+        report['nativeSessionDiagnosticUnavailable']='log timeout; native test verdict preserved'
     (SAFE/'resultats-ui.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report));raise SystemExit(rc)

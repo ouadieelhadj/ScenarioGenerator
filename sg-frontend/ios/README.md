@@ -58,3 +58,12 @@ Avant toute diffusion, faire relire les déclarations de confidentialité aux re
 La préparation n'a modifié ni l'APK Android publiée, ni les API, ni Nginx, ni les comptes ou clés. Pour abandonner le test iPhone, ne pas installer/publier l'IPA ; conserver les preuves et le projet. Aucun retour SQL ou arrêt de service n'est nécessaire. Ne pas supprimer les modifications d'autres sessions dans le dépôt standard. Le fichier README et les preuves de préparation doivent accompagner toute passation.
 
 Références : https://capacitorjs.com/docs/ios ; https://capacitorjs.com/docs/ios/configuration ; https://capacitorjs.com/docs/ios/privacy-manifest ; https://developer.apple.com/testflight/ .
+
+
+## Actualisation du 22 novembre 2026 - recette native en cours
+
+Les paragraphes de préparation ci-dessus constituent l'état initial. Capacitor est maintenant aligné sur8.5.1. Les quatre tests Swift ont réellement réussi sur le Mac hébergé, ainsi que les52contrôles JavaScript et la compilation pour simulateur. La CLI utilise seulement ouadieelhadj sur le dépôt standard public, selon la dernière décision du propriétaire ; aucune exigence de dépôt privé n'est à réintroduire.
+
+Les résultats45017962040 et45019475326 restent des campagnes partielles, sans succès global. La connexion et l'accès incidents ont été observés, mais la restauration après relance n'est pas encore qualifiée. Le run45053786588 est le diagnostic suivant ; consulter son état réel avant toute relance. Les codes de retour natifs du trousseau sont collectés sur simulateur sans afficher de token ou de valeur Keychain. Les deux phases de construction utilisent le même DerivedData afin de ne pas recompiler deux fois les mêmes dépendances ; les XCUITest restent réellement exécutés après build-for-testing.
+
+La signature de distribution Apple et une IPA installable sur téléphone restent distinctes de la construction simulateur. Aucun Team ID ou certificat n'a été inventé. Les cas caméra/Fichiers, cycle complet d'affiliation, isolation native, reprise et réinstallation restent à compléter. Lire REPRISE_IPHONE_DAMANCASH.md à la racine pour les actualisations suivantes, et ne pas interpréter cette note comme un résultat final.
