@@ -41,6 +41,8 @@ jobs:
         run: |
           mkdir -p "$FP_IOS_OUTPUT"
           git rev-parse HEAD > "$FP_IOS_OUTPUT/source-commit.txt"
+      - name: Verifier le protocole des outils de signature sans installer une app
+        run: python3 tools/ios/probe-simulator-signature.py
       - name: Observer la connectivite API sans compte reel
         run: python3 tools/ios/probe-native-gateway.py
       - name: Amorcer le simulateur iPhone
@@ -63,6 +65,7 @@ jobs:
           name: iphone-resultats-${{ github.run_number }}
           path: |
             preuves-mac/preparation.json
+            preuves-mac/simulator-tool-preflight.json
             preuves-mac/swift-policy-tests.log
             preuves-mac/preuves-iphone-chiffrees.cms
             preuves-mac/preuves-chiffrees-manifeste.json
