@@ -55,11 +55,28 @@ try:
     bundle=OUT/'native-results.xcresult'
     try:
         report['nativeUIExecutionStarted']=True
+        selector='MerchantUITests/MerchantUITests/'
+        base=['xcodebuild','test-without-building','-xctestrun',str(private),'-destination',destination,'-parallel-testing-enabled','NO']
+        exclusions=['-skip-testing:'+selector+'test08FreshInstallationRequiresLogin']
+        if not authenticated:exclusions+=['-skip-testing:'+selector+'test07SeedSessionForReinstall']
         with raw.open('a') as log:
-            test=subprocess.run(['xcodebuild','test-without-building','-xctestrun',str(private),'-destination',destination,'-parallel-testing-enabled','NO','-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=600)
+            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
         passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
-        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3,authenticatedCasesPassed=authenticated and test.returncode==0 and passed==6 and skipped==0)
+        if authenticated and test.returncode==0 and passed==7 and failed==0 and skipped==0:
+            identifier=report['simulatorSignature']['bundleIdentifier']
+            # Only this candidate bundle is uninstalled on the dedicated disposable simulator.
+            run(['xcrun','simctl','uninstall',chosen['udid'],identifier])
+            run(['xcrun','simctl','install',chosen['udid'],str(appBundle)])
+            report['reinstallationPerformed']={'bundle':identifier,'sameCompiledApp':True,'dedicatedSimulatorOnly':True,'physicalDeviceModified':False}
+            reinstallBundle=OUT/'reinstallation-results.xcresult'
+            with raw.open('a') as log:
+                fresh=subprocess.run(base+['-only-testing:'+selector+'test08FreshInstallationRequiresLogin','-resultBundlePath',str(reinstallBundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=240)
+            second=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(reinstallBundle)]))
+            passed+=int(second.get('passedTests',0));failed+=int(second.get('failedTests',0));skipped+=int(second.get('skippedTests',0))
+            report['reinstallationPassed']=fresh.returncode==0 and int(second.get('passedTests',0))==1 and int(second.get('failedTests',0))==0
+            if fresh.returncode:test=fresh
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3,authenticatedCasesPassed=authenticated and test.returncode==0 and passed==8 and skipped==0 and report.get('reinstallationPassed',False))
         rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
         # Curated attachments only; raw XCTest result bundles may contain input activity.
         attachments=OUT/'private-attachments'
@@ -94,15 +111,18 @@ finally:
         nativeCases=[{'name':name,'passed':state=='passed'} for name,state in re.findall(r"Test Case '-\[MerchantUITests\.MerchantUITests ([^]]+)\]' (passed|failed) \(",journal)]
         report['nativeDraftSubjects']=sorted(set(re.findall(r'FP_NATIVE_DRAFT subject=(iOS natif [a-f0-9]{8})',journal)))
         report['loginInputLengthMatches']=[value=='true' for value in re.findall(r'FP_LOGIN_INPUT lengthMatches=(true|false)',journal)]
+        report['loginFailureUiCategories']=[int(value) for value in re.findall(r'FP_LOGIN_UI_FAILURE status=(\d+)',journal)]
         report['initialLoginSeconds']=[int(value) for value in re.findall(r'FP_INITIAL_LOGIN seconds=(\d+)',journal)]
+        report['reinstallationMarkers']={'sessionSeeded':bool(re.search(r'FP_REINSTALL_SEED restored=true',journal)),'freshLoginRequired':bool(re.search(r'FP_REINSTALL_RESULT loginRequired=true',journal))}
         if nativeCases:
             report['nativeCaseResultsFromJournal']=nativeCases
             report['passedFromJournal']=sum(case['passed'] for case in nativeCases)
             report['failedFromJournal']=sum(not case['passed'] for case in nativeCases)
             report['nativeJournalIsNotFinalResultBundle']=True
-        if bundle.is_dir():
-            recovery=OUT/'curated-attachments-recovery'
-            subprocess.run(['xcrun','xcresulttool','export','attachments','--path',str(bundle),'--output-path',str(recovery)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=120)
+        for evidenceBundle in [bundle,OUT/'reinstallation-results.xcresult']:
+            if not evidenceBundle.is_dir():continue
+            recovery=OUT/('curated-attachments-recovery-'+evidenceBundle.stem)
+            subprocess.run(['xcrun','xcresulttool','export','attachments','--path',str(evidenceBundle),'--output-path',str(recovery)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=120)
             for metadata in recovery.glob('*.json'):
                 try: document=json.loads(metadata.read_text())
                 except ValueError:continue

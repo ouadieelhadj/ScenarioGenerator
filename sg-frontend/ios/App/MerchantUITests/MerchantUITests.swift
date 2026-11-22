@@ -86,6 +86,16 @@ final class MerchantUITests: XCTestCase {
         button.tap()
         let authenticated = element(app, "Bonjour " + user).waitForExistence(timeout: 30)
         screenshot(app, "diagnostic-resultat-connexion")
+        if !authenticated {
+            for (label, status) in [
+                ("Identifiant ou mot de passe incorrect.", 401),
+                ("Accès à la connexion refusé. Réessayez ou contactez votre support.", 403),
+                ("Trop de tentatives. Patientez avant de réessayer.", 429),
+                ("Le service de connexion est indisponible. Vérifiez votre connexion puis réessayez.", 0)
+            ] where element(app, label).exists {
+                print("FP_LOGIN_UI_FAILURE status=" + String(status))
+            }
+        }
         XCTAssertTrue(authenticated, "Connexion ou accueil attendu indisponible.")
     }
     @MainActor private func screenshot(_ app: XCUIApplication, _ name: String) {
@@ -187,6 +197,26 @@ final class MerchantUITests: XCTestCase {
         for _ in 0..<3 { app.webViews.firstMatch.swipeDown() }
         screenshot(app, "ios06-brouillon-natif-enregistre")
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+    }
+
+    @MainActor func test07SeedSessionForReinstall() throws {
+        let app = launch(); try login(app)
+        app.terminate(); app.launch()
+        let user = ProcessInfo.processInfo.environment["FP_IOS_TEST_USER"] ?? "bim.amina"
+        XCTAssertTrue(element(app, "Bonjour " + user).waitForExistence(timeout: 30), "La session doit être restaurée avant le test de réinstallation.")
+        screenshot(app, "ios16-session-avant-desinstallation")
+        print("FP_REINSTALL_SEED restored=true")
+        app.terminate()
+    }
+
+    @MainActor func test08FreshInstallationRequiresLogin() {
+        let app = launch()
+        XCTAssertTrue(element(app, "Se connecter").waitForExistence(timeout: 60), "Une nouvelle installation doit demander une connexion.")
+        XCTAssertTrue(app.webViews.secureTextFields.firstMatch.exists)
+        let user = ProcessInfo.processInfo.environment["FP_IOS_TEST_USER"] ?? "bim.amina"
+        XCTAssertFalse(element(app, "Bonjour " + user).exists, "Ancienne session reprise après désinstallation.")
+        screenshot(app, "ios16-connexion-apres-reinstallation")
+        print("FP_REINSTALL_RESULT loginRequired=true")
     }
 
 }
