@@ -14,10 +14,11 @@ def prepare(output:Path,password:str)->dict:
     tokens={}
     def save():output.write_text(json.dumps(report,indent=2)+'\n')
     def call(method,path,user=None,body=None):
-        headers={'Accept':'application/json'}
+        headers={'Accept':'application/json','User-Agent':'FuturPayment-iPhone-Support-Check/1'}
         if user:headers['Authorization']='Bearer '+tokens[user]
         data=None
         if body is not None:data=json.dumps(body).encode();headers['Content-Type']='application/json'
+        report['lastOperation']={'method':method,'routeKind':'LOGIN' if path.endswith('/auth/login') else 'CONTEXTS' if path.endswith('/contexts') else 'INCIDENT_FIXTURE'}
         request=urllib.request.Request(ORIGIN+path,data=data,headers=headers,method=method)
         # No retries of uncertain creates/commands. Preserve known references.
         with urllib.request.urlopen(request,timeout=35) as response:
@@ -53,15 +54,19 @@ def prepare(output:Path,password:str)->dict:
             report['fixtures'][kind].update(status=ticket['status'],version=ticket['version']);save()
         report.update(ready=True,internalMarker='FP-IOS-INTERNAL-'+suffix,publicMarker='FP-IOS-PUBLIC-'+suffix,nativeReply='FP-IOS-REPLY-'+suffix)
         save();return report
-    except Exception:
-        report['failure']='Fixture preparation not confirmed; inspect known references without repeating uncertain writes.';save();raise
+    except Exception as error:
+        report['failure']='Fixture preparation not confirmed; inspect known references without repeating uncertain writes.'
+        report['failureType']=type(error).__name__;report['http']=getattr(error,'code',None)
+        responseHeaders=getattr(error,'headers',{})
+        report['responseContentType']=responseHeaders.get('Content-Type');report['edgeChallenge']=responseHeaders.get('cf-mitigated')
+        save();raise
     finally:tokens.clear();password=''
 
 def verify(report:dict,password:str,output:Path)->dict:
     checks=[]
     def record(name,value):checks.append({'name':name,'passed':bool(value)})
     def call(path,token=None,body=None):
-        headers={'Accept':'application/json'}
+        headers={'Accept':'application/json','User-Agent':'FuturPayment-iPhone-Support-Check/1'}
         if token:headers['Authorization']='Bearer '+token
         data=None
         if body is not None:data=json.dumps(body).encode();headers['Content-Type']='application/json'
