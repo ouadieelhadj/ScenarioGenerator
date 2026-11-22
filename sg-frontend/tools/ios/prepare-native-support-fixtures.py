@@ -73,15 +73,17 @@ def verify(report:dict,password:str,output:Path)->dict:
         request=urllib.request.Request(ORIGIN+path,data=data,headers=headers,method='POST' if body is not None else 'GET')
         with urllib.request.urlopen(request,timeout=35) as response:return json.load(response)
     result={'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'readOnlyReconciliation':True,'nativeUiPassNotInferred':True,'checks':checks,'allExecutedChecksPassed':False}
-    token=''
+    token='';supportToken=''
     try:
         token=call('/api-merchant-portal/auth/login',body={'login':'bim.amina','password':password})['token']
+        supportToken=call('/api-merchant-portal/auth/login',body={'login':'damancash.salma','password':password})['token']
+        result['historyReadByAuthorizedSupport']=True
         for kind,expected,action in [('reply','IN_PROGRESS','REPLY'),('confirm','CLOSED','CONFIRM'),('reopen','IN_PROGRESS','REOPEN')]:
             fixture=report['fixtures'][kind]
             ticket=call(BASE+'/'+fixture['id'],token)
             record(kind+' exact fixture retained',ticket.get('id')==fixture['id'] and ticket.get('subject')==fixture['subject'])
             record(kind+' expected server status',ticket.get('status')==expected)
-            history=call(BASE+'/'+fixture['id']+'/history',token)
+            history=call(BASE+'/'+fixture['id']+'/history',supportToken)
             record(kind+' native author recorded',any(e.get('action')==action and e.get('actor')=='232' for e in history))
             messages=call(BASE+'/'+fixture['id']+'/messages',token)
             record(kind+' internal notes excluded',not any(m.get('internal') for m in messages))
@@ -89,7 +91,7 @@ def verify(report:dict,password:str,output:Path)->dict:
         result['allExecutedChecksPassed']=all(check['passed'] for check in checks)
     except Exception:result['failure']='Read-only native support reconciliation not confirmed.'
     finally:
-        token='';password=''
+        token='';supportToken='';password=''
         Path(output).write_text(json.dumps(result,indent=2)+'\n')
     return result
 
