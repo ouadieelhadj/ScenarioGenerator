@@ -1,5 +1,8 @@
+import { mobileAuthorizedCommerces } from '../services/mobile-authorized-commerces';
+import { PersonalMerchantAssociationService, type PersonalAssociation } from '../../app/core/services/personal-merchant-association.service';
+import type { CurrentUser } from '../../app/core/models/auth.models';
 import { mobileDossierSummary } from '../../app/core/services/personal-dossier-source';
-import { Component, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnDestroy, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { IonButton, IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular/standalone';
 import { Subject, takeUntil } from 'rxjs';
@@ -21,6 +24,12 @@ import { commercialAccess, merchantAccess, reviewAccess, mobileLabel, statusTone
       @if (loading()) { <div class="mobile-state" role="status"><span class="loading-dot"></span> Mise à jour de votre activité…</div> }
       @if (error()) { <div class="mobile-notice danger" role="alert">{{ error() }}</div> }
       @if (count() !== null) { <section class="metric-card"><span>{{ countLabel() }}</span><strong>{{ count() }}</strong><p>{{ countScope() }}</p></section> }
+      @if (commerces().length) { <section class="mobile-surface" aria-label="Commerces rattachés">
+        <span class="eyebrow">Commerces rattachés</span>
+        @for (commerce of commerces(); track commerce.id) { <h2>{{ commerce.hierarchyLabel }}</h2><p>Acquéreur : {{ commerce.acquirerCode }}</p> }
+        <p>Consultez Mes rattachements pour l’ensemble de vos autorisations.</p>
+      </section> }
+      @if (commerceMessage()) { <p class="mobile-notice" role="status">{{ commerceMessage() }}</p> }
       @if (dossier(); as item) { <section class="mobile-surface dossier-summary"><div class="card-topline"><span class="eyebrow">Dossier d’affiliation</span><span class="status-pill" [attr.data-tone]="tone(item.kycStatus)">{{ label(item.kycStatus) }}</span></div>
         <h2>{{ item.tradingName || item.legalName || 'Mon commerce' }}</h2><p class="reference">{{ item.reference }}</p>
         <dl class="summary-lines"><div><dt>Avancement</dt><dd>{{ label(item.status) }}</dd></div><div><dt>Vérification des pièces</dt><dd>{{ label(item.kycStatus) }}</dd></div></dl>
@@ -49,6 +58,13 @@ export class MobileHomePage implements OnDestroy {
   private readonly service = inject(MerchantOnboardingService);
   private readonly commercial = inject(MerchantCommercialService);
   private readonly router = inject(Router);
+  private readonly associations = inject(PersonalMerchantAssociationService);
+  private readonly commerceRows = signal<PersonalAssociation[]>([]);
+  private readonly commerceViewer = signal<CurrentUser | null>(null);
+  private readonly commerceFailure = signal('');
+  readonly commerces = computed(() => this.commerceViewer() === this.auth.user() ? this.commerceRows() : []);
+  readonly commerceMessage = computed(() => this.commerceViewer() === this.auth.user() ? this.commerceFailure() : '');
+
   private readonly cancel = new Subject<void>();
   readonly dossier = signal<MerchantDossier | null>(null);
   readonly count = signal<number | null>(null); readonly countLabel = signal(''); readonly countScope = signal('');
@@ -58,7 +74,7 @@ export class MobileHomePage implements OnDestroy {
   ionViewWillEnter(): void { this.refresh(); }
   ionViewWillLeave(): void { this.clear(); }
   ngOnDestroy(): void { this.clear(); this.cancel.complete(); }
-  private clear(): void { this.cancel.next(); this.dossier.set(null); this.count.set(null); this.loading.set(false); this.error.set(''); }
+  private clear(): void { this.cancel.next(); this.dossier.set(null); this.count.set(null); this.loading.set(false); this.error.set(''); this.commerceRows.set([]); this.commerceViewer.set(null); this.commerceFailure.set(''); }
   refresh(): void {
     this.clear(); const user = this.auth.user(); if (!user) return;
     if (this.isCommercial()) {
@@ -75,6 +91,11 @@ export class MobileHomePage implements OnDestroy {
         this.count.set(items.length); this.countLabel.set('Dossiers dans votre file KYC'); this.countScope.set('File complète retournée pour vos habilitations'); this.loading.set(false);
       }, error: () => this.failed() });
     } else if (this.isMerchant()) {
+      this.commerceViewer.set(user);
+      this.associations.mine().pipe(takeUntil(this.cancel)).subscribe({
+        next: rows => { if (this.auth.user() === user) this.commerceRows.set(mobileAuthorizedCommerces(rows)); },
+        error: () => { if (this.auth.user() === user) this.commerceFailure.set('Vos rattachements n’ont pas pu être chargés. Consultez Mes rattachements ou actualisez.'); },
+      });
       this.loading.set(true); mobileDossierSummary(this.service).pipe(takeUntil(this.cancel)).subscribe({ next: dossier => { this.dossier.set(dossier); this.loading.set(false); },
         error: err => { if (err.status === 404) this.loading.set(false); else this.failed(); } });
     }

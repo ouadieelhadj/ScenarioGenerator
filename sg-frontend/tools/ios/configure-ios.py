@@ -46,7 +46,7 @@ config.setdefault('ios',{}).update(webContentsDebuggingEnabled=False,contentInse
 config.setdefault('plugins',{}).setdefault('CapacitorHttp',{})['enabled']=True
 config_path.write_text(json.dumps(config,indent=2)+'\n')
 
-sources=['MerchantOriginPolicy.swift','IncidentExportPolicy.swift','SecureSessionPlugin.swift',
+sources=['MerchantOriginPolicy.swift','IncidentExportPolicy.swift','IncidentExportStorage.swift','SecureSessionPlugin.swift',
          'IncidentFileDownloadPlugin.swift','MerchantBridgeViewController.swift']
 resources=['PrivacyInfo.xcprivacy']
 project=frontend/'ios/App/App.xcodeproj/project.pbxproj'

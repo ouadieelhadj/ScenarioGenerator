@@ -7,6 +7,6 @@ let package = Package(name: "MerchantNativePolicies", platforms: [.macOS(.v12), 
             "AppDelegate.swift", "SceneDelegate.swift", "SecureSessionPlugin.swift", "IncidentFileDownloadPlugin.swift",
             "MerchantBridgeViewController.swift", "Assets.xcassets", "Base.lproj", "Info.plist", "App.entitlements",
             "PrivacyInfo.xcprivacy", "capacitor.config.json", "config.xml", "public"],
-            sources: ["MerchantOriginPolicy.swift", "IncidentExportPolicy.swift"]),
+            sources: ["MerchantOriginPolicy.swift", "IncidentExportPolicy.swift", "IncidentExportStorage.swift"]),
         .testTarget(name: "MerchantNativePoliciesTests", dependencies: ["MerchantNativePolicies"], path: "PolicyTests")
     ])

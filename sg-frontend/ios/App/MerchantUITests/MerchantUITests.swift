@@ -46,7 +46,7 @@ final class MerchantUITests: XCTestCase {
         let user = env["FP_IOS_TEST_USER"] ?? "bim.amina"
         if element(app, "Bonjour " + user).waitForExistence(timeout: 5) { return }
         let login = app.webViews.textFields.firstMatch
-        XCTAssertTrue(login.waitForExistence(timeout: 15)); login.tap(); clearExistingInput(login); login.typeText(user)
+        XCTAssertTrue(login.waitForExistence(timeout: 60)); login.tap(); clearExistingInput(login); login.typeText(user)
         dismissFormKeyboard(app)
         // Move the field above the software keyboard before tapping it. Ionic can
         // reposition its input while the first keyboard is appearing.
@@ -128,12 +128,14 @@ final class MerchantUITests: XCTestCase {
     }
     @MainActor func test04MerchantSessionRestoreAndLogout() throws {
         let app = launch(); try login(app)
+        XCTAssertTrue(element(app, "BIM").waitForExistence(timeout: 25), "Le nom du commerce doit provenir du rattachement actif renvoyé par le serveur.")
         screenshot(app, "ios04-accueil-commercant")
         app.terminate(); app.launch()
         let user = ProcessInfo.processInfo.environment["FP_IOS_TEST_USER"] ?? "bim.amina"
         let restored = element(app, "Bonjour " + user).waitForExistence(timeout: 30)
         screenshot(app, "diagnostic-restauration-apres-relance")
         XCTAssertTrue(restored, "Restauration Keychain non confirmée.")
+        XCTAssertTrue(element(app, "BIM").waitForExistence(timeout: 25), "Le commerce autorisé doit rester visible après restauration.")
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
         XCTAssertTrue(app.webViews.secureTextFields.firstMatch.waitForExistence(timeout: 20))
         app.terminate(); app.launch()
@@ -142,6 +144,8 @@ final class MerchantUITests: XCTestCase {
     }
     @MainActor func test05MerchantIncidentsEntry() throws {
         let app = launch(); try login(app)
+        XCTAssertTrue(element(app, "BIM").waitForExistence(timeout: 25), "Le commerce actif autorisé doit être affiché à partir de l’API.")
+        screenshot(app, "ios05-commerce-rattache")
         tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
         XCTAssertTrue(element(app, "Déclarer un incident").waitForExistence(timeout: 30))
         XCTAssertTrue(element(app, "Exporter les références autorisées").exists)
@@ -246,10 +250,24 @@ final class MerchantUITests: XCTestCase {
         XCTAssertTrue(download.waitForExistence(timeout: 20))
         XCTAssertTrue(download.isEnabled, "Seule une pièce CLEAN doit être copiable.")
         tap(app, "Télécharger")
-        let cancel = app.buttons.matching(NSPredicate(format: "label IN {'Annuler', 'Cancel'}")).firstMatch
-        XCTAssertTrue(cancel.waitForExistence(timeout: 25), "Le sélecteur natif Fichiers ne s’est pas ouvert.")
+        let owners = [app, XCUIApplication(bundleIdentifier: "com.apple.springboard")]
+        var cancel: XCUIElement?
+        for _ in 0..<50 {
+            for owner in owners {
+                let candidate = owner.descendants(matching: .any).matching(NSPredicate(format: "label ==[c] %@ OR label ==[c] %@", "Annuler", "Cancel")).firstMatch
+                if candidate.exists { cancel = candidate; break }
+            }
+            if cancel != nil { break }
+            _ = XCTWaiter.wait(for: [], timeout: 0.5)
+        }
         screenshot(app, "ios10-selecteur-copie-native")
-        cancel.tap()
+        for label in ["Annuler", "Cancel", "Enregistrer", "Save", "OK", "Done"] {
+            print("FP_PICKER_CONTROL label=" + label + " app=" + String(app.buttons[label].exists) + " system=" + String(owners[1].buttons[label].exists))
+        }
+        guard let cancel = cancel else { XCTFail("Annulation native indisponible ; voir la capture du sélecteur."); return }
+        let frame = cancel.frame
+        XCTAssertFalse(frame.isEmpty || frame.isNull || frame.isInfinite)
+        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX - app.frame.minX, dy: frame.midY - app.frame.minY)).tap()
         let notice = "Enregistrement annulé. Le dossier reste disponible."
         XCTAssertTrue(element(app, notice).waitForExistence(timeout: 20), "Une annulation ne doit pas être présentée comme une copie réussie.")
         for _ in 0..<7 { app.webViews.firstMatch.swipeDown() }

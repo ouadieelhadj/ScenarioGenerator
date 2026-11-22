@@ -12,6 +12,17 @@ public final class IncidentFileDownloadPlugin: CAPPlugin, CAPBridgedPlugin, UIDo
     private var pending: CAPPluginCall?
     private var temporaryDirectory: URL?
 
+    public override func load() {
+        do { try IncidentExportStorage.cleanupInterrupted(in: FileManager.default.temporaryDirectory) }
+        catch {
+            // A locked/unavailable store may be retried at the next explicit save.
+            // Never log a filename, bytes, directory or user identity.
+            #if targetEnvironment(simulator)
+            NSLog("FP_EXPORT_DIAGNOSTIC cleanup=startup_failed")
+            #endif
+        }
+    }
+
     @objc public func save(_ call: CAPPluginCall) {
         guard let encoded = call.getString("base64"), let mime = call.getString("contentType"),
               let name = call.getString("filename"),
@@ -28,13 +39,10 @@ public final class IncidentFileDownloadPlugin: CAPPlugin, CAPBridgedPlugin, UIDo
                 call.reject("Fermez la fenêtre précédente avant de copier.", "INCIDENT_COPY_PICKER_UNAVAILABLE"); return
             }
             do {
-                let root = FileManager.default.temporaryDirectory.appendingPathComponent("merchant-incident-exports", isDirectory: true)
+                let root = IncidentExportStorage.root(in: FileManager.default.temporaryDirectory)
+                try IncidentExportStorage.cleanupInterrupted(in: FileManager.default.temporaryDirectory)
                 try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true,
                     attributes: [.protectionKey: FileProtectionType.complete])
-                // Clear only this application's private interrupted exports, never user-selected files.
-                for item in try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil) {
-                    if UUID(uuidString: item.lastPathComponent) != nil { try FileManager.default.removeItem(at: item) }
-                }
                 var directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false,
                     attributes: [.protectionKey: FileProtectionType.complete])

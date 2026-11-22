@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7F2716FB9827D2E427905D0C /* IncidentExportStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6181CB3B4B45B4589F10F4C6 /* IncidentExportStorage.swift */; };
 		F10000000000000000000001 /* MerchantUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000000000000000000002 /* MerchantUITests.swift */; };
 		A5C0ABD00DB3CE00E74EA832 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 9B5D67C069C02B0DF987C70F /* PrivacyInfo.xcprivacy */; };
 		C63CA83B70A4A64F4B787E5C /* MerchantBridgeViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 155FE5D50C6C63DC6BF9FD22 /* MerchantBridgeViewController.swift */; };
@@ -34,6 +35,7 @@
 /* End PBXTargetDependency section */
 
 /* Begin PBXFileReference section */
+		6181CB3B4B45B4589F10F4C6 /* IncidentExportStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IncidentExportStorage.swift; sourceTree = "<group>"; };
 		F10000000000000000000002 /* MerchantUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MerchantUITests/MerchantUITests.swift; sourceTree = SOURCE_ROOT; };
 		F10000000000000000000003 /* MerchantUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MerchantUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		9B5D67C069C02B0DF987C70F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -90,6 +92,7 @@
 		504EC3061FED79650016851F /* App */ = {
 			isa = PBXGroup;
 			children = (
+				6181CB3B4B45B4589F10F4C6 /* IncidentExportStorage.swift */,
 				9B5D67C069C02B0DF987C70F /* PrivacyInfo.xcprivacy */,
 				155FE5D50C6C63DC6BF9FD22 /* MerchantBridgeViewController.swift */,
 				519EA4DE44D3BB39510AE69D /* IncidentFileDownloadPlugin.swift */,
@@ -196,6 +199,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7F2716FB9827D2E427905D0C /* IncidentExportStorage.swift in Sources */,
 				C63CA83B70A4A64F4B787E5C /* MerchantBridgeViewController.swift in Sources */,
 				E4FD049DA79CC7A42FA2F021 /* IncidentFileDownloadPlugin.swift in Sources */,
 				BD8D525FDA38565CC35120F4 /* SecureSessionPlugin.swift in Sources */,

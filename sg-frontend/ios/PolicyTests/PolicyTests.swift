@@ -36,4 +36,46 @@ final class PolicyTests: XCTestCase {
         XCTAssertNotNil(IncidentExportPolicy.decode(jpeg, mime: "image/jpeg", filename: "incident-" + identifier + ".jpg"))
         XCTAssertNil(IncidentExportPolicy.decode(png, mime: "image/jpeg", filename: "incident-" + identifier + ".jpg"))
     }
+    private func workspace() throws -> URL {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("merchant-export-policy-" + UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        return root
+    }
+    func testInterruptedPrivateExportIsRemoved() throws {
+        let folder = try workspace(); defer { try? FileManager.default.removeItem(at: folder) }
+        let export = IncidentExportStorage.root(in: folder).appendingPathComponent(UUID().uuidString, isDirectory: true)
+        try FileManager.default.createDirectory(at: export, withIntermediateDirectories: true)
+        try Data("synthetic".utf8).write(to: export.appendingPathComponent("fixture.png"))
+        try IncidentExportStorage.cleanupInterrupted(in: folder)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: export.path))
+    }
+    func testNonExportDirectoryIsPreserved() throws {
+        let folder = try workspace(); defer { try? FileManager.default.removeItem(at: folder) }
+        let retained = IncidentExportStorage.root(in: folder).appendingPathComponent("unrelated-data", isDirectory: true)
+        try FileManager.default.createDirectory(at: retained, withIntermediateDirectories: true)
+        try Data("synthetic".utf8).write(to: retained.appendingPathComponent("keep.txt"))
+        try IncidentExportStorage.cleanupInterrupted(in: folder)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: retained.appendingPathComponent("keep.txt").path))
+    }
+    func testSymlinkRootCannotDeleteAnotherDirectory() throws {
+        let folder = try workspace(); defer { try? FileManager.default.removeItem(at: folder) }
+        let retained = folder.appendingPathComponent("other-owned-data", isDirectory: true)
+        try FileManager.default.createDirectory(at: retained, withIntermediateDirectories: true)
+        let marker = retained.appendingPathComponent("keep.txt"); try Data("synthetic".utf8).write(to: marker)
+        try FileManager.default.createSymbolicLink(at: IncidentExportStorage.root(in: folder), withDestinationURL: retained)
+        XCTAssertThrowsError(try IncidentExportStorage.cleanupInterrupted(in: folder))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: marker.path))
+    }
+    func testExportSymlinkDoesNotRemoveItsDestination() throws {
+        let folder = try workspace(); defer { try? FileManager.default.removeItem(at: folder) }
+        let root = IncidentExportStorage.root(in: folder), retained = folder.appendingPathComponent("other-owned-data", isDirectory: true)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(at: retained, withIntermediateDirectories: true)
+        let marker = retained.appendingPathComponent("keep.txt"); try Data("synthetic".utf8).write(to: marker)
+        try FileManager.default.createSymbolicLink(at: root.appendingPathComponent(UUID().uuidString), withDestinationURL: retained)
+        try IncidentExportStorage.cleanupInterrupted(in: folder)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: marker.path))
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil).isEmpty)
+    }
+
 }

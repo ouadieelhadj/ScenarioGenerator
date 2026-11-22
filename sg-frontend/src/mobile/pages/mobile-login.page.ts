@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router,RouterLink } from '@angular/router';
@@ -59,10 +60,14 @@ export class MobileLoginPage {
         this.form.controls.password.reset('');
         this.router.navigateByUrl(this.confirmationHandoff.resumePath(this.auth.user()?.role)||'/home');
       },
-      error: () => {
+      error: (error: unknown) => {
         this.loading.set(false);
         this.form.controls.password.reset('');
-        this.error.set('Identifiant ou mot de passe incorrect.');
+        const status=error instanceof HttpErrorResponse?error.status:-1;
+        this.error.set(status===400||status===401?'Identifiant ou mot de passe incorrect.':
+          status===403?'Accès à la connexion refusé. Réessayez ou contactez votre support.':
+          status===429?'Trop de tentatives. Patientez avant de réessayer.':
+          'Le service de connexion est indisponible. Vérifiez votre connexion puis réessayez.');
       },
     });
   }

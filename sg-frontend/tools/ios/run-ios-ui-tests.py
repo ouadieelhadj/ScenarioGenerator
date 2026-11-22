@@ -9,7 +9,7 @@ authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
 focus=os.environ.get('FP_IOS_UI_FOCUS','full')
 if focus not in ('full','session_files_reinstall'):raise SystemExit('Unsupported native suite')
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
-expectedCases=4 if focus=='session_files_reinstall' else 9
+expectedCases=5 if focus=='session_files_reinstall' else 9
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -64,7 +64,7 @@ try:
         exclusions=['-skip-testing:'+selector+'test08FreshInstallationRequiresLogin']
         if not authenticated:exclusions+=['-skip-testing:'+selector+'test10SeedSessionForReinstall']
         if focus=='session_files_reinstall':
-            exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
+            exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
         with raw.open('a') as log:
             test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
@@ -80,7 +80,7 @@ try:
             exports=container/'tmp/merchant-incident-exports'
             remaining=sum(1 for item in exports.rglob('*') if item.is_file()) if exports.exists() else 0
             report['nativeExportTemporaryFilesRemaining']=remaining
-            if remaining:raise RuntimeError('Native attachment export did not clean its private temporary bytes')
+            report['nativeExportTemporaryCleanupPassed']=remaining==0
             # Only this candidate bundle is uninstalled on the dedicated disposable simulator.
             run(['xcrun','simctl','uninstall',chosen['udid'],identifier])
             run(['xcrun','simctl','install',chosen['udid'],str(appBundle)])
@@ -92,7 +92,7 @@ try:
             passed+=int(second.get('passedTests',0));failed+=int(second.get('failedTests',0));skipped+=int(second.get('skippedTests',0))
             report['reinstallationPassed']=fresh.returncode==0 and int(second.get('passedTests',0))==1 and int(second.get('failedTests',0))==0
             if fresh.returncode:test=fresh
-        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3,authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and report.get('reinstallationPassed',False))
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3 and report.get('nativeExportTemporaryCleanupPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))
         rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
         # Curated attachments only; raw XCTest result bundles may contain input activity.
         attachments=OUT/'private-attachments'
@@ -133,6 +133,7 @@ finally:
         report['initialLoginSeconds']=[int(value) for value in re.findall(r'FP_INITIAL_LOGIN seconds=(\d+)',journal)]
         report['reinstallationMarkers']={'sessionSeeded':bool(re.search(r'FP_REINSTALL_SEED restored=true',journal)),'freshLoginRequired':bool(re.search(r'FP_REINSTALL_RESULT loginRequired=true',journal))}
         report['nativeExportCancellationObserved']=bool(re.search(r'FP_NATIVE_EXPORT cancelled=true',journal))
+        report['nativePickerControls']=[{'label':label,'inApp':app=='true','inSystemUi':system=='true'} for label,app,system in re.findall(r'FP_PICKER_CONTROL label=(Annuler|Cancel|Enregistrer|Save|OK|Done) app=(true|false) system=(true|false)',journal)]
         if nativeCases:
             report['nativeCaseResultsFromJournal']=nativeCases
             report['passedFromJournal']=sum(case['passed'] for case in nativeCases)
