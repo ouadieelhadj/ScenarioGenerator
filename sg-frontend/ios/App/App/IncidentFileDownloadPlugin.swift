@@ -8,7 +8,7 @@ import Capacitor
 public final class IncidentFileDownloadPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelegate {
     public let identifier = "IncidentFileDownloadPlugin"
     public let jsName = "IncidentFileDownload"
-    public let pluginMethods = [CAPPluginMethod(name: "save", returnType: CAPPluginReturnPromise)]
+    public let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "save", returnType: CAPPluginReturnPromise)]
     private var pending: CAPPluginCall?
     private var temporaryDirectory: URL?
 
