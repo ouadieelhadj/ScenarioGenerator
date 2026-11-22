@@ -21,6 +21,6 @@ export const mobileRoutes: Routes = [
   { path: 'merchant/associations', canActivate: [mobileAuthGuard], loadComponent: () => import('./pages/mobile-personal-associations.page').then(m => m.MobilePersonalAssociationsPage) },
   { path: 'merchant/dossier', canActivate: [mobileAuthGuard],data:{verifiedIdentityResume:true}, loadComponent: () => import('./pages/mobile-personal-dossier.page').then(m => m.MobilePersonalDossierPage) },
   { path: 'commercial/prospect', canActivate: [mobileCommercialGuard], loadComponent: () => import('./pages/mobile-commercial-prospect.page').then(m => m.MobileCommercialProspectPage) },
-  { path: '', pathMatch: 'full', redirectTo: 'login' },
+  { path: '', pathMatch: 'full', redirectTo: 'home' },
   { path: '**', redirectTo: 'login' },
 ];
