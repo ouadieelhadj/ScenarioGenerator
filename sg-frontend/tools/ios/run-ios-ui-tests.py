@@ -9,7 +9,7 @@ authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
 focus=os.environ.get('FP_IOS_UI_FOCUS','full')
 if focus not in ('full','session_files_reinstall'):raise SystemExit('Unsupported native suite')
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
-expectedCases=5 if focus=='session_files_reinstall' else 9
+expectedCases=5 if focus=='session_files_reinstall' else 10
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -51,7 +51,22 @@ try:
         if isinstance(value,dict) and 'MerchantUITests' in key:targets.append(value)
     for configuration in data.get('TestConfigurations',[]):targets.extend(t for t in configuration.get('TestTargets',[]) if t.get('BlueprintName')=='MerchantUITests')
     if not targets:raise RuntimeError('UI test target missing from xctestrun')
+    supportFixture=None
+    if authenticated and focus=='full':
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('native_support_fixtures',F/'tools/ios/prepare-native-support-fixtures.py')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        supportFixture=module.prepare(SAFE/'native-support-fixtures.json',password)
+        report['supportFixturesPrepared']=True
     for target in targets:
+        if supportFixture:
+            target.setdefault('EnvironmentVariables',{}).update(
+                FP_IOS_REPLY_REFERENCE=supportFixture['fixtures']['reply']['reference'],
+                FP_IOS_CONFIRM_REFERENCE=supportFixture['fixtures']['confirm']['reference'],
+                FP_IOS_REOPEN_REFERENCE=supportFixture['fixtures']['reopen']['reference'],
+                FP_IOS_PUBLIC_MESSAGE=supportFixture['publicMarker'],
+                FP_IOS_INTERNAL_MESSAGE=supportFixture['internalMarker'],
+                FP_IOS_REPLY_MESSAGE=supportFixture['nativeReply'])
         target.setdefault('EnvironmentVariables',{}).update(FP_IOS_AUTHENTICATED_TESTS='true' if authenticated else 'false',FP_IOS_TEST_USER=os.environ.get('FP_IOS_TEST_USER','bim.amina'),FP_IOS_TEST_PASSWORD=password)
     with tempfile.NamedTemporaryFile(prefix='fp-ui-',suffix='.xctestrun',dir=OUT/'DerivedData/Build/Products',delete=False) as file:
         private=Path(file.name);file.write(plistlib.dumps(data))
@@ -69,6 +84,10 @@ try:
             test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
         passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
+        if supportFixture:
+            reconciliation=module.verify(supportFixture,password,SAFE/'native-support-reconciliation.json')
+            report['supportServerReconciliationPassed']=reconciliation['allExecutedChecksPassed']
+            report['supportServerReconciliationAssertions']=len(reconciliation['checks'])
         firstPhaseJournal=raw.read_text(errors='replace')
         seeded=bool(re.search(r"test10SeedSessionForReinstall\]' passed",firstPhaseJournal)) and 'FP_REINSTALL_SEED restored=true' in firstPhaseJournal
         # The target reinstall check is independent of an unrelated first-phase
@@ -92,7 +111,7 @@ try:
             passed+=int(second.get('passedTests',0));failed+=int(second.get('failedTests',0));skipped+=int(second.get('skippedTests',0))
             report['reinstallationPassed']=fresh.returncode==0 and int(second.get('passedTests',0))==1 and int(second.get('failedTests',0))==0
             if fresh.returncode:test=fresh
-        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3 and report.get('nativeExportTemporaryCleanupPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3 and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False) and report.get('supportServerReconciliationPassed',True))
         rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
         # Curated attachments only; raw XCTest result bundles may contain input activity.
         attachments=OUT/'private-attachments'
@@ -133,6 +152,8 @@ finally:
         report['initialLoginSeconds']=[int(value) for value in re.findall(r'FP_INITIAL_LOGIN seconds=(\d+)',journal)]
         report['reinstallationMarkers']={'sessionSeeded':bool(re.search(r'FP_REINSTALL_SEED restored=true',journal)),'freshLoginRequired':bool(re.search(r'FP_REINSTALL_RESULT loginRequired=true',journal))}
         report['nativeExportCancellationObserved']=bool(re.search(r'FP_NATIVE_EXPORT cancelled=true',journal))
+        report['nativePickerBackNavigations']=[int(value) for value in re.findall(r'FP_PICKER_BACK count=(\d+)',journal)]
+        report['nativeSupportUiMarkers']={name:bool(re.search('FP_NATIVE_SUPPORT '+name+'=true',journal)) for name in ['reply','confirm','reopen']}
         report['nativePickerControls']=[{'label':label,'inApp':app=='true','inSystemUi':system=='true'} for label,app,system in re.findall(r'FP_PICKER_CONTROL label=(Annuler|Cancel|Enregistrer|Save|OK|Done) app=(true|false) system=(true|false)',journal)]
         if nativeCases:
             report['nativeCaseResultsFromJournal']=nativeCases

@@ -214,6 +214,66 @@ final class MerchantUITests: XCTestCase {
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
     }
 
+    @MainActor private func openSupportFixture(_ app: XCUIApplication, reference: String) {
+        for _ in 0..<14 { app.webViews.firstMatch.swipeDown() }
+        let card = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", reference)).firstMatch
+        for _ in 0..<18 {
+            if card.exists && card.isHittable { break }
+            app.webViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(card.exists && card.isHittable, "Le dossier fictif autorisé doit être accessible.")
+        card.tap()
+        XCTAssertTrue(element(app, "Pièces jointes").waitForExistence(timeout: 20))
+    }
+    @MainActor private func merchantAction(_ app: XCUIApplication, action: String, text: String) {
+        let select = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Action")).firstMatch
+        for _ in 0..<15 {
+            if select.exists && select.isHittable { break }
+            app.webViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(select.exists && select.isHittable)
+        select.tap()
+        let wheel = app.pickerWheels.firstMatch
+        if wheel.waitForExistence(timeout: 3) {
+            wheel.adjust(toPickerWheelValue: action); dismissFormKeyboard(app)
+        } else {
+            let option = app.buttons.matching(NSPredicate(format: "label == %@", action)).firstMatch
+            XCTAssertTrue(option.waitForExistence(timeout: 5)); option.tap()
+        }
+        let message = app.webViews.textViews.matching(NSPredicate(format: "label == %@", "Message ou motif")).firstMatch
+        fillIncidentField(app, field: message, value: text)
+        tap(app, action)
+        XCTAssertTrue(element(app, "Action enregistrée.").waitForExistence(timeout: 25))
+    }
+    @MainActor func test07NativeSupportReplyAndResolution() throws {
+        let app = launch(); try login(app)
+        let env = ProcessInfo.processInfo.environment
+        guard let reply = env["FP_IOS_REPLY_REFERENCE"], let confirm = env["FP_IOS_CONFIRM_REFERENCE"],
+              let reopen = env["FP_IOS_REOPEN_REFERENCE"], let publicMarker = env["FP_IOS_PUBLIC_MESSAGE"],
+              let internalMarker = env["FP_IOS_INTERNAL_MESSAGE"], let answer = env["FP_IOS_REPLY_MESSAGE"] else {
+            throw XCTSkip("Les trois dossiers support natifs ne sont pas préparés.")
+        }
+        tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
+        XCTAssertTrue(element(app, "Déclarer un incident").waitForExistence(timeout: 30))
+        openSupportFixture(app, reference: reply)
+        XCTAssertTrue(element(app, publicMarker).waitForExistence(timeout: 20))
+        XCTAssertFalse(element(app, internalMarker).exists, "Une note interne ne doit jamais être affichée au commerçant.")
+        XCTAssertFalse(element(app, "Ajouter une note interne").exists)
+        merchantAction(app, action: "Répondre", text: answer)
+        XCTAssertTrue(element(app, answer).waitForExistence(timeout: 15))
+        screenshot(app, "ios11-reponse-commercant-sans-note-interne")
+        print("FP_NATIVE_SUPPORT reply=true")
+        openSupportFixture(app, reference: confirm)
+        merchantAction(app, action: "Confirmer personnellement la résolution", text: "Résolution fictive confirmée depuis le client iPhone.")
+        screenshot(app, "ios12-resolution-confirmee")
+        print("FP_NATIVE_SUPPORT confirm=true")
+        openSupportFixture(app, reference: reopen)
+        merchantAction(app, action: "Contester et réouvrir", text: "Réouverture fictive demandée depuis le client iPhone.")
+        screenshot(app, "ios12-reouverture-commercant")
+        print("FP_NATIVE_SUPPORT reopen=true")
+        tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+    }
+
     @MainActor func test10SeedSessionForReinstall() throws {
         let app = launch(); try login(app)
         app.terminate(); app.launch()
@@ -252,13 +312,27 @@ final class MerchantUITests: XCTestCase {
         tap(app, "Télécharger")
         let owners = [app, XCUIApplication(bundleIdentifier: "com.apple.springboard")]
         var cancel: XCUIElement?
-        for _ in 0..<50 {
+        let deadline = Date().addingTimeInterval(35)
+        var backs = 0
+        // iOS26 may open inside "On My iPhone". Its top-left control navigates
+        // back to Locations; Cancel is only available at that root screen.
+        // Use the actual native navigation bar, never a guessed screen coordinate.
+        while Date() < deadline {
             for owner in owners {
-                let candidate = owner.descendants(matching: .any).matching(NSPredicate(format: "label ==[c] %@ OR label ==[c] %@", "Annuler", "Cancel")).firstMatch
+                let candidate = owner.buttons.matching(NSPredicate(format: "label ==[c] %@ OR label ==[c] %@", "Annuler", "Cancel")).firstMatch
                 if candidate.exists { cancel = candidate; break }
             }
             if cancel != nil { break }
-            _ = XCTWaiter.wait(for: [], timeout: 0.5)
+            let save = app.buttons.matching(NSPredicate(format: "label ==[c] %@ OR label ==[c] %@", "Enregistrer", "Save")).firstMatch
+            let back = app.navigationBars.buttons.firstMatch
+            if backs < 3 && save.exists && back.exists && back.isEnabled {
+                let frame = back.frame, bounds = app.frame
+                if !frame.isEmpty && !frame.isNull && !frame.isInfinite && frame.midX < bounds.minX + bounds.width * 0.28 && frame.midY < bounds.minY + bounds.height * 0.30 {
+                    back.tap(); backs += 1
+                    print("FP_PICKER_BACK count=" + String(backs))
+                }
+            }
+            _ = XCTWaiter.wait(for: [], timeout: 0.3)
         }
         screenshot(app, "ios10-selecteur-copie-native")
         for label in ["Annuler", "Cancel", "Enregistrer", "Save", "OK", "Done"] {
