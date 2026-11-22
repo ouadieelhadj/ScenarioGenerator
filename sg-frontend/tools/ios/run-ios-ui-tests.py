@@ -7,9 +7,9 @@ OUT=Path(os.environ.get('FP_IOS_OUTPUT',str(F/'ios/App/output/cloud'))).resolve(
 SAFE=OUT/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
 authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
 focus=os.environ.get('FP_IOS_UI_FOCUS','full')
-if focus not in ('full','session_files_reinstall','authenticated'):raise SystemExit('Unsupported native suite')
+if focus not in ('full','session_files_reinstall','authenticated','connection'):raise SystemExit('Unsupported native suite')
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
-expectedCases=5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 10
+expectedCases=2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 10
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -82,6 +82,8 @@ try:
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
         if focus=='authenticated':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test06NativeIncidentDraftCreation','test07NativeSupportReplyAndResolution','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
+        if focus=='connection':
+            exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry']]
         with raw.open('a') as log:
             test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
@@ -113,7 +115,7 @@ try:
             passed+=int(second.get('passedTests',0));failed+=int(second.get('failedTests',0));skipped+=int(second.get('skippedTests',0))
             report['reinstallationPassed']=fresh.returncode==0 and int(second.get('passedTests',0))==1 and int(second.get('failedTests',0))==0
             if fresh.returncode:test=fresh
-        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3 and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False) and report.get('supportServerReconciliationPassed',True))
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3 and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus=='connection' or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
         rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
         # Curated attachments only; raw XCTest result bundles may contain input activity.
         attachments=OUT/'private-attachments'
@@ -203,6 +205,22 @@ finally:
             codes=re.findall(r'(?:NSURLErrorDomain Code=|completed with error \[)(-?\d+)',network.stdout)
             report['nativeNetworkErrorCodesOnly']=sorted(set(int(code) for code in codes))
             report['nativeNetworkLogRawExported']=False
+        tls=subprocess.run(['xcrun','simctl','spawn',chosen['udid'],'log','show','--last','30m','--style','compact','--predicate','process == "App" AND messageType == error AND (eventMessage CONTAINS[c] "SSL" OR eventMessage CONTAINS[c] "TLS" OR eventMessage CONTAINS "CFStream")'],capture_output=True,text=True,timeout=45)
+        report['nativeTLSNumericDiagnosticCollectionStatus']=tls.returncode
+        if tls.returncode==0:
+            details=[]
+            for line in tls.stdout.splitlines():
+                # Only known numeric status labels. No raw line, address, request,
+                # identifier, header, credential, body or certificate is exported.
+                for code in re.findall(r'(?:_kCFStreamErrorCodeKey|_kCFNetworkCFStreamSSLErrorOriginalValue|SSL [Ee]rror|OSStatus)[= :]+(-?\d+)',line):
+                    details.append({'kind':'SSL_STATUS','code':int(code)})
+                for code,domain,underlying in re.findall(r'error code:\s*(-?\d+)(?:\[(\d+):(-?\d+)\])?',line):
+                    row={'kind':'NETWORK_STATUS','code':int(code)}
+                    if domain:row.update(streamDomain=int(domain),streamCode=int(underlying))
+                    details.append(row)
+            report['nativeTLSNumericDetails']=[json.loads(value) for value in sorted(set(json.dumps(row,sort_keys=True) for row in details))]
+            report['nativeTLSRawLogsExported']=False
+
     except subprocess.TimeoutExpired:
         report['nativeAuthDiagnosticCollectionTimedOut']=True
     (SAFE/'resultats-ui.json').write_text(json.dumps(report,indent=2)+'\n')

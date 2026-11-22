@@ -31,6 +31,7 @@ on:
           - full
           - session_files_reinstall
           - authenticated
+          - connection
 permissions:
   contents: read
 concurrency:
