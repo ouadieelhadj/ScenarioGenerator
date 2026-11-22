@@ -14,16 +14,21 @@ def redacted(value):
     value=re.sub(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+','[JWT_REDACTED]',value)
     return re.sub(r'([?#&](?:token|code)=)[^\s"<>]+',r'\1[REDACTED]',value,flags=re.I)
 listing=json.loads(run(['xcrun','simctl','list','devices','available','--json']))
-chosen=next((d for runtime,devices in listing['devices'].items() if 'iOS' in runtime for d in devices if d.get('isAvailable') and d['name'].startswith('iPhone')),None)
+requested=json.loads((OUT/'simulator.json').read_text()) if (OUT/'simulator.json').is_file() else None
+chosen=next((d for runtime,devices in listing['devices'].items() if 'iOS' in runtime for d in devices if d.get('isAvailable') and d['name'].startswith('iPhone') and (not requested or d['udid']==requested['udid'])),None)
 if not chosen:raise SystemExit('Aucun simulateur iPhone utilisable sur ce runner.')
 destination='platform=iOS Simulator,id='+chosen['udid']
 common=['xcodebuild','-project',str(F/'ios/App/App.xcodeproj'),'-scheme','App','-configuration','Release','-derivedDataPath',str(OUT/'UITestBuild'),'-destination',destination,'CODE_SIGNING_ALLOWED=NO','-parallel-testing-enabled','NO']
 report={'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'nativeUIExecutionStarted':False,'authenticatedRequested':authenticated,'simulatorName':chosen['name'],'realIPhoneDeviceTested':False,'fullAcceptanceCompleted':False,'pentestExecuted':False}
 raw=OUT/'xcode-ui-private.log'
+bundle=OUT/'native-results.xcresult'
 rc=1
 try:
     with raw.open('w') as log:
-        build=subprocess.run(common+['build-for-testing'],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=900)
+        boot=subprocess.run(['xcrun','simctl','bootstatus',chosen['udid'],'-b'],stdout=log,stderr=subprocess.STDOUT,timeout=480)
+        if boot.returncode:raise RuntimeError('Simulator boot not confirmed')
+        report['simulatorBootConfirmed']=True
+        build=subprocess.run(common+['build-for-testing'],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=600)
     if build.returncode:raise RuntimeError('Build-for-testing failed')
     runs=list((OUT/'UITestBuild/Build/Products').glob('*.xctestrun'))
     if len(runs)!=1:raise RuntimeError('No unique xctestrun file')
@@ -41,7 +46,7 @@ try:
     try:
         report['nativeUIExecutionStarted']=True
         with raw.open('a') as log:
-            test=subprocess.run(['xcodebuild','test-without-building','-xctestrun',str(private),'-destination',destination,'-parallel-testing-enabled','NO','-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=900)
+            test=subprocess.run(['xcodebuild','test-without-building','-xctestrun',str(private),'-destination',destination,'-parallel-testing-enabled','NO','-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=600)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
         passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
         report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3,authenticatedCasesPassed=authenticated and test.returncode==0 and passed==5 and skipped==0)
@@ -57,7 +62,7 @@ try:
                 strings=[s for s in value.values() if isinstance(s,str)]
                 if any('preuve-' in s for s in strings):
                     for candidate in strings:
-                        if candidate.endswith('.png') and Path(candidate).name==candidate:
+                        if candidate.lower().endswith(('.png','.jpg','.jpeg')) and Path(candidate).name==candidate:
                             image=attachments/candidate
                             if image.is_file():
                                 target=SAFE/'captures'/candidate;target.parent.mkdir(exist_ok=True)
@@ -73,6 +78,36 @@ try:
 except Exception as error:
     report['failure']=redacted(str(error))
 finally:
-    if raw.is_file():(SAFE/'journal-expurge.txt').write_text(redacted(raw.read_text(errors='replace')),encoding='utf8')
+    if raw.is_file():
+        journal=redacted(raw.read_text(errors='replace'))
+        (SAFE/'journal-expurge.txt').write_text(journal,encoding='utf8')
+        nativeCases=[{'name':name,'passed':state=='passed'} for name,state in re.findall(r"Test Case '-\[MerchantUITests\.MerchantUITests ([^]]+)\]' (passed|failed) \(",journal)]
+        if nativeCases:
+            report['nativeCaseResultsFromJournal']=nativeCases
+            report['passedFromJournal']=sum(case['passed'] for case in nativeCases)
+            report['failedFromJournal']=sum(not case['passed'] for case in nativeCases)
+            report['nativeJournalIsNotFinalResultBundle']=True
+        if bundle.is_dir():
+            recovery=OUT/'curated-attachments-recovery'
+            subprocess.run(['xcrun','xcresulttool','export','attachments','--path',str(bundle),'--output-path',str(recovery)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=120)
+            for metadata in recovery.glob('*.json'):
+                try: document=json.loads(metadata.read_text())
+                except ValueError:continue
+                def recover(value):
+                    if isinstance(value,dict):
+                        strings=[v for v in value.values() if isinstance(v,str)]
+                        if any('preuve-' in v for v in strings):
+                            for candidate in strings:
+                                if candidate.lower().endswith(('.png','.jpg','.jpeg')) and Path(candidate).name==candidate:
+                                    source=recovery/candidate
+                                    if source.is_file():
+                                        destination=SAFE/'captures'/candidate;destination.parent.mkdir(exist_ok=True)
+                                        shutil.copy2(source,destination)
+                        for child in value.values():recover(child)
+                    elif isinstance(value,list):
+                        for child in value:recover(child)
+                recover(document)
+            report['curatedScreenshotFiles']=sorted(p.name for p in (SAFE/'captures').glob('*') if p.is_file())
+            report['screenshotsAwaitingReview']=bool(report['curatedScreenshotFiles'])
     (SAFE/'resultats-ui.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report));raise SystemExit(rc)

@@ -41,6 +41,8 @@ jobs:
         run: |
           mkdir -p "$FP_IOS_OUTPUT"
           git rev-parse HEAD > "$FP_IOS_OUTPUT/source-commit.txt"
+      - name: Amorcer le simulateur iPhone
+        run: python3 tools/ios/prepare-simulator.py
       - name: Compiler le client, tester les politiques Swift et construire pour simulateur
         run: bash tools/ios/build-iphone.sh simulator
       - name: Executer les vrais parcours XCUITest

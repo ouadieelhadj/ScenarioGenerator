@@ -36,8 +36,19 @@ final class MerchantUITests: XCTestCase {
         if element(app, "Bonjour " + user).waitForExistence(timeout: 5) { return }
         let login = app.webViews.textFields.firstMatch
         XCTAssertTrue(login.waitForExistence(timeout: 15)); login.tap(); login.typeText(user)
+        // Move the field above the software keyboard before tapping it. Ionic can
+        // reposition its input while the first keyboard is appearing.
+        let viewport = app.webViews.firstMatch
+        viewport.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.40))
+            .press(forDuration: 0.05, thenDragTo: viewport.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.18)))
         let secret = app.webViews.secureTextFields.firstMatch
-        XCTAssertTrue(secret.exists); secret.tap(); secret.typeText(password)
+        XCTAssertTrue(secret.waitForExistence(timeout: 10))
+        _ = XCTWaiter.wait(for: [], timeout: 0.5)
+        XCTAssertTrue(secret.isHittable, "Le champ sécurisé doit être visible avant saisie.")
+        secret.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5)).tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
+        _ = XCTWaiter.wait(for: [], timeout: 0.5)
+        secret.typeText(password)
         tap(app, "Se connecter")
         XCTAssertTrue(element(app, "Bonjour " + user).waitForExistence(timeout: 30), "Connexion ou accueil attendu indisponible.")
     }
