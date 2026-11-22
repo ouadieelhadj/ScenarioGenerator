@@ -8,7 +8,7 @@ on:
         required: true
         default: codex/damancash-iphone-20261122
       authenticated:
-        description: Executer aussi les deux cas authentifies avec le secret de recette
+        description: Executer les parcours authentifies avec le secret de recette
         type: boolean
         default: false
 permissions:
@@ -36,12 +36,14 @@ jobs:
         with:
           node-version: '24'
           cache: npm
-          cache-dependency-path: sg-frontend/package-lock.json
+          cache-dependency-path: |
+            sg-frontend/package-lock.json
+            sg-frontend/tools/ios/build-iphone.sh
       - name: Identifier les sources réellement compilées
         run: |
           mkdir -p "$FP_IOS_OUTPUT"
           git rev-parse HEAD > "$FP_IOS_OUTPUT/source-commit.txt"
-      - name: Verifier le protocole des outils de signature sans installer une app
+      - name: Verifier les outils et compiler les sources XCTest avant le client
         run: python3 tools/ios/probe-simulator-signature.py
       - name: Observer la connectivite API sans compte reel
         run: python3 tools/ios/probe-native-gateway.py

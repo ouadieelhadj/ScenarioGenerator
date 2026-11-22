@@ -18,7 +18,7 @@ requested=json.loads((OUT/'simulator.json').read_text()) if (OUT/'simulator.json
 chosen=next((d for runtime,devices in listing['devices'].items() if 'iOS' in runtime for d in devices if d.get('isAvailable') and d['name'].startswith('iPhone') and (not requested or d['udid']==requested['udid'])),None)
 if not chosen:raise SystemExit('Aucun simulateur iPhone utilisable sur ce runner.')
 destination='platform=iOS Simulator,id='+chosen['udid']
-common=['xcodebuild','-project',str(F/'ios/App/App.xcodeproj'),'-scheme','App','-configuration','Release','-derivedDataPath',str(OUT/'DerivedData'),'-destination',destination,'-arch',os.uname().machine,'ONLY_ACTIVE_ARCH=YES','CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-','-parallel-testing-enabled','NO']
+common=['xcodebuild','-project',str(F/'ios/App/App.xcodeproj'),'-scheme','App','-configuration','Release','-derivedDataPath',str(OUT/'DerivedData'),'-destination',destination,'ONLY_ACTIVE_ARCH=YES','CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-','-parallel-testing-enabled','NO']
 report={'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'nativeUIExecutionStarted':False,'authenticatedRequested':authenticated,'simulatorName':chosen['name'],'realIPhoneDeviceTested':False,'fullAcceptanceCompleted':False,'pentestExecuted':False}
 raw=OUT/'xcode-ui-private.log'
 bundle=OUT/'native-results.xcresult'

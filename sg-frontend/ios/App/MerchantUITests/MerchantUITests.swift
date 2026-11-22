@@ -125,7 +125,7 @@ final class MerchantUITests: XCTestCase {
     }
 
     @MainActor private func dismissFormKeyboard(_ app: XCUIApplication) {
-        let done = app.toolbars.buttons.matching(NSPredicate(format: "label IN %@", ["OK", "Done", "Terminé"])).firstMatch
+        let done = app.toolbars.buttons.matching(NSPredicate(format: "label IN {'OK', 'Done', 'Terminé'}")).firstMatch
         if done.exists && done.isHittable { done.tap() }
     }
     @MainActor private func fillIncidentField(_ app: XCUIApplication, field: XCUIElement, value: String) {

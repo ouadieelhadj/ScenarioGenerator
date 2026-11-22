@@ -17,7 +17,11 @@ try:
   subprocess.run(['codesign','--force','--sign','-',str(executable)],check=True,capture_output=True)
   subprocess.run(['codesign','--verify','--strict',str(executable)],check=True,capture_output=True)
   assert module.simulated_entitlements(executable)=={'application-identifier':'com.moneycore.merchantportal.test'}
-  report.update(passed=True,simulatedEntitlementReaderVerified=True,restrictedEntitlementsInsertedInCodeSignature=False)
+  developer=Path(subprocess.check_output(['xcrun','--sdk','iphonesimulator','--show-sdk-platform-path'],text=True).strip())/'Developer'
+  # Type-check XCTest before the expensive client/SPM build. This is a compiler
+  # prerequisite, not an executed native UI scenario or an Apple distribution.
+  subprocess.run(['xcrun','--sdk','iphonesimulator','swiftc','-typecheck','-target',arch+'-apple-ios15.0-simulator','-sdk',sdk,'-F',str(developer/'Library/Frameworks'),'-I',str(developer/'usr/lib'),str(F/'ios/App/MerchantUITests/MerchantUITests.swift')],check=True,capture_output=True)
+  report.update(passed=True,simulatedEntitlementReaderVerified=True,restrictedEntitlementsInsertedInCodeSignature=False,uiTestSourcesTypechecked=True)
 except Exception as error:
  report.update(passed=False,errorType=type(error).__name__,message=str(error))
  if getattr(error,'stderr',None): report['toolDiagnostic']=error.stderr.decode('utf8','replace')[:2000]

@@ -21,7 +21,7 @@ BUILD="${FP_IOS_BUILD:-10310}"
 OUT="${FP_IOS_OUTPUT:-$ROOT/ios/App/output/$(date -u +%Y%m%dT%H%M%SZ)}"
 mkdir -p "$OUT"
 cd "$ROOT"
-export npm_config_cache="${npm_config_cache:-$HOME/Library/Caches/futurpayment-npm}"
+export npm_config_cache="${npm_config_cache:-$HOME/.npm}"
 npm ci --ignore-scripts --no-audit --no-fund
 node --test tools/test-mobile-session-security.mjs tools/test-mobile-session-revocation.mjs tools/test-mobile-native-gateway.mjs tools/test-merchant-native-links.mjs tools/test-incident-file-export.mjs tools/test-incident-client-channel.mjs
 npm run build:merchant-mobile -- --configuration production --source-map=false
@@ -33,7 +33,7 @@ swift test --package-path ios --scratch-path "$OUT/PolicyBuild" 2>&1 | tee "$OUT
 if [[ "$MODE" == prepare ]]; then printf 'IOS_PROJECT_READY=%s/ios/App/App.xcodeproj|IPA=NOT_BUILT\n' "$ROOT"; exit 0; fi
 COMMON=(-project ios/App/App.xcodeproj -scheme App -configuration Release -derivedDataPath "$OUT/DerivedData")
 if [[ "$MODE" == simulator ]]; then
-  xcodebuild "${COMMON[@]}" -destination 'generic/platform=iOS Simulator' -arch "$(uname -m)" ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build 2>&1 | tee "$OUT/build-simulator.log"
+  xcodebuild "${COMMON[@]}" -destination 'generic/platform=iOS Simulator' ONLY_ACTIVE_ARCH=YES CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build 2>&1 | tee "$OUT/build-simulator.log"
   printf 'SIMULATOR_BUILD=%s/DerivedData/Build/Products/Release-iphonesimulator/App.app|DEVICE_IPA=NOT_BUILT\n' "$OUT"
   exit 0
 fi
