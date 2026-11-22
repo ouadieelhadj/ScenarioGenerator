@@ -1,0 +1,368 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "edit": "Éditer",
+    "delete": "Supprimer",
+    "create": "Créer",
+    "loading": "Chargement…",
+    "saving": "Enregistrement…",
+    "yes": "Oui",
+    "no": "Non",
+    "actions": "Actions",
+    "confirmDelete": "Confirmer la suppression ?",
+    "required": "obligatoire"
+  },
+  "menu": {
+    "dashboard": "Tableau de bord",
+    "switchLabPos": "TPE & POS",
+    "switchLabTestCenter": "Campagnes & Tests",
+    "switchLabOnline": "Réseaux Online",
+    "switchLabClearing": "Réseaux Clearing",
+    "switchLabEcommerce": "E-commerce & 3DS",
+    "switchLabIndustrialization": "Industrialisation",
+    "campaignGeneration": "Génération de campagne",
+    "campaignOrchestration": "Orchestration de campagne",
+    "executions": "Consultation des exécutions",
+    "dmas": "Monétique DMAS",
+    "admin": "Administration",
+    "help": "Aide",
+    "config": "Configuration",
+    "swamLisMember": "SWAM LIS Membre",
+    "swamLisSwitch": "SWAM LIS Switch",
+    "core": "Accueil",
+    "campaigns": "Campagnes",
+    "workflow": "Workflow",
+    "myOperations": "Mes opérations",
+    "myApprovals": "Mes validations",
+    "users": "Utilisateurs",
+    "roles": "Rôles",
+    "businessModules": "Modules métier",
+    "deployments": "Déploiements",
+    "campaignsTests": "Campagnes & Tests",
+    "simulators": "Simulateurs",
+    "transactions": "Transactions",
+    "acquiring": "Acquisition",
+    "issuing": "Émission",
+    "networksClearing": "Réseaux & Clearing",
+    "operations": "Exploitation",
+    "interfaces": "Interfaces"
+  },
+  "product": {
+    "switchLabSubtitle": "Portail de simulation et de certification monétique",
+    "switchSubtitle": "Portail du switch monétique bancaire",
+    "merchantPortalSubtitle": "Parcours sécurisé d'affiliation commerçant",
+    "foundationTitle": "Fondation du produit disponible",
+    "foundationDescription": "Les fonctions opérationnelles de ce domaine seront raccordées aux API réelles dans le lot métier correspondant."
+  },
+  "merchantPortal": {
+    "menu": { "dashboard": "Mon affiliation", "newProspect": "Nouveau prospect", "dossier": "Mon dossier", "kycReview": "Revue KYC", "provisioning": "Provisionnement" }
+  },
+  "topbar": {
+    "theme": "Thème",
+    "language": "Langue",
+    "logout": "Se déconnecter"
+  },
+  "login": {
+    "subtitle": "Plateforme de simulation monétique",
+    "username": "Identifiant",
+    "password": "Mot de passe",
+    "submit": "Se connecter",
+    "connecting": "Connexion…",
+    "errorInvalid": "Identifiant ou mot de passe incorrect",
+    "errorDisabled": "Compte désactivé",
+    "errorNoServer": "Aucune réponse du serveur (service arrêté ou CORS ?)",
+    "errorGeneric": "Connexion impossible. Vérifiez que les services sont démarrés."
+  },
+  "campaign": {
+    "title": "Génération de campagne",
+    "new": "Nouvelle campagne",
+    "none": "Aucune campagne. Créez-en une pour commencer.",
+    "loadError": "Impossible de charger les campagnes.",
+    "saveError": "Échec de l'enregistrement.",
+    "deleteError": "Échec de la suppression.",
+    "editTitle": "Éditer campagne",
+    "newTitle": "Nouvelle campagne",
+    "col": {
+      "id": "ID",
+      "name": "Nom",
+      "category": "Catégorie",
+      "steps": "Paliers",
+      "slaError": "SLA err. max",
+      "active": "Active",
+      "createdBy": "Créée par",
+      "network": "Reseau"
+    },
+    "field": {
+      "name": "Nom",
+      "category": "Catégorie",
+      "description": "Description",
+      "config": "Configuration (JSON)",
+      "expectedDe039": "DE039 attendu",
+      "slaP95": "SLA P95 max (ms)",
+      "slaError": "SLA taux d'erreur max (%)",
+      "slaApproval": "SLA approbation min (%)",
+      "stopOnError": "Arrêt si taux d'erreur (%)",
+      "active": "Active",
+      "loadSteps": "Paliers de charge (TPS)",
+      "addStep": "Ajouter un palier",
+      "stepStart": "Début (s)",
+      "stepEnd": "Fin (s)",
+      "stepTps": "TPS",
+      "network": "Reseau",
+      "initiator": "Initiateur"
+    },
+    "help": {
+      "name": "Nom de la campagne (ex. CAMP-DEMO). Obligatoire.",
+      "category": "Catégorie de la campagne (ex. DMAS). Détermine le type de transactions générées. Obligatoire.",
+      "description": "Texte libre décrivant la campagne. Optionnel.",
+      "config": "JSON décrivant la génération : mode de PAN, présence du PIN, champs variables (montant, etc.). Cœur de la campagne.",
+      "expectedDe039": "Code réponse ISO attendu (00 = approuvé). Vérifie que les transactions renvoient le résultat espéré.",
+      "slaP95": "Temps de réponse max au 95e percentile, en ms. Ex. 500 = 95% des transactions sous 500 ms.",
+      "slaError": "Taux d'erreur maximum toléré, en %. Au-delà, verdict FAILED.",
+      "slaApproval": "Taux d'approbation minimum attendu, en %. Ex. 90 = au moins 90% approuvées.",
+      "stopOnError": "Seuil d'arrêt automatique. Si le taux d'erreur dépasse cette valeur pendant l'exécution, la campagne s'arrête.",
+      "active": "Si coché, la campagne est active et peut être lancée.",
+      "loadSteps": "Profil de montée en charge : chaque palier définit un débit (TPS) sur une plage de temps.",
+      "stepStart": "Instant de début du palier, en secondes depuis le lancement.",
+      "stepEnd": "Instant de fin du palier, en secondes.",
+      "stepTps": "Débit visé (transactions par seconde) pendant ce palier.",
+      "network": "Reseau monetique cible (DMAS, SWAM...)",
+      "initiator": "Cote qui emet la charge : ACQUIRER (banque->switch) ou ISSUER (switch->banque)"
+    }
+  },
+  "help": {
+    "title": "Aide",
+    "intro": "Documentation des écrans de la plateforme. Cliquez sur une section pour la déplier."
+  },
+  "placeholder": {
+    "toImplement": "Écran « {{name}} » — à implémenter."
+  },
+  "orchestration": {
+    "title": "Orchestration de campagne",
+    "selectCampaign": "Campagnes actives",
+    "noCampaign": "Aucune campagne active. Activez une campagne dans l'écran Génération.",
+    "launch": "Lancer",
+    "launching": "Lancement…",
+    "running": "En cours d'exécution",
+    "execution": "Exécution",
+    "autoRefresh": "Rafraîchissement auto",
+    "stopFollow": "Arrêter le suivi",
+    "refresh": "Rafraîchir",
+    "launchError": "Échec du lancement de la campagne.",
+    "followError": "Impossible de récupérer le statut de l'exécution.",
+    "status": "Statut",
+    "txTotal": "Transactions",
+    "txApproved": "Approuvées",
+    "txDeclined": "Refusées",
+    "verdict": "Verdict",
+    "tpsAvg": "TPS moyen",
+    "respAvg": "Temps réponse moyen (ms)",
+    "detail": "Détail"
+  },
+  "executionView": {
+    "title": "Consultation des exécutions",
+    "selectCampaign": "Choisir une campagne",
+    "selectPlaceholder": "— Sélectionner —",
+    "noExecution": "Aucune exécution pour cette campagne.",
+    "loadError": "Impossible de charger les exécutions.",
+    "pickCampaign": "Sélectionnez une campagne pour voir ses exécutions.",
+    "col": {
+      "execId": "Exéc. #",
+      "status": "Statut",
+      "txTotal": "Tx total",
+      "txApproved": "Approuvées",
+      "txDeclined": "Refusées",
+      "tpsAvg": "TPS moy.",
+      "verdict": "Verdict"
+    },
+    "detail": {
+      "title": "Détail de l'exécution",
+      "close": "Fermer",
+      "respAvg": "Temps de réponse moyen (ms)",
+      "verdictDetail": "Détail du verdict"
+    }
+  },
+  "dmas": {
+    "title": "Monétique DMAS",
+    "tab": {
+      "network": "Réseau",
+      "keys": "Clés",
+      "cards": "Cartes",
+      "auth": "Test 0100"
+    },
+    "network": {
+      "desc": "Gestion de la session réseau jPOS avec le simulateur.",
+      "signon": "Sign-on",
+      "signoff": "Sign-off",
+      "status": "Statut réseau"
+    },
+    "keys": {
+      "desc": "Initialisation des clés cryptographiques.",
+      "memberGroupId": "Groupe membre",
+      "kekClear": "KEK en clair",
+      "bootstrap": "Bootstrap KEK",
+      "pek": "Échange PEK"
+    },
+    "cards": {
+      "desc": "Provisionnement et consultation des cartes de test.",
+      "pan": "PAN",
+      "pin": "PIN",
+      "balance": "Solde (centimes)",
+      "currency": "Devise",
+      "expiry": "Expiration (AAMM)",
+      "create": "Provisionner",
+      "get": "Consulter",
+      "setBalance": "Ajuster le solde",
+      "status": "Statut",
+      "notFound": "Carte introuvable"
+    },
+    "auth": {
+      "desc": "Envoi d'une autorisation unitaire (message 0100).",
+      "pan": "PAN (DE002)",
+      "amount": "Montant (DE004, centimes)",
+      "processingCode": "Code traitement (DE003)",
+      "mcc": "MCC (DE018)",
+      "currency": "Devise (DE049)",
+      "pin": "PIN (DE052)",
+      "send": "Envoyer 0100",
+      "advanced": "Champs avancés"
+    },
+    "result": "Résultat",
+    "success": "Succès",
+    "error": "Erreur",
+    "sending": "Envoi…"
+  },
+  "portConfig": {
+    "title": "Configuration des ports",
+    "intro": "Consultez et modifiez le port de chaque service. Le service redémarre automatiquement sur le nouveau port.",
+    "service": "Service",
+    "currentPort": "Port actuel",
+    "newPort": "Nouveau port",
+    "apply": "Appliquer",
+    "applying": "Redémarrage…",
+    "refresh": "Rafraîchir",
+    "restarting": "Le service redémarre sur le port {{port}}…",
+    "reconnected": "Reconnecté sur le port {{port}}",
+    "unreachable": "Service injoignable",
+    "invalidPort": "Port invalide (1024-65535)",
+    "changeError": "Échec du changement de port.",
+    "sameFront": "Port connu du front"
+  },
+  "admin": {
+    "title": "Administration",
+    "subtitle": "Gestion des utilisateurs",
+    "new": "Nouvel utilisateur",
+    "none": "Aucun utilisateur.",
+    "loadError": "Impossible de charger les utilisateurs.",
+    "saveError": "Échec de l'enregistrement.",
+    "editTitle": "Éditer l'utilisateur",
+    "newTitle": "Nouvel utilisateur",
+    "col": {
+      "id": "ID",
+      "login": "Identifiant",
+      "email": "E-mail",
+      "role": "Rôle",
+      "active": "Actif"
+    },
+    "field": {
+      "login": "Identifiant",
+      "password": "Mot de passe",
+      "email": "E-mail",
+      "role": "Rôle",
+      "passwordHint": "Laisser vide pour ne pas changer"
+    },
+    "toggle": "Activer/Désactiver",
+    "activate": "Activer",
+    "deactivate": "Désactiver"
+  }
+  ,"clearing": {
+    "transactions": "Transactions de clearing",
+    "files": "Fichiers LIS",
+    "reconciliation": "Rapprochement",
+    "chargebacks": "Chargebacks",
+    "eod": "Fin de journée",
+    "accounting": "Comptabilisation",
+    "foundationReady": "Socle dynamique actif",
+    "dynamicContext": "Écran commun chargé avec le contexte du module",
+    "dynamicContextDetail": "Les listes et actions métier seront activées avec les API de consultation et les permissions fines."
+  },
+  "modules": {
+    "serverPos": "ServerPOS",
+    "acquiring": "Acquisition POS / e-commerce",
+    "issuing": "Issuing",
+    "swamMember": "SWAM Membre",
+    "dmasMember": "DMAS Membre",
+    "dmcsMember": "DMCS Membre",
+    "visaOnline": "Visa Online Membre",
+    "visaBase2": "Visa Base II Membre",
+    "simulators": "Simulateurs"
+  },
+  "moduleMenus": { "operations": "Opérations", "simulators": "Simulateurs" },
+  "screens": {
+    "overview": "Vue d'ensemble", "terminals": "Terminaux", "merchants": "Commerçants",
+    "routing": "Routage", "keys": "Clés", "transactions": "Transactions", "logs": "Journaux",
+    "contracts": "Contrats", "posTransactions": "Transactions POS", "ecommerceTransactions": "Transactions e-commerce",
+    "settlement": "Compensation", "customers": "Clients", "products": "Produits", "cards": "Cartes",
+    "authorizations": "Autorisations", "cardControls": "Contrôles carte", "statements": "Relevés",
+    "network": "Réseau", "reconciliation": "Rapprochement", "posSimulator": "Simulateur POS",
+    "merchantSiteLocal": "Site marchand national", "merchantSiteInternational": "Site marchand international",
+    "threeDsNetwork": "Simulateur réseau 3DS", "cardNetwork": "Simulateur réseau Visa / Mastercard",
+    "presentments": "Présentations", "base2Files": "Fichiers Base II",
+    "visaNetSimulator": "Simulateur réseau VisaNet", "base2Simulator": "Simulateur réseau Base II"
+  },
+  "roles": {
+    "title": "Rôles", "subtitle": "Rôles et permissions effectives", "loadError": "Impossible de charger les rôles.",
+    "none": "Aucun rôle.", "code": "Code", "label": "Libellé", "permissions": "Permissions"
+  },
+  "workflow": {
+    "myOperations": "Mes opérations", "myApprovals": "Mes validations", "none": "Aucune demande.",
+    "foundationTitle": "Socle Maker/Checker prêt",
+    "foundationDetail": "L'interface est fermée tant que les API de workflow ne sont pas raccordées. Aucune validation fictive n'est créée."
+  },
+  "dynamicScreen": {
+    "unavailableTitle": "Écran indisponible", "unavailableDetail": "Cet écran n'est pas enregistré dans le registre frontend."
+  },
+  "moduleWorkspace": {
+    "ready": "Module enregistré dans le portail", "detail": "Le menu, la route et le contrôle d'accès sont actifs. L'écran métier sera raccordé à son API dédiée."
+  },
+  "visaWorkspace": {
+    "sandbox": "Sandbox fonctionnelle non certifiée", "scope": "Périmètre opérationnel",
+    "onlineScope": "Autorisation Visa Online ISO 8583, corrélation STAN/RRN, réponse DE39/DE38 et références Visa DE62.",
+    "base2Scope": "Préparation CTF Base II à 168 octets, ARN contrôlé, validation de structure et acquittement réseau idempotent.",
+    "safety": "Sécurité et traçabilité", "safetyDetail": "PAN masqué, aucune clé ni donnée sensible journalisée, refus explicite quand le transport ou une donnée obligatoire manque.",
+    "flow": { "acquiring": "Acquisition e-commerce", "gateway": "Routage Visa", "visanet": "VisaNet", "response": "Réponse inverse", "authorization": "Autorisation acceptée", "presentment": "Présentation", "base2": "Fichier Base II", "ack": "Acquittement" }
+  },
+  "deployment": {
+    "title": "Déploiements", "subtitle": "Préparer, valider et exploiter les plateformes membres et simulateurs.",
+    "menu": { "overview": "Vue d'ensemble", "clients": "Clients banques", "environments": "Environnements", "modules": "Modules", "licenses": "Licences", "executions": "Exécutions" },
+    "metrics": { "clients": "Clients banques", "environments": "Environnements", "bundles": "Bundles exécutables" },
+    "overview": {
+      "menuMode": "Pilotage depuis le menu", "menuModeDetail": "Les équipes fonctionnelles préparent les clients, environnements, modules et contrôles préalables depuis l'administration.",
+      "cliMode": "Pilotage technique par CLI", "cliModeDetail": "Les mêmes opérations sont disponibles en Git Bash, Linux Bash, PowerShell et CMD avec un contrat commun.",
+      "safety": "Déploiement fermé par défaut", "safetyDetail": "Tout contrôle BLOQUANT interdit l'installation. Les secrets restent référencés et ne sont jamais affichés ni enregistrés dans Git."
+    },
+    "clients": { "title": "Clients banques", "new": "Nouveau client", "none": "Aucun client banque n'est encore enregistré." },
+    "environments": { "title": "Environnements", "new": "Nouvel environnement", "none": "Aucun environnement pour ce client." },
+    "fields": {
+      "code": "Code", "legalName": "Raison sociale", "commercialName": "Nom commercial", "country": "Pays", "currency": "Devise", "status": "Statut",
+      "environmentType": "Type d'environnement", "root": "Répertoire de déploiement", "shellExecutable": "Exécutable du shell", "databaseType": "Base de données",
+      "dbSecretRef": "Référence secrète du mot de passe DB", "variableReferences": "Références des variables sensibles",
+      "environment": "Environnement", "validFrom": "Valide à partir du", "validUntil": "Valide jusqu'au", "validity": "Validité", "bundleVersion": "Version des bundles"
+    },
+    "preflight": { "run": "Vérifier les prérequis", "title": "Rapport de prérequis" },
+    "modules": { "members": "Modules côté membre", "simulators": "Modules simulateurs" },
+    "licenses": {
+      "title": "Licences de déploiement", "detail": "Chaque livraison contient une licence technique signée et une licence PDF lisible par le client.",
+      "noSecrets": "Aucun secret dans les licences", "noSecretsDetail": "Les licences identifient le client, l'environnement et les modules autorisés sans contenir de clé, mot de passe ou PAN.",
+      "prepare": "Préparer la licence", "none": "Aucune demande de licence."
+    },
+    "executions": { "title": "Exécutions techniques", "detail": "La CLI commune conserve un cycle explicite et contrôlable sur tous les shells supportés.", "action": "Action", "request": "Soumettre au checker", "none": "Aucune demande d'exécution." },
+    "approve": "Approuver",
+    "errors": {
+      "load": "Impossible de charger l'administration des déploiements.", "environments": "Impossible de charger les environnements.", "save": "Impossible d'enregistrer les informations.",
+      "clientRequired": "Sélectionnez d'abord un client banque.", "environmentRequired": "Sélectionnez d'abord un environnement.", "variables": "Chaque variable doit respecter NOM=secret://référence.", "preflight": "Le contrôle des prérequis a échoué.",
+      "license": "La demande de licence a échoué.", "execution": "La demande d'exécution a échoué.", "approval": "L'approbation a échoué. Vérifiez la séparation maker/checker et la configuration serveur."
+    }
+  }
+}

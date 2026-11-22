@@ -1,0 +1,78 @@
+#!/usr/bin/env python3
+"""Real XCUITest execution on a fresh simulator. Never publish raw result bundles or credentials."""
+from pathlib import Path
+import datetime,json,os,plistlib,re,shutil,subprocess,sys,tempfile
+F=Path(__file__).resolve().parents[2]
+OUT=Path(os.environ.get('FP_IOS_OUTPUT',str(F/'ios/App/output/cloud'))).resolve()
+SAFE=OUT/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
+authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
+password=os.environ.get('FP_IOS_TEST_PASSWORD','')
+if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
+def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
+def redacted(value):
+    if password:value=value.replace(password,'[REDACTED]')
+    value=re.sub(r'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+','[JWT_REDACTED]',value)
+    return re.sub(r'([?#&](?:token|code)=)[^\s"<>]+',r'\1[REDACTED]',value,flags=re.I)
+listing=json.loads(run(['xcrun','simctl','list','devices','available','--json']))
+chosen=next((d for runtime,devices in listing['devices'].items() if 'iOS' in runtime for d in devices if d.get('isAvailable') and d['name'].startswith('iPhone')),None)
+if not chosen:raise SystemExit('Aucun simulateur iPhone utilisable sur ce runner.')
+destination='platform=iOS Simulator,id='+chosen['udid']
+common=['xcodebuild','-project',str(F/'ios/App/App.xcodeproj'),'-scheme','App','-configuration','Release','-derivedDataPath',str(OUT/'UITestBuild'),'-destination',destination,'CODE_SIGNING_ALLOWED=NO','-parallel-testing-enabled','NO']
+report={'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'nativeUIExecutionStarted':False,'authenticatedRequested':authenticated,'simulatorName':chosen['name'],'realIPhoneDeviceTested':False,'fullAcceptanceCompleted':False,'pentestExecuted':False}
+raw=OUT/'xcode-ui-private.log'
+rc=1
+try:
+    with raw.open('w') as log:
+        build=subprocess.run(common+['build-for-testing'],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=900)
+    if build.returncode:raise RuntimeError('Build-for-testing failed')
+    runs=list((OUT/'UITestBuild/Build/Products').glob('*.xctestrun'))
+    if len(runs)!=1:raise RuntimeError('No unique xctestrun file')
+    data=plistlib.loads(runs[0].read_bytes());targets=[]
+    for key,value in data.items():
+        if isinstance(value,dict) and 'MerchantUITests' in key:targets.append(value)
+    for configuration in data.get('TestConfigurations',[]):targets.extend(t for t in configuration.get('TestTargets',[]) if t.get('BlueprintName')=='MerchantUITests')
+    if not targets:raise RuntimeError('UI test target missing from xctestrun')
+    for target in targets:
+        target.setdefault('EnvironmentVariables',{}).update(FP_IOS_AUTHENTICATED_TESTS='true' if authenticated else 'false',FP_IOS_TEST_USER=os.environ.get('FP_IOS_TEST_USER','bim.amina'),FP_IOS_TEST_PASSWORD=password)
+    with tempfile.NamedTemporaryFile(prefix='fp-ui-',suffix='.xctestrun',dir=OUT/'UITestBuild/Build/Products',delete=False) as file:
+        private=Path(file.name);file.write(plistlib.dumps(data))
+    private.chmod(0o600)
+    bundle=OUT/'native-results.xcresult'
+    try:
+        report['nativeUIExecutionStarted']=True
+        with raw.open('a') as log:
+            test=subprocess.run(['xcodebuild','test-without-building','-xctestrun',str(private),'-destination',destination,'-parallel-testing-enabled','NO','-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=900)
+        summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
+        passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3,authenticatedCasesPassed=authenticated and test.returncode==0 and passed==5 and skipped==0)
+        rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
+        # Curated attachments only; raw XCTest result bundles may contain input activity.
+        attachments=OUT/'private-attachments'
+        subprocess.run(['xcrun','xcresulttool','export','attachments','--path',str(bundle),'--output-path',str(attachments)],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=120)
+        # Export only attachments explicitly created after password reset or on public screens.
+        # Never export framework failure attachments or input-activity result bundles.
+        images=[]
+        def inspect(value):
+            if isinstance(value,dict):
+                strings=[s for s in value.values() if isinstance(s,str)]
+                if any('preuve-' in s for s in strings):
+                    for candidate in strings:
+                        if candidate.endswith('.png') and Path(candidate).name==candidate:
+                            image=attachments/candidate
+                            if image.is_file():
+                                target=SAFE/'captures'/candidate;target.parent.mkdir(exist_ok=True)
+                                shutil.copy2(image,target);images.append(candidate)
+                for child in value.values():inspect(child)
+            elif isinstance(value,list):
+                for child in value:inspect(child)
+        for manifest in attachments.glob('*.json'):
+            try:inspect(json.loads(manifest.read_text()))
+            except ValueError:pass
+        report.update(screenshotsAwaitingReview=True,curatedScreenshotFiles=sorted(set(images)))
+    finally:private.unlink(missing_ok=True)
+except Exception as error:
+    report['failure']=redacted(str(error))
+finally:
+    if raw.is_file():(SAFE/'journal-expurge.txt').write_text(redacted(raw.read_text(errors='replace')),encoding='utf8')
+    (SAFE/'resultats-ui.json').write_text(json.dumps(report,indent=2)+'\n')
+print(json.dumps(report));raise SystemExit(rc)

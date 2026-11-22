@@ -1,0 +1,5 @@
+/* Keep audit rows readable on narrow screens; horizontal scrolling preserves every column. */
+.table-scroll table { min-width: 720px; }
+.table-scroll table th, .table-scroll table td { overflow-wrap: normal; min-width: 85px; }
+.table-scroll table th:first-child, .table-scroll table td:first-child { min-width: 65px; }
+.table-scroll:focus-visible { outline: 2px solid #0057a8; outline-offset: 3px; }

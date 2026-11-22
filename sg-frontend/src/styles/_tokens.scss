@@ -1,0 +1,58 @@
+/* =====================================================================
+   Tokens de design centralises — charte modifiable en un seul endroit.
+   Toutes les couleurs, espacements, rayons passent par des variables CSS.
+   Un changement ici se propage a toute l'application.
+   Les themes (clair/sombre/custom) surchargent ces variables a chaud.
+   ===================================================================== */
+:root {
+  /* Couleurs de marque (surchargeables par theme) */
+  --sg-color-primary: #2563eb;
+  --sg-color-primary-hover: #1d4ed8;
+  --sg-color-accent: #0f766e;
+  --sg-color-danger: #dc2626;
+  --sg-color-success: #16a34a;
+  --sg-color-warning: #d97706;
+
+  /* Surfaces */
+  --sg-bg-page: #f5f6f8;
+  --sg-bg-surface: #ffffff;
+  --sg-bg-elevated: #ffffff;
+  --sg-bg-sidebar: #1e293b;
+  --sg-bg-hover: #f1f5f9;
+
+  /* Texte */
+  --sg-text-primary: #0f172a;
+  --sg-text-secondary: #475569;
+  --sg-text-muted: #94a3b8;
+  --sg-text-on-primary: #ffffff;
+  --sg-text-on-sidebar: #e2e8f0;
+
+  /* Bordures */
+  --sg-border: #e2e8f0;
+  --sg-border-strong: #cbd5e1;
+
+  /* Rayons */
+  --sg-radius-sm: 6px;
+  --sg-radius: 10px;
+  --sg-radius-lg: 16px;
+
+  /* Espacements */
+  --sg-gap-xs: 4px;
+  --sg-gap-sm: 8px;
+  --sg-gap-md: 16px;
+  --sg-gap-lg: 24px;
+  --sg-gap-xl: 40px;
+
+  /* Typographie */
+  --sg-font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --sg-font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  --sg-font-size-base: 14px;
+
+  /* Elevation */
+  --sg-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --sg-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+
+  /* Layout */
+  --sg-sidebar-width: 260px;
+  --sg-topbar-height: 60px;
+}

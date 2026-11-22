@@ -1,0 +1,435 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "projects": {
+    "sg-frontend": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/sg-frontend",
+            "index": "src/index.html",
+            "browser": "src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.app.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }],
+              "outputHashing": "all",
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switchlab.prod.ts" }]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switchlab.ts" }]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "configurations": {
+            "production": { "buildTarget": "sg-frontend:build:production" },
+            "development": { "buildTarget": "sg-frontend:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "futurpayment-switchlab": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/futurpayment-switchlab",
+            "index": "src/index.html",
+            "browser": "src/main.switchlab.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.switchlab.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }],
+              "outputHashing": "all",
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switchlab.prod.ts" }]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switchlab.ts" }]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "port": 4210 },
+          "configurations": {
+            "production": { "buildTarget": "futurpayment-switchlab:build:production" },
+            "development": { "buildTarget": "futurpayment-switchlab:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "futurpayment-switch": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/futurpayment-switch",
+            "index": "src/index.html",
+            "browser": "src/main.switch.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.switch.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }],
+              "outputHashing": "all",
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switch.prod.ts" }]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.switch.ts" }]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "port": 4220 },
+          "configurations": {
+            "production": { "buildTarget": "futurpayment-switch:build:production" },
+            "development": { "buildTarget": "futurpayment-switch:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "futurpayment-fraud-gateway": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "fraud",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/futurpayment-fraud-gateway",
+            "index": { "input": "src/index.fraud-gateway.html", "output": "index.html" },
+            "browser": "src/main.fraud-gateway.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.fraud-gateway.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }],
+              "outputHashing": "all"
+            },
+            "development": { "optimization": false, "extractLicenses": false, "sourceMap": true }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "port": 4250 },
+          "configurations": {
+            "production": { "buildTarget": "futurpayment-fraud-gateway:build:production" },
+            "development": { "buildTarget": "futurpayment-fraud-gateway:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "futurpayment-fraud-platform": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "fraud",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/futurpayment-fraud-platform",
+            "index": { "input": "src/index.fraud-platform.html", "output": "index.html" },
+            "browser": "src/main.fraud-platform.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.fraud-platform.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }],
+              "outputHashing": "all"
+            },
+            "development": { "optimization": false, "extractLicenses": false, "sourceMap": true }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "port": 4260 },
+          "configurations": {
+            "production": { "buildTarget": "futurpayment-fraud-platform:build:production" },
+            "development": { "buildTarget": "futurpayment-fraud-platform:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "merchant-portal-web": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/merchant-portal-web",
+            "index": "src/index.html",
+            "browser": "src/main.merchant-portal.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.merchant-portal.json",
+            "assets": ["src/assets", {"glob": "assetlinks.json", "input": "src/.well-known", "output": "/.well-known"}],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }],
+              "outputHashing": "all",
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.merchant-portal.prod.ts" }]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.merchant-portal.ts" }]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "port": 4230 },
+          "configurations": {
+            "production": { "buildTarget": "merchant-portal-web:build:production" },
+            "development": { "buildTarget": "merchant-portal-web:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "futurpayment-marketplace": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "marketplace",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/futurpayment-marketplace",
+            "index": { "input": "src/index.marketplace.html", "output": "index.html" },
+            "browser": "src/main.marketplace.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.marketplace.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "650kb", "maximumError": "1.8mb" }],
+              "outputHashing": "all"
+            },
+            "development": { "optimization": false, "extractLicenses": false, "sourceMap": true }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "port": 4270 },
+          "configurations": {
+            "production": { "buildTarget": "futurpayment-marketplace:build:production" },
+            "development": { "buildTarget": "futurpayment-marketplace:build:development" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    },
+    "futurpayment-marketplace-client-mobile": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "marketplace",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/futurpayment-marketplace-client-mobile",
+            "index": { "input": "src/index.marketplace-client-mobile.html", "output": "index.html" },
+            "browser": "src/main.marketplace-client-mobile.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.marketplace-client-mobile.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": { "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false }, "budgets": [{ "type": "initial", "maximumWarning": "650kb", "maximumError": "1.8mb" }], "outputHashing": "all" },
+            "development": { "optimization": false, "extractLicenses": false, "sourceMap": true }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": { "builder": "@angular-devkit/build-angular:dev-server", "options": { "port": 4271 }, "configurations": { "production": { "buildTarget": "futurpayment-marketplace-client-mobile:build:production" }, "development": { "buildTarget": "futurpayment-marketplace-client-mobile:build:development" } }, "defaultConfiguration": "development" }
+      }
+    },
+    "futurpayment-marketplace-merchant-mobile": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "marketplace",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/futurpayment-marketplace-merchant-mobile",
+            "index": { "input": "src/index.marketplace-merchant-mobile.html", "output": "index.html" },
+            "browser": "src/main.marketplace-merchant-mobile.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.marketplace-merchant-mobile.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": { "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false }, "budgets": [{ "type": "initial", "maximumWarning": "750kb", "maximumError": "2mb" }], "outputHashing": "all" },
+            "development": { "optimization": false, "extractLicenses": false, "sourceMap": true }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": { "builder": "@angular-devkit/build-angular:dev-server", "options": { "port": 4272 }, "configurations": { "production": { "buildTarget": "futurpayment-marketplace-merchant-mobile:build:production" }, "development": { "buildTarget": "futurpayment-marketplace-merchant-mobile:build:development" } }, "defaultConfiguration": "development" }
+      }
+    },
+    "futurpayment-marketplace-courier-mobile": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "marketplace",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/futurpayment-marketplace-courier-mobile",
+            "index": { "input": "src/index.marketplace-courier-mobile.html", "output": "index.html" },
+            "browser": "src/main.marketplace-courier-mobile.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.marketplace-courier-mobile.json",
+            "assets": ["src/assets"],
+            "styles": ["src/styles.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": { "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false }, "budgets": [{ "type": "initial", "maximumWarning": "500kb", "maximumError": "1.5mb" }], "outputHashing": "all" },
+            "development": { "optimization": false, "extractLicenses": false, "sourceMap": true }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": { "builder": "@angular-devkit/build-angular:dev-server", "options": { "port": 4273 }, "configurations": { "production": { "buildTarget": "futurpayment-marketplace-courier-mobile:build:production" }, "development": { "buildTarget": "futurpayment-marketplace-courier-mobile:build:development" } }, "defaultConfiguration": "development" }
+      }
+    },
+    "merchant-mobile": {
+      "projectType": "application",
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular-devkit/build-angular:application",
+          "options": {
+            "outputPath": "dist/merchant-mobile",
+            "index": "src/index.html",
+            "browser": "src/main.merchant-mobile.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.merchant-mobile.json",
+            "assets": ["src/assets", {"glob": "assetlinks.json", "input": "src/.well-known", "output": "/.well-known"}],
+            "styles": ["src/mobile/mobile.scss"],
+            "scripts": []
+          },
+          "configurations": {
+            "production": {
+              "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": true }, "fonts": false },
+              "budgets": [{ "type": "initial", "maximumWarning": "750kb", "maximumError": "2mb" }],
+              "outputHashing": "all",
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.merchant-portal.prod.ts" }]
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.merchant-portal.ts" }]
+            },
+            "wifi": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": false,
+              "fileReplacements": [{ "replace": "src/environments/environment.ts", "with": "src/environments/environment.merchant-mobile.wifi.ts" }]
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular-devkit/build-angular:dev-server",
+          "options": { "port": 4240 },
+          "configurations": {
+            "production": { "buildTarget": "merchant-mobile:build:production" },
+            "development": { "buildTarget": "merchant-mobile:build:development" },
+            "wifi": { "buildTarget": "merchant-mobile:build:wifi" }
+          },
+          "defaultConfiguration": "development"
+        }
+      }
+    }
+  }
+}
