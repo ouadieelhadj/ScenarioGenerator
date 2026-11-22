@@ -123,4 +123,52 @@ final class MerchantUITests: XCTestCase {
         // photo, support decision, isolation attack or full onboarding acceptance.
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
     }
+
+    @MainActor private func dismissFormKeyboard(_ app: XCUIApplication) {
+        let done = app.toolbars.buttons.matching(NSPredicate(format: "label IN %@", ["OK", "Done", "Terminé"])).firstMatch
+        if done.exists && done.isHittable { done.tap() }
+    }
+    @MainActor private func fillIncidentField(_ app: XCUIApplication, field: XCUIElement, value: String) {
+        XCTAssertTrue(field.waitForExistence(timeout: 15))
+        for _ in 0..<7 {
+            if field.isHittable { break }
+            app.webViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(field.isHittable); field.tap(); field.typeText(value)
+        dismissFormKeyboard(app)
+    }
+    @MainActor func test06NativeIncidentDraftCreation() throws {
+        let app = launch(); try login(app)
+        tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
+        let declaration = element(app, "Déclarer un incident")
+        XCTAssertTrue(declaration.waitForExistence(timeout: 30))
+        let loaded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: declaration)
+        XCTAssertEqual(XCTWaiter.wait(for: [loaded], timeout: 25), .completed, "Le périmètre BIM doit être chargé avant le dépôt.")
+        tap(app, "Déclarer un incident")
+        XCTAssertTrue(element(app, "Nouvelle déclaration").waitForExistence(timeout: 15))
+        screenshot(app, "ios06-formulaire-avant-saisie")
+        let beneficiary = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == %@ OR label BEGINSWITH %@", "Choisir un dossier autorisé", "Commerce ou dossier bénéficiaire")).firstMatch
+        XCTAssertTrue(beneficiary.exists && beneficiary.isHittable, "Sélecteur bénéficiaire natif indisponible.")
+        beneficiary.tap()
+        let wheel = app.pickerWheels.firstMatch
+        if wheel.waitForExistence(timeout: 3) {
+            // This exact label was read from the existing BIM fixture on OCI.
+            wheel.adjust(toPickerWheelValue: "BIM")
+            dismissFormKeyboard(app)
+        } else {
+            let option = app.buttons.matching(NSPredicate(format: "label == %@", "BIM")).firstMatch
+            XCTAssertTrue(option.waitForExistence(timeout: 5)); option.tap()
+        }
+        let subject = "iOS natif " + UUID().uuidString.prefix(8).lowercased()
+        fillIncidentField(app, field: app.webViews.textFields.matching(NSPredicate(format: "label == %@", "Objet")).firstMatch, value: subject)
+        fillIncidentField(app, field: app.webViews.textViews.matching(NSPredicate(format: "label == %@", "Description")).firstMatch, value: "Brouillon fictif créé depuis le simulateur iPhone. Aucun traitement financier.")
+        tap(app, "Enregistrer le brouillon")
+        XCTAssertTrue(element(app, "Brouillon enregistré.").waitForExistence(timeout: 30), "Aucun accusé natif de sauvegarde reçu.")
+        XCTAssertTrue(element(app, subject).exists)
+        // Only a synthetic subject, never credentials, is exported for server reconciliation.
+        print("FP_NATIVE_DRAFT subject=" + subject)
+        screenshot(app, "ios06-brouillon-natif-enregistre")
+        tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+    }
+
 }
