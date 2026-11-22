@@ -37,7 +37,8 @@ public final class SecureSessionPlugin: CAPPlugin, CAPBridgedPlugin {
     public let pluginMethods: [CAPPluginMethod] = [
         CAPPluginMethod(name: "set", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "get", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "clear", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "clear", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "diagnose", returnType: CAPPluginReturnPromise)
     ]
     private let queue = DispatchQueue(label: "com.moneycore.merchant.session")
 
@@ -62,6 +63,24 @@ public final class SecureSessionPlugin: CAPPlugin, CAPBridgedPlugin {
                     call.reject("Session protégée indisponible. Reconnectez-vous.", "SESSION_KEYCHAIN")
                 }
             }
+        }
+    }
+    @objc public func diagnose(_ call: CAPPluginCall) {
+        guard let phase = call.getString("phase"), ["NETWORK", "HTTP", "SESSION", "CLIENT"].contains(phase),
+              let status = call.getInt("status"), (-1...599).contains(status),
+              let destination = call.getString("destination"), ["HTTPS", "BUNDLED", "OTHER", "NONE"].contains(destination) else {
+            call.options = [:]; call.reject("Diagnostic refusé.", "SESSION_DIAGNOSTIC_INVALID"); return
+        }
+        call.options = [:]
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self, MerchantOriginPolicy.isBundledPage(self.bridge?.webView?.url) else {
+                call.reject("Origine non autorisée.", "SESSION_ORIGIN"); return
+            }
+            #if targetEnvironment(simulator)
+            NSLog("FP_AUTH_DIAGNOSTIC phase=%@ status=%ld destination=%@", phase, status, destination)
+            #endif
+            // No logging or persisted diagnostic on physical devices.
+            call.resolve()
         }
     }
     @objc public func set(_ call: CAPPluginCall) {

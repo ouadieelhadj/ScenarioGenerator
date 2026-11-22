@@ -232,13 +232,19 @@ final class MerchantUITests: XCTestCase {
             app.webViews.firstMatch.swipeUp()
         }
         XCTAssertTrue(select.exists && select.isHittable)
-        select.tap()
-        let wheel = app.pickerWheels.firstMatch
-        if wheel.waitForExistence(timeout: 3) {
-            wheel.adjust(toPickerWheelValue: action); dismissFormKeyboard(app)
-        } else {
-            let option = app.buttons.matching(NSPredicate(format: "label == %@", action)).firstMatch
-            XCTAssertTrue(option.waitForExistence(timeout: 5)); option.tap()
+        if (select.value as? String) != action {
+            select.tap()
+            let wheel = app.pickerWheels.firstMatch
+            if wheel.waitForExistence(timeout: 3) {
+                wheel.adjust(toPickerWheelValue: action); dismissFormKeyboard(app)
+            } else {
+                let prefix = action.hasPrefix("Contester") ? "Contester" : action.hasPrefix("Confirmer personnellement") ? "Confirmer personnellement" : action
+                let option = app.descendants(matching: .any).matching(NSPredicate(format: "label BEGINSWITH[cd] %@", prefix)).firstMatch
+                screenshot(app, action.hasPrefix("Contester") ? "diagnostic-menu-reouverture" : "diagnostic-menu-action")
+                XCTAssertTrue(option.waitForExistence(timeout: 5), "Choix natif de l’action indisponible ; voir le menu capturé.")
+                if !option.isHittable && app.menus.firstMatch.exists { app.menus.firstMatch.swipeUp() }
+                XCTAssertTrue(option.isHittable); option.tap()
+            }
         }
         let message = app.webViews.textViews.matching(NSPredicate(format: "label == %@", "Message ou motif")).firstMatch
         fillIncidentField(app, field: message, value: text)

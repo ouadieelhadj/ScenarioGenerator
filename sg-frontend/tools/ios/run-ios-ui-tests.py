@@ -7,9 +7,9 @@ OUT=Path(os.environ.get('FP_IOS_OUTPUT',str(F/'ios/App/output/cloud'))).resolve(
 SAFE=OUT/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
 authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
 focus=os.environ.get('FP_IOS_UI_FOCUS','full')
-if focus not in ('full','session_files_reinstall'):raise SystemExit('Unsupported native suite')
+if focus not in ('full','session_files_reinstall','authenticated'):raise SystemExit('Unsupported native suite')
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
-expectedCases=5 if focus=='session_files_reinstall' else 10
+expectedCases=5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 10
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -52,7 +52,7 @@ try:
     for configuration in data.get('TestConfigurations',[]):targets.extend(t for t in configuration.get('TestTargets',[]) if t.get('BlueprintName')=='MerchantUITests')
     if not targets:raise RuntimeError('UI test target missing from xctestrun')
     supportFixture=None
-    if authenticated and focus=='full':
+    if authenticated and focus in ('full','authenticated'):
         import importlib.util
         spec=importlib.util.spec_from_file_location('native_support_fixtures',F/'tools/ios/prepare-native-support-fixtures.py')
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
@@ -80,6 +80,8 @@ try:
         if not authenticated:exclusions+=['-skip-testing:'+selector+'test10SeedSessionForReinstall']
         if focus=='session_files_reinstall':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
+        if focus=='authenticated':
+            exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test06NativeIncidentDraftCreation','test07NativeSupportReplyAndResolution','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
         with raw.open('a') as log:
             test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
@@ -192,5 +194,16 @@ finally:
             report['nativeSessionDiagnostic']=[{'operation':name,'code':int(code)} for name,code in codes]
     except subprocess.TimeoutExpired:
         report['nativeSessionDiagnosticUnavailable']='log timeout; native test verdict preserved'
+    try:
+        diagnostic=subprocess.run(['xcrun','simctl','spawn',chosen['udid'],'log','show','--last','30m','--style','compact','--predicate','eventMessage BEGINSWITH "FP_AUTH_DIAGNOSTIC"'],capture_output=True,text=True,timeout=45)
+        if diagnostic.returncode==0:
+            report['nativeAuthDiagnostic']=[{'phase':phase,'status':int(status),'destination':destination} for phase,status,destination in re.findall(r'FP_AUTH_DIAGNOSTIC phase=(NETWORK|HTTP|SESSION|CLIENT) status=(-?\d+) destination=(HTTPS|BUNDLED|OTHER|NONE)',diagnostic.stdout)]
+        network=subprocess.run(['xcrun','simctl','spawn',chosen['udid'],'log','show','--last','30m','--style','compact','--predicate','process == "App" AND subsystem == "com.apple.CFNetwork" AND messageType == error'],capture_output=True,text=True,timeout=45)
+        if network.returncode==0:
+            codes=re.findall(r'(?:NSURLErrorDomain Code=|completed with error \[)(-?\d+)',network.stdout)
+            report['nativeNetworkErrorCodesOnly']=sorted(set(int(code) for code in codes))
+            report['nativeNetworkLogRawExported']=False
+    except subprocess.TimeoutExpired:
+        report['nativeAuthDiagnosticCollectionTimedOut']=True
     (SAFE/'resultats-ui.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report));raise SystemExit(rc)

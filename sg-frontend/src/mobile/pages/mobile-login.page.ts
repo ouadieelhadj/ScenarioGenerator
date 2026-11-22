@@ -1,3 +1,5 @@
+import {Capacitor,registerPlugin} from '@capacitor/core';
+import {mobileLoginDiagnostic} from '../services/mobile-login-diagnostic';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
@@ -63,6 +65,10 @@ export class MobileLoginPage {
       error: (error: unknown) => {
         this.loading.set(false);
         this.form.controls.password.reset('');
+        if(Capacitor.getPlatform()==='ios') {
+          const diagnostic=mobileLoginDiagnostic(error,error instanceof HttpErrorResponse,window.location.href);
+          void loginDiagnostics.diagnose(diagnostic).catch(()=>undefined);
+        }
         const status=error instanceof HttpErrorResponse?error.status:-1;
         this.error.set(status===400||status===401?'Identifiant ou mot de passe incorrect.':
           status===403?'Accès à la connexion refusé. Réessayez ou contactez votre support.':
@@ -72,3 +78,5 @@ export class MobileLoginPage {
     });
   }
 }
+
+const loginDiagnostics=registerPlugin<{diagnose:(input:ReturnType<typeof mobileLoginDiagnostic>)=>Promise<void>}>('SecureSession');
