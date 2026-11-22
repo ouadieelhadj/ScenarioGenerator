@@ -42,11 +42,19 @@ final class MerchantUITests: XCTestCase {
         // Move the field above the software keyboard before tapping it. Ionic can
         // reposition its input while the first keyboard is appearing.
         let viewport = app.webViews.firstMatch
-        viewport.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.40))
-            .press(forDuration: 0.05, thenDragTo: viewport.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.18)))
         let secret = app.webViews.secureTextFields.firstMatch
         XCTAssertTrue(secret.waitForExistence(timeout: 10))
         _ = XCTWaiter.wait(for: [], timeout: 0.5)
+        for _ in 0..<5 {
+            let bottom = app.keyboards.firstMatch.exists ? app.keyboards.firstMatch.frame.minY : viewport.frame.maxY
+            if secret.frame.minY < viewport.frame.minY + 60 {
+                viewport.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.25))
+                    .press(forDuration: 0.05, thenDragTo: viewport.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.50)))
+            } else if secret.frame.maxY > bottom - 12 {
+                viewport.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.50))
+                    .press(forDuration: 0.05, thenDragTo: viewport.coordinate(withNormalizedOffset: CGVector(dx: 0.85, dy: 0.25)))
+            } else { break }
+        }
         XCTAssertTrue(secret.isHittable, "Le champ sécurisé doit être visible avant saisie.")
         secret.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5)).tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
@@ -96,7 +104,9 @@ final class MerchantUITests: XCTestCase {
         screenshot(app, "ios04-accueil-commercant")
         app.terminate(); app.launch()
         let user = ProcessInfo.processInfo.environment["FP_IOS_TEST_USER"] ?? "bim.amina"
-        XCTAssertTrue(element(app, "Bonjour " + user).waitForExistence(timeout: 30), "Restauration Keychain non confirmée.")
+        let restored = element(app, "Bonjour " + user).waitForExistence(timeout: 30)
+        screenshot(app, "diagnostic-restauration-apres-relance")
+        XCTAssertTrue(restored, "Restauration Keychain non confirmée.")
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
         XCTAssertTrue(app.webViews.secureTextFields.firstMatch.waitForExistence(timeout: 20))
         app.terminate(); app.launch()

@@ -49,8 +49,16 @@ public final class SecureSessionPlugin: CAPPlugin, CAPBridgedPlugin {
             self.queue.async {
                 do {
                     try MerchantSessionKeychain.prepareInstallation()
-                    call.resolve(try operation())
+                    let result = try operation()
+                    #if targetEnvironment(simulator)
+                    NSLog("FP_SESSION_DIAGNOSTIC operation=%@ code=0", call.methodName)
+                    #endif
+                    call.resolve(result)
                 } catch {
+                    #if targetEnvironment(simulator)
+                    // Error code only: never log a token, query or protected value.
+                    NSLog("FP_SESSION_DIAGNOSTIC operation=%@ code=%ld", call.methodName, (error as NSError).code)
+                    #endif
                     call.reject("Session protégée indisponible. Reconnectez-vous.", "SESSION_KEYCHAIN")
                 }
             }

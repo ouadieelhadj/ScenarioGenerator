@@ -109,5 +109,9 @@ finally:
                 recover(document)
             report['curatedScreenshotFiles']=sorted(p.name for p in (SAFE/'captures').glob('*') if p.is_file())
             report['screenshotsAwaitingReview']=bool(report['curatedScreenshotFiles'])
+    diagnostic = subprocess.run(['xcrun','simctl','spawn',chosen['udid'],'log','show','--last','20m','--style','compact','--predicate','eventMessage BEGINSWITH "FP_SESSION_DIAGNOSTIC"'],capture_output=True,text=True,timeout=60)
+    if diagnostic.returncode == 0:
+        codes = re.findall(r'FP_SESSION_DIAGNOSTIC operation=([a-zA-Z]+) code=(-?\d+)',diagnostic.stdout)
+        report['nativeSessionDiagnostic']=[{'operation':name,'code':int(code)} for name,code in codes]
     (SAFE/'resultats-ui.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report));raise SystemExit(rc)
