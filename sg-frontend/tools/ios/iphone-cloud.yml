@@ -11,6 +11,10 @@ on:
         description: Executer les parcours authentifies avec le secret de recette
         type: boolean
         default: false
+      device_sdk_only:
+        description: Compiler uniquement pour le SDK iPhone, sans signature ni installation
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -46,12 +50,23 @@ jobs:
       - name: Verifier les outils et compiler les sources XCTest avant le client
         run: python3 tools/ios/probe-simulator-signature.py
       - name: Observer la connectivite API sans compte reel
+        if: ${{ !inputs.device_sdk_only }}
         run: python3 tools/ios/probe-native-gateway.py
       - name: Amorcer le simulateur iPhone
+        if: ${{ !inputs.device_sdk_only }}
         run: python3 tools/ios/prepare-simulator.py
-      - name: Compiler le client, tester les politiques Swift et construire pour simulateur
-        run: bash tools/ios/build-iphone.sh simulator
+      - name: Compiler le client et tester les politiques Swift
+        env:
+          FP_IOS_DEVICE_SDK_ONLY: ${{ inputs.device_sdk_only }}
+        run: |
+          if [[ "$FP_IOS_DEVICE_SDK_ONLY" == true ]]; then
+            bash tools/ios/build-iphone.sh prepare
+            python3 tools/ios/build-device-sdk.py
+          else
+            bash tools/ios/build-iphone.sh simulator
+          fi
       - name: Executer les vrais parcours XCUITest
+        if: ${{ !inputs.device_sdk_only }}
         env:
           FP_IOS_AUTHENTICATED_TESTS: ${{ inputs.authenticated }}
           FP_IOS_TEST_USER: bim.amina
@@ -72,6 +87,7 @@ jobs:
             preuves-mac/preuves-iphone-chiffrees.cms
             preuves-mac/preuves-chiffrees-manifeste.json
             preuves-mac/connectivite-api.json
+            preuves-mac/device-sdk-check.json
             preuves-mac/source-commit.txt
             preuves-mac/preuves-publiables/resultats-ui.json
           if-no-files-found: warn
