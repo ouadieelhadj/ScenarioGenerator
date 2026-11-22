@@ -1,0 +1,64 @@
+name: DAMANCASH - Validation iPhone sur Mac heberge
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Branche du client mobile à compiler dans ce dépôt
+        type: string
+        required: true
+        default: codex/damancash-iphone-20261122
+      authenticated:
+        description: Executer aussi les deux cas authentifies avec le secret de recette
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: iphone-damancash-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  ios-validation:
+    runs-on: macos-26
+    timeout-minutes: 35
+    env:
+      FP_IOS_OUTPUT: ${{ github.workspace }}/preuves-mac
+      NG_BUILD_MAX_WORKERS: '2'
+    defaults:
+      run:
+        shell: bash
+        working-directory: sg-frontend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: sg-frontend/package-lock.json
+      - name: Identifier les sources réellement compilées
+        run: |
+          mkdir -p "$FP_IOS_OUTPUT"
+          git rev-parse HEAD > "$FP_IOS_OUTPUT/source-commit.txt"
+          node --test tools/test-mobile-session-security.mjs tools/test-mobile-session-revocation.mjs tools/test-mobile-native-gateway.mjs tools/test-merchant-native-links.mjs tools/test-incident-file-export.mjs
+      - name: Compiler le client, tester les politiques Swift et construire pour simulateur
+        run: bash tools/ios/build-iphone.sh simulator
+      - name: Executer les vrais parcours XCUITest
+        env:
+          FP_IOS_AUTHENTICATED_TESTS: ${{ inputs.authenticated }}
+          FP_IOS_TEST_USER: bim.amina
+          FP_IOS_TEST_PASSWORD: ${{ secrets.FP_IOS_TEST_PASSWORD }}
+        run: python3 tools/ios/run-ios-ui-tests.py
+      - name: Conserver seulement les preuves expurgees
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: iphone-resultats-${{ github.run_number }}
+          path: |
+            preuves-mac/preparation.json
+            preuves-mac/swift-policy-tests.log
+            preuves-mac/source-commit.txt
+            preuves-mac/preuves-publiables/resultats-ui.json
+          if-no-files-found: warn
+          retention-days: 7
