@@ -32,7 +32,7 @@ def sign(app,output):
         profile=Path(directory)/'simulator.plist';profile.write_bytes(plistlib.dumps(entitlements))
         command('sign simulator executable',['codesign','--force','--sign','-','--entitlements',str(profile),'--generate-entitlement-der',str(app)])
     command('verify simulator bundle',['codesign','--verify','--deep','--strict',str(app)])
-    actual=command('read signed simulator entitlements',['codesign','--display','--entitlements','-',str(app)]).stdout
+    actual=command('read signed simulator entitlements',['codesign','--display','--entitlements','-','--xml',str(app)]).stdout
     signed=plistlib.loads(actual)
     if signed!=entitlements:raise RuntimeError('Simulator entitlements do not match the isolated bundle')
     result={'simulatorOnly':True,'adHocSignatureVerified':True,'appleDistributionSignature':False,
