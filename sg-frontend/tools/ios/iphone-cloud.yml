@@ -15,6 +15,10 @@ on:
         description: Compiler uniquement pour le SDK iPhone, sans signature ni installation
         type: boolean
         default: false
+      transport_only:
+        description: Diagnostic HTTPS Apple sans compte, compilation application ou changement serveur
+        type: boolean
+        default: false
       ui_focus:
         description: Lot natif complet ou complément session, Fichiers et réinstallation
         type: choice
@@ -45,6 +49,7 @@ jobs:
           ref: ${{ inputs.source_ref }}
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        if: ${{ !inputs.transport_only }}
         with:
           node-version: '24'
           cache: npm
@@ -55,15 +60,20 @@ jobs:
         run: |
           mkdir -p "$FP_IOS_OUTPUT"
           git rev-parse HEAD > "$FP_IOS_OUTPUT/source-commit.txt"
+      - name: Diagnostiquer HTTPS Apple sans compte
+        if: ${{ inputs.transport_only }}
+        run: python3 tools/ios/probe-native-https.py
       - name: Verifier les outils et compiler les sources XCTest avant le client
+        if: ${{ !inputs.transport_only }}
         run: python3 tools/ios/probe-simulator-signature.py
       - name: Observer la connectivite API sans compte reel
-        if: ${{ !inputs.device_sdk_only }}
+        if: ${{ !inputs.device_sdk_only && !inputs.transport_only }}
         run: python3 tools/ios/probe-native-gateway.py
       - name: Amorcer le simulateur iPhone
-        if: ${{ !inputs.device_sdk_only }}
+        if: ${{ !inputs.device_sdk_only && !inputs.transport_only }}
         run: python3 tools/ios/prepare-simulator.py
       - name: Compiler le client et tester les politiques Swift
+        if: ${{ !inputs.transport_only }}
         env:
           FP_IOS_DEVICE_SDK_ONLY: ${{ inputs.device_sdk_only }}
         run: |
@@ -74,7 +84,7 @@ jobs:
             bash tools/ios/build-iphone.sh simulator
           fi
       - name: Executer les vrais parcours XCUITest
-        if: ${{ !inputs.device_sdk_only }}
+        if: ${{ !inputs.device_sdk_only && !inputs.transport_only }}
         env:
           FP_IOS_AUTHENTICATED_TESTS: ${{ inputs.authenticated }}
           FP_IOS_UI_FOCUS: ${{ inputs.ui_focus }}
@@ -90,6 +100,7 @@ jobs:
         with:
           name: iphone-resultats-${{ github.run_number }}
           path: |
+            preuves-mac/diagnostic-https-apple.json
             preuves-mac/preparation.json
             preuves-mac/simulator-tool-preflight.json
             preuves-mac/swift-policy-tests.log
