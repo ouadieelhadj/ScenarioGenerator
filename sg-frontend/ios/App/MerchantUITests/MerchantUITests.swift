@@ -29,6 +29,14 @@ final class MerchantUITests: XCTestCase {
         }
         XCTFail("Contrôle non accessible : " + label)
     }
+    @MainActor private func clearExistingInput(_ field: XCUIElement) {
+        let value = field.value as? String ?? ""
+        // Inspect only length in memory; never print the value or use it in an assertion.
+        if !value.isEmpty && value != field.placeholderValue {
+            field.coordinate(withNormalizedOffset: CGVector(dx: 0.96, dy: 0.5)).tap()
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: min(value.count, 256)))
+        }
+    }
     @MainActor private func login(_ app: XCUIApplication) throws {
         let env = ProcessInfo.processInfo.environment
         guard env["FP_IOS_AUTHENTICATED_TESTS"] == "true",
@@ -38,7 +46,8 @@ final class MerchantUITests: XCTestCase {
         let user = env["FP_IOS_TEST_USER"] ?? "bim.amina"
         if element(app, "Bonjour " + user).waitForExistence(timeout: 5) { return }
         let login = app.webViews.textFields.firstMatch
-        XCTAssertTrue(login.waitForExistence(timeout: 15)); login.tap(); login.typeText(user)
+        XCTAssertTrue(login.waitForExistence(timeout: 15)); login.tap(); clearExistingInput(login); login.typeText(user)
+        dismissFormKeyboard(app)
         // Move the field above the software keyboard before tapping it. Ionic can
         // reposition its input while the first keyboard is appearing.
         let viewport = app.webViews.firstMatch
@@ -59,7 +68,11 @@ final class MerchantUITests: XCTestCase {
         secret.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5)).tap()
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 5))
         _ = XCTWaiter.wait(for: [], timeout: 0.5)
+        clearExistingInput(secret)
         secret.typeText(password)
+        let valueCountMatches = (secret.value as? String)?.count == password.count
+        print("FP_LOGIN_INPUT lengthMatches=" + String(valueCountMatches))
+        dismissFormKeyboard(app)
         XCTAssertTrue((login.value as? String) == user, "Identifiant saisi non confirmé.")
         let button = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Se connecter")).firstMatch
         XCTAssertTrue(button.exists && button.isEnabled, "Le formulaire doit être valide avant envoi.")
@@ -81,8 +94,12 @@ final class MerchantUITests: XCTestCase {
         add(attachment)
     }
     @MainActor func test01LoginRequired() {
+        let started = Date()
         let app = launch()
-        XCTAssertTrue(element(app, "Se connecter").waitForExistence(timeout: 20))
+        screenshot(app, "ios01-etat-initial-avant-attente")
+        let ready = element(app, "Se connecter").waitForExistence(timeout: 60)
+        print("FP_INITIAL_LOGIN seconds=" + String(Int(Date().timeIntervalSince(started))))
+        XCTAssertTrue(ready, "Premier écran de connexion indisponible sur le simulateur froid.")
         XCTAssertTrue(app.webViews.textFields.firstMatch.exists)
         XCTAssertTrue(app.webViews.secureTextFields.firstMatch.exists)
         XCTAssertFalse(app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Se connecter")).firstMatch.isEnabled)
@@ -167,6 +184,7 @@ final class MerchantUITests: XCTestCase {
         XCTAssertTrue(element(app, subject).exists)
         // Only a synthetic subject, never credentials, is exported for server reconciliation.
         print("FP_NATIVE_DRAFT subject=" + subject)
+        for _ in 0..<3 { app.webViews.firstMatch.swipeDown() }
         screenshot(app, "ios06-brouillon-natif-enregistre")
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
     }

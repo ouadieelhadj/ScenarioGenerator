@@ -21,8 +21,8 @@ import { CommercialConfirmationHandoffService } from '../../app/core/auth/commer
           <h2>Se connecter</h2><p>Utilisez votre compte existant. Les accès sont adaptés à votre profil.</p>
           <form [formGroup]="form" (ngSubmit)="submit()">
             <ion-list lines="full">
-              <ion-item><ion-input label="Identifiant" labelPlacement="stacked" formControlName="login" autocomplete="username" /></ion-item>
-              <ion-item><ion-input label="Mot de passe" labelPlacement="stacked" type="password" formControlName="password" autocomplete="current-password" /></ion-item>
+              <ion-item><ion-input label="Identifiant" labelPlacement="stacked" formControlName="login" autocomplete="username" autocapitalize="off" autocorrect="off" [spellcheck]="false" /></ion-item>
+              <ion-item><ion-input label="Mot de passe" labelPlacement="stacked" type="password" formControlName="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" [spellcheck]="false" /></ion-item>
             </ion-list>
             @if (error()) { <p class="form-error" role="alert">{{ error() }}</p> }
             <ion-button expand="block" type="submit" [disabled]="form.invalid || loading()">
