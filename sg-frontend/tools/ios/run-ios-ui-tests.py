@@ -34,7 +34,10 @@ try:
     # simulator app with its own access group, without an Apple distribution identity.
     appBundle=OUT/'DerivedData/Build/Products/Release-iphonesimulator/App.app'
     signatureReport=OUT/'simulator-signature.json'
-    subprocess.run([sys.executable,str(F/'tools/ios/sign-simulator-app.py'),str(appBundle),'--report',str(signatureReport)],capture_output=True,check=True)
+    signature=subprocess.run([sys.executable,str(F/'tools/ios/sign-simulator-app.py'),str(appBundle),'--report',str(signatureReport)],capture_output=True)
+    if signature.returncode:
+        report['simulatorSignatureFailure']=json.loads(signatureReport.read_text()) if signatureReport.exists() else {'message':'Signature tool did not return a report'}
+        raise RuntimeError('Simulator signing failed; see structured signature diagnostic')
     report['simulatorSignature']=json.loads(signatureReport.read_text())
     runs=list((OUT/'DerivedData/Build/Products').glob('*.xctestrun'))
     if len(runs)!=1:raise RuntimeError('No unique xctestrun file')
