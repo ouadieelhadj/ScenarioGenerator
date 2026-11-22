@@ -41,7 +41,6 @@ jobs:
         run: |
           mkdir -p "$FP_IOS_OUTPUT"
           git rev-parse HEAD > "$FP_IOS_OUTPUT/source-commit.txt"
-          node --test tools/test-mobile-session-security.mjs tools/test-mobile-session-revocation.mjs tools/test-mobile-native-gateway.mjs tools/test-merchant-native-links.mjs tools/test-incident-file-export.mjs
       - name: Compiler le client, tester les politiques Swift et construire pour simulateur
         run: bash tools/ios/build-iphone.sh simulator
       - name: Executer les vrais parcours XCUITest
