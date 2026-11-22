@@ -153,7 +153,18 @@ final class MerchantUITests: XCTestCase {
 
     @MainActor private func dismissFormKeyboard(_ app: XCUIApplication) {
         let done = app.toolbars.buttons.matching(NSPredicate(format: "label IN {'OK', 'Done', 'Terminé'}")).firstMatch
-        if done.exists && done.isHittable { done.tap() }
+        for _ in 0..<4 {
+            if !done.exists { return }
+            let frame = done.frame, bounds = app.frame
+            if !frame.isEmpty && !frame.isNull && !frame.isInfinite && bounds.contains(CGPoint(x: frame.midX, y: frame.midY)) {
+                // The simulator accessibility hit-point resolver can fail while the
+                // toolbar animates. Tap the same visible button at its actual frame.
+                app.coordinate(withNormalizedOffset: .zero)
+                    .withOffset(CGVector(dx: frame.midX - bounds.minX, dy: frame.midY - bounds.minY)).tap()
+                return
+            }
+            _ = XCTWaiter.wait(for: [], timeout: 0.2)
+        }
     }
     @MainActor private func fillIncidentField(_ app: XCUIApplication, field: XCUIElement, value: String) {
         XCTAssertTrue(field.waitForExistence(timeout: 15))
@@ -199,7 +210,7 @@ final class MerchantUITests: XCTestCase {
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
     }
 
-    @MainActor func test07SeedSessionForReinstall() throws {
+    @MainActor func test10SeedSessionForReinstall() throws {
         let app = launch(); try login(app)
         app.terminate(); app.launch()
         let user = ProcessInfo.processInfo.environment["FP_IOS_TEST_USER"] ?? "bim.amina"
@@ -217,6 +228,34 @@ final class MerchantUITests: XCTestCase {
         XCTAssertFalse(element(app, "Bonjour " + user).exists, "Ancienne session reprise après désinstallation.")
         screenshot(app, "ios16-connexion-apres-reinstallation")
         print("FP_REINSTALL_RESULT loginRequired=true")
+    }
+
+    @MainActor func test09CancelNativeAttachmentCopy() throws {
+        let app = launch(); try login(app)
+        tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
+        XCTAssertTrue(element(app, "Déclarer un incident").waitForExistence(timeout: 30))
+        // This private BIM draft and its CLEAN synthetic PNG were qualified on OCI.
+        let fixture = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", "INC-90b54e47-6fec-4f03-b47d-69cd0ceb1aed")).firstMatch
+        for _ in 0..<12 {
+            if fixture.exists && fixture.isHittable { break }
+            app.webViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(fixture.exists && fixture.isHittable, "Brouillon de fichier synthétique BIM indisponible.")
+        fixture.tap()
+        let download = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Télécharger")).firstMatch
+        XCTAssertTrue(download.waitForExistence(timeout: 20))
+        XCTAssertTrue(download.isEnabled, "Seule une pièce CLEAN doit être copiable.")
+        tap(app, "Télécharger")
+        let cancel = app.buttons.matching(NSPredicate(format: "label IN {'Annuler', 'Cancel'}")).firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 25), "Le sélecteur natif Fichiers ne s’est pas ouvert.")
+        screenshot(app, "ios10-selecteur-copie-native")
+        cancel.tap()
+        let notice = "Enregistrement annulé. Le dossier reste disponible."
+        XCTAssertTrue(element(app, notice).waitForExistence(timeout: 20), "Une annulation ne doit pas être présentée comme une copie réussie.")
+        for _ in 0..<7 { app.webViews.firstMatch.swipeDown() }
+        screenshot(app, "ios10-annulation-confirmee")
+        print("FP_NATIVE_EXPORT cancelled=true")
+        // Keep this existing session for the following host-controlled reinstall phase.
     }
 
 }

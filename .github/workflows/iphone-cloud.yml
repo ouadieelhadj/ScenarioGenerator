@@ -15,6 +15,13 @@ on:
         description: Compiler uniquement pour le SDK iPhone, sans signature ni installation
         type: boolean
         default: false
+      ui_focus:
+        description: Lot natif complet ou complément session, Fichiers et réinstallation
+        type: choice
+        default: full
+        options:
+          - full
+          - session_files_reinstall
 permissions:
   contents: read
 concurrency:
@@ -69,6 +76,7 @@ jobs:
         if: ${{ !inputs.device_sdk_only }}
         env:
           FP_IOS_AUTHENTICATED_TESTS: ${{ inputs.authenticated }}
+          FP_IOS_UI_FOCUS: ${{ inputs.ui_focus }}
           FP_IOS_TEST_USER: bim.amina
           FP_IOS_TEST_PASSWORD: ${{ secrets.FP_IOS_TEST_PASSWORD }}
         run: python3 tools/ios/run-ios-ui-tests.py

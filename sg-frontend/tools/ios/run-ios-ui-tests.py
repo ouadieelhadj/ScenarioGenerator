@@ -6,6 +6,10 @@ F=Path(__file__).resolve().parents[2]
 OUT=Path(os.environ.get('FP_IOS_OUTPUT',str(F/'ios/App/output/cloud'))).resolve()
 SAFE=OUT/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
 authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
+focus=os.environ.get('FP_IOS_UI_FOCUS','full')
+if focus not in ('full','session_files_reinstall'):raise SystemExit('Unsupported native suite')
+if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
+expectedCases=4 if focus=='session_files_reinstall' else 9
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -19,7 +23,7 @@ chosen=next((d for runtime,devices in listing['devices'].items() if 'iOS' in run
 if not chosen:raise SystemExit('Aucun simulateur iPhone utilisable sur ce runner.')
 destination='platform=iOS Simulator,id='+chosen['udid']
 common=['xcodebuild','-project',str(F/'ios/App/App.xcodeproj'),'-scheme','App','-configuration','Release','-derivedDataPath',str(OUT/'DerivedData'),'-destination',destination,'ONLY_ACTIVE_ARCH=YES','CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-','-parallel-testing-enabled','NO']
-report={'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'nativeUIExecutionStarted':False,'authenticatedRequested':authenticated,'simulatorName':chosen['name'],'realIPhoneDeviceTested':False,'fullAcceptanceCompleted':False,'pentestExecuted':False}
+report={'suite':focus,'expectedNativeCases':expectedCases,'curatedScreenshotAssociations':[],'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'nativeUIExecutionStarted':False,'authenticatedRequested':authenticated,'simulatorName':chosen['name'],'realIPhoneDeviceTested':False,'fullAcceptanceCompleted':False,'pentestExecuted':False}
 raw=OUT/'xcode-ui-private.log'
 bundle=OUT/'native-results.xcresult'
 rc=1
@@ -58,13 +62,25 @@ try:
         selector='MerchantUITests/MerchantUITests/'
         base=['xcodebuild','test-without-building','-xctestrun',str(private),'-destination',destination,'-parallel-testing-enabled','NO']
         exclusions=['-skip-testing:'+selector+'test08FreshInstallationRequiresLogin']
-        if not authenticated:exclusions+=['-skip-testing:'+selector+'test07SeedSessionForReinstall']
+        if not authenticated:exclusions+=['-skip-testing:'+selector+'test10SeedSessionForReinstall']
+        if focus=='session_files_reinstall':
+            exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
         with raw.open('a') as log:
             test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
         passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
-        if authenticated and test.returncode==0 and passed==7 and failed==0 and skipped==0:
+        firstPhaseJournal=raw.read_text(errors='replace')
+        seeded=bool(re.search(r"test10SeedSessionForReinstall\]' passed",firstPhaseJournal)) and 'FP_REINSTALL_SEED restored=true' in firstPhaseJournal
+        # The target reinstall check is independent of an unrelated first-phase
+        # failure; the original failures still count in the final global verdict.
+        if authenticated and seeded:
             identifier=report['simulatorSignature']['bundleIdentifier']
+            # Inspect only the dedicated candidate's own temporary export directory.
+            container=Path(run(['xcrun','simctl','get_app_container',chosen['udid'],identifier,'data']).strip())
+            exports=container/'tmp/merchant-incident-exports'
+            remaining=sum(1 for item in exports.rglob('*') if item.is_file()) if exports.exists() else 0
+            report['nativeExportTemporaryFilesRemaining']=remaining
+            if remaining:raise RuntimeError('Native attachment export did not clean its private temporary bytes')
             # Only this candidate bundle is uninstalled on the dedicated disposable simulator.
             run(['xcrun','simctl','uninstall',chosen['udid'],identifier])
             run(['xcrun','simctl','install',chosen['udid'],str(appBundle)])
@@ -76,7 +92,7 @@ try:
             passed+=int(second.get('passedTests',0));failed+=int(second.get('failedTests',0));skipped+=int(second.get('skippedTests',0))
             report['reinstallationPassed']=fresh.returncode==0 and int(second.get('passedTests',0))==1 and int(second.get('failedTests',0))==0
             if fresh.returncode:test=fresh
-        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3,authenticatedCasesPassed=authenticated and test.returncode==0 and passed==8 and skipped==0 and report.get('reinstallationPassed',False))
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3,authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and report.get('reinstallationPassed',False))
         rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
         # Curated attachments only; raw XCTest result bundles may contain input activity.
         attachments=OUT/'private-attachments'
@@ -94,6 +110,8 @@ try:
                             if image.is_file():
                                 target=SAFE/'captures'/candidate;target.parent.mkdir(exist_ok=True)
                                 shutil.copy2(image,target);images.append(candidate)
+                                labels=[m.group(0) for value in strings for m in [re.search(r'preuve-[a-z0-9-]+',value)] if m]
+                                report['curatedScreenshotAssociations'].append({'file':candidate,'labels':sorted(set(labels))})
                 for child in value.values():inspect(child)
             elif isinstance(value,list):
                 for child in value:inspect(child)
@@ -114,6 +132,7 @@ finally:
         report['loginFailureUiCategories']=[int(value) for value in re.findall(r'FP_LOGIN_UI_FAILURE status=(\d+)',journal)]
         report['initialLoginSeconds']=[int(value) for value in re.findall(r'FP_INITIAL_LOGIN seconds=(\d+)',journal)]
         report['reinstallationMarkers']={'sessionSeeded':bool(re.search(r'FP_REINSTALL_SEED restored=true',journal)),'freshLoginRequired':bool(re.search(r'FP_REINSTALL_RESULT loginRequired=true',journal))}
+        report['nativeExportCancellationObserved']=bool(re.search(r'FP_NATIVE_EXPORT cancelled=true',journal))
         if nativeCases:
             report['nativeCaseResultsFromJournal']=nativeCases
             report['passedFromJournal']=sum(case['passed'] for case in nativeCases)
@@ -136,6 +155,8 @@ finally:
                                     if source.is_file():
                                         destination=SAFE/'captures'/candidate;destination.parent.mkdir(exist_ok=True)
                                         shutil.copy2(source,destination)
+                                        labels=[m.group(0) for value in strings for m in [re.search(r'preuve-[a-z0-9-]+',value)] if m]
+                                        report['curatedScreenshotAssociations'].append({'file':candidate,'labels':sorted(set(labels))})
                         for child in value.values():recover(child)
                     elif isinstance(value,list):
                         for child in value:recover(child)
