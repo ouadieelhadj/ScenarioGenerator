@@ -33,7 +33,7 @@ swift test --package-path ios --scratch-path "$OUT/PolicyBuild" 2>&1 | tee "$OUT
 if [[ "$MODE" == prepare ]]; then printf 'IOS_PROJECT_READY=%s/ios/App/App.xcodeproj|IPA=NOT_BUILT\n' "$ROOT"; exit 0; fi
 COMMON=(-project ios/App/App.xcodeproj -scheme App -configuration Release -derivedDataPath "$OUT/DerivedData")
 if [[ "$MODE" == simulator ]]; then
-  xcodebuild "${COMMON[@]}" -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build 2>&1 | tee "$OUT/build-simulator.log"
+  xcodebuild "${COMMON[@]}" -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build 2>&1 | tee "$OUT/build-simulator.log"
   printf 'SIMULATOR_BUILD=%s/DerivedData/Build/Products/Release-iphonesimulator/App.app|DEVICE_IPA=NOT_BUILT\n' "$OUT"
   exit 0
 fi

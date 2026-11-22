@@ -18,7 +18,7 @@ requested=json.loads((OUT/'simulator.json').read_text()) if (OUT/'simulator.json
 chosen=next((d for runtime,devices in listing['devices'].items() if 'iOS' in runtime for d in devices if d.get('isAvailable') and d['name'].startswith('iPhone') and (not requested or d['udid']==requested['udid'])),None)
 if not chosen:raise SystemExit('Aucun simulateur iPhone utilisable sur ce runner.')
 destination='platform=iOS Simulator,id='+chosen['udid']
-common=['xcodebuild','-project',str(F/'ios/App/App.xcodeproj'),'-scheme','App','-configuration','Release','-derivedDataPath',str(OUT/'DerivedData'),'-destination',destination,'CODE_SIGNING_ALLOWED=NO','-parallel-testing-enabled','NO']
+common=['xcodebuild','-project',str(F/'ios/App/App.xcodeproj'),'-scheme','App','-configuration','Release','-derivedDataPath',str(OUT/'DerivedData'),'-destination',destination,'CODE_SIGNING_ALLOWED=YES','CODE_SIGN_IDENTITY=-','-parallel-testing-enabled','NO']
 report={'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'nativeUIExecutionStarted':False,'authenticatedRequested':authenticated,'simulatorName':chosen['name'],'realIPhoneDeviceTested':False,'fullAcceptanceCompleted':False,'pentestExecuted':False}
 raw=OUT/'xcode-ui-private.log'
 bundle=OUT/'native-results.xcresult'
@@ -30,14 +30,15 @@ try:
         report['simulatorBootConfirmed']=True
         build=subprocess.run(common+['build-for-testing'],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=600)
     if build.returncode:raise RuntimeError('Build-for-testing failed')
-    # Xcode builds above are unsigned and cannot access Keychain. Sign only the
-    # simulator app with its own access group, without an Apple distribution identity.
+    # Xcode embeds simulated entitlements in Mach-O and signs to run locally.
+    # Never insert iOS restricted entitlements into a macOS code signature:
+    # that made launchd reject the preceding simulator candidate (POSIX162).
     appBundle=OUT/'DerivedData/Build/Products/Release-iphonesimulator/App.app'
     signatureReport=OUT/'simulator-signature.json'
-    signature=subprocess.run([sys.executable,str(F/'tools/ios/sign-simulator-app.py'),str(appBundle),'--report',str(signatureReport)],capture_output=True)
-    if signature.returncode:
-        report['simulatorSignatureFailure']=json.loads(signatureReport.read_text()) if signatureReport.exists() else {'message':'Signature tool did not return a report'}
-        raise RuntimeError('Simulator signing failed; see structured signature diagnostic')
+    verification=subprocess.run([sys.executable,str(F/'tools/ios/verify-simulator-app.py'),str(appBundle),'--report',str(signatureReport)],capture_output=True)
+    if verification.returncode:
+        report['simulatorSignatureFailure']=json.loads(signatureReport.read_text()) if signatureReport.exists() else {'message':'Verifier returned no report'}
+        raise RuntimeError('Xcode simulator identity not verified; see structured diagnostic')
     report['simulatorSignature']=json.loads(signatureReport.read_text())
     runs=list((OUT/'DerivedData/Build/Products').glob('*.xctestrun'))
     if len(runs)!=1:raise RuntimeError('No unique xctestrun file')

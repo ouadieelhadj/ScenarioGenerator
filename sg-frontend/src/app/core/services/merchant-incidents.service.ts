@@ -1,4 +1,6 @@
 import { inject, Injectable } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
+import { incidentCreationSuffix } from './incident-client-channel';
 import { HttpClient } from '@angular/common/http';
 import { url } from '../config/api.config';
 import { IncidentAttachmentPolicy } from './incident-attachment-policy';
@@ -36,7 +38,7 @@ export class MerchantIncidentsService {
  contexts(code:string,mobile:boolean,offset=0){return this.http.get<Array<{context:IncidentContext;label:string}>>(this.base(code,mobile)+'/contexts',{params:{offset,limit:100}});}
  referenceOptions(code:string,mobile:boolean,context:IncidentContext,kind:IncidentReferenceKind,offset=0){return this.http.get<IncidentReferenceOption[]>(this.base(code,mobile)+'/business-reference-options',{params:{kind,offset,limit:25,...(context.dossierId?{dossierId:context.dossierId}:{}),...(context.nodeId?{nodeId:context.nodeId}:{})}});}
  references(code:string,mobile:boolean,id:string){return this.http.get<IncidentReferenceOption[]>(this.base(code,mobile)+'/'+encodeURIComponent(id)+'/business-references');}
- create(code:string,mobile:boolean,input:IncidentCreation){return this.http.post<IncidentView>(this.base(code,mobile)+(mobile?'/android':''),input);}
+ create(code:string,mobile:boolean,input:IncidentCreation){return this.http.post<IncidentView>(this.base(code,mobile)+incidentCreationSuffix(mobile,Capacitor.getPlatform()),input);}
  editDraft(code:string,mobile:boolean,id:string,input:IncidentDraftEdit){return this.http.put<IncidentView>(this.base(code,mobile)+'/'+encodeURIComponent(id)+'/draft',input);}
  detail(code:string,mobile:boolean,id:string){return this.http.get<IncidentView>(this.base(code,mobile)+'/'+encodeURIComponent(id));}
  targets(code:string,mobile:boolean,id:string){return this.http.get<IncidentTarget[]>(this.base(code,mobile)+'/'+encodeURIComponent(id)+'/assignment-targets');}
