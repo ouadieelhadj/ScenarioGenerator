@@ -31,6 +31,7 @@ fi
 node --test tools/ios/test-dependency-cache.mjs
 node --test tools/test-mobile-session-security.mjs tools/test-mobile-session-revocation.mjs tools/test-mobile-native-gateway.mjs tools/test-merchant-native-links.mjs tools/test-incident-file-export.mjs tools/test-incident-client-channel.mjs tools/test-mobile-authorized-commerces.mjs tools/test-mobile-login-diagnostic.mjs tools/test-mobile-native-login.mjs
 node tools/test-mobile-auth-native-integration.mjs
+python3 tools/ios/test-native-onboarding-documents.py
 npm run build:merchant-mobile -- --configuration production --source-map=false
 node node_modules/@capacitor/cli/bin/capacitor sync ios
 python3 tools/ios/configure-ios.py --version "$VERSION" --build "$BUILD"

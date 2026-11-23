@@ -16,7 +16,7 @@ def prepare(output,password):
     try:
         own=m.request(PREFIX+'/v1/dossiers/verified-mine',token)
         full=m.request(PREFIX+'/v2/dossiers/'+fixture['id'],token)
-        assert own['id']==fixture['id'] and full['reference']==fixture['reference'] and full['acquirerId']=='DAMANCASH'
+        assert own['id']==fixture['id'] and full['reference']==fixture['reference'] and own['acquirerId']=='DAMANCASH'
         assert full['version']==1 and full['status']=='DRAFT' and full['merchantType']=='PM' and full['legalName']==fixture['legalName']
         workspace=m.request(PREFIX+'/v1/dossiers/'+fixture['id']+'/commercial/workspace',token)
         assert 'EDIT' in workspace['actions']
@@ -53,7 +53,7 @@ def verify(context,password,output):
         full=m.request(PREFIX+'/v2/dossiers/'+context['id'],token)
         own=m.request(PREFIX+'/v1/dossiers/verified-mine',token)
         check('Same personal dossier retained',own['id']==context['id'] and full['reference']==context['reference'])
-        check('Draft remains pending human review',full['status']=='DRAFT' and full['kycStatus']!='VALIDATED')
+        check('Draft remains pending human review',full['status']=='DRAFT' and own['kycStatus']!='VALIDATED')
         # addDocument() notes each change and flushes @Version once per upload.
         check('One document change per upload',full['version']==context['versionBefore']+len(context['documents']))
         check('Legal profile unchanged by uploads',full['legalName']==fixture['legalName'] and len(full['outlets'])==1 and full['outlets'][0]['code']==fixture['outletCode'])
