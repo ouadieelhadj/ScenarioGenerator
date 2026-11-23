@@ -492,7 +492,7 @@ final class MerchantUITests: XCTestCase {
                     // an arbitrary system control or a tap into the blank loading view.
                     let thumbnails = app.images.allElementsBoundByIndex.filter { image in
                         let f = image.frame
-                        return image.exists && image.isHittable && f.width > bounds.width * 0.20
+                        return image.exists && f.width > bounds.width * 0.20
                             && f.width < bounds.width * 0.50 && f.height > bounds.width * 0.20
                             && f.minX < bounds.minX + bounds.width * 0.10
                             && f.minY > bounds.minY + bounds.height * 0.20
@@ -514,7 +514,18 @@ final class MerchantUITests: XCTestCase {
                 return
             }
             pickerScreen("ios09-selecteur-photo-synthetique")
-            photo.tap()
+            // Run45109939644: native Photos exposes real thumbnail images with
+            // valid visible frames but isHittable=false (decorative image children).
+            // Touch the centre of the actual resolved thumbnail, never a fixed
+            // screen coordinate or the blank loading view. Exact server SHA stays required.
+            let thumbnailFrame = photo.frame
+            let thumbnailCentre = CGPoint(x: thumbnailFrame.midX, y: thumbnailFrame.midY)
+            XCTAssertTrue(bounds.contains(thumbnailCentre) && thumbnailFrame.width > bounds.width * 0.20)
+            if photo.isHittable { photo.tap() }
+            else {
+                app.coordinate(withNormalizedOffset: .zero)
+                    .withOffset(CGVector(dx: thumbnailCentre.x - bounds.minX, dy: thumbnailCentre.y - bounds.minY)).tap()
+            }
             pickerScreen("ios09-photo-apres-toucher-vignette")
             for owner in [app, XCUIApplication(bundleIdentifier: "com.apple.springboard")] {
                 let add = owner.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["Ajouter", "Add", "Ajouter (1)", "Add (1)", "Choisir", "Choose", "Utiliser la photo", "Use Photo", "Ouvrir", "Open", "Terminé", "Done", "Ajouter la photo", "Add Photo"])).firstMatch
