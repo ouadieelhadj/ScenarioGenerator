@@ -22,7 +22,13 @@ OUT="${FP_IOS_OUTPUT:-$ROOT/ios/App/output/$(date -u +%Y%m%dT%H%M%SZ)}"
 mkdir -p "$OUT"
 cd "$ROOT"
 export npm_config_cache="${npm_config_cache:-$HOME/.npm}"
-npm ci --ignore-scripts --prefer-offline --no-audit --no-fund
+if node tools/ios/dependency-cache.mjs verify; then
+  printf '%s\n' 'PUBLIC_DEPENDENCIES_RESTORED_WITH_MATCHING_LOCK_AND_TOOLCHAIN'
+else
+  npm ci --ignore-scripts --prefer-offline --no-audit --no-fund
+  node tools/ios/dependency-cache.mjs record
+fi
+node --test tools/ios/test-dependency-cache.mjs
 node --test tools/test-mobile-session-security.mjs tools/test-mobile-session-revocation.mjs tools/test-mobile-native-gateway.mjs tools/test-merchant-native-links.mjs tools/test-incident-file-export.mjs tools/test-incident-client-channel.mjs tools/test-mobile-authorized-commerces.mjs tools/test-mobile-login-diagnostic.mjs tools/test-mobile-native-login.mjs
 node tools/test-mobile-auth-native-integration.mjs
 npm run build:merchant-mobile -- --configuration production --source-map=false

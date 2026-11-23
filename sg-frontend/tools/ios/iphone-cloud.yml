@@ -78,6 +78,20 @@ jobs:
         if: ${{ !inputs.transport_only }}
         with:
           node-version: '24'
+      - name: Identifier la version Node exacte pour le cache public
+        id: node_runtime
+        if: ${{ !inputs.transport_only }}
+        run: node tools/ios/dependency-cache.mjs metadata
+      - name: Restaurer les dependances installees avant tout compte
+        id: installed_vendor_cache
+        if: ${{ !inputs.transport_only }}
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4, verified official tag
+        with:
+          path: |
+            sg-frontend/node_modules
+            !sg-frontend/node_modules/.cache
+          key: fp-ios-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.node_runtime.outputs.node_version }}-${{ hashFiles('sg-frontend/package.json', 'sg-frontend/package-lock.json') }}
       - name: Restaurer les dependances publiques npm
         id: npm_vendor_cache
         if: ${{ !inputs.transport_only }}
@@ -129,6 +143,15 @@ jobs:
           else
             bash tools/ios/build-iphone.sh simulator
           fi
+      - name: Conserver les dependances installees avant tout compte
+        if: ${{ success() && !inputs.transport_only && steps.installed_vendor_cache.outputs.cache-hit != 'true' && steps.installed_vendor_cache.outputs.cache-primary-key != '' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4, verified official tag
+        with:
+          path: |
+            sg-frontend/node_modules
+            !sg-frontend/node_modules/.cache
+          key: ${{ steps.installed_vendor_cache.outputs.cache-primary-key }}
       - name: Conserver le cache public avant les tests de compte
         if: ${{ success() && !inputs.transport_only && steps.npm_vendor_cache.outputs.cache-hit != 'true' && steps.npm_vendor_cache.outputs.cache-primary-key != '' }}
         continue-on-error: true
