@@ -60,13 +60,15 @@ on:
           - onboarding_draft
           - onboarding_documents
           - framework_validation
+          - android_build
 permissions:
   contents: read
 concurrency:
-  group: iphone-damancash-${{ github.ref }}${{ inputs.typecheck_only && '-preflight' || '' }}
+  group: iphone-damancash-${{ github.ref }}${{ inputs.ui_focus == 'android_build' && '-android' || (inputs.typecheck_only && '-preflight' || '') }}
   cancel-in-progress: false
 jobs:
   ios-validation:
+    if: ${{ inputs.ui_focus != 'android_build' }}
     runs-on: ${{ inputs.typecheck_only && inputs.authenticated && !inputs.transport_only && inputs.ui_focus == 'onboarding_documents' && 'ubuntu-24.04' || 'macos-26' }}
     timeout-minutes: 60
     env:
@@ -207,4 +209,40 @@ jobs:
             preuves-mac/source-commit.txt
             preuves-mac/preuves-publiables/resultats-ui.json
           if-no-files-found: warn
+          retention-days: 7
+
+  android-validation:
+    if: ${{ inputs.ui_focus == 'android_build' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    env:
+      FP_IOS_OUTPUT: ${{ github.workspace }}/preuves-android
+    defaults:
+      run:
+        shell: bash
+        working-directory: sg-frontend
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: Compiler Android avec certificat intermediaire jetable
+        run: python3 tools/ios/build-android-cloud.py
+      - name: Chiffrer le candidat Android et les preuves
+        if: always()
+        run: python3 tools/ios/protect-cloud-evidence.py
+      - name: Conserver uniquement le candidat chiffre
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: android-intermediaire-chiffre-${{ github.run_number }}
+          path: |
+            preuves-android/preuves-iphone-chiffrees.cms
+            preuves-android/preuves-chiffrees-manifeste.json
+          if-no-files-found: error
           retention-days: 7

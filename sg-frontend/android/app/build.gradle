@@ -1,0 +1,103 @@
+apply plugin: 'com.android.application'
+
+// Release inputs are external; never pass passwords as Gradle arguments.
+def releaseVersionCode = System.getenv('FP_ANDROID_VERSION_CODE') ?: '10301'
+def releaseVersionName = System.getenv('FP_ANDROID_VERSION_NAME') ?: '1.3.1'
+def mobileTestVariant = System.getenv('FP_ANDROID_TEST_VARIANT') == 'true'
+if (!(releaseVersionCode ==~ /[1-9][0-9]{0,8}/)) {
+    throw new GradleException('Invalid Android version code')
+}
+def releaseSigningInputs = ['FP_ANDROID_KEYSTORE_FILE', 'FP_ANDROID_KEY_ALIAS',
+    'FP_ANDROID_STORE_PASSWORD_FILE', 'FP_ANDROID_KEY_PASSWORD_FILE']
+def hasReleaseSigning = releaseSigningInputs.every { System.getenv(it)?.trim() }
+if (!hasReleaseSigning && releaseSigningInputs.any { System.getenv(it)?.trim() }) {
+    throw new GradleException('Incomplete external Android signing configuration')
+}
+if (!hasReleaseSigning && System.getenv('FP_ANDROID_REQUIRE_SIGNING') == 'true') {
+    throw new GradleException('Release signing is required but not configured')
+}
+if (mobileTestVariant && !hasReleaseSigning) {
+    throw new GradleException('Separate mobile test application requires signing')
+}
+def readSigningPassword = { String variable ->
+    def secretFile = file(System.getenv(variable))
+    if (!secretFile.isFile() || secretFile.length() > 4096) {
+        throw new GradleException('Android signing password file is unavailable or invalid')
+    }
+    def lines = secretFile.readLines('UTF-8')
+    if (lines.size() != 1 || lines[0].isEmpty()) {
+        throw new GradleException('Android signing password file must contain exactly one non-empty line')
+    }
+    return lines[0]
+}
+
+android {
+    namespace = "com.moneycore.merchantportal"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "com.moneycore.merchantportal"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode releaseVersionCode.toInteger()
+        versionName releaseVersionName
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        if (hasReleaseSigning) {
+            externalRelease {
+                def signingStore = file(System.getenv('FP_ANDROID_KEYSTORE_FILE'))
+                if (!signingStore.isFile()) throw new GradleException('Android signing keystore is unavailable')
+                storeFile signingStore
+                keyAlias System.getenv('FP_ANDROID_KEY_ALIAS')
+                storePassword readSigningPassword('FP_ANDROID_STORE_PASSWORD_FILE')
+                keyPassword readSigningPassword('FP_ANDROID_KEY_PASSWORD_FILE')
+            }
+        }
+    }
+    buildTypes {
+        release {
+            debuggable false
+            if (mobileTestVariant) {
+                applicationIdSuffix '.test'
+                versionNameSuffix '-test'
+            }
+            if (hasReleaseSigning) signingConfig signingConfigs.externalRelease
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
