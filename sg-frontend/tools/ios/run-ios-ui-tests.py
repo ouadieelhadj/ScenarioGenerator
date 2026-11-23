@@ -74,7 +74,7 @@ try:
         email=os.environ.get('FP_IOS_ONBOARDING_EMAIL','')
         if not re.fullmatch(r'[a-zA-Z0-9._-]+\+fpios-[a-z0-9-]+@gmail\.com',email):
             raise RuntimeError('Controlled public-registration test address missing; no registration sent')
-        request=urllib.request.Request('https://merchant.futurpayment.com/api-merchant-portal/api/merchant-onboarding/public/v1/acquirers',headers={'Accept':'application/json'})
+        request=urllib.request.Request('https://merchant.futurpayment.com/api-merchant-portal/api/merchant-onboarding/public/v1/acquirers',headers={'Accept':'application/json','User-Agent':'FuturPayment-Recipe/1.0 (authorized demo health check)'})
         with urllib.request.urlopen(request,timeout=30) as response:
             if response.status!=200:raise RuntimeError('Public acquirer catalogue unavailable')
             catalogue=json.loads(response.read())
