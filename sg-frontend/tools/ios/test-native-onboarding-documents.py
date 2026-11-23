@@ -64,6 +64,13 @@ class Contracts(unittest.TestCase):
         # must still fail; removing a nonexistent metadata field weakens no gate.
         with patch.object(kyc.urllib.request,'urlopen',return_value=io.BytesIO(self.content[:-1])):
             with self.assertRaises(AssertionError):self.prepare()
+    def test_source_download_identifies_the_authorized_checker(self):
+        seen=[]
+        def download(request,**kwargs):
+            seen.append(request.get_header('User-agent'))
+            return io.BytesIO(self.content)
+        with patch.object(kyc.urllib.request,'urlopen',side_effect=download):self.prepare()
+        self.assertEqual(seen,['FuturPayment-Recipe/1.0 (authorized demo health check)'])
     def test_unclean_source_stops_before_download(self):
         original=self.api.request
         self.api.request=lambda path,*a,**kw: [{'id':kyc.SOURCE_ATTACHMENT,'scanState':'QUARANTINED','contentType':'image/png'}] if path.endswith('/attachments') else original(path,*a,**kw)

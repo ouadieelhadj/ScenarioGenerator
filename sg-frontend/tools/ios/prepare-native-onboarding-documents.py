@@ -35,7 +35,7 @@ def prepare(output,password):
             # Incident.Attachment exposes id/contentType/scanState/createdAt, not size.
             # Exact size and hash are checked on the authorized download below.
             assert source['scanState']=='CLEAN' and source['contentType']=='image/png'
-            req=urllib.request.Request(m.ORIGIN+PREFIX+'/v1/acquirers/DAMANCASH/incidents/'+SOURCE_INCIDENT+'/attachments/'+SOURCE_ATTACHMENT,headers={'Authorization':'Bearer '+other,'Accept':'image/png'})
+            req=urllib.request.Request(m.ORIGIN+PREFIX+'/v1/acquirers/DAMANCASH/incidents/'+SOURCE_INCIDENT+'/attachments/'+SOURCE_ATTACHMENT,headers={'Authorization':'Bearer '+other,'Accept':'image/png','User-Agent':'FuturPayment-Recipe/1.0 (authorized demo health check)'})
             with urllib.request.urlopen(req,timeout=30) as response:content=response.read(1000001)
             assert len(content)==1000000 and hashlib.sha256(content).hexdigest()==SYNTHETIC_HASH
         finally:other=''
@@ -74,3 +74,22 @@ def verify(context,password,output):
                 'syntheticImageReusedForRequiredTypes':True,'documentAuthenticityTested':False}
         Path(output).write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');return report
     finally:token=''
+
+
+if __name__=='__main__':
+    import os,sys,urllib.error,urllib.parse
+    assert sys.argv[1:]==['--check-only']
+    root=Path(os.environ['FP_IOS_OUTPUT'])/'preuves-publiables';root.mkdir(parents=True,exist_ok=True)
+    try:
+        context=prepare(root/'native-kyc-preflight.json',os.environ['FP_IOS_TEST_PASSWORD'])
+        result={'readOnlyPreflightPassed':True,'nativeUIExecutionStarted':False,'businessWrites':False,'requiredDocuments':len(context['documents'])}
+    except urllib.error.HTTPError as error:
+        raw=error.read(2048)
+        result={'readOnlyPreflightPassed':False,'nativeUIExecutionStarted':False,'businessWrites':False,'http':error.code,
+                'path':urllib.parse.urlsplit(error.url).path,'responseContentType':error.headers.get('Content-Type'),
+                'responseServer':error.headers.get('Server'),'cfMitigated':error.headers.get('cf-mitigated'),
+                'responseBodySha256':hashlib.sha256(raw).hexdigest(),'bodyStored':False,'cloudflareMentionInBody':b'cloudflare' in raw.lower()}
+    except Exception as error:
+        result={'readOnlyPreflightPassed':False,'nativeUIExecutionStarted':False,'businessWrites':False,'failureType':type(error).__name__}
+    (root/'native-kyc-preflight-result.json').write_text(json.dumps(result,indent=2)+'\n')
+    print(json.dumps(result));raise SystemExit(0 if result['readOnlyPreflightPassed'] else 1)

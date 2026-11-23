@@ -63,7 +63,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: iphone-damancash-${{ github.ref }}
+  group: iphone-damancash-${{ github.ref }}${{ inputs.typecheck_only && '-preflight' || '' }}
   cancel-in-progress: false
 jobs:
   ios-validation:
@@ -166,6 +166,12 @@ jobs:
         with:
           path: ~/.npm/_cacache
           key: ${{ steps.npm_vendor_cache.outputs.cache-primary-key }}
+      - name: Verifier seulement le prevol KYC
+        if: ${{ inputs.typecheck_only && inputs.authenticated && !inputs.transport_only && inputs.ui_focus == 'onboarding_documents' }}
+        env:
+          FP_IOS_DRAFT_FIXTURE: ${{ secrets.FP_IOS_DRAFT_FIXTURE }}
+          FP_IOS_TEST_PASSWORD: ${{ secrets.FP_IOS_TEST_PASSWORD }}
+        run: python3 tools/ios/prepare-native-onboarding-documents.py --check-only
       - name: Executer les vrais parcours XCUITest
         if: ${{ !inputs.typecheck_only && !inputs.device_sdk_only && !inputs.transport_only }}
         env:
