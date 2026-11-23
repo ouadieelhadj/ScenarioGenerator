@@ -700,4 +700,86 @@ final class MerchantUITests: XCTestCase {
         screenshot(app, "ios05-demande-publique-accuse-neutre")
         print("FP_NATIVE_ONBOARDING publicRegistrationAcknowledged=true mailReceiptNotInferred=true")
     }
+    // Dedicated test case allocated by the real public request. All values are
+    // synthetic, supplied only in the private XCTest environment, never in source.
+    @MainActor private func revealDraftControl(_ app: XCUIApplication, _ control: XCUIElement, diagnostic: String = "contrôle") {
+        let view = app.webViews.firstMatch
+        for _ in 0..<30 {
+            if control.exists {
+                if !control.isEnabled { _ = XCTWaiter.wait(for: [], timeout: 0.5); continue }
+                let frame = control.frame, visible = view.frame
+                if control.isHittable && frame.minY > visible.minY + 12 && frame.maxY < visible.maxY - 10 { return }
+                if !frame.isEmpty && frame.midY < visible.minY + 100 { view.swipeDown() }
+                else { view.swipeUp() }
+            } else { view.swipeUp() }
+        }
+        print("FP_NATIVE_DRAFT_MISSING label=" + diagnostic)
+        for field in app.webViews.textFields.allElementsBoundByIndex.prefix(90) { print("FP_NATIVE_DRAFT_LABEL " + field.label) }
+        screenshot(app, "ios05-diagnostic-champ-dossier")
+        XCTFail("Contrôle du dossier inaccessible : " + diagnostic)
+    }
+    @MainActor private func selectDraftChoice(_ app: XCUIApplication, label: String, placeholder: String, choice: String) {
+        let control = app.webViews.descendants(matching: .any)
+            .matching(NSPredicate(format: "label == %@ OR value == %@", label, placeholder)).firstMatch
+        revealDraftControl(app, control, diagnostic: label); control.tap()
+        let wheel = app.pickerWheels.firstMatch
+        XCTAssertTrue(wheel.waitForExistence(timeout: 10), "Le choix doit utiliser le sélecteur natif.")
+        wheel.adjust(toPickerWheelValue: choice); dismissFormKeyboard(app)
+    }
+    @MainActor private func fillDraftFields(_ app: XCUIApplication, _ fields: [[String: Any]]) throws {
+        for (number, row) in fields.enumerated() {
+            let label = try XCTUnwrap(row["label"] as? String)
+            let value = try XCTUnwrap(row["value"] as? String)
+            let index = row["index"] as? Int ?? 0
+            let prefix = row["prefix"] as? Bool ?? false
+            let predicate = NSPredicate(format: prefix ? "label BEGINSWITH %@" : "label == %@", label)
+            let control = app.webViews.textFields.matching(predicate).element(boundBy: index)
+            revealDraftControl(app, control, diagnostic: label)
+            XCTAssertTrue(control.isEnabled, "Le titulaire doit pouvoir modifier son brouillon.")
+            control.tap(); clearExistingInput(control); control.typeText(value); dismissFormKeyboard(app)
+            XCTAssertTrue((control.value as? String) == value, "La saisie du champ n'est pas confirmée : " + label)
+            print("FP_NATIVE_DRAFT_FIELD index=" + String(number) + " confirmed=true")
+        }
+    }
+    @MainActor func test14PersonalLegalDossierNativeSave() throws {
+        guard let raw = ProcessInfo.processInfo.environment["FP_IOS_DRAFT_FIXTURE"],
+              let data = raw.data(using: .utf8),
+              let input = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw XCTSkip("Dossier dédié contrôlé requis ; aucune écriture revendiquée.")
+        }
+        let user = try XCTUnwrap(input["login"] as? String)
+        let reference = try XCTUnwrap(input["reference"] as? String)
+        let company = try XCTUnwrap(input["companyFields"] as? [[String: Any]])
+        let outlet = try XCTUnwrap(input["outletFields"] as? [[String: Any]])
+        let app = launch(); try login(app, userOverride: user)
+        XCTAssertTrue(element(app, reference).waitForExistence(timeout: 30))
+        tap(app, "Ouvrir le menu"); tap(app, "Mon commerce"); tap(app, "Mon dossier")
+        XCTAssertTrue(element(app, "Dossier commercant et PDV").waitForExistence(timeout: 30))
+        XCTAssertTrue(element(app, reference).exists); XCTAssertTrue(element(app, "DRAFT").exists)
+        screenshot(app, "ios05-nouveau-dossier-draft-avant-saisie")
+        selectDraftChoice(app, label: "Système de destination", placeholder: "Choisir une destination", choice: "FuturPayment Acquiring")
+        selectDraftChoice(app, label: "Type", placeholder: "Personne morale", choice: "Personne morale")
+        for field in company {
+            if (field["label"] as? String) == "RIB" {
+                selectDraftChoice(app, label: "Canal d’acceptation", placeholder: "Choisir un canal", choice: "TPE")
+            }
+            try fillDraftFields(app, [field])
+        }
+        let add = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Ajouter un PDV")).firstMatch
+        revealDraftControl(app, add); add.tap()
+        try fillDraftFields(app, outlet)
+        let save = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Enregistrer le dossier complet")).firstMatch
+        revealDraftControl(app, save)
+        XCTAssertTrue(save.isEnabled, "Toutes les coordonnées obligatoires et le PDV doivent être complets.")
+        screenshot(app, "ios05-dossier-complet-avant-enregistrement")
+        save.tap() // One explicit business write. Never retry an uncertain save.
+        let notice = element(app, "Dossier juridique, PDV, TPE et e-commerce enregistres.")
+        for _ in 0..<28 {
+            if notice.exists && notice.isHittable { break }
+            app.webViews.firstMatch.swipeDown()
+        }
+        XCTAssertTrue(notice.waitForExistence(timeout: 45))
+        screenshot(app, "ios05-dossier-juridique-enregistre")
+        print("FP_NATIVE_ONBOARDING legalDossierSaved=true dedicatedAccount=true explicitSaveCount=1")
+    }
 }

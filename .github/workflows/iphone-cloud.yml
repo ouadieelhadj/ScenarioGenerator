@@ -53,6 +53,7 @@ on:
           - attachment
           - onboarding_readonly
           - onboarding_request
+          - onboarding_draft
 permissions:
   contents: read
 concurrency:
@@ -168,6 +169,7 @@ jobs:
           FP_IOS_UPLOAD_SOURCE: ${{ inputs.upload_source }}
           FP_IOS_TEST_USER: bim.amina
           FP_IOS_ONBOARDING_EMAIL: ${{ secrets.FP_IOS_ONBOARDING_EMAIL }}
+          FP_IOS_DRAFT_FIXTURE: ${{ secrets.FP_IOS_DRAFT_FIXTURE }}
           FP_IOS_TEST_PASSWORD: ${{ secrets.FP_IOS_TEST_PASSWORD }}
         run: python3 tools/ios/run-ios-ui-tests.py
       - name: Proteger les preuves avant transfert

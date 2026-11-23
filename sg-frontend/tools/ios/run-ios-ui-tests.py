@@ -7,11 +7,11 @@ OUT=Path(os.environ.get('FP_IOS_OUTPUT',str(F/'ios/App/output/cloud'))).resolve(
 SAFE=OUT/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
 authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
 focus=os.environ.get('FP_IOS_UI_FOCUS','full')
-if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation','upload','attachment','onboarding_readonly','onboarding_request'):raise SystemExit('Unsupported native suite')
+if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation','upload','attachment','onboarding_readonly','onboarding_request','onboarding_draft'):raise SystemExit('Unsupported native suite')
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
 uploadSource=os.environ.get('FP_IOS_UPLOAD_SOURCE','photos')
 if uploadSource not in ('photos','files'):raise SystemExit('Unsupported upload source')
-expectedCases=1 if focus=='onboarding_request' else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
+expectedCases=1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -68,6 +68,14 @@ try:
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         supportFixture=module.prepare(SAFE/'native-support-fixtures.json',password)
         report['supportFixturesPrepared']=True
+    draftContext=None
+    if focus=='onboarding_draft':
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('native_dossier_draft',F/'tools/ios/prepare-native-onboarding-draft.py')
+        draftModule=importlib.util.module_from_spec(spec);spec.loader.exec_module(draftModule)
+        draftContext=draftModule.prepare(SAFE/'native-dossier-preflight.json',password)
+        report['nativeDossierPreflightPassed']=True
+        report['nativeDossierExpectedFields']=len(draftContext['fixture']['companyFields'])+len(draftContext['fixture']['outletFields'])
     publicOnboarding=None
     if focus=='onboarding_request':
         import urllib.request
@@ -83,6 +91,7 @@ try:
         publicOnboarding={'email':email,'acquirerName':acquirer['name']}
         report['publicRegistrationIsNotActivation']=True
     for target in targets:
+        if draftContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_DRAFT_FIXTURE=json.dumps(draftContext['fixture']))
         if publicOnboarding:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_ONBOARDING_EMAIL=publicOnboarding['email'],FP_IOS_ONBOARDING_ACQUIRER_NAME=publicOnboarding['acquirerName'])
         if uploadFixture:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_UPLOAD_REFERENCE=uploadFixture['fixture']['reference'],FP_IOS_UPLOAD_SOURCE=uploadSource)
         if supportFixture:
@@ -102,7 +111,7 @@ try:
         report['nativeUIExecutionStarted']=True
         selector='MerchantUITests/MerchantUITests/'
         base=['xcodebuild','test-without-building','-xctestrun',str(private),'-destination',destination,'-parallel-testing-enabled','NO']
-        exclusions=['-skip-testing:'+selector+name for name in ['test08FreshInstallationRequiresLogin','test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly','test13PublicPersonalRegistrationRequest']]
+        exclusions=['-skip-testing:'+selector+name for name in ['test08FreshInstallationRequiresLogin','test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly','test13PublicPersonalRegistrationRequest','test14PersonalLegalDossierNativeSave']]
         if not authenticated:exclusions+=['-skip-testing:'+selector+'test10SeedSessionForReinstall']
         if focus=='session_files_reinstall':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
@@ -116,6 +125,10 @@ try:
             exclusions=['-only-testing:'+selector+name for name in ['test09cNativeMerchantIsolation','test10SeedSessionForReinstall']]
         if focus=='upload':
             exclusions=['-only-testing:'+selector+name for name in ((['test09bSaveNativeAttachmentCopy'] if uploadSource=='files' else [])+['test09cNativeMerchantIsolation','test09dNativeImageAttachmentUpload','test10SeedSessionForReinstall'])]
+        if focus=='onboarding_draft':
+            exclusions=['-only-testing:'+selector+'test14PersonalLegalDossierNativeSave']
+            report['nativeDossierSaveOnly']=True
+            report['reinstallationRequested']=False
         if focus=='onboarding_request':
             exclusions=['-only-testing:'+selector+'test13PublicPersonalRegistrationRequest']
             report['publicRegistrationCountertestOnly']=True
@@ -129,9 +142,13 @@ try:
             report['attachmentCountertestOnly']=True
             report['reinstallationRequested']=False
         with raw.open('a') as log:
-            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=2100 if focus=='full' else 720)
+            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=2100 if focus=='full' else 1800 if focus=='onboarding_draft' else 720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
         passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
+        if draftContext:
+            reconciliation=draftModule.verify(draftContext,password,SAFE/'native-dossier-reconciliation.json')
+            report['nativeDossierServerReconciliationPassed']=reconciliation['allExecutedChecksPassed']
+            report['nativeDossierServerAssertionCount']=len(reconciliation['checks'])
         if supportFixture:
             reconciliation=module.verify(supportFixture,password,SAFE/'native-support-reconciliation.json')
             report['supportServerReconciliationPassed']=reconciliation['allExecutedChecksPassed']
@@ -162,7 +179,7 @@ try:
             passed+=int(second.get('passedTests',0));failed+=int(second.get('failedTests',0));skipped+=int(second.get('skippedTests',0))
             report['reinstallationPassed']=fresh.returncode==0 and int(second.get('passedTests',0))==1 and int(second.get('failedTests',0))==0
             if fresh.returncode:test=fresh
-        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and (passed==expectedCases if authenticated else passed>=3) and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus in ('connection','attachment','onboarding_readonly','onboarding_request') or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and (passed==expectedCases if authenticated else passed>=3) and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus in ('connection','attachment','onboarding_readonly','onboarding_request','onboarding_draft') or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
         rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
         # Curated attachments only; raw XCTest result bundles may contain input activity.
         attachments=OUT/'private-attachments'
@@ -197,6 +214,8 @@ finally:
         journal=redacted(raw.read_text(errors='replace'))
         (SAFE/'journal-expurge.txt').write_text(journal,encoding='utf8')
         nativeCases=[{'name':name,'passed':state=='passed'} for name,state in re.findall(r"Test Case '-\[MerchantUITests\.MerchantUITests ([^]]+)\]' (passed|failed) \(",journal)]
+        report['nativeLegalDossierSaveObserved']='FP_NATIVE_ONBOARDING legalDossierSaved=true dedicatedAccount=true explicitSaveCount=1' in journal
+        report['nativeDossierFieldConfirmations']=len(re.findall(r'FP_NATIVE_DRAFT_FIELD index=\d+ confirmed=true',journal))
         report['nativePublicRegistrationAcknowledged']='FP_NATIVE_ONBOARDING publicRegistrationAcknowledged=true mailReceiptNotInferred=true' in journal
         report['nativeExistingPersonalDossierReadOnlyObserved']='FP_NATIVE_ONBOARDING existingPersonalDossierRead=true approved=true businessMutation=false' in journal
         report['nativeCommercialOnboardingReadOnlyObserved']='FP_NATIVE_ONBOARDING commercialEntryRead=true commercialListLoaded=true businessMutation=false' in journal
@@ -291,6 +310,8 @@ finally:
     if focus=='onboarding_request' and not report.get('nativePublicRegistrationAcknowledged'):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='onboarding_readonly' and not (report.get('nativeExistingPersonalDossierReadOnlyObserved') and report.get('nativeCommercialOnboardingReadOnlyObserved')):
+        report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
+    if focus=='onboarding_draft' and not (report.get('nativeLegalDossierSaveObserved') and report.get('nativeDossierServerReconciliationPassed') and report.get('nativeDossierFieldConfirmations')==report.get('nativeDossierExpectedFields')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     (SAFE/'resultats-ui.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report));raise SystemExit(rc)
