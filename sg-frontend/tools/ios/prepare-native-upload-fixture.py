@@ -29,7 +29,18 @@ def prepare(output:Path,password:str,udid:str,private_dir:Path):
         contexts=request(BASE+'/contexts',token)
         context=next((row['context'] for row in contexts if row.get('context',{}).get('nodeId')==NODE),None)
         if not context:raise RuntimeError('BIM fixture context unavailable')
+        source_mode=os.environ.get('FP_IOS_UPLOAD_SOURCE','photos')
+        if source_mode not in ('photos','files'):raise ValueError('Unsupported native upload source')
+        report['sourceMode']=source_mode
         policy=request(BASE+'/attachment-policy',token);png=synthetic_png()
+        if source_mode=='files':
+            source_path=BASE+'/90b54e47-6fec-4f03-b47d-69cd0ceb1aed/attachments'
+            files=request(source_path,token)
+            source_file=next((f for f in files if f.get('id')=='d41ce29b-7cfd-439f-bf38-77032b23d605'),None)
+            if not source_file or source_file.get('scanState')!='CLEAN':raise RuntimeError('Existing synthetic saved-copy source unavailable')
+            png=request(source_path+'/'+source_file['id'],token,binary=True)
+            if len(png)!=1000000 or hashlib.sha256(png).hexdigest()!='a1107345e9538212373dafae0074a987f92f716656340be824e8944dcea0c9d6':raise RuntimeError('Synthetic saved-copy source fingerprint differs')
+            report['savedCopySource']={'incidentId':'90b54e47-6fec-4f03-b47d-69cd0ceb1aed','attachmentId':source_file['id'],'createdThroughNativeSaveTest':False,'nativeSaveRequiredBeforeSelection':True}
         report['policy']=policy
         if 'image/png' not in policy.get('contentTypes',[]) or policy.get('maxFiles',0)<1 or policy.get('maxBytes',0)<len(png):raise RuntimeError('Existing attachment policy does not allow the synthetic PNG')
         reuse=os.environ.get('FP_IOS_UPLOAD_REUSE_ID','').strip()
@@ -51,6 +62,11 @@ def prepare(output:Path,password:str,udid:str,private_dir:Path):
         private_dir.mkdir(parents=True,exist_ok=True)
         source=private_dir/'FP-IOS-SYNTHETIC-UPLOAD.png';source.write_bytes(png)
         report['expectedFile']={'bytes':len(png),'sha256':hashlib.sha256(png).hexdigest(),'contentType':'image/png','synthetic':True}
+        if source_mode=='files':
+            # Nothing is inserted into the simulator filesystem or uploaded by API.
+            # test09b must create the user copy through the real Save UI first.
+            report.update(ready=True,simulatorMediaPrepared=False,nativeFileSaveRequired=True)
+            return report
         # The hosted runner is disposable; this adds only a generated test pattern.
         report['mediaPreparation']={'phase':'WARM_PHOTOS','importTimeoutSeconds':120}
         output.write_text(json.dumps(report,indent=2)+'\n')
