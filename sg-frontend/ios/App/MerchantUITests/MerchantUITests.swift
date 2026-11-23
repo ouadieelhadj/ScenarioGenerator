@@ -122,6 +122,11 @@ final class MerchantUITests: XCTestCase {
         XCTFail("Dossier synthétique autorisé absent des quatre pages contrôlées.")
     }
 
+    @MainActor private func pickerScreen(_ name: String) {
+        let proof = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        proof.name = "preuve-" + name; proof.lifetime = .keepAlways
+        add(proof)
+    }
     @MainActor private func screenshot(_ app: XCUIApplication, _ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "preuve-" + name; attachment.lifetime = .keepAlways
@@ -432,11 +437,38 @@ final class MerchantUITests: XCTestCase {
         let library = app.buttons.matching(NSPredicate(format: "label IN %@", ["Photothèque", "Photo Library", "Choisir une photo", "Choose Photo", "Choisir une photo ou une vidéo"])).firstMatch
         XCTAssertTrue(library.waitForExistence(timeout: 10), "La photothèque native doit être proposée explicitement.")
         library.tap()
-        let photo = app.collectionViews.cells.firstMatch
-        XCTAssertTrue(photo.waitForExistence(timeout: 15), "L'image synthétique doit être disponible dans le sélecteur iOS.")
-        screenshot(app, "ios09-selecteur-photo-synthetique")
+        pickerScreen("ios09-selecteur-systeme-avant-recherche")
+        // A disposable hosted simulator contains only the prepared synthetic asset.
+        // Acknowledge a real first-use UI if present; never change TCC with a command.
+        for _ in 0..<2 {
+            let consent = app.buttons.matching(NSPredicate(format: "label IN %@", ["Continuer", "Continue", "Autoriser l’accès complet", "Autoriser l'accès complet", "Allow Full Access", "Autoriser l’accès à toutes les photos", "Autoriser l'accès à toutes les photos"])).firstMatch
+            if consent.waitForExistence(timeout: 1) && consent.isHittable {
+                pickerScreen("ios09-consentement-phototheque")
+                consent.tap()
+            } else { break }
+        }
+        // Photos on recent iOS may expose an asset as a button/image rather than
+        // a collection cell. The server hash must still prove the chosen asset.
+        let asset = NSPredicate(format: "label BEGINSWITH[cd] %@ OR label MATCHES[cd] %@ OR label BEGINSWITH[cd] %@ OR label BEGINSWITH[cd] %@", "Photo,", "Photo [0-9].*", "Image,", "FP-IOS-SYNTHETIC-UPLOAD")
+        let system = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+        var selected: XCUIElement?
+        let deadline = Date().addingTimeInterval(25)
+        repeat {
+            for candidate in [app.descendants(matching: .any).matching(asset).firstMatch,
+                              app.collectionViews.cells.firstMatch,
+                              system.descendants(matching: .any).matching(asset).firstMatch] {
+                if candidate.exists && candidate.isHittable { selected = candidate; break }
+            }
+            if selected != nil { break }
+            _ = XCTWaiter.wait(for: [], timeout: 0.5)
+        } while Date() < deadline
+        pickerScreen("ios09-selecteur-systeme-apres-recherche")
+        print("FP_PHOTO_PICKER appCells=" + String(app.collectionViews.cells.count) + " appImages=" + String(app.images.count) + " assetFound=" + String(selected != nil))
+        XCTAssertNotNil(selected, "L'image synthétique doit être disponible dans le sélecteur iOS.")
+        guard let photo = selected else { return }
+        pickerScreen("ios09-selecteur-photo-synthetique")
         photo.tap()
-        let add = app.buttons.matching(NSPredicate(format: "label IN %@", ["Ajouter", "Add", "Ajouter (1)", "Add (1)"])).firstMatch
+        let add = app.buttons.matching(NSPredicate(format: "label IN %@", ["Ajouter", "Add", "Ajouter (1)", "Add (1)", "Choisir", "Choose", "Utiliser la photo", "Use Photo", "Ouvrir", "Open"])).firstMatch
         if add.waitForExistence(timeout: 3) && add.isEnabled && add.isHittable { add.tap() }
         let received = app.webViews.staticTexts.matching(NSPredicate(format: "label IN %@", ["Pièce contrôlée.", "Pièce reçue ; consultation bloquée tant que le contrôle de sécurité n’est pas validé."])).firstMatch
         XCTAssertTrue(received.waitForExistence(timeout: 35), "Le serveur doit accuser réception du dépôt depuis le sélecteur.")
