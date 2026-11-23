@@ -1,0 +1,107 @@
+<header><p class="eyebrow">PORTAIL COMMERÇANT</p><h1>{{bankOperations() ? 'Rapprochement bancaire' : 'Mes remises et règlements'}}</h1>
+  @if(bankOperations()){<p>Comparez les règlements exécutés et les crédits du relevé. Une proposition n’est pas une validation bancaire.</p>}
+  @else {<p>Consultez les totaux de vos remises et télécollectes, les frais appliqués, le net à recevoir et l’état du règlement.</p>}
+</header>
+<section class="filters" aria-label="Filtres des remises et règlements">
+  <label>Acquéreur<select [(ngModel)]="acquirer" (ngModelChange)="selectAcquirer()">@for (a of acquirers(); track a.code) {<option [value]="a.code">{{a.name}}</option>}</select></label>
+  <label>Périmètre<select [(ngModel)]="nodeId" (ngModelChange)="checkImportPermission()"><option value="">Tous mes périmètres</option>
+    @for (n of nodes(); track n.id) {<option [value]="n.id">{{n.label}}{{n.active ? '' : ' (historique)'}}</option>}</select></label>
+  <label>Du<input type="date" [(ngModel)]="from"></label><label>Au (inclus)<input type="date" [(ngModel)]="to"></label>
+  <label>Devise ISO<input maxlength="3" [(ngModel)]="currency" placeholder="MAD"></label>
+  <button (click)="refresh()" [disabled]="busy() || actionBusy() || !accessReady()">{{bankOperations() ? 'Actualiser le rapprochement' : 'Actualiser les remises'}}</button>
+</section>
+<p class="notice">Dates affichées dans votre fuseau ; filtre par jour UTC. Les totaux de devises différentes ne sont jamais fusionnés.</p>
+@if (error()) {<p role="alert" class="error">{{error()}}</p>}
+@if (notice()) {<p role="status" class="notice">{{notice()}}</p>}
+@if (importPermission()) {
+  <section class="import"><h2>Importer un relevé de crédits</h2>
+    <p>CSV portail v1, UTF-8, 1 Mio et 5 000 crédits maximum. Sans RIB ni numéro de compte. Les références du relevé doivent être stables et uniques.</p>
+    <label>Relevé CSV<input type="file" accept=".csv,text/csv" (change)="chooseFile($event)"></label>
+    <button (click)="importStatement()" [disabled]="!file || actionBusy() || busy()">Importer les crédits</button>
+    <button (click)="downloadTemplate()">Télécharger le modèle CSV</button>
+    <p>Le modèle est le contrat du portail, pas un format bancaire universel. Une conversion contrôlée est nécessaire si votre banque utilise un autre format.</p>
+  </section>
+}
+@if(bankOperations()){<nav class="tabs" aria-label="Vues de rapprochement"><button (click)="tab='settlements'" [attr.aria-pressed]="tab==='settlements'">Règlements</button>
+  <button (click)="tab='credits'" [attr.aria-pressed]="tab==='credits'">Crédits bancaires</button></nav>}
+@if (busy()) {<p role="status">Chargement des données autorisées…</p>}
+@if (tab==='settlements' && settlements(); as page) {
+  <div class="table-scroll"><table><caption>{{page.totalElements}} remise(s) / règlement(s)</caption><thead><tr><th>Référence de remise</th><th>Exécution</th><th>Brut</th><th>Frais</th><th>Ajustements</th><th>Net</th><th>Devise</th><th>{{bankOperations() ? 'Rapprochement' : 'État du règlement'}}</th><th>Action</th></tr></thead><tbody>
+    @for (row of page.content; track row.id) {<tr><td>{{row.reference}}</td><td>{{row.executedAt ? (row.executedAt | date:'dd/MM/yyyy HH:mm') : 'Non exécuté'}}</td>
+      <td class="money">{{money(row.grossAmount)}}</td><td class="money">{{money(row.feesAmount)}}</td><td class="money">{{money(row.adjustmentsAmount)}}</td>
+      <td class="money">{{money(row.amount)}}</td><td>{{row.currency}}</td><td>{{label(row.reconciliationStatus)}}</td>
+      <td><button (click)="openDetail(row)" [disabled]="actionBusy()">Détails</button></td></tr>}
+  </tbody></table></div>
+  @if (!page.content.length) {<p>Aucun règlement dans ce périmètre et cette période.</p>}
+  <div class="pagination"><button (click)="refresh(page.number-1,'settlements')" [disabled]="!page.number || busy() || actionBusy()">Précédent</button>
+    <span>Page {{page.totalPages ? page.number+1 : 0}} / {{page.totalPages}}</span>
+    <button (click)="refresh(page.number+1,'settlements')" [disabled]="page.number+1>=page.totalPages || busy() || actionBusy()">Suivant</button></div>
+}
+@if (tab==='credits' && credits(); as page) {
+  <div class="table-scroll"><table><caption>{{page.totalElements}} crédit(s) bancaire(s)</caption><thead><tr><th>Référence du crédit</th><th>Référence de paiement</th><th>Date</th><th>Montant</th><th>Devise</th><th>Rapprochement</th><th>Action</th></tr></thead><tbody>
+    @for (row of page.content; track row.id) {<tr><td>{{row.data.sourceCreditId}}</td><td>{{row.data.paymentReference || 'Non fournie'}}</td>
+      <td>{{row.data.bookedAt | date:'dd/MM/yyyy HH:mm'}}</td><td class="money">{{money(row.data.amount)}}</td><td>{{row.data.currency}}</td><td>{{label(row.reconciliationStatus)}}</td>
+      <td><button (click)="openCredit(row)" [disabled]="actionBusy()">Historique et correction</button></td></tr>}
+  </tbody></table></div>
+  @if (!page.content.length) {<p>Aucun crédit importé dans ce périmètre et cette période.</p>}
+  <div class="pagination"><button (click)="refresh(page.number-1,'credits')" [disabled]="!page.number || busy() || actionBusy()">Précédent</button>
+    <span>Page {{page.totalPages ? page.number+1 : 0}} / {{page.totalPages}}</span>
+    <button (click)="refresh(page.number+1,'credits')" [disabled]="page.number+1>=page.totalPages || busy() || actionBusy()">Suivant</button></div>
+}
+@if (detail(); as row) {
+  <section class="detail" aria-label="Détail du rapprochement"><div class="detail-heading"><h2>{{row.reference}}</h2><button (click)="closeDetail()" [disabled]="actionBusy()">Fermer le détail</button></div>
+    <dl><dt>Total brut</dt><dd>{{money(row.grossAmount)}} {{row.currency}}</dd><dt>Frais</dt><dd>{{money(row.feesAmount)}} {{row.currency}}</dd>
+      <dt>Ajustements</dt><dd>{{money(row.adjustmentsAmount)}} {{row.currency}}</dd><dt>Net attendu</dt><dd>{{money(row.amount)}} {{row.currency}}</dd><dt>État</dt><dd>{{label(row.reconciliationStatus)}}</dd></dl>
+    <a routerLink="/merchant/settlements" [queryParams]="{acquirer:acquirer,record:row.id}">Consulter les opérations de la remise</a>
+    @if (row.match; as match) {
+      <dl><dt>Écart crédit − net</dt><dd>{{money(match.difference)}} {{row.currency}}</dd><dt>Proposé par</dt><dd>{{match.proposedBy}} — {{match.proposedAt | date:'dd/MM/yyyy HH:mm'}}</dd>
+        <dt>Justification</dt><dd>{{match.proposalReason}}</dd>
+        @if (match.decidedBy) {<dt>Décidé par</dt><dd>{{match.decidedBy}} — {{match.decidedAt | date:'dd/MM/yyyy HH:mm'}}</dd><dt>Motif de décision</dt><dd>{{match.decisionReason}}</dd>}
+      </dl>
+      @if (!match.sourceCurrent) {<p role="alert" class="error">Le règlement source ou le crédit bancaire a changé. Cette validation ne constitue plus une preuve à jour.</p>}
+      @if (permissions().checker && (match.status==='PROPOSED' || !match.sourceCurrent && match.status==='VALIDATED')) {
+        <label>Justification de décision<textarea maxlength="1000" [(ngModel)]="justification" placeholder="Sans donnée bancaire sensible"></textarea></label>
+        @if (match.status==='PROPOSED' && match.sourceCurrent) {<button (click)="decide(true)" [disabled]="actionBusy()">Valider le rapprochement</button>}
+        <button (click)="decide(false)" [disabled]="actionBusy()">{{match.status==='VALIDATED' ? 'Invalider la validation périmée' : 'Rejeter la proposition'}}</button>
+        <p>Le serveur interdit l’auto-approbation, même pour un administrateur.</p>
+      }
+    } @else if(bankOperations()) {
+      <p>{{row.candidates.length}} crédit(s) identifié(s) par référence, périmètre, devise et date. Un montant identique seul n’est pas suffisant.</p>
+      @if (permissions().maker && row.reconciliationStatus!=='NOT_EXECUTED') {
+        <label>Crédit à rapprocher<select [(ngModel)]="selectedCreditId"><option value="">Sélectionner un crédit</option>
+          @for (c of candidateCredits(); track c.id) {<option [value]="c.id">{{c.data.sourceCreditId}} — {{money(c.data.amount)}} {{c.data.currency}}</option>}</select></label>
+        <p>Les crédits non rapprochés de la page bancaire courante sont également proposés. Le serveur vérifie le commerçant et le périmètre des deux éléments.</p>
+        <label>Justification de proposition<textarea maxlength="1000" [(ngModel)]="justification" placeholder="Sans donnée bancaire sensible"></textarea></label>
+        <button (click)="propose()" [disabled]="!selectedCreditId || actionBusy()">Proposer le rapprochement</button>
+      }
+    }
+  </section>
+}
+@if (creditDetail(); as credit) {
+  <section class="detail" aria-label="Versions du crédit bancaire">
+    <div class="detail-heading"><h2>Crédit {{credit.data.sourceCreditId}}</h2><button (click)="closeDetail()" [disabled]="actionBusy()">Fermer les versions</button></div>
+    <p>Version effective : {{money(credit.data.amount)}} {{credit.data.currency}} — {{credit.data.bookedAt | date:'dd/MM/yyyy HH:mm'}}.
+      {{credit.revisionId ? 'Une correction validée est appliquée.' : 'Crédit du relevé initial.'}}</p>
+    <p>Le relevé d’origine est conservé. Une correction porte sur un crédit identifié du même périmètre et de la même devise ; elle ne modifie pas le virement bancaire.</p>
+    @if (correctionPermissions().maker && !pendingCorrection()) {
+      <label>Relevé corrigé (un seul crédit)<input type="file" accept=".csv,text/csv" (change)="chooseCorrectionFile($event)"></label>
+      <label>Justification de correction<textarea maxlength="1000" [(ngModel)]="correctionReason" (ngModelChange)="correctionChanged()" placeholder="Sans donnée sensible"></textarea></label>
+      <button (click)="proposeCorrection()" [disabled]="!correctionFile || actionBusy()">Proposer la correction du crédit</button>
+    }
+    @if (pendingCorrection()) {<p>Une correction est en attente de décision indépendante.</p>}
+    @if (correctionPermissions().checker && pendingCorrection()) {
+      <label>Motif de décision de correction<textarea maxlength="1000" [(ngModel)]="correctionReason" placeholder="Sans donnée sensible"></textarea></label>
+    }
+    <div class="table-scroll"><table><caption>Historique des corrections</caption><thead><tr><th>Version</th><th>Montant</th><th>Date du crédit</th><th>Référence de paiement</th><th>État</th><th>Proposition</th><th>Décision</th><th>Actions</th></tr></thead><tbody>
+      @for (r of corrections(); track r.id) {
+        <tr><td>{{r.revisionNumber}}</td><td>{{money(r.data.amount)}} {{r.data.currency}}</td><td>{{r.data.bookedAt | date:'dd/MM/yyyy HH:mm'}}</td><td>{{r.data.paymentReference || 'Non fournie'}}</td><td>{{label(r.status)}}</td>
+          <td>{{r.proposedBy}} — {{r.proposedAt | date:'dd/MM/yyyy HH:mm'}}<br>{{r.proposalReason}}</td>
+          <td>{{r.decidedBy || 'Non décidée'}} @if (r.decidedAt) { — {{r.decidedAt | date:'dd/MM/yyyy HH:mm'}}<br>{{r.decisionReason}} }</td>
+          <td>@if (correctionPermissions().checker && r.status==='PROPOSED') {
+            <button (click)="decideCorrection(r,true)" [disabled]="actionBusy()">Valider la correction</button><button (click)="decideCorrection(r,false)" [disabled]="actionBusy()">Rejeter la correction</button>
+          }</td></tr>
+      }
+    </tbody></table></div>
+    @if (!corrections().length) {<p>Aucune correction. Le crédit d’origine n’a pas été remplacé.</p>}
+  </section>
+}

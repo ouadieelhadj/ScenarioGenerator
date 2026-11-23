@@ -20,7 +20,16 @@ const origin='https://merchant.futurpayment.com';
  const installed=JSON.parse(fs.readFileSync(path.join(F,'node_modules/@angular/core/package.json'),'utf8'));
  report.angular=installed.version;report.lockSha256=crypto.createHash('sha256').update(fs.readFileSync(path.join(F,'package-lock.json'))).digest('hex');
  check('Actual compiled framework is Angular21',installed.version==='21.2.26');
- cp.execFileSync(process.execPath,['node_modules/@angular/cli/bin/ng.js','build','merchant-portal-web','--configuration','production','--source-map=false'],{cwd:F,stdio:'pipe',timeout:480000,maxBuffer:4*1024*1024});
+ check('Portal build configuration supplied with source',fs.existsSync(path.join(F,'tsconfig.merchant-portal.json'))&&fs.existsSync(path.join(F,'src/main.merchant-portal.ts'))&&fs.existsSync(path.join(F,'src/styles.scss')));
+ try{
+  cp.execFileSync(process.execPath,['node_modules/@angular/cli/bin/ng.js','build','merchant-portal-web','--configuration','production','--source-map=false'],{cwd:F,stdio:'pipe',timeout:480000,maxBuffer:4*1024*1024});
+ }catch(error){
+  // The build happens before authentication. Keep its exact diagnostics inside
+  // encrypted evidence; never reduce a compiler error to the name "Error".
+  report.buildFailure={exitCode:Number.isInteger(error.status)?error.status:null,signal:error.signal||null};
+  fs.writeFileSync(path.join(OUT,'compiler-failure.log'),Buffer.concat([Buffer.from(error.stdout||''),Buffer.from(error.stderr||'')]));
+  throw error;
+ }
  const root=path.resolve(F,'dist/merchant-portal-web/browser');check('New portal asset build present',fs.existsSync(path.join(root,'index.html')));
  const chrome='/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
  if(!fs.existsSync(chrome))cp.execFileSync(process.execPath,['node_modules/playwright/cli.js','install','chromium'],{cwd:F,stdio:'pipe',timeout:300000,maxBuffer:4*1024*1024});

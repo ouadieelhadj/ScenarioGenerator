@@ -67,7 +67,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   ios-validation:
-    runs-on: macos-26
+    runs-on: ${{ inputs.typecheck_only && inputs.authenticated && !inputs.transport_only && inputs.ui_focus == 'onboarding_documents' && 'ubuntu-24.04' || 'macos-26' }}
     timeout-minutes: 60
     env:
       FP_IOS_OUTPUT: ${{ github.workspace }}/preuves-mac
@@ -82,16 +82,16 @@ jobs:
           ref: ${{ inputs.source_ref }}
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
-        if: ${{ !inputs.transport_only }}
+        if: ${{ !inputs.transport_only && !inputs.typecheck_only }}
         with:
           node-version: '24'
       - name: Identifier la version Node exacte pour le cache public
         id: node_runtime
-        if: ${{ !inputs.transport_only }}
+        if: ${{ !inputs.transport_only && !inputs.typecheck_only }}
         run: node tools/ios/dependency-cache.mjs metadata
       - name: Restaurer les dependances installees avant tout compte
         id: installed_vendor_cache
-        if: ${{ !inputs.transport_only }}
+        if: ${{ !inputs.transport_only && !inputs.typecheck_only }}
         continue-on-error: true
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4, verified official tag
         with:
@@ -101,7 +101,7 @@ jobs:
           key: fp-ios-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ steps.node_runtime.outputs.node_version }}-${{ hashFiles('sg-frontend/package.json', 'sg-frontend/package-lock.json') }}
       - name: Restaurer les dependances publiques npm
         id: npm_vendor_cache
-        if: ${{ !inputs.transport_only }}
+        if: ${{ !inputs.transport_only && !inputs.typecheck_only }}
         continue-on-error: true
         uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4, verified official tag
         with:
@@ -131,7 +131,7 @@ jobs:
             python3 tools/ios/probe-native-https.py
           fi
       - name: Verifier les outils et compiler les sources XCTest avant le client
-        if: ${{ !inputs.transport_only }}
+        if: ${{ !inputs.transport_only && !(inputs.typecheck_only && inputs.authenticated && inputs.ui_focus == 'onboarding_documents') }}
         run: python3 tools/ios/probe-simulator-signature.py
       - name: Observer la connectivite API sans compte reel
         if: ${{ !inputs.typecheck_only && !inputs.device_sdk_only && !inputs.transport_only }}

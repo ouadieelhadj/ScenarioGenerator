@@ -1,0 +1,61 @@
+<section class="portal-chargebacks"><h1>Chargebacks et litiges</h1><p>Répondre au litige et joindre les pièces ; le traitement réseau reste réalisé par le Back-office hors du portail.</p>
+  @if(error()){<p role="alert" class="error">{{error()}}</p>}@if(notice()){<p role="status" class="notice">{{notice()}}</p>}
+  <div class="toolbar"><label>Acquéreur<select [(ngModel)]="acquirer" (change)="selectAcquirer()" [disabled]="actionBusy()">@for(a of acquirers();track a.code){<option [value]="a.code">{{a.name}}</option>}</select></label>
+    <label>Du<input type="date" [(ngModel)]="from" [disabled]="actionBusy()"></label><label>Au<input type="date" [(ngModel)]="to" [disabled]="actionBusy()"></label>
+    <label>Statut source<select [(ngModel)]="state" [disabled]="actionBusy()"><option value="">Tous</option><option value="OPEN">Ouvert</option><option value="CLOSED">Clôturé</option><option value="CANCELLED">Annulé</option><option value="UNKNOWN">À qualifier</option></select></label>
+    <button (click)="refresh()" [disabled]="busy()||actionBusy()">Actualiser les litiges</button></div>
+  @if(rows();as list){<div class="scroll"><table><thead><tr><th>Référence</th><th>Motif</th><th>Montant</th><th>Échéance</th><th>Statut source</th><th>Action</th></tr></thead>
+    <tbody>@for(row of list.content;track row.id){<tr><td>{{row.data.reference}}</td><td>{{row.data.reasonCode}} — {{row.data.reasonLabel}}</td><td>{{money(row.data.amount)}} {{row.data.currency}}</td>
+      <td>{{row.data.deadlineAt|date:'dd/MM/yyyy HH:mm'}}</td><td>{{label(row.data.canonicalStatus)}} ({{row.data.sourceStatus}})</td><td><button (click)="openDetail(row)" [disabled]="actionBusy()">Détails</button></td></tr>}@empty{<tr><td colspan="6">Aucun litige sur votre périmètre.</td></tr>}</tbody></table></div>
+    <nav aria-label="Pages des litiges"><span>{{list.totalElements}} litige(s)</span><button (click)="refresh(list.number-1)" [disabled]="list.number===0||busy()||actionBusy()">Précédente</button><span>Page {{list.number+1}} / {{list.totalPages||1}}</span>
+      <button (click)="refresh(list.number+1)" [disabled]="list.number+1>=list.totalPages||busy()||actionBusy()">Suivante</button></nav>}
+  @if(detail();as row){<article class="panel"><h2>{{row.data.reference}}</h2><p class="notice">{{row.networkNotice}}</p><dl>
+    <dt>Opération d’origine</dt><dd><a routerLink="/merchant/transactions" [queryParams]="{acquirer:acquirer,record:row.data.transactionId}">Ouvrir la transaction d’origine</a></dd><dt>Montant du litige</dt><dd>{{money(row.data.amount)}} {{row.data.currency}}</dd>
+    <dt>Motif</dt><dd>{{row.data.reasonCode}} — {{row.data.reasonLabel}}</dd><dt>Échéance</dt><dd>{{row.data.deadlineAt|date:'dd/MM/yyyy HH:mm'}}</dd>
+    <dt>Statut officiel</dt><dd>{{label(row.data.canonicalStatus)}} — {{row.data.sourceStatus}}</dd><dt>Résultat officiel</dt><dd>{{row.data.officialOutcome||'Non fourni par la source'}}</dd>
+    <dt>Dernière version source</dt><dd>{{row.data.sourceUpdatedAt|date:'dd/MM/yyyy HH:mm'}}</dd></dl>
+    <h3>Réponses et piste de validation</h3>
+    @for(response of row.responses;track response.id){<section class="response"><h4>{{response.response==='ACCEPT'?'Acceptation':'Contestation'}} — {{label(response.state)}}</h4>
+      @if(!response.sourceCurrent){<p role="alert" class="error">Le litige source a changé ; cette réponse ne peut plus être approuvée.</p>}
+      <dl><dt>Commentaire</dt><dd>{{response.comment}}</dd><dt>Auteur</dt><dd>{{response.createdBy}} — {{response.createdAt|date:'dd/MM/yyyy HH:mm'}}</dd>
+        <dt>Contrôle commerçant</dt><dd>{{response.merchantChecker||'Non effectué'}} — {{response.merchantReason||'Sans décision'}}</dd>
+        <dt>Contrôle Back-office</dt><dd>{{response.backofficeChecker||'Non effectué'}} — {{response.backofficeReason||'Sans décision'}}</dd></dl>
+      @if(response.invalidatedBy){<p>Remise invalidée par {{response.invalidatedBy}} le {{response.invalidatedAt|date:'dd/MM/yyyy HH:mm'}} : {{response.invalidationReason}}</p>}
+      <ul>@for(doc of response.documents;track doc.id){<li>{{doc.contentType}} — {{doc.contentSize}} octets <button (click)="download(response,doc)" [disabled]="actionBusy()">Télécharger la pièce</button></li>}@empty{<li>Aucune pièce.</li>}</ul>
+      <app-merchant-request-assignment [resource]="assignmentResource(response)" [businessVersion]="response.version" [assignment]="response.assignment" [originalAuthor]="response.createdBy" (changed)="openDetailId(row.id)"></app-merchant-request-assignment>
+      @if(response.sourceCurrent&&actionable()&&response.state==='DRAFT'&&responsible(response)&&row.capabilities.maker){
+        <label>Pièce PDF, PNG ou JPEG<input type="file" accept="application/pdf,image/png,image/jpeg" (change)="selectFile($event)" [disabled]="actionBusy()"></label>
+        <button (click)="upload(response)" [disabled]="!file||actionBusy()">Déposer une pièce</button><button (click)="submit(response)" [disabled]="actionBusy()||(response.response==='CONTEST'&&!response.documents.length)">Soumettre la réponse</button>}
+      @if(response.sourceCurrent&&independent(response)){
+        @if(actionable()&&response.state==='MERCHANT_REVIEW'&&row.capabilities.checker&&checkerResponsible(response)){<label>Justification de décision<textarea [(ngModel)]="reason" maxlength="1000"></textarea></label>
+          <button (click)="merchantDecision(response,true)" [disabled]="actionBusy()">Valider la réponse commerçant</button><button (click)="merchantDecision(response,false)" [disabled]="actionBusy()">Refuser la réponse commerçant</button>}
+        @if(response.state==='BACKOFFICE_REVIEW'&&row.capabilities.backoffice){<label>Justification de décision<textarea [(ngModel)]="reason" maxlength="1000"></textarea></label>
+          <button (click)="backofficeDecision(response,'VALIDATE')" [disabled]="actionBusy()||!actionable()">Remettre au Back-office externe</button><button (click)="backofficeDecision(response,'COMPLEMENT')" [disabled]="actionBusy()">Demander des compléments</button>
+          <button (click)="backofficeDecision(response,'REJECT')" [disabled]="actionBusy()">Refuser côté Back-office</button>}}
+      @if(!independent(response)&&['MERCHANT_REVIEW','BACKOFFICE_REVIEW'].includes(response.state)){<p>Vous avez participé à cette demande : l’auto-approbation est interdite, même après réattribution.</p>}
+      @if(!response.sourceCurrent&&responsible(response)&&['DRAFT','MERCHANT_REVIEW','BACKOFFICE_REVIEW','COMPLEMENT_REQUIRED'].includes(response.state)){
+        <button (click)="withdraw(response)" [disabled]="actionBusy()">Retirer la version obsolète</button>}
+      @if(row.capabilities.backoffice&&independent(response)&&response.state==='READY_FOR_EXTERNAL_BO'&&(!response.sourceCurrent||!actionable())){
+        <label>Justification de l’invalidation<textarea [(ngModel)]="reason" maxlength="1000"></textarea></label>
+        <button (click)="invalidate(response)" [disabled]="actionBusy()">Invalider la remise devenue obsolète</button>}
+    </section>}@empty{<p>Aucune réponse enregistrée.</p>}
+    @if(canRespond()){<form (ngSubmit)="createResponse()"><h3>Nouvelle réponse</h3><label>Réponse au litige<select name="response" [(ngModel)]="response"><option value="ACCEPT">Accepter</option><option value="CONTEST">Contester</option></select></label>
+      <label>Commentaire de réponse<textarea name="comment" [(ngModel)]="comment" required maxlength="1000"></textarea></label><button type="submit" [disabled]="actionBusy()">Enregistrer la réponse</button></form>}
+    <h3>Notifications et rappels</h3><p>« En attente » indique un travail préparé, pas un e-mail envoyé. Aucune donnée bancaire ni pièce ne doit être incluse dans un e-mail.</p>
+    <ul>@for(n of row.notifications;track $index){<li>{{n.kind==='NEW_CASE'?'Nouveau litige':n.kind==='REMINDER_3_DAYS'?'Rappel à trois jours':'Rappel à un jour'}} — {{n.dueAt|date:'dd/MM/yyyy HH:mm'}} — {{mailLabel(n.status)}}
+      @if(n.blockReason){<p role="alert">{{mailBlock(n.blockReason)}}</p>}</li>}</ul>
+    @if(row.capabilities.backoffice){<button (click)="loadMailTracking()" [disabled]="mailBusy()">Suivi des notifications</button>}
+    @if(mailTracking();as tracking){<h3>Suivi technique des e-mails</h3><p>Le serveur peut accepter un message sans garantir sa réception. Un résultat incertain interdit le renvoi automatique.</p>
+      <div class="scroll"><table><thead><tr><th>Notification</th><th>État</th><th>Acceptation du relais</th><th>Tentatives</th><th>Action</th></tr></thead><tbody>
+        @for(d of tracking;track d.id){<tr><td>{{d.id}}</td><td>{{mailLabel(d.state)}}</td><td>{{d.acceptedAt? (d.acceptedAt|date:'dd/MM/yyyy HH:mm'):'Non confirmée'}}</td><td>{{d.attempts.length}}</td><td>
+          @if(d.state==='UNCERTAIN'){<button (click)="prepareRetry(d)" [disabled]="mailBusy()">Renvoi après contrôle du relais</button>}</td></tr>}
+        @empty{<tr><td colspan="5">Aucune tentative préparée.</td></tr>}</tbody></table></div>
+      @for(d of tracking;track d.id){@for(a of d.attempts;track a.id){<p>Tentative {{a.id}} : {{mailLabel(a.state)}} — {{a.startedAt|date:'dd/MM/yyyy HH:mm'}}
+        @if(a.retryAuthorizedBy){ — nouvelle tentative autorisée par {{a.retryAuthorizedBy}} le {{a.retryAuthorizedAt|date:'dd/MM/yyyy HH:mm'}}}</p>}}
+      @if(retryTarget()){<section class="response"><h4>Confirmer le renvoi contrôlé</h4><p role="alert">Vérifiez auprès du relais que le message n’a pas été accepté. En cas de doute, ne renvoyez pas : une duplication reste possible.</p>
+        <label>Preuve de non-acceptation par le relais<textarea [(ngModel)]="relayEvidence" maxlength="1000" [disabled]="mailBusy()"></textarea></label>
+        <button (click)="confirmRetry()" [disabled]="mailBusy()">Confirmer la nouvelle tentative</button><button (click)="cancelRetry()" [disabled]="mailBusy()">Annuler le renvoi</button></section>}
+      <button (click)="mailTracking.set(null)" [disabled]="mailBusy()">Fermer le suivi mail</button>}
+    <button (click)="closeDetail()" [disabled]="actionBusy()">Fermer le détail</button>
+  </article>}
+</section>

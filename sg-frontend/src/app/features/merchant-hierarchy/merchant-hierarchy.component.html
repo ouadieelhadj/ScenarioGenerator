@@ -1,0 +1,36 @@
+<section class="hierarchy"><h1>Hiérarchie et habilitations</h1>
+  <p>Consulter l’organisation issue de l’acquisition et administrer les périmètres du portail selon vos droits.</p>
+  @if(error()){<p role="alert" class="error">{{error()}}</p>}@if(notice()){<p role="status" class="notice">{{notice()}}</p>}
+  <div class="toolbar"><label>Acquéreur<select [(ngModel)]="acquirer" (change)="selectAcquirer()" [disabled]="actionBusy()">@for(a of acquirers();track a.code){<option [value]="a.code">{{a.name}}</option>}</select></label>
+    <button (click)="refresh(nodes()?.number||0)" [disabled]="busy()||actionBusy()">Actualiser la hiérarchie</button></div>
+  @if(nodes();as list){<div class="scroll"><table><caption>Niveaux de votre périmètre autorisé</caption><thead><tr><th>Libellé</th><th>Niveau</th><th>Référence source</th><th>État</th><th>Action</th></tr></thead>
+    <tbody>@for(n of list.content;track n.id){<tr><td>{{n.label}}</td><td>{{label(n.nodeType)}}</td><td>{{n.sourceSystem}} — {{n.sourceObjectId}}</td><td>{{n.active?'Actif':'Fermé — historique consultable'}}</td>
+      <td><button (click)="open(n)" [disabled]="actionBusy()">Détails et habilitations</button></td></tr>}@empty{<tr><td colspan="5">Aucun niveau disponible dans votre périmètre.</td></tr>}</tbody></table></div>
+    <nav aria-label="Pages de la hiérarchie"><span>{{list.totalElements}} niveau(x)</span><button (click)="refresh(list.number-1)" [disabled]="list.number===0||busy()||actionBusy()">Précédente</button><span>Page {{list.number+1}} / {{list.totalPages||1}}</span><button (click)="refresh(list.number+1)" [disabled]="list.number+1>=list.totalPages||busy()||actionBusy()">Suivante</button></nav>}
+  @if(selected();as node){<article class="panel"><h2>{{node.label}}</h2><dl><dt>Niveau</dt><dd>{{label(node.nodeType)}}</dd><dt>Référence source</dt><dd>{{node.sourceSystem}} — {{node.sourceObjectId}}</dd>
+    <dt>Référence parent</dt><dd>{{node.parentNodeId||'Commerçant racine'}}</dd><dt>MID</dt><dd>{{node.mid||'Non fourni'}}</dd><dt>TID</dt><dd>{{node.tid||'Non fourni'}}</dd>
+    <dt>Dernière version source</dt><dd>{{node.sourceUpdatedAt|date:'dd/MM/yyyy HH:mm':'UTC'}} UTC</dd><dt>Dernière synchronisation</dt><dd>{{node.lastSyncedAt|date:'dd/MM/yyyy HH:mm':'UTC'}} UTC</dd></dl>
+    <p class="notice">La hiérarchie, le MID et le TID restent administrés dans le système d’acquisition. Cet écran ne crée ni commerçant ni terminal chez WAY4/PowerCARD.</p>
+    @if(detailBusy()){<p role="status">Chargement des habilitations…</p>}
+    @if(permissions();as rights){@if(rights.manageGrants){
+      <h3>Habilitations affectées directement à ce niveau</h3><p>Une habilitation s’applique aussi aux descendants. Les droits hérités d’un parent ne sont pas supprimés par une désactivation à ce niveau.</p>
+      @if(grants();as list){<div class="scroll"><table><thead><tr><th>Utilisateur</th><th>Rôle</th><th>État</th><th>Action</th></tr></thead><tbody>@for(g of list.content;track g.id){<tr><td>{{g.login||'Compte à vérifier'}}</td><td>{{label(g.role)}}</td><td>{{g.active?'Active':'Désactivée'}}</td>
+        <td>@if(g.active){<button (click)="askRevoke(g)" [disabled]="actionBusy()">Désactiver cette habilitation</button>}@else{<span>Historique conservé</span>}</td></tr>}@empty{<tr><td colspan="4">Aucune affectation directe.</td></tr>}</tbody></table></div>
+        <nav aria-label="Pages des habilitations"><span>{{list.totalElements}} habilitation(s)</span><button (click)="loadGrants(list.number-1)" [disabled]="list.number===0||detailBusy()||actionBusy()">Habilitations précédentes</button><span>Page {{list.number+1}} / {{list.totalPages||1}}</span><button (click)="loadGrants(list.number+1)" [disabled]="list.number+1>=list.totalPages||detailBusy()||actionBusy()">Habilitations suivantes</button></nav>}
+      @if(revokeTarget();as target){<div role="alertdialog" aria-label="Confirmer la désactivation"><p>Désactiver le rôle {{label(target.role)}} de {{target.login||'ce compte'}} sur {{node.label}} ? Les autres affectations ne changent pas.</p>
+        <button (click)="revoke()" [disabled]="actionBusy()">Confirmer la désactivation</button><button (click)="revokeTarget.set(null)" [disabled]="actionBusy()">Annuler la désactivation</button></div>}
+      <form (ngSubmit)="requestPersonalAssociation()"><h3>Rattacher un compte personnel existant</h3>
+        <p>Proposez un accès à ce niveau. La personne doit ensuite l’accepter en étant connectée à son compte. Ne saisissez ni e-mail ni mot de passe.</p>
+        <label>Identifiant personnel<input name="personalLogin" [(ngModel)]="personalLogin" (ngModelChange)="personalBindingChanged()" maxlength="96" autocomplete="off" [disabled]="actionBusy()"></label>
+        <label>Rôle proposé<select name="personalRole" [(ngModel)]="personalRole" (ngModelChange)="personalBindingChanged()" [disabled]="actionBusy()"><option value="VIEWER">Consultation</option><option value="MAKER">Préparateur (Maker)</option><option value="CHECKER">Valideur (Checker)</option><option value="ACCOUNTING">Comptabilité</option><option value="ADMIN">Administrateur</option></select></label>
+        <button type="submit" [disabled]="actionBusy()||!personalLogin.trim()">Proposer le rattachement</button>
+      </form>
+      <form (ngSubmit)="grant()"><h3>Affecter un utilisateur existant</h3><p>L’utilisateur doit déjà être actif et associé à cet acquéreur. Aucun compte, mot de passe ou rôle global Keycloak n’est créé.</p>
+        <label>Connexion utilisateur<input name="login" [(ngModel)]="login" (ngModelChange)="identityChanged()" maxlength="96" autocomplete="off" [disabled]="actionBusy()"></label>
+        <button type="button" (click)="resolveIdentity()" [disabled]="actionBusy()||!login.trim()">Vérifier l’utilisateur</button>
+        @if(identity();as user){<p role="status">{{user.login}} est actif et associé à cet acquéreur.</p>}
+        <label>Rôle sur ce niveau<select name="role" [(ngModel)]="role" [disabled]="actionBusy()"><option value="VIEWER">Consultation</option><option value="MAKER">Préparateur (Maker)</option><option value="CHECKER">Valideur (Checker)</option><option value="ACCOUNTING">Comptabilité</option><option value="ADMIN">Administrateur</option></select></label>
+        <button type="submit" [disabled]="!identity()||actionBusy()">Affecter l’habilitation</button></form>
+    }@else{<p>Consultation seule sur ce niveau : l’administration des utilisateurs et de leurs habilitations n’est pas autorisée.</p>}}
+    <button (click)="closeDetail()" [disabled]="actionBusy()">Fermer le détail</button></article>}
+</section>

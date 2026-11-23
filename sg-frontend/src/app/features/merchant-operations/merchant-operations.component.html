@@ -1,0 +1,72 @@
+<section class="portal-operations">
+  <header><h1>Demandes commerçants</h1><p>Ajout de TPE et changement de RIB, avec justificatifs et validations séparées.</p></header>
+  @if(error()){<p role="alert" class="error">{{error()}}</p>} @if(notice()){<p role="status" class="notice">{{notice()}}</p>}
+  <div class="toolbar">
+    <label>Acquéreur<select aria-label="Acquéreur" [(ngModel)]="acquirer" (change)="selectAcquirer()" [disabled]="actionBusy()">@for(a of acquirers();track a.code){<option [value]="a.code">{{a.name}}</option>}</select></label>
+    <label>Périmètre de nouvelle demande<select aria-label="Périmètre de nouvelle demande" [(ngModel)]="nodeId" (change)="checkPermissions()" [disabled]="actionBusy()||!!revisionTarget()">
+      @for(n of nodes();track n.id){<option [value]="n.id" [disabled]="!n.active">{{n.label}} — {{n.nodeType}}</option>}</select></label>
+    <button (click)="refresh()" [disabled]="busy()||actionBusy()">Actualiser les demandes</button>
+    @if(permissions().maker){<button (click)="openForm()" [disabled]="actionBusy()">Nouvelle demande</button>}
+  </div>
+  @if(creating()){
+    <form (ngSubmit)="create()" class="panel"><h2>{{revisionTarget()?'Compléter la demande':'Nouvelle demande'}}</h2>
+      @if(revisionTarget();as previous){<p>{{previous.complementReason}}</p><p>L’ancienne version reste conservée. Aucun accord ni examen documentaire n’est transféré à cette révision.</p>}
+      <label>Type de demande<select name="kind" [(ngModel)]="kind" [disabled]="!!revisionTarget()"><option value="ADD_TERMINAL">Ajouter un TPE</option><option value="CHANGE_RIB">Changer le RIB</option></select></label>
+      @if(kind==='ADD_TERMINAL'){
+        <label>Libellé TPE<input name="label" [(ngModel)]="label" required maxlength="160"></label>
+        <label>Modèle TPE<input name="model" [(ngModel)]="terminalModel" required maxlength="96"></label>
+        <label>Connexion<select name="connection" [(ngModel)]="connectionType"><option>IP</option><option>GPRS</option><option>WIFI</option></select></label>
+        <label>Devise<input name="currency" [(ngModel)]="currency" required maxlength="3"></label>
+        <label>Emplacement<input name="location" [(ngModel)]="location" required maxlength="256"></label>
+      }@else{
+        <label>Contrat de règlement concerné<input name="contract" [(ngModel)]="contract" required maxlength="128"></label>
+        <label>Titulaire du compte<input name="holder" [(ngModel)]="holder" required maxlength="160"></label>
+        <label>Nouveau RIB ou IBAN<input name="bankCoordinates" type="password" [(ngModel)]="bankCoordinates" autocomplete="off" required maxlength="42"></label>
+        <p>La cible est ce contrat uniquement, sans propagation à toute la chaîne. Les coordonnées ne sont pas réaffichées en clair.</p>
+      }
+      <button type="submit" [disabled]="actionBusy()">Enregistrer le brouillon</button><button type="button" (click)="closeForm()" [disabled]="actionBusy()">Annuler le formulaire</button>
+    </form>
+  }
+  @if(rows();as list){
+    <div class="scroll"><table><thead><tr><th>Référence</th><th>Type</th><th>Périmètre</th><th>Résumé</th><th>Statut</th><th>Créée le</th><th>Action</th></tr></thead>
+      <tbody>@for(row of list.content;track row.id){<tr><td>{{row.id}}</td><td>{{row.kind==='ADD_TERMINAL'?'Ajout de TPE':'Changement de RIB'}}</td>
+        <td>{{nodeLabel(row.hierarchyNodeId)}}</td><td>{{row.summary}}</td><td>{{labelForState(row.state)}}</td><td>{{row.createdAt|date:'dd/MM/yyyy HH:mm'}}</td>
+        <td><button (click)="openDetail(row)" [disabled]="actionBusy()">Détails</button></td></tr>}@empty{<tr><td colspan="7">Aucune demande sur votre périmètre.</td></tr>}</tbody></table></div>
+    <nav aria-label="Pages des demandes"><span>{{list.totalElements}} demande(s)</span><button (click)="refresh(list.number-1)" [disabled]="list.number===0||busy()||actionBusy()">Précédente</button>
+      <span>Page {{list.number+1}} / {{list.totalPages||1}}</span><button (click)="refresh(list.number+1)" [disabled]="list.number+1>=list.totalPages||busy()||actionBusy()">Suivante</button></nav>
+  }
+  @if(detail();as row){<article class="panel"><h2>Détail de la demande</h2><p>{{row.id}}</p><p class="notice">{{row.sourceNotice}}</p>
+    <app-merchant-request-assignment [resource]="assignmentResource(row)" [businessVersion]="row.version" [assignment]="row.assignment" [originalAuthor]="row.createdBy" (changed)="openDetailId(row.id)"></app-merchant-request-assignment>
+    <dl><dt>Statut</dt><dd>{{labelForState(row.state)}}</dd><dt>Résumé</dt><dd>{{row.summary}}</dd><dt>Demandeur</dt><dd>{{row.createdBy}}</dd>
+      <dt>Validation commerçant</dt><dd>{{row.merchantChecker||'Non effectuée'}} {{row.merchantCheckedAt|date:'dd/MM/yyyy HH:mm'}}</dd>
+      <dt>Validation Back-office</dt><dd>{{row.backofficeChecker||'Non effectuée'}} {{row.backofficeCheckedAt|date:'dd/MM/yyyy HH:mm'}}</dd>
+      <dt>Dernière justification</dt><dd>{{row.decisionReason||'Aucune décision'}}</dd><dt>Référence officielle</dt><dd>{{row.sourceReference||'Pas de confirmation source'}}</dd>
+      @if(row.complementReason){<dt>Compléments attendus</dt><dd>{{row.complementReason}}</dd><dt>Demandés par</dt><dd>{{row.complementRequestedBy}} — {{row.complementRequestedAt|date:'dd/MM/yyyy HH:mm'}}</dd>}
+      @if(row.details;as d){@if(row.kind==='ADD_TERMINAL'){<dt>Modèle / connexion / devise</dt><dd>{{d.terminalModel}} / {{d.connectionType}} / {{d.currency}}</dd><dt>Emplacement</dt><dd>{{d.location}}</dd>}
+        @else{<dt>Contrat ciblé</dt><dd>{{d.settlementContractReference}}</dd><dt>Titulaire</dt><dd>{{d.accountHolder}}</dd>}}</dl>
+    @if(row.previousOperationId){<button (click)="openDetailId(row.previousOperationId)" [disabled]="actionBusy()">Consulter la version précédente</button>}
+    @if(row.nextOperationId){<button (click)="openDetailId(row.nextOperationId)" [disabled]="actionBusy()">Consulter la nouvelle révision</button>}
+    @if(row.state==='COMPLEMENTS_REQUIRED'&&row.capabilities.maker&&responsible(row)){<button (click)="openRevision(row)" [disabled]="actionBusy()">Compléter la demande</button>}
+    <h3>Justificatifs protégés</h3><p>Le contrôle de format ne remplace pas une analyse antivirus. Téléchargement réservé au périmètre autorisé.</p>
+    <ul>@for(doc of row.documents;track doc.id){<li><span>{{doc.contentType}} — {{doc.contentSize}} octets — {{doc.status==='CHECKED'?'Examiné':doc.status==='REJECTED'?'Refusé':'À examiner'}}</span>
+      <button (click)="download(doc)" [disabled]="actionBusy()">Télécharger le justificatif</button>
+      @if(row.state==='BACKOFFICE_REVIEW'&&row.capabilities.backoffice&&independent(row)&&doc.status==='PENDING'){
+        <button (click)="reviewDocument(doc,true)" [disabled]="actionBusy()">Valider la pièce</button><button (click)="reviewDocument(doc,false)" [disabled]="actionBusy()">Refuser la pièce</button>}
+      @if(doc.reviewReason){<span>{{doc.reviewReason}}</span>}</li>}@empty{<li>Aucun justificatif déposé.</li>}</ul>
+    @if(row.state==='DRAFT'&&responsible(row)&&row.capabilities.maker){
+      <label>Justificatif PDF, PNG ou JPEG<input type="file" accept="application/pdf,image/png,image/jpeg" (change)="selectFile($event)" [disabled]="actionBusy()"></label>
+      <button (click)="upload()" [disabled]="!file||actionBusy()">Déposer le justificatif</button><button (click)="submit()" [disabled]="!row.documents.length||actionBusy()">Soumettre la demande</button>
+    }
+    @if(row.state==='MERCHANT_REVIEW'||row.state==='BACKOFFICE_REVIEW'){
+      <label>Justification de contrôle<textarea [(ngModel)]="reason" maxlength="1000" [disabled]="actionBusy()"></textarea></label>
+      @if(!independent(row)){<p>Vous avez participé à cette demande : l’auto-approbation est interdite, même après réattribution.</p>}
+      @else if(row.state==='MERCHANT_REVIEW'&&row.capabilities.checker&&checkerResponsible(row)){<button (click)="decide(true,false)" [disabled]="actionBusy()">Approuver côté commerçant</button><button (click)="decide(false,false)" [disabled]="actionBusy()">Refuser côté commerçant</button>}
+      @else if(row.state==='BACKOFFICE_REVIEW'&&row.capabilities.backoffice){<button (click)="decide(true,true)" [disabled]="actionBusy()">Approuver côté Back-office</button><button (click)="decide(false,true)" [disabled]="actionBusy()">Refuser côté Back-office</button><button (click)="requestComplement()" [disabled]="actionBusy()">Demander des compléments</button>}
+    }
+    @if(row.state==='APPROVED'&&row.capabilities.backoffice){<p>Le connecteur officiel et son contrôle de configuration doivent être disponibles avant l’envoi.</p>
+      <button (click)="execute()" [disabled]="actionBusy()">Exécuter via l’acquisition</button>}
+    @if(['EXECUTING','UNCERTAIN','SOURCE_PENDING'].includes(row.state)&&row.capabilities.backoffice){<p>Aucun renvoi automatique : interroger d’abord le résultat source.</p>
+      <button (click)="sourceStatus()" [disabled]="actionBusy()">Interroger le résultat source</button>}
+    <button (click)="closeDetail()" [disabled]="actionBusy()">Fermer le détail</button>
+  </article>}
+</section>

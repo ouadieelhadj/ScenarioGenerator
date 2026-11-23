@@ -1,0 +1,189 @@
+<header><p class="eyebrow">EXPLOITATION COMMERÇANTE</p><h1>{{ title }}</h1>
+  <p>Données du portail issues du système d’acquisition. Les dates affichées et les filtres sont en UTC.</p>
+</header>
+<section aria-label="Fraîcheur des sources">
+@if(freshnessWarning()){<p role="status">{{freshnessWarning()}}</p>}
+@for(s of sourceFreshness();track s.sourceSystem+':'+s.kind){<p>{{s.sourceSystem}} — {{labelKind(s.kind)}} :
+  @switch(s.freshness){@case('FRESH'){À jour}@case('STALE'){Données anciennes — mise à jour attendue}@case('INCOMPLETE'){Import incomplet — rejets à examiner}@default{Aucun cycle complet confirmé}}
+  @if(s.lastCompletedAt){ — dernier cycle complet : {{s.lastCompletedAt|date:'dd/MM/yyyy HH:mm:ss':'UTC'}} UTC}
+  @if(s.lastAttemptFailed){. La dernière tentative a échoué ; les données confirmées restent consultables.}
+</p>}
+</section>
+<form class="filters" (ngSubmit)="refresh()">
+  <label>Acquéreur<select name="acquirer" [(ngModel)]="acquirer" (ngModelChange)="selectAcquirer()">
+    @for (a of acquirers(); track a.code) { <option [value]="a.code">{{ a.name }} — {{ a.code }}</option> }
+  </select></label>
+  <label>Périmètre<select name="hierarchy" [(ngModel)]="hierarchyNodeId">
+    <option value="">Tout mon périmètre autorisé</option>
+    @for (n of nodes(); track n.id) { <option [value]="n.id">{{ n.label }} — {{ n.nodeType }}{{ n.active ? '' : ' (inactif, historique)' }}</option> }
+  </select></label>
+  <label>Du<input type="date" name="from" [(ngModel)]="from" required></label>
+  <label>Au (inclus)<input type="date" name="to" [(ngModel)]="to" required></label>
+  <label>Devise ISO<input name="currency" [(ngModel)]="currency" maxlength="3" placeholder="Toutes" aria-label="Devise ISO"></label>
+  @if (statuses().length) {
+    <label>Statut<select name="status" aria-label="Statut" [(ngModel)]="status"><option value="">Tous</option>
+      @for (s of statuses(); track s) { <option [value]="s">{{ labelStatus(s) }}</option> }
+    </select></label>
+  }
+  <button type="submit" [disabled]="busy() || !acquirer">{{ busy() ? 'Chargement…' : 'Actualiser la consultation' }}</button>
+</form>
+@if (exportEnabled) {
+  <p>Le relevé couvre tous les résultats filtrés et respecte votre périmètre. Les montants Excel sont conservés comme textes décimaux exacts.</p>
+  <div class="pagination"><button type="button" [disabled]="exportBusy() || busy() || !acquirer" (click)="exportStatement('PDF')">Télécharger PDF</button>
+    <button type="button" [disabled]="exportBusy() || busy() || !acquirer" (click)="exportStatement('XLSX')">Télécharger Excel</button></div>
+}
+@if (error()) { <p class="error" role="alert">{{ error() }}</p> }
+@if (busy()) { <p role="status">Lecture des données et calcul des totaux sur toute la période…</p> }
+@if (result(); as page) {
+  <section class="summary" aria-label="Totaux de la période">
+    @for (t of totals(); track t.kind + t.currency + t.status) {
+      <article><h2>{{ labelKind(t.kind) }} · {{ t.currency }}</h2><strong>{{ money(t.amount) }} {{ t.currency }}</strong>
+        <p>{{ t.count }} élément(s) · {{ labelStatus(t.status) }}</p>
+        <small>Dernière évolution source : {{ t.latestSourceUpdate | date:'dd/MM/yyyy HH:mm':'UTC' }}</small>
+        @if (dashboard) { <button type="button" (click)="drilldown(t)" [disabled]="busy()"
+          [attr.aria-label]="'Voir ' + labelKind(t.kind) + ' ' + t.currency + ' ' + labelStatus(t.status)">Voir les opérations correspondantes</button> }
+      </article>
+    }
+  </section>
+  @if (dashboard) {
+    @if (selectedKind) {
+      <p class="notice">Sélection : {{ labelKind(selectedKind) }} · {{ currency }} · {{ labelStatus(status) }}.
+        <button type="button" (click)="clearDrilldown()" [disabled]="busy()">Revenir à toutes les familles</button></p>
+    }
+    <section class="activity-charts" aria-label="Courbes d’activité">
+      <h2>Évolution quotidienne des montants</h2>
+      <p>Montants distincts par famille, devise et statut. Jours en UTC ; aucun taux de conversion n’est appliqué.
+        Un jour sans ligne dans le portail ne prouve pas l’absence d’opérations dans le système source.</p>
+      @if (calculatedAt()) { <p>Calcul des indicateurs et courbes : {{ calculatedAt() | date:'dd/MM/yyyy HH:mm':'UTC' }} UTC.</p> }
+      @for (s of series(); track s.key) {
+        <article class="chart"><h3>{{ labelKind(s.kind) }} · {{ s.currency }} · {{ labelStatus(s.status) }}</h3>
+          <svg viewBox="0 0 300 120" role="img" [attr.aria-label]="'Évolution ' + labelKind(s.kind) + ' ' + s.currency + ' ' + labelStatus(s.status)">
+            <line x1="10" y1="60" x2="290" y2="60" class="zero-axis" />
+            <polyline [attr.points]="s.points" class="amount-line" />
+            @for (p of s.coordinates; track $index) { <circle [attr.cx]="p.x" [attr.cy]="p.y" r="3" /> }
+          </svg>
+          <details><summary>Voir les valeurs quotidiennes exactes</summary>
+            <table><caption>{{ labelKind(s.kind) }} · {{ s.currency }} · {{ labelStatus(s.status) }}</caption>
+              <thead><tr><th>Date UTC</th><th>Nombre</th><th>Montant exact</th></tr></thead>
+              <tbody>@for (d of s.days; track d.date) { <tr><td>{{ d.date | date:'dd/MM/yyyy':'UTC' }}</td><td>{{ d.count }}</td>
+                <td class="money">{{ money(d.amount) }} {{ d.currency }}</td></tr> }</tbody>
+            </table>
+          </details>
+        </article>
+      } @empty { <p>Aucune courbe calculable pour les filtres sélectionnés.</p> }
+    </section>
+  }
+  @if (!page.totalElements) {
+    <p class="empty">Aucune donnée dans votre périmètre et cette période. Cela ne prouve pas qu’il n’existe aucune opération dans le système source. Vérifiez la synchronisation avec votre Back-office.</p>
+  } @else {
+    <p>{{ page.totalElements }} résultat(s). Totaux calculés sur tous les résultats filtrés, indépendamment de la page.</p>
+    <div class="table-scroll"><table><caption>{{ title }} — {{ acquirer }}</caption>
+      <thead><tr><th scope="col">Référence</th><th scope="col">Date UTC</th><th scope="col">PDV / TPE</th>
+        <th scope="col">Type</th><th scope="col">Montant</th><th scope="col">Statut</th><th scope="col">Action</th></tr></thead>
+      <tbody>@for (r of page.content; track r.id) { <tr>
+        <td>{{ r.data.reference }}</td><td>{{ r.data.occurredAt | date:'dd/MM/yyyy HH:mm':'UTC' }}</td>
+        <td>{{ nodeLabel(r.data.hierarchyNodeId) }}</td><td>{{ r.data.operationType }}</td>
+        <td class="money">{{ money(r.data.amount) }} {{ r.data.currency }}</td>
+        <td><span class="status">{{ labelStatus(r.data.status) }}</span></td>
+        <td><button type="button" (click)="openDetail(r)" [attr.aria-label]="'Détails de ' + r.data.reference">Détails</button></td>
+      </tr> }</tbody>
+    </table></div>
+    <nav class="pagination" aria-label="Pagination"><button type="button" [disabled]="page.number === 0 || busy()" (click)="refresh(page.number - 1)">Précédent</button>
+      <span>Page {{ page.number + 1 }} / {{ page.totalPages }}</span>
+      <button type="button" [disabled]="page.number + 1 >= page.totalPages || busy()" (click)="refresh(page.number + 1)">Suivant</button></nav>
+  }
+}
+@if (detailBusy()) { <p role="status">Chargement du détail…</p> }
+@if (detailError()) { <p class="error" role="alert">{{ detailError() }}</p> }
+@if (detail(); as r) {
+  <section class="detail" aria-label="Détail de l’opération"><div class="detail-heading"><h2>{{ r.data.reference }}</h2>
+    <button type="button" (click)="closeDetail()">Fermer le détail</button></div>
+    <dl><dt>Famille</dt><dd>{{ labelKind(r.data.kind) }}</dd><dt>Montant</dt><dd>{{ money(r.data.amount) }} {{ r.data.currency }}</dd>
+      <dt>État portail</dt><dd>{{ labelStatus(r.data.status) }}</dd><dt>État source</dt><dd>{{ r.data.sourceStatus }}</dd>
+      <dt>Périmètre</dt><dd>{{ nodeLabel(r.data.hierarchyNodeId) }}</dd><dt>Réseau / canal</dt><dd>{{ r.data.network || 'Non fourni' }} / {{ r.data.channel || 'Non fourni' }}</dd>
+      <dt>RRN / STAN</dt><dd>{{ r.data.rrn || 'Non fourni' }} / {{ r.data.stan || 'Non fourni' }}</dd>
+      @if (r.data.kind === 'AUTHORIZATION') {
+        <dt>Code d’autorisation</dt><dd>{{ r.data.authorizationCode || 'Non fourni' }}</dd>
+        <dt>Réponse</dt><dd>{{ r.data.responseCode || 'Non fourni' }} — {{ r.data.responseLabel || 'Non fourni' }}</dd>
+      }
+      @if (r.data.kind === 'FEE') {
+        <dt>Nature du frais</dt><dd>{{ r.data.feeType }}</dd><dt>Estimation</dt><dd>{{ r.data.estimated ? 'Oui — non définitif' : 'Non' }}</dd>
+        <dt>Base / taux</dt><dd>{{ money(r.data.calculationBase) }} / {{ r.data.feeRate || 'Non fourni' }}</dd>
+        <dt>Forfait / taxe</dt><dd>{{ money(r.data.fixedAmount) }} / {{ money(r.data.taxAmount) }}</dd>
+      }
+      @if (r.data.kind === 'SETTLEMENT') {
+        <dt>Brut</dt><dd>{{ money(r.data.grossAmount) }} {{ r.data.currency }}</dd>
+        <dt>Frais / ajustements</dt><dd>{{ money(r.data.feesAmount) }} / {{ money(r.data.adjustmentsAmount) }}</dd>
+        <dt>Période</dt><dd>{{ r.data.periodStart | date:'dd/MM/yyyy':'UTC' }} — {{ r.data.periodEnd | date:'dd/MM/yyyy':'UTC' }}</dd>
+        <dt>Exécution</dt><dd>{{ r.data.executedAt ? (r.data.executedAt | date:'dd/MM/yyyy HH:mm':'UTC') : 'Non confirmée' }}</dd>
+        <dt>Crédit bancaire</dt><dd>{{ r.data.bankConfirmedAt ? (r.data.bankConfirmedAt | date:'dd/MM/yyyy HH:mm':'UTC') : 'Non confirmé' }}</dd>
+      }
+      <dt>Origine</dt><dd>{{ r.data.sourceSystem }} · {{ r.data.sourceObjectId }} · mapping {{ r.data.mappingVersion }}</dd>
+      <dt>Dernière synchronisation</dt><dd>{{ r.lastSyncedAt | date:'dd/MM/yyyy HH:mm':'UTC' }}</dd>
+    </dl>
+    <p class="notice">Une autorisation acceptée n’est pas une preuve de compensation ou de crédit bancaire.</p>
+    @if(r.data.kind==='SETTLEMENT'){
+      <section aria-label="Composition du règlement"><h3>Composition du règlement</h3>
+      <button type="button" (click)="loadComposition(composition()?.lines?.number||0)" [disabled]="compositionBusy()">Actualiser la composition</button>
+      @if(compositionBusy()){<p role="status">Chargement de la composition source…</p>}
+      @if(compositionError()){<p role="alert" class="error">{{compositionError()}}</p>}
+      @if(composition();as c){<p class="notice">{{compositionStatus(c.status)}}</p>
+        @if(c.status==='NOT_RECEIVED'){<p>Aucune liste d’opérations ou de frais reçue de la source. Les montants du règlement ne sont pas décomposés artificiellement.</p>}
+        @else{
+          <p>Version source : {{c.sourceUpdatedAt|date:'dd/MM/yyyy HH:mm:ss':'UTC'}} UTC ; {{c.receivedLines}} / {{c.expectedLines}} lignes reçues.</p>
+          <div class="table-scroll"><table aria-label="Montants source et composition"><thead><tr><th>Montant</th><th>Règlement source</th><th>Ensemble des lignes importées</th></tr></thead>
+          <tbody><tr><th>Brut</th><td>{{money(c.sourceGross)}} {{c.currency}}</td><td>{{money(c.importedGross)}} {{c.currency}}</td></tr>
+          <tr><th>Frais</th><td>{{money(c.sourceFees)}} {{c.currency}}</td><td>{{money(c.importedFees)}} {{c.currency}}</td></tr>
+          <tr><th>Ajustements</th><td>{{money(c.sourceAdjustments)}} {{c.currency}}</td><td>{{money(c.importedAdjustments)}} {{c.currency}}</td></tr>
+          <tr><th>Net</th><td>{{money(c.sourceNet)}} {{c.currency}}</td><td>{{money(c.importedNet)}} {{c.currency}}</td></tr></tbody></table></div>
+          <p>Totaux calculés sur toutes les lignes, indépendamment de la page. Un import partiel ou périmé ne justifie pas le règlement courant.</p>
+          <div class="table-scroll"><table aria-label="Lignes de composition"><thead><tr><th>Référence source</th><th>Nature</th><th>Contribution</th><th>Action</th></tr></thead>
+          <tbody>@for(l of c.lines.content;track l.id){<tr><td>{{l.sourceLineId}}</td><td>{{compositionRole(l.role)}}</td><td>{{money(l.amount)}} {{c.currency}}</td>
+            <td>@if(l.financialRecordId){<button type="button" (click)="openDetailId(l.financialRecordId)">Ouvrir le composant financier</button>}@else{Ajustement source sans opération liée}</td></tr>}
+            @empty{<tr><td colspan="4">Aucune ligne dans cette page.</td></tr>}</tbody></table></div>
+          <nav class="pagination" aria-label="Pages de composition"><button type="button" (click)="loadComposition(c.lines.number-1)" [disabled]="compositionBusy()||c.lines.number===0">Composition précédente</button>
+          <span>Page {{c.lines.number+1}} / {{c.lines.totalPages||1}}</span><button type="button" (click)="loadComposition(c.lines.number+1)" [disabled]="compositionBusy()||c.lines.number+1>=c.lines.totalPages">Composition suivante</button></nav>
+        }
+      }</section>
+    }
+    <section aria-label="Versions financières observées"><h3>Versions financières observées</h3>
+      <p>Versions reçues par le portail, distinctes des opérations liées. Un historique antérieur non reçu n’est pas reconstitué.</p>
+      <button type="button" (click)="loadRevisions(revisions()?.number||0)" [disabled]="revisionsBusy()">Consulter les versions source</button>
+      @if(revisionsBusy()){<p role="status">Chargement des versions source…</p>}
+      @if(revisionsError()){<p class="error" role="alert">{{revisionsError()}}</p>}
+      @if(revisions();as versions){
+        <div class="table-scroll"><table aria-label="Versions source"><thead><tr><th>Évolution source UTC</th><th>Observation portail UTC</th><th>Origine</th><th>Montant</th><th>Statut</th><th>Action</th></tr></thead>
+        <tbody>@for(v of versions.content;track v.id){<tr><td>{{v.sourceUpdatedAt|date:'dd/MM/yyyy HH:mm:ss':'UTC'}}</td><td>{{v.observedAt|date:'dd/MM/yyyy HH:mm:ss':'UTC'}}</td><td>{{revisionReason(v.captureReason)}}</td><td>{{money(v.data.amount)}} {{v.data.currency}}</td><td>{{labelStatus(v.data.status)}}</td><td><button type="button" (click)="selectedRevision.set(v)">Voir cette version</button></td></tr>}
+        @empty{<tr><td colspan="6">Aucune version conservée pour cette opération. Ce résultat ne prouve pas l’absence de modifications antérieures.</td></tr>}</tbody></table></div>
+        <nav class="pagination" aria-label="Pagination des versions"><button type="button" (click)="loadRevisions(versions.number-1)" [disabled]="revisionsBusy()||versions.number===0">Versions précédentes</button><span>{{versions.totalElements}} version(s) · Page {{versions.number+1}} / {{versions.totalPages||1}}</span><button type="button" (click)="loadRevisions(versions.number+1)" [disabled]="revisionsBusy()||versions.number+1>=versions.totalPages">Versions suivantes</button></nav>
+      }
+      @if(selectedRevision();as v){<section aria-label="Détail de la version source"><h4>Version observée — {{v.data.reference}}</h4><button type="button" (click)="selectedRevision.set(null)">Fermer la version</button>
+        <dl><dt>Montant historique</dt><dd>{{money(v.data.amount)}} {{v.data.currency}}</dd><dt>Statut historique</dt><dd>{{labelStatus(v.data.status)}} / {{v.data.sourceStatus}}</dd><dt>Type / réseau / canal</dt><dd>{{v.data.operationType}} / {{v.data.network||'Non fourni'}} / {{v.data.channel||'Non fourni'}}</dd><dt>RRN / STAN</dt><dd>{{v.data.rrn||'Non fourni'}} / {{v.data.stan||'Non fourni'}}</dd><dt>Réponse / autorisation</dt><dd>{{v.data.responseCode||'Non fournie'}} — {{v.data.responseLabel||'Non fournie'}} / {{v.data.authorizationCode||'Non fournie'}}</dd><dt>Mapping source</dt><dd>{{v.data.mappingVersion}}</dd></dl>
+        @if(v.data.kind==='FEE'){<dl><dt>Nature / estimation</dt><dd>{{v.data.feeType}} / {{v.data.estimated?'Estimé':'Définitif'}}</dd><dt>Base / taux / forfait / taxe</dt><dd>{{money(v.data.calculationBase)}} / {{v.data.feeRate||'Non fourni'}} / {{money(v.data.fixedAmount)}} / {{money(v.data.taxAmount)}}</dd></dl>}
+        @if(v.data.kind==='SETTLEMENT'){<dl><dt>Brut / frais / ajustements</dt><dd>{{money(v.data.grossAmount)}} / {{money(v.data.feesAmount)}} / {{money(v.data.adjustmentsAmount)}}</dd><dt>Exécution historique</dt><dd>{{v.data.executedAt?(v.data.executedAt|date:'dd/MM/yyyy HH:mm:ss':'UTC'):'Non confirmée'}}</dd><dt>Crédit bancaire historique</dt><dd>{{v.data.bankConfirmedAt?(v.data.bankConfirmedAt|date:'dd/MM/yyyy HH:mm:ss':'UTC'):'Non confirmé'}}</dd></dl>}
+        <p class="notice">Consultation seulement : cette version ne remplace pas l’état courant et ne déclenche aucune action vers l’acquisition.</p></section>}
+    </section>
+    <h3>Échanges liés à cette opération</h3>
+    <div class="actions"><button type="button" (click)="changeRelations('direct')" [disabled]="relatedBusy()||relationMode()==='direct'">Voir les liens directs</button>
+      <button type="button" (click)="changeRelations('history')" [disabled]="relatedBusy()||relationMode()==='history'">Voir l’historique lié</button></div>
+    @if(relationMode()==='history') { <p>Ensemble des échanges reliés par la source, opération choisie incluse, dans votre périmètre.
+      Aucune liaison n’est déduite du montant ; cet historique n’est pas une preuve de règlement ni de complétude de la source.</p> }
+    @else { <p>Liens directs d’origine ou de rattachement fournis par la source, dans votre périmètre.
+      Ouvrir un lien permet de poursuivre son historique ; aucune opération n’est rapprochée par montant seul.</p> }
+    @if (relatedBusy()) { <p role="status">Chargement des opérations liées…</p> }
+    @if (relatedError()) { <p role="alert" class="error">{{ relatedError() }}</p> }
+    @if (related(); as linked) {
+      @if (linked.totalElements) {
+        <div class="table-scroll"><table aria-label="Opérations liées"><thead><tr><th>Référence</th><th>Famille</th><th>Date UTC</th><th>Montant</th><th>Statut</th><th>Action</th></tr></thead>
+          <tbody>@for (child of linked.content; track child.id) {
+            <tr><td>{{ child.data.reference }}</td><td>{{ labelKind(child.data.kind) }}</td><td>{{ child.data.occurredAt | date:'dd/MM/yyyy HH:mm':'UTC' }}</td>
+              <td class="money">{{ money(child.data.amount) }} {{ child.data.currency }}</td><td>{{ labelStatus(child.data.status) }}</td>
+              <td><button type="button" (click)="openDetail(child)" [attr.aria-label]="'Ouvrir ' + child.data.reference">Ouvrir l’opération liée</button></td></tr>
+          }</tbody></table></div>
+        <nav class="pagination" aria-label="Pagination des liens"><button type="button" [disabled]="linked.number === 0 || relatedBusy()" (click)="loadRelated(linked.number - 1)">Liens précédents</button>
+          <span>{{ linked.totalElements }} lien(s) · Page {{ linked.number + 1 }} / {{ linked.totalPages }}</span>
+          <button type="button" [disabled]="linked.number + 1 >= linked.totalPages || relatedBusy()" (click)="loadRelated(linked.number + 1)">Liens suivants</button></nav>
+      } @else { <p>Aucun lien direct visible pour cette opération dans votre périmètre.</p> }
+    }
+  </section>
+}

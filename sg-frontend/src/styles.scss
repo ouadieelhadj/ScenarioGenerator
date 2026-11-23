@@ -1,0 +1,23 @@
+/* Import des tokens de design (charte centralisee) */
+@import 'styles/tokens';
+
+/* PrimeIcons */
+@import 'primeicons/primeicons.css';
+
+/* Reset leger */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--sg-font-sans);
+  font-size: var(--sg-font-size-base);
+  color: var(--sg-text-primary);
+  background: var(--sg-bg-page);
+}
+h1, h2, h3 { font-weight: 600; }
+a { color: inherit; }
+
+/* Transition douce lors du changement de theme */
+body, .sidebar, .topbar, .content, input, select, button {
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
