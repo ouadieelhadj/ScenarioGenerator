@@ -7,6 +7,10 @@ on:
         type: string
         required: true
         default: codex/damancash-iphone-20261122
+      typecheck_only:
+        description: Verifier seulement les sources XCTest, sans application ni donnees de compte
+        type: boolean
+        default: false
       authenticated:
         description: Executer les parcours authentifies avec le secret de recette
         type: boolean
@@ -128,13 +132,13 @@ jobs:
         if: ${{ !inputs.transport_only }}
         run: python3 tools/ios/probe-simulator-signature.py
       - name: Observer la connectivite API sans compte reel
-        if: ${{ !inputs.device_sdk_only && !inputs.transport_only }}
+        if: ${{ !inputs.typecheck_only && !inputs.device_sdk_only && !inputs.transport_only }}
         run: python3 tools/ios/probe-native-gateway.py
       - name: Amorcer le simulateur iPhone
-        if: ${{ !inputs.device_sdk_only && !inputs.transport_only }}
+        if: ${{ !inputs.typecheck_only && !inputs.device_sdk_only && !inputs.transport_only }}
         run: python3 tools/ios/prepare-simulator.py
       - name: Compiler le client et tester les politiques Swift
-        if: ${{ !inputs.transport_only }}
+        if: ${{ !inputs.typecheck_only && !inputs.transport_only }}
         env:
           FP_IOS_DEVICE_SDK_ONLY: ${{ inputs.device_sdk_only }}
         run: |
@@ -145,7 +149,7 @@ jobs:
             bash tools/ios/build-iphone.sh simulator
           fi
       - name: Conserver les dependances installees avant tout compte
-        if: ${{ success() && !inputs.transport_only && steps.installed_vendor_cache.outputs.cache-hit != 'true' && steps.installed_vendor_cache.outputs.cache-primary-key != '' }}
+        if: ${{ !inputs.typecheck_only && success() && !inputs.transport_only && steps.installed_vendor_cache.outputs.cache-hit != 'true' && steps.installed_vendor_cache.outputs.cache-primary-key != '' }}
         continue-on-error: true
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4, verified official tag
         with:
@@ -154,14 +158,14 @@ jobs:
             !sg-frontend/node_modules/.cache
           key: ${{ steps.installed_vendor_cache.outputs.cache-primary-key }}
       - name: Conserver le cache public avant les tests de compte
-        if: ${{ success() && !inputs.transport_only && steps.npm_vendor_cache.outputs.cache-hit != 'true' && steps.npm_vendor_cache.outputs.cache-primary-key != '' }}
+        if: ${{ !inputs.typecheck_only && success() && !inputs.transport_only && steps.npm_vendor_cache.outputs.cache-hit != 'true' && steps.npm_vendor_cache.outputs.cache-primary-key != '' }}
         continue-on-error: true
         uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4, verified official tag
         with:
           path: ~/.npm/_cacache
           key: ${{ steps.npm_vendor_cache.outputs.cache-primary-key }}
       - name: Executer les vrais parcours XCUITest
-        if: ${{ !inputs.device_sdk_only && !inputs.transport_only }}
+        if: ${{ !inputs.typecheck_only && !inputs.device_sdk_only && !inputs.transport_only }}
         env:
           FP_IOS_AUTHENTICATED_TESTS: ${{ inputs.authenticated }}
           FP_IOS_UI_FOCUS: ${{ inputs.ui_focus }}
