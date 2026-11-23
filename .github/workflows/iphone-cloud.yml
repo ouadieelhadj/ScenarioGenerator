@@ -33,6 +33,7 @@ on:
           - authenticated
           - connection
           - incident_completion
+          - isolation
 permissions:
   contents: read
 concurrency:
@@ -58,10 +59,14 @@ jobs:
         if: ${{ !inputs.transport_only }}
         with:
           node-version: '24'
-          cache: npm
-          cache-dependency-path: |
-            sg-frontend/package-lock.json
-            sg-frontend/tools/ios/build-iphone.sh
+      - name: Restaurer les dependances publiques npm
+        id: npm_vendor_cache
+        if: ${{ !inputs.transport_only }}
+        continue-on-error: true
+        uses: actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830 # v4, verified official tag
+        with:
+          path: ~/.npm/_cacache
+          key: fp-ios-npm-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('sg-frontend/package-lock.json') }}
       - name: Identifier les sources réellement compilées
         run: |
           mkdir -p "$FP_IOS_OUTPUT"
@@ -97,6 +102,13 @@ jobs:
           else
             bash tools/ios/build-iphone.sh simulator
           fi
+      - name: Conserver le cache public avant les tests de compte
+        if: ${{ success() && !inputs.transport_only && steps.npm_vendor_cache.outputs.cache-hit != 'true' && steps.npm_vendor_cache.outputs.cache-primary-key != '' }}
+        continue-on-error: true
+        uses: actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830 # v4, verified official tag
+        with:
+          path: ~/.npm/_cacache
+          key: ${{ steps.npm_vendor_cache.outputs.cache-primary-key }}
       - name: Executer les vrais parcours XCUITest
         if: ${{ !inputs.device_sdk_only && !inputs.transport_only }}
         env:

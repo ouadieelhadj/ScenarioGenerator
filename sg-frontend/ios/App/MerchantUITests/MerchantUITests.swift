@@ -37,13 +37,13 @@ final class MerchantUITests: XCTestCase {
             field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: min(value.count, 256)))
         }
     }
-    @MainActor private func login(_ app: XCUIApplication) throws {
+    @MainActor private func login(_ app: XCUIApplication, userOverride: String? = nil) throws {
         let env = ProcessInfo.processInfo.environment
         guard env["FP_IOS_AUTHENTICATED_TESTS"] == "true",
               let password = env["FP_IOS_TEST_PASSWORD"], !password.isEmpty else {
             throw XCTSkip("Le secret de recette n'est pas configuré : aucun test authentifié revendiqué.")
         }
-        let user = env["FP_IOS_TEST_USER"] ?? "bim.amina"
+        let user = userOverride ?? env["FP_IOS_TEST_USER"] ?? "bim.amina"
         if element(app, "Bonjour " + user).waitForExistence(timeout: 5) { return }
         let login = app.webViews.textFields.firstMatch
         XCTAssertTrue(login.waitForExistence(timeout: 60)); login.tap(); clearExistingInput(login); login.typeText(user)
@@ -347,6 +347,52 @@ final class MerchantUITests: XCTestCase {
         screenshot(app, "ios10-copie-enregistree")
         print("FP_NATIVE_EXPORT saved=true")
         // The subsequent test10 restores the actual session before host reinstall.
+    }
+
+    @MainActor func test09cNativeMerchantIsolation() throws {
+        let app = launch(); try login(app)
+        XCTAssertTrue(element(app, "BIM").waitForExistence(timeout: 25))
+        tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
+        let refresh = element(app, "Actualiser")
+        XCTAssertTrue(refresh.waitForExistence(timeout: 30))
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: refresh)
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
+        let reference = "INC-90b54e47-6fec-4f03-b47d-69cd0ceb1aed"
+        let fixture = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", reference)).firstMatch
+        for _ in 0..<15 {
+            if fixture.exists && fixture.isHittable { break }
+            app.webViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(fixture.exists && fixture.isHittable); fixture.tap()
+        XCTAssertTrue(element(app, "Télécharger").waitForExistence(timeout: 20), "Le ticket privé BIM doit être réellement consultable par son commerçant.")
+        for _ in 0..<7 { app.webViews.firstMatch.swipeDown() }
+        screenshot(app, "ios03-bim-ticket-prive-avant-changement")
+        tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+        XCTAssertTrue(app.webViews.secureTextFields.firstMatch.waitForExistence(timeout: 20))
+        try login(app, userOverride: "carrefour.leila")
+        let commerce = app.webViews.staticTexts.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Carrefour")).firstMatch
+        XCTAssertTrue(commerce.waitForExistence(timeout: 25), "Le commerce Carrefour doit être chargé depuis son propre rattachement.")
+        XCTAssertFalse(element(app, "BIM").exists)
+        XCTAssertFalse(element(app, "Bonjour bim.amina").exists)
+        screenshot(app, "ios03-carrefour-accueil-apres-changement")
+        tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
+        let create = element(app, "Déclarer un incident")
+        XCTAssertTrue(create.waitForExistence(timeout: 30))
+        let contextReady = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: create)
+        XCTAssertEqual(XCTWaiter.wait(for: [contextReady], timeout: 30), .completed)
+        tap(app, "Actualiser")
+        let refreshed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: element(app, "Actualiser"))
+        XCTAssertEqual(XCTWaiter.wait(for: [refreshed], timeout: 30), .completed)
+        let count = app.webViews.staticTexts.matching(NSPredicate(format: "label MATCHES %@", "[0-9]+ incident\\(s\\) dans votre périmètre\\.")).firstMatch
+        XCTAssertTrue(count.waitForExistence(timeout: 15), "La liste Carrefour doit avoir un compteur chargé.")
+        XCTAssertFalse(element(app, "Liste indisponible, module désactivé ou accès refusé.").exists)
+        XCTAssertFalse(element(app, "Les acquéreurs autorisés sont indisponibles.").exists)
+        XCTAssertFalse(app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", reference)).firstMatch.exists)
+        XCTAssertFalse(element(app, "Copie enregistrée.").exists)
+        screenshot(app, "ios03-carrefour-incidents-sans-ticket-bim")
+        print("FP_NATIVE_ISOLATION switched=true ownRead=true foreignReferenceAbsent=true")
+        tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+        XCTAssertTrue(app.webViews.secureTextFields.firstMatch.waitForExistence(timeout: 20))
     }
 
     @MainActor func test10SeedSessionForReinstall() throws {
