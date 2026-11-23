@@ -719,12 +719,37 @@ final class MerchantUITests: XCTestCase {
         XCTFail("Contrôle du dossier inaccessible : " + diagnostic)
     }
     @MainActor private func selectDraftChoice(_ app: XCUIApplication, label: String, placeholder: String, choice: String) {
-        let control = app.webViews.descendants(matching: .any)
-            .matching(NSPredicate(format: "label == %@ OR value == %@", label, placeholder)).firstMatch
-        revealDraftControl(app, control, diagnostic: label); control.tap()
+        // A wrapping HTML label is also exposed as StaticText. Selecting it as
+        // firstMatch touched text, not the actual popup (run45146755455).
+        let control = app.webViews.descendants(matching: .any).matching(NSPredicate(
+            format: "(value == %@ OR label == %@ OR label == %@) AND elementType != %d",
+            placeholder, placeholder, label, XCUIElement.ElementType.staticText.rawValue)).firstMatch
+        revealDraftControl(app, control, diagnostic: label)
+        if (control.value as? String) == choice {
+            print("FP_NATIVE_DRAFT_CHOICE alreadySelected=true label=" + label)
+            return
+        }
+        screenshot(app, "ios05-choix-avant-" + label)
+        control.tap()
+        screenshot(app, "ios05-choix-ouvert-" + label)
         let wheel = app.pickerWheels.firstMatch
-        XCTAssertTrue(wheel.waitForExistence(timeout: 10), "Le choix doit utiliser le sélecteur natif.")
-        wheel.adjust(toPickerWheelValue: choice); dismissFormKeyboard(app)
+        if wheel.waitForExistence(timeout: 3) {
+            wheel.adjust(toPickerWheelValue: choice)
+            dismissFormKeyboard(app)
+        } else {
+            // Current iOS may render a native menu instead of a wheel. Use the
+            // visible menu item, never inject a DOM value or call a business API.
+            let button = app.buttons.matching(NSPredicate(format: "label == %@", choice)).firstMatch
+            let option = app.staticTexts.matching(NSPredicate(format: "label == %@", choice)).firstMatch
+            if button.waitForExistence(timeout: 5) && button.isHittable { button.tap() }
+            else {
+                XCTAssertTrue(option.waitForExistence(timeout: 5) && option.isHittable, "Choix natif indisponible : " + label)
+                option.tap()
+            }
+        }
+        XCTAssertTrue((control.value as? String) == choice || control.label == choice,
+                      "La valeur choisie doit être relue depuis le contrôle : " + label)
+        screenshot(app, "ios05-choix-confirme-" + label)
     }
     @MainActor private func fillDraftFields(_ app: XCUIApplication, _ fields: [[String: Any]]) throws {
         for (number, row) in fields.enumerated() {
@@ -781,5 +806,66 @@ final class MerchantUITests: XCTestCase {
         XCTAssertTrue(notice.waitForExistence(timeout: 45))
         screenshot(app, "ios05-dossier-juridique-enregistre")
         print("FP_NATIVE_ONBOARDING legalDossierSaved=true dedicatedAccount=true explicitSaveCount=1")
+    }
+    @MainActor func test15PersonalKycDocumentsNativeUpload() throws {
+        guard let raw = ProcessInfo.processInfo.environment["FP_IOS_KYC_FIXTURE"],
+              let data = raw.data(using: .utf8),
+              let input = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw XCTSkip("Prévol du dossier KYC dédié requis ; aucun dépôt revendiqué.")
+        }
+        let user = try XCTUnwrap(input["login"] as? String)
+        let reference = try XCTUnwrap(input["reference"] as? String)
+        let documents = try XCTUnwrap(input["documents"] as? [[String: Any]])
+        let app = launch()
+        // test09b saves the synthetic image as BIM. Switch by the normal logout UI.
+        if element(app, "Bonjour bim.amina").waitForExistence(timeout: 5) {
+            tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+            XCTAssertTrue(app.webViews.secureTextFields.firstMatch.waitForExistence(timeout: 20))
+        }
+        try login(app, userOverride: user)
+        XCTAssertTrue(element(app, reference).waitForExistence(timeout: 30))
+        tap(app, "Ouvrir le menu"); tap(app, "Mon commerce"); tap(app, "Mon dossier")
+        XCTAssertTrue(element(app, "Dossier commercant et PDV").waitForExistence(timeout: 30))
+        XCTAssertTrue(element(app, reference).exists)
+        for (index, row) in documents.enumerated() {
+            let label = try XCTUnwrap(row["label"] as? String)
+            let choose = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Choisir le justificatif : " + label)).firstMatch
+            revealDraftControl(app, choose, diagnostic: "justificatif " + String(index + 1))
+            XCTAssertTrue(choose.isEnabled); choose.tap()
+            let browse = app.buttons.matching(NSPredicate(format: "label IN %@", ["Choisir le fichier", "Choisir des fichiers", "Choose File", "Choose Files", "Browse"])).firstMatch
+            XCTAssertTrue(browse.waitForExistence(timeout: 10), "Le sélecteur Fichiers doit être proposé.")
+            browse.tap()
+            let stem = "incident-d41ce29b-7cfd-439f-bf38-77032b23d605"
+            let file = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", stem)).firstMatch
+            if !file.waitForExistence(timeout: 10) {
+                let locations = app.buttons.matching(NSPredicate(format: "label IN %@", ["Parcourir", "Browse"])).firstMatch
+                if locations.exists && locations.isHittable { locations.tap() }
+                let local = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["Sur mon iPhone", "On My iPhone"])).firstMatch
+                if local.waitForExistence(timeout: 5) && local.isHittable { local.tap() }
+                if !file.waitForExistence(timeout: 5) {
+                    let downloads = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["Téléchargements", "Downloads"])).firstMatch
+                    if downloads.exists && downloads.isHittable { downloads.tap() }
+                }
+            }
+            pickerScreen("ios05-kyc-selecteur-piece-" + String(index + 1))
+            XCTAssertTrue(file.waitForExistence(timeout: 10) && file.isHittable, "Utiliser uniquement la copie synthétique enregistrée par le vrai sélecteur.")
+            file.tap()
+            let open = app.buttons.matching(NSPredicate(format: "label IN %@", ["Ouvrir", "Open"])).firstMatch
+            if open.waitForExistence(timeout: 2) && open.isEnabled && open.isHittable { open.tap() }
+            let upload = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Téléverser le justificatif : " + label)).firstMatch
+            revealDraftControl(app, upload, diagnostic: "dépôt " + String(index + 1))
+            XCTAssertTrue(upload.isEnabled)
+            upload.tap() // Exactly one upload per required type; no retry after uncertainty.
+            let pending = app.webViews.staticTexts.matching(NSPredicate(format: "label == %@", "PENDING"))
+            for _ in 0..<40 {
+                if pending.count >= index + 1 { break }
+                _ = XCTWaiter.wait(for: [], timeout: 0.5)
+            }
+            XCTAssertGreaterThanOrEqual(pending.count, index + 1, "Le dépôt doit être relu depuis le serveur en attente de revue.")
+            screenshot(app, "ios05-kyc-piece-deposee-" + String(index + 1))
+            print("FP_NATIVE_KYC_UPLOADED index=" + String(index + 1) + " pending=true")
+        }
+        XCTAssertFalse(element(app, "Affiliation terminee").exists)
+        print("FP_NATIVE_KYC completed=true uploads=" + String(documents.count) + " authenticityClaimed=false")
     }
 }

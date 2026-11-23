@@ -58,6 +58,7 @@ on:
           - onboarding_readonly
           - onboarding_request
           - onboarding_draft
+          - onboarding_documents
 permissions:
   contents: read
 concurrency:
