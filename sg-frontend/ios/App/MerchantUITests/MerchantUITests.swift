@@ -214,6 +214,42 @@ final class MerchantUITests: XCTestCase {
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
     }
 
+    @MainActor func test06bNativeIncidentSubmission() throws {
+        let app = launch(); try login(app)
+        tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
+        let declaration = element(app, "Déclarer un incident")
+        XCTAssertTrue(declaration.waitForExistence(timeout: 30))
+        let loaded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: declaration)
+        XCTAssertEqual(XCTWaiter.wait(for: [loaded], timeout: 25), .completed, "Le périmètre BIM doit être chargé avant le dépôt.")
+        tap(app, "Déclarer un incident")
+        XCTAssertTrue(element(app, "Nouvelle déclaration").waitForExistence(timeout: 15))
+        screenshot(app, "ios06-formulaire-avant-saisie")
+        let beneficiary = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == %@ OR label BEGINSWITH %@", "Choisir un dossier autorisé", "Commerce ou dossier bénéficiaire")).firstMatch
+        XCTAssertTrue(beneficiary.exists && beneficiary.isHittable, "Sélecteur bénéficiaire natif indisponible.")
+        beneficiary.tap()
+        let wheel = app.pickerWheels.firstMatch
+        if wheel.waitForExistence(timeout: 3) {
+            // This exact label was read from the existing BIM fixture on OCI.
+            wheel.adjust(toPickerWheelValue: "BIM")
+            dismissFormKeyboard(app)
+        } else {
+            let option = app.buttons.matching(NSPredicate(format: "label == %@", "BIM")).firstMatch
+            XCTAssertTrue(option.waitForExistence(timeout: 5)); option.tap()
+        }
+        let subject = "iOS depot " + UUID().uuidString.prefix(8).lowercased()
+        fillIncidentField(app, field: app.webViews.textFields.matching(NSPredicate(format: "label == %@", "Objet")).firstMatch, value: subject)
+        fillIncidentField(app, field: app.webViews.textViews.matching(NSPredicate(format: "label == %@", "Description")).firstMatch, value: "Déclaration fictive envoyée depuis le simulateur iPhone. Aucun traitement financier.")
+        tap(app, "Envoyer")
+        let receipt = app.webViews.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Dépôt confirmé : INC-")).firstMatch
+        XCTAssertTrue(receipt.waitForExistence(timeout: 30), "Aucun accusé natif de dépôt reçu.")
+        XCTAssertTrue(element(app, subject).exists)
+        // Only a synthetic subject, never credentials, is exported for server reconciliation.
+        print("FP_NATIVE_SUBMISSION subject=" + subject)
+        for _ in 0..<3 { app.webViews.firstMatch.swipeDown() }
+        screenshot(app, "ios07-depot-natif-confirme")
+        tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+    }
+
     @MainActor private func openSupportFixture(_ app: XCUIApplication, reference: String) {
         for _ in 0..<14 { app.webViews.firstMatch.swipeDown() }
         let card = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", reference)).firstMatch
@@ -278,6 +314,39 @@ final class MerchantUITests: XCTestCase {
         screenshot(app, "ios12-reouverture-commercant")
         print("FP_NATIVE_SUPPORT reopen=true")
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+    }
+
+
+    @MainActor func test09bSaveNativeAttachmentCopy() throws {
+        let app = launch(); try login(app)
+        tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
+        XCTAssertTrue(element(app, "Déclarer un incident").waitForExistence(timeout: 30))
+        let fixture = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", "INC-90b54e47-6fec-4f03-b47d-69cd0ceb1aed")).firstMatch
+        for _ in 0..<15 {
+            if fixture.exists && fixture.isHittable { break }
+            app.webViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(fixture.exists && fixture.isHittable); fixture.tap()
+        let download = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Télécharger")).firstMatch
+        XCTAssertTrue(download.waitForExistence(timeout: 20)); XCTAssertTrue(download.isEnabled)
+        tap(app, "Télécharger")
+        let save = app.buttons.matching(NSPredicate(format: "label ==[c] %@ OR label ==[c] %@", "Enregistrer", "Save")).firstMatch
+        if !save.waitForExistence(timeout: 15) || !save.isEnabled {
+            let local = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@ OR label == %@", "Sur mon iPhone", "On My iPhone")).firstMatch
+            XCTAssertTrue(local.waitForExistence(timeout: 10)); local.tap()
+        }
+        if save.exists && !save.isEnabled {
+            let downloads = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@ OR label == %@", "Téléchargements", "Downloads")).firstMatch
+            if downloads.exists && downloads.isHittable { downloads.tap() }
+        }
+        screenshot(app, "ios10-destination-avant-copie")
+        XCTAssertTrue(save.waitForExistence(timeout: 15)); XCTAssertTrue(save.isEnabled && save.isHittable)
+        save.tap()
+        XCTAssertTrue(element(app, "Copie enregistrée.").waitForExistence(timeout: 30), "La copie doit être confirmée par le sélecteur système.")
+        for _ in 0..<7 { app.webViews.firstMatch.swipeDown() }
+        screenshot(app, "ios10-copie-enregistree")
+        print("FP_NATIVE_EXPORT saved=true")
+        // The subsequent test10 restores the actual session before host reinstall.
     }
 
     @MainActor func test10SeedSessionForReinstall() throws {

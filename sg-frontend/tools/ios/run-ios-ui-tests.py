@@ -7,9 +7,9 @@ OUT=Path(os.environ.get('FP_IOS_OUTPUT',str(F/'ios/App/output/cloud'))).resolve(
 SAFE=OUT/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
 authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
 focus=os.environ.get('FP_IOS_UI_FOCUS','full')
-if focus not in ('full','session_files_reinstall','authenticated','connection'):raise SystemExit('Unsupported native suite')
+if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion'):raise SystemExit('Unsupported native suite')
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
-expectedCases=2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 10
+expectedCases=4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 12
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -84,6 +84,8 @@ try:
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test06NativeIncidentDraftCreation','test07NativeSupportReplyAndResolution','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
         if focus=='connection':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry']]
+        if focus=='incident_completion':
+            exclusions=['-only-testing:'+selector+name for name in ['test06bNativeIncidentSubmission','test09bSaveNativeAttachmentCopy','test10SeedSessionForReinstall']]
         with raw.open('a') as log:
             test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
@@ -115,7 +117,7 @@ try:
             passed+=int(second.get('passedTests',0));failed+=int(second.get('failedTests',0));skipped+=int(second.get('skippedTests',0))
             report['reinstallationPassed']=fresh.returncode==0 and int(second.get('passedTests',0))==1 and int(second.get('failedTests',0))==0
             if fresh.returncode:test=fresh
-        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and passed>=3 and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus=='connection' or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and (passed==expectedCases if authenticated else passed>=3) and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus=='connection' or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
         rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
         # Curated attachments only; raw XCTest result bundles may contain input activity.
         attachments=OUT/'private-attachments'
@@ -150,6 +152,7 @@ finally:
         journal=redacted(raw.read_text(errors='replace'))
         (SAFE/'journal-expurge.txt').write_text(journal,encoding='utf8')
         nativeCases=[{'name':name,'passed':state=='passed'} for name,state in re.findall(r"Test Case '-\[MerchantUITests\.MerchantUITests ([^]]+)\]' (passed|failed) \(",journal)]
+        report['nativeSubmittedSubjects']=sorted(set(re.findall(r'FP_NATIVE_SUBMISSION subject=(iOS depot [a-f0-9]{8})',journal)))
         report['nativeDraftSubjects']=sorted(set(re.findall(r'FP_NATIVE_DRAFT subject=(iOS natif [a-f0-9]{8})',journal)))
         report['loginInputLengthMatches']=[value=='true' for value in re.findall(r'FP_LOGIN_INPUT lengthMatches=(true|false)',journal)]
         report['loginFailureUiCategories']=[int(value) for value in re.findall(r'FP_LOGIN_UI_FAILURE status=(\d+)',journal)]
@@ -223,5 +226,13 @@ finally:
 
     except subprocess.TimeoutExpired:
         report['nativeAuthDiagnosticCollectionTimedOut']=True
+    try:
+        copies=subprocess.run(['xcrun','simctl','spawn',chosen['udid'],'log','show','--last','30m','--style','compact','--predicate','eventMessage BEGINSWITH "FP_EXPORT_SAVED"'],capture_output=True,text=True,timeout=45)
+        if copies.returncode==0:
+            report['nativeSavedCopyChecks']=[{'externalToPrivateTemporaryStore':True,'bytes':int(size),'sha256':digest} for size,digest in re.findall(r'FP_EXPORT_SAVED verified=true external=true bytes=(\d+) sha256=([a-f0-9]{64})',copies.stdout)]
+            report['nativeSavedCopyHashMatched']=any(row['bytes']==1000000 and row['sha256']=='a1107345e9538212373dafae0074a987f92f716656340be824e8944dcea0c9d6' for row in report['nativeSavedCopyChecks'])
+    except subprocess.TimeoutExpired:report['nativeSavedCopyDiagnosticTimedOut']=True
+    if focus=='incident_completion' and not report.get('nativeSavedCopyHashMatched',False):
+        report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     (SAFE/'resultats-ui.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report));raise SystemExit(rc)

@@ -32,6 +32,7 @@ on:
           - session_files_reinstall
           - authenticated
           - connection
+          - incident_completion
 permissions:
   contents: read
 concurrency:
