@@ -23,6 +23,10 @@ on:
         description: Exécuter la sonde anonyme dans iOS Simulator plutôt que macOS
         type: boolean
         default: false
+      upload_fixture_id:
+        description: Reutiliser uniquement le brouillon synthetique vide du test de piece jointe
+        type: string
+        default: ''
       ui_focus:
         description: Lot natif complet ou complément session, Fichiers et réinstallation
         type: choice
@@ -115,6 +119,7 @@ jobs:
         env:
           FP_IOS_AUTHENTICATED_TESTS: ${{ inputs.authenticated }}
           FP_IOS_UI_FOCUS: ${{ inputs.ui_focus }}
+          FP_IOS_UPLOAD_REUSE_ID: ${{ inputs.upload_fixture_id }}
           FP_IOS_TEST_USER: bim.amina
           FP_IOS_TEST_PASSWORD: ${{ secrets.FP_IOS_TEST_PASSWORD }}
         run: python3 tools/ios/run-ios-ui-tests.py

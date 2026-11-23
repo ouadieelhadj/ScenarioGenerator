@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """One synthetic attachment fixture; never upload a file through the API for the UI test."""
 from pathlib import Path
-import datetime,hashlib,json,struct,subprocess,time,urllib.request,urllib.error,uuid,zlib
+import datetime,hashlib,json,os,struct,subprocess,time,urllib.request,urllib.error,uuid,zlib
 ORIGIN='https://merchant.futurpayment.com'
 BASE='/api-merchant-portal/api/merchant-onboarding/v1/acquirers/DAMANCASH/incidents'
 NODE='6d1fc470-9e01-42de-849f-0842fe70b89c'
@@ -32,11 +32,18 @@ def prepare(output:Path,password:str,udid:str,private_dir:Path):
         policy=request(BASE+'/attachment-policy',token);png=synthetic_png()
         report['policy']=policy
         if 'image/png' not in policy.get('contentTypes',[]) or policy.get('maxFiles',0)<1 or policy.get('maxBytes',0)<len(png):raise RuntimeError('Existing attachment policy does not allow the synthetic PNG')
-        payload={'requestId':str(uuid.uuid4()),'context':context,'category':'OTHER','subject':'iOS upload '+uuid.uuid4().hex[:8],'description':'Dossier fictif réservé au dépôt depuis le sélecteur natif iPhone. Aucun traitement financier.','impact':'LIMITED','fields':{},'draft':True}
-        report['createRequest']={key:payload[key] for key in ['requestId','subject']}
-        report['creationConfirmed']=False;output.write_text(json.dumps(report,indent=2)+'\n')
-        ticket=request(BASE+'/ios',token,payload)
-        report['creationConfirmed']=True
+        reuse=os.environ.get('FP_IOS_UPLOAD_REUSE_ID','').strip()
+        if reuse:
+            if str(uuid.UUID(reuse))!=reuse:raise ValueError('Invalid reusable fixture identifier')
+            ticket=request(BASE+'/'+reuse,token)
+            if not (ticket.get('status')=='DRAFT' and ticket.get('version')==0 and ticket.get('author')=='232' and ticket.get('channel')=='IOS' and ticket.get('subject','').startswith('iOS upload ') and ticket.get('context',{}).get('nodeId')==NODE):raise RuntimeError('Reusable fixture outside the authorized synthetic scope')
+            report.update(fixtureReused=True,newDraftCreated=False,creationConfirmed=True)
+        else:
+            payload={'requestId':str(uuid.uuid4()),'context':context,'category':'OTHER','subject':'iOS upload '+uuid.uuid4().hex[:8],'description':'Dossier fictif réservé au dépôt depuis le sélecteur natif iPhone. Aucun traitement financier.','impact':'LIMITED','fields':{},'draft':True}
+            report['createRequest']={key:payload[key] for key in ['requestId','subject']}
+            report['creationConfirmed']=False;output.write_text(json.dumps(report,indent=2)+'\n')
+            ticket=request(BASE+'/ios',token,payload)
+            report.update(creationConfirmed=True,fixtureReused=False,newDraftCreated=True)
         report['fixture']={key:ticket[key] for key in ['id','reference','subject','status','version']}
         output.write_text(json.dumps(report,indent=2)+'\n')
         if ticket.get('status')!='DRAFT' or ticket.get('channel')!='IOS':raise RuntimeError('Unexpected fixture channel or status')
@@ -45,7 +52,17 @@ def prepare(output:Path,password:str,udid:str,private_dir:Path):
         source=private_dir/'FP-IOS-SYNTHETIC-UPLOAD.png';source.write_bytes(png)
         report['expectedFile']={'bytes':len(png),'sha256':hashlib.sha256(png).hexdigest(),'contentType':'image/png','synthetic':True}
         # The hosted runner is disposable; this adds only a generated test pattern.
-        result=subprocess.run(['xcrun','simctl','addmedia',udid,str(source)],capture_output=True,timeout=30)
+        report['mediaPreparation']={'phase':'WARM_PHOTOS','importTimeoutSeconds':120}
+        output.write_text(json.dumps(report,indent=2)+'\n')
+        warmed=subprocess.run(['xcrun','simctl','launch',udid,'com.apple.mobileslideshow'],capture_output=True,timeout=45)
+        report['mediaPreparation']['photosLaunchReturnCode']=warmed.returncode
+        if warmed.returncode:raise RuntimeError('Simulator Photos warm-up not confirmed')
+        report['mediaPreparation']['phase']='IMPORT_SYNTHETIC_IMAGE'
+        output.write_text(json.dumps(report,indent=2)+'\n')
+        started=time.monotonic()
+        try:result=subprocess.run(['xcrun','simctl','addmedia',udid,str(source)],capture_output=True,timeout=120)
+        finally:report['mediaPreparation']['elapsedImportSeconds']=round(time.monotonic()-started,2)
+        report['mediaPreparation']['importReturnCode']=result.returncode
         if result.returncode:raise RuntimeError('Synthetic simulator media not imported')
         report.update(ready=True,simulatorMediaPrepared=True)
         return report
