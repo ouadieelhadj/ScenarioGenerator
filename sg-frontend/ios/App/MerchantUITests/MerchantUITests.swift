@@ -98,6 +98,30 @@ final class MerchantUITests: XCTestCase {
         }
         XCTAssertTrue(authenticated, "Connexion ou accueil attendu indisponible.")
     }
+    @MainActor private func openIncident(_ app: XCUIApplication, reference: String) {
+        for page in 0..<4 {
+            let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: element(app, "Actualiser"))
+            XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
+            if page > 0 { for _ in 0..<10 { app.webViews.firstMatch.swipeDown() } }
+            let fixture = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", reference)).firstMatch
+            for _ in 0..<16 {
+                if fixture.exists && fixture.isHittable {
+                    print("FP_NATIVE_INCIDENT_PAGE ordinal=" + String(page + 1))
+                    fixture.tap(); return
+                }
+                app.webViews.firstMatch.swipeUp()
+            }
+            let next = element(app, "Suivant")
+            guard next.exists && next.isEnabled else { break }
+            for _ in 0..<5 {
+                if next.isHittable { break }
+                app.webViews.firstMatch.swipeUp()
+            }
+            XCTAssertTrue(next.isHittable); next.tap()
+        }
+        XCTFail("Dossier synthétique autorisé absent des quatre pages contrôlées.")
+    }
+
     @MainActor private func screenshot(_ app: XCUIApplication, _ name: String) {
         let attachment = XCTAttachment(screenshot: app.screenshot())
         attachment.name = "preuve-" + name; attachment.lifetime = .keepAlways
@@ -321,12 +345,7 @@ final class MerchantUITests: XCTestCase {
         let app = launch(); try login(app)
         tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
         XCTAssertTrue(element(app, "Déclarer un incident").waitForExistence(timeout: 30))
-        let fixture = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", "INC-90b54e47-6fec-4f03-b47d-69cd0ceb1aed")).firstMatch
-        for _ in 0..<15 {
-            if fixture.exists && fixture.isHittable { break }
-            app.webViews.firstMatch.swipeUp()
-        }
-        XCTAssertTrue(fixture.exists && fixture.isHittable); fixture.tap()
+        openIncident(app, reference: "INC-90b54e47-6fec-4f03-b47d-69cd0ceb1aed")
         let download = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Télécharger")).firstMatch
         XCTAssertTrue(download.waitForExistence(timeout: 20)); XCTAssertTrue(download.isEnabled)
         tap(app, "Télécharger")
@@ -358,12 +377,7 @@ final class MerchantUITests: XCTestCase {
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: refresh)
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
         let reference = "INC-90b54e47-6fec-4f03-b47d-69cd0ceb1aed"
-        let fixture = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", reference)).firstMatch
-        for _ in 0..<15 {
-            if fixture.exists && fixture.isHittable { break }
-            app.webViews.firstMatch.swipeUp()
-        }
-        XCTAssertTrue(fixture.exists && fixture.isHittable); fixture.tap()
+        openIncident(app, reference: reference)
         XCTAssertTrue(element(app, "Télécharger").waitForExistence(timeout: 20), "Le ticket privé BIM doit être réellement consultable par son commerçant.")
         for _ in 0..<7 { app.webViews.firstMatch.swipeDown() }
         screenshot(app, "ios03-bim-ticket-prive-avant-changement")
@@ -404,12 +418,7 @@ final class MerchantUITests: XCTestCase {
         XCTAssertTrue(element(app, "Déclarer un incident").waitForExistence(timeout: 30))
         let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: element(app, "Actualiser"))
         XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
-        let fixture = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", reference)).firstMatch
-        for _ in 0..<12 {
-            if fixture.exists && fixture.isHittable { break }
-            app.webViews.firstMatch.swipeUp()
-        }
-        XCTAssertTrue(fixture.exists && fixture.isHittable); fixture.tap()
+        openIncident(app, reference: reference)
         let upload = element(app, "Ajouter un fichier ou une photo")
         XCTAssertTrue(upload.waitForExistence(timeout: 20))
         for _ in 0..<18 {
@@ -463,13 +472,7 @@ final class MerchantUITests: XCTestCase {
         tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
         XCTAssertTrue(element(app, "Déclarer un incident").waitForExistence(timeout: 30))
         // This private BIM draft and its CLEAN synthetic PNG were qualified on OCI.
-        let fixture = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", "INC-90b54e47-6fec-4f03-b47d-69cd0ceb1aed")).firstMatch
-        for _ in 0..<12 {
-            if fixture.exists && fixture.isHittable { break }
-            app.webViews.firstMatch.swipeUp()
-        }
-        XCTAssertTrue(fixture.exists && fixture.isHittable, "Brouillon de fichier synthétique BIM indisponible.")
-        fixture.tap()
+        openIncident(app, reference: "INC-90b54e47-6fec-4f03-b47d-69cd0ceb1aed")
         let download = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Télécharger")).firstMatch
         XCTAssertTrue(download.waitForExistence(timeout: 20))
         XCTAssertTrue(download.isEnabled, "Seule une pièce CLEAN doit être copiable.")
