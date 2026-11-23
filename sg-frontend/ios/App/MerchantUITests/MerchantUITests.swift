@@ -607,4 +607,36 @@ final class MerchantUITests: XCTestCase {
         // Keep this existing session for the following host-controlled reinstall phase.
     }
 
+
+    // Existing approved synthetic case, positively checked against OCI on 2026-11-23.
+    // Read only: no save, approval, upload, invitation or registration is performed.
+    @MainActor func test11PersonalDossierReadOnly() throws {
+        let app = launch(); try login(app, userOverride: "fp-u000004")
+        XCTAssertTrue(element(app, "ONB-D1DB521C").waitForExistence(timeout: 30))
+        screenshot(app, "ios05-compte-personnel-dossier-existant")
+        tap(app, "Ouvrir le menu"); tap(app, "Mon dossier")
+        XCTAssertTrue(element(app, "Dossier commercant et PDV").waitForExistence(timeout: 30))
+        XCTAssertTrue(element(app, "ONB-D1DB521C").exists)
+        XCTAssertTrue(element(app, "APPROVED").exists)
+        screenshot(app, "ios05-dossier-approuve-lecture-seule")
+        print("FP_NATIVE_ONBOARDING existingPersonalDossierRead=true approved=true businessMutation=false")
+        tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+    }
+    @MainActor func test12CommercialOnboardingReadOnly() throws {
+        let app = launch(); try login(app, userOverride: "damancash.karim")
+        tap(app, "Ouvrir le menu"); tap(app, "Nouveau prospect")
+        XCTAssertTrue(element(app, "Créer un prospect commerçant").waitForExistence(timeout: 30))
+        let create = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Créer et inviter")).firstMatch
+        XCTAssertTrue(create.exists)
+        XCTAssertFalse(create.isEnabled, "Un prospect vide et sans consentement ne doit pas être envoyé.")
+        XCTAssertTrue(app.webViews.textFields.firstMatch.exists)
+        screenshot(app, "ios06-prospect-commercial-vide-non-envoye")
+        tap(app, "Ouvrir le menu"); tap(app, "Dossiers commerciaux")
+        XCTAssertTrue(element(app, "Mes dossiers").waitForExistence(timeout: 30))
+        let filter = app.webViews.searchFields.firstMatch
+        XCTAssertTrue(filter.waitForExistence(timeout: 30), "La liste doit réellement terminer son chargement.")
+        screenshot(app, "ios06-liste-commerciale-reelle")
+        print("FP_NATIVE_ONBOARDING commercialEntryRead=true commercialListLoaded=true businessMutation=false")
+        tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+    }
 }

@@ -51,6 +51,7 @@ on:
           - isolation
           - upload
           - attachment
+          - onboarding_readonly
 permissions:
   contents: read
 concurrency:
