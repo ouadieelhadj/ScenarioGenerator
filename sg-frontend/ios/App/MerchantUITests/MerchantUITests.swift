@@ -465,49 +465,56 @@ final class MerchantUITests: XCTestCase {
             // A disposable hosted simulator contains only the prepared synthetic asset.
             // Acknowledge a real first-use UI if present; never change TCC with a command.
             for _ in 0..<2 {
-                let consent = app.buttons.matching(NSPredicate(format: "label IN %@", ["Continuer", "Continue", "Autoriser l’accès complet", "Autoriser l'accès complet", "Allow Full Access", "Autoriser l’accès à toutes les photos", "Autoriser l'accès à toutes les photos"])).firstMatch
+                let consent = app.buttons.matching(NSPredicate(format: "label IN %@", ["Continuer", "Continue"])).firstMatch
                 if consent.waitForExistence(timeout: 1) && consent.isHittable {
                     pickerScreen("ios09-consentement-phototheque")
                     consent.tap()
                 } else { break }
             }
-            // Photos on recent iOS may expose an asset as a button/image rather than
-            // a collection cell. The server hash must still prove the chosen asset.
+            // Run45106459090 proves that the remote picker may still display
+            // "Chargement..." after25seconds. Wait for a real hittable thumbnail;
+            // never tap a coordinate while the gallery is still loading.
+            // The newly imported synthetic mire is first in the reviewed grid;
+            // sample Photos assets may also exist. Exact server SHA remains mandatory.
             let asset = NSPredicate(format: "label BEGINSWITH[cd] %@ OR label MATCHES[cd] %@ OR label BEGINSWITH[cd] %@ OR label BEGINSWITH[cd] %@", "Photo,", "Photo [0-9].*", "Image,", "FP-IOS-SYNTHETIC-UPLOAD")
             let system = XCUIApplication(bundleIdentifier: "com.apple.springboard")
+            let bounds = app.frame
             var selected: XCUIElement?
-            let deadline = Date().addingTimeInterval(25)
+            let deadline = Date().addingTimeInterval(120)
             repeat {
                 for candidate in [app.descendants(matching: .any).matching(asset).firstMatch,
                                   app.collectionViews.cells.firstMatch,
                                   system.descendants(matching: .any).matching(asset).firstMatch] {
                     if candidate.exists && candidate.isHittable { selected = candidate; break }
                 }
+                if selected == nil {
+                    // Match the actual first gallery thumbnail, not the Photos logo,
+                    // an arbitrary system control or a tap into the blank loading view.
+                    let thumbnails = app.images.allElementsBoundByIndex.filter { image in
+                        let f = image.frame
+                        return image.exists && image.isHittable && f.width > bounds.width * 0.20
+                            && f.width < bounds.width * 0.50 && f.height > bounds.width * 0.20
+                            && f.minX < bounds.minX + bounds.width * 0.10
+                            && f.minY > bounds.minY + bounds.height * 0.20
+                            && f.maxY < bounds.maxY - bounds.height * 0.10
+                    }.sorted { $0.frame.minY < $1.frame.minY }
+                    selected = thumbnails.first
+                }
                 if selected != nil { break }
                 _ = XCTWaiter.wait(for: [], timeout: 0.5)
             } while Date() < deadline
             pickerScreen("ios09-selecteur-systeme-apres-recherche")
             print("FP_PHOTO_PICKER appCells=" + String(app.collectionViews.cells.count) + " appImages=" + String(app.images.count) + " assetFound=" + String(selected != nil))
-            if let photo = selected {
-                pickerScreen("ios09-selecteur-photo-synthetique")
-                photo.tap()
-            } else {
-                // The original full-screen evidence of run45099858503 was reviewed:
-                // iPhone Air, 1260x2736 pixels (420x912 points), synthetic colour mire
-                // visible in the first tile at x=210,y=1232. The remote Photos view
-                // exposes no matching asset through this XCTest accessibility query.
-                // Restrict the real UI tap to that reviewed simulator layout; do not
-                // inject a selection or upload through an API. The unchanged server
-                // reconciliation must still verify all12420 bytes and the exact SHA.
-                let frame = app.frame
-                guard abs(frame.width - 420) < 1 && abs(frame.height - 912) < 1 else {
-                    XCTFail("Disposition du sélecteur différente de la capture native revue.")
-                    return
-                }
-                pickerScreen("ios09-selecteur-photo-synthetique")
-                print("FP_PHOTO_PICKER reviewedLayoutTap=true")
-                app.coordinate(withNormalizedOffset: CGVector(dx: 1.0 / 6.0, dy: 0.45)).tap()
+            for (index, image) in app.images.allElementsBoundByIndex.prefix(15).enumerated() {
+                let f = image.frame
+                print("FP_PHOTO_IMAGE index=\(index) x=\(f.minX) y=\(f.minY) w=\(f.width) h=\(f.height) hittable=\(image.isHittable)")
             }
+            guard let photo = selected else {
+                XCTFail("La photothèque doit avoir terminé son chargement et rendre la mire sélectionnable.")
+                return
+            }
+            pickerScreen("ios09-selecteur-photo-synthetique")
+            photo.tap()
             pickerScreen("ios09-photo-apres-toucher-vignette")
             for owner in [app, XCUIApplication(bundleIdentifier: "com.apple.springboard")] {
                 let add = owner.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["Ajouter", "Add", "Ajouter (1)", "Add (1)", "Choisir", "Choose", "Utiliser la photo", "Use Photo", "Ouvrir", "Open", "Terminé", "Done", "Ajouter la photo", "Add Photo"])).firstMatch
