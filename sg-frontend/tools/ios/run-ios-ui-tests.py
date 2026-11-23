@@ -11,7 +11,7 @@ if focus not in ('full','session_files_reinstall','authenticated','connection','
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
 uploadSource=os.environ.get('FP_IOS_UPLOAD_SOURCE','photos')
 if uploadSource not in ('photos','files'):raise SystemExit('Unsupported upload source')
-expectedCases=2 if focus=='onboarding_documents' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
+expectedCases=3 if focus=='onboarding_documents' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -120,7 +120,7 @@ try:
         report['nativeUIExecutionStarted']=True
         selector='MerchantUITests/MerchantUITests/'
         base=['xcodebuild','test-without-building','-xctestrun',str(private),'-destination',destination,'-parallel-testing-enabled','NO']
-        exclusions=['-skip-testing:'+selector+name for name in ['test08FreshInstallationRequiresLogin','test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly','test13PublicPersonalRegistrationRequest','test14PersonalLegalDossierNativeSave','test15PersonalKycDocumentsNativeUpload']]
+        exclusions=['-skip-testing:'+selector+name for name in ['test08FreshInstallationRequiresLogin','test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly','test13PublicPersonalRegistrationRequest','test14PersonalLegalDossierNativeSave','test14bSavedDossierKeyboardLayout','test15PersonalKycDocumentsNativeUpload']]
         if not authenticated:exclusions+=['-skip-testing:'+selector+'test10SeedSessionForReinstall']
         if focus=='session_files_reinstall':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
@@ -135,7 +135,7 @@ try:
         if focus=='upload':
             exclusions=['-only-testing:'+selector+name for name in ((['test09bSaveNativeAttachmentCopy'] if uploadSource=='files' else [])+['test09cNativeMerchantIsolation','test09dNativeImageAttachmentUpload','test10SeedSessionForReinstall'])]
         if focus=='onboarding_documents':
-            exclusions=['-only-testing:'+selector+name for name in ['test09bSaveNativeAttachmentCopy','test15PersonalKycDocumentsNativeUpload']]
+            exclusions=['-only-testing:'+selector+name for name in ['test09bSaveNativeAttachmentCopy','test14bSavedDossierKeyboardLayout','test15PersonalKycDocumentsNativeUpload']]
             report['nativeKycUploadOnly']=True
             report['reinstallationRequested']=False
         if focus=='onboarding_draft':
@@ -231,6 +231,7 @@ finally:
         journal=redacted(raw.read_text(errors='replace'))
         (SAFE/'journal-expurge.txt').write_text(journal,encoding='utf8')
         nativeCases=[{'name':name,'passed':state=='passed'} for name,state in re.findall(r"Test Case '-\[MerchantUITests\.MerchantUITests ([^]]+)\]' (passed|failed) \(",journal)]
+        report['nativeKeyboardLayoutPassed']='FP_NATIVE_LAYOUT focusStable=true horizontalClipping=false valuePreserved=true businessMutation=false' in journal
         report['nativeKycUploadMarkers']=len(re.findall(r'FP_NATIVE_KYC_UPLOADED index=\d+ pending=true',journal))
         report['nativeKycUploadCompleted']=bool(re.search(r'FP_NATIVE_KYC completed=true uploads=\d+ authenticityClaimed=false',journal))
         report['nativeLegalDossierSaveObserved']='FP_NATIVE_ONBOARDING legalDossierSaved=true dedicatedAccount=true explicitSaveCount=1' in journal
@@ -332,7 +333,7 @@ finally:
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='onboarding_draft' and not (report.get('nativeLegalDossierSaveObserved') and report.get('nativeDossierServerReconciliationPassed') and report.get('nativeDossierFieldConfirmations')==report.get('nativeDossierExpectedFields')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
-    if focus=='onboarding_documents' and not (report.get('nativeKycUploadCompleted') and report.get('nativeKycServerReconciliationPassed') and report.get('nativeKycUploadMarkers')==report.get('nativeKycExpectedUploads') and report.get('nativeSavedCopyHashMatched')):
+    if focus=='onboarding_documents' and not (report.get('nativeKeyboardLayoutPassed') and report.get('nativeKycUploadCompleted') and report.get('nativeKycServerReconciliationPassed') and report.get('nativeKycUploadMarkers')==report.get('nativeKycExpectedUploads') and report.get('nativeSavedCopyHashMatched')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     (SAFE/'resultats-ui.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report));raise SystemExit(rc)

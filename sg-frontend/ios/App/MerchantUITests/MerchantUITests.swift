@@ -807,7 +807,56 @@ final class MerchantUITests: XCTestCase {
         screenshot(app, "ios05-dossier-juridique-enregistre")
         print("FP_NATIVE_ONBOARDING legalDossierSaved=true dedicatedAccount=true explicitSaveCount=1")
     }
+    @MainActor private static var savedDossierLayoutVerified = false
+
+    // Read the saved profile, focus its real input and preserve every value.
+    // This must pass before the dependent KYC upload test is allowed to write.
+    @MainActor func test14bSavedDossierKeyboardLayout() throws {
+        Self.savedDossierLayoutVerified = false
+        guard let raw = ProcessInfo.processInfo.environment["FP_IOS_KYC_FIXTURE"],
+              let data = raw.data(using: .utf8),
+              let input = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw XCTSkip("Prévol KYC requis pour le dossier enregistré.")
+        }
+        let user = try XCTUnwrap(input["login"] as? String)
+        let reference = try XCTUnwrap(input["reference"] as? String)
+        let app = launch()
+        if element(app, "Bonjour bim.amina").waitForExistence(timeout: 5) {
+            tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+            XCTAssertTrue(app.webViews.secureTextFields.firstMatch.waitForExistence(timeout: 20))
+        }
+        try login(app, userOverride: user)
+        XCTAssertTrue(element(app, reference).waitForExistence(timeout: 30))
+        tap(app, "Ouvrir le menu"); tap(app, "Mon commerce"); tap(app, "Mon dossier")
+        XCTAssertTrue(element(app, "Dossier commercant et PDV").waitForExistence(timeout: 30))
+        XCTAssertTrue(element(app, reference).exists)
+        let field = app.webViews.textFields.matching(NSPredicate(format: "label == %@", "Raison sociale")).firstMatch
+        revealDraftControl(app, field, diagnostic: "raison sociale enregistrée")
+        let initialValue = try XCTUnwrap(field.value as? String)
+        XCTAssertFalse(initialValue.isEmpty)
+        let before = field.frame
+        XCTAssertGreaterThan(before.width, 80)
+        screenshot(app, "ios05-clavier-avant-focus")
+        field.tap()
+        XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 10))
+        _ = XCTWaiter.wait(for: [], timeout: 1)
+        let focused = field.frame, viewport = app.webViews.firstMatch.frame
+        XCTAssertEqual(focused.width, before.width, accuracy: max(3, before.width * 0.03), "Le focus ne doit pas agrandir le formulaire.")
+        XCTAssertGreaterThanOrEqual(focused.minX, viewport.minX - 2)
+        XCTAssertLessThanOrEqual(focused.maxX, viewport.maxX + 2)
+        screenshot(app, "ios05-clavier-focus-sans-zoom")
+        dismissFormKeyboard(app)
+        _ = XCTWaiter.wait(for: [], timeout: 0.5)
+        XCTAssertEqual(field.value as? String, initialValue, "La vérification ne modifie pas la donnée.")
+        XCTAssertEqual(field.frame.width, before.width, accuracy: max(3, before.width * 0.03))
+        screenshot(app, "ios05-clavier-ferme-donnee-conservee")
+        print("FP_NATIVE_LAYOUT focusStable=true horizontalClipping=false valuePreserved=true businessMutation=false")
+        tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+        Self.savedDossierLayoutVerified = true
+    }
+
     @MainActor func test15PersonalKycDocumentsNativeUpload() throws {
+        XCTAssertTrue(Self.savedDossierLayoutVerified, "Le contrôle de lisibilité doit réussir avant tout dépôt KYC.")
         guard let raw = ProcessInfo.processInfo.environment["FP_IOS_KYC_FIXTURE"],
               let data = raw.data(using: .utf8),
               let input = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {

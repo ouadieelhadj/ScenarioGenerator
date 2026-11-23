@@ -19,6 +19,11 @@
   --ion-color-success: #15803d;
 }
 * { box-sizing: border-box; }
+/* Keep native form controls readable without iOS focus auto-zoom. The shared
+   dossier inherits small label fonts; leave pinch zoom and the viewport intact. */
+input:not([type='checkbox']):not([type='radio']), select, textarea,
+ion-input, ion-textarea { font-size: 16px; }
+
 ion-content { --background: var(--sg-bg-page); }
 ion-toolbar { --background: #fff; --color: var(--sg-text-primary); --border-color: var(--sg-border); }
 ion-title { font-size: 17px; font-weight: 750; }
