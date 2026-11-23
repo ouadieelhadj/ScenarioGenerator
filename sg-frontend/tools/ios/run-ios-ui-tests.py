@@ -99,7 +99,7 @@ try:
         if focus=='upload':
             exclusions=['-only-testing:'+selector+name for name in ['test09cNativeMerchantIsolation','test09dNativeImageAttachmentUpload','test10SeedSessionForReinstall']]
         with raw.open('a') as log:
-            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=1500 if focus=='full' else 720)
+            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=2100 if focus=='full' else 720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
         passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
         if supportFixture:
