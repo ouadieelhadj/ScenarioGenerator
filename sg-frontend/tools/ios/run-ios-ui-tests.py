@@ -7,11 +7,11 @@ OUT=Path(os.environ.get('FP_IOS_OUTPUT',str(F/'ios/App/output/cloud'))).resolve(
 SAFE=OUT/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
 authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
 focus=os.environ.get('FP_IOS_UI_FOCUS','full')
-if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation','upload','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents'):raise SystemExit('Unsupported native suite')
+if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation','upload','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents','framework_validation'):raise SystemExit('Unsupported native suite')
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
 uploadSource=os.environ.get('FP_IOS_UPLOAD_SOURCE','photos')
 if uploadSource not in ('photos','files'):raise SystemExit('Unsupported upload source')
-expectedCases=3 if focus=='onboarding_documents' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
+expectedCases=3 if focus in ('onboarding_documents','framework_validation') else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -84,6 +84,24 @@ try:
         kycContext=kycModule.prepare(SAFE/'native-kyc-preflight.json',password)
         report['nativeKycPreflightPassed']=True
         report['nativeKycExpectedUploads']=len(kycContext['documents'])
+    frameworkContext=None
+    if focus=='framework_validation':
+        import importlib.util
+        moduleSpec=importlib.util.spec_from_file_location('framework_saved_dossier',F/'tools/ios/prepare-native-onboarding-draft.py')
+        frameworkModule=importlib.util.module_from_spec(moduleSpec);moduleSpec.loader.exec_module(frameworkModule)
+        fixture=frameworkModule.load_fixture();token=frameworkModule.authenticated(fixture,password)
+        own=frameworkModule.request('/api-merchant-portal/api/merchant-onboarding/v1/dossiers/verified-mine',token)
+        full=frameworkModule.request('/api-merchant-portal/api/merchant-onboarding/v2/dossiers/'+fixture['id'],token)
+        assert own['id']==fixture['id'] and own['acquirerId']=='DAMANCASH' and full['legalName']==fixture['legalName'] and full['version']>=1
+        frameworkContext={'login':fixture['login'],'reference':fixture['reference']}
+        frameworkVersionBefore=full['version'];token=''
+        report['frameworkSavedDossierVersionBefore']=frameworkVersionBefore
+        report['frameworkWebExecutionStarted']=True
+        web=subprocess.run(['node',str(F/'tools/ios/test-framework-web.cjs')],cwd=F,capture_output=True,text=True,timeout=900)
+        webResult=SAFE/'framework-web/resultats.json'
+        report['frameworkWebChecksPassed']=web.returncode==0 and webResult.is_file() and json.loads(webResult.read_text()).get('allExecutedChecksPassed') is True
+        if not report['frameworkWebChecksPassed']:raise RuntimeError('Candidate browser regression failed; inspect protected framework-web report')
+
     publicOnboarding=None
     if focus=='onboarding_request':
         import urllib.request
@@ -100,6 +118,7 @@ try:
         report['publicRegistrationIsNotActivation']=True
     for target in targets:
         if kycContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_KYC_FIXTURE=json.dumps(kycContext))
+        if frameworkContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_KYC_FIXTURE=json.dumps(frameworkContext))
         if draftContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_DRAFT_FIXTURE=json.dumps(draftContext['fixture']))
         if publicOnboarding:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_ONBOARDING_EMAIL=publicOnboarding['email'],FP_IOS_ONBOARDING_ACQUIRER_NAME=publicOnboarding['acquirerName'])
         if uploadFixture:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_UPLOAD_REFERENCE=uploadFixture['fixture']['reference'],FP_IOS_UPLOAD_SOURCE=uploadSource)
@@ -126,6 +145,9 @@ try:
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
         if focus=='authenticated':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test06NativeIncidentDraftCreation','test07NativeSupportReplyAndResolution','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
+        if focus=='framework_validation':
+            exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test14bSavedDossierKeyboardLayout']]
+            report['reinstallationRequested']=False
         if focus=='connection':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry']]
         if focus=='incident_completion':
@@ -155,13 +177,17 @@ try:
             report['attachmentCountertestOnly']=True
             report['reinstallationRequested']=False
         with raw.open('a') as log:
-            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=2100 if focus=='full' else 1800 if focus in ('onboarding_draft','onboarding_documents') else 720)
+            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=2100 if focus=='full' else 1800 if focus in ('onboarding_draft','onboarding_documents','framework_validation') else 720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
         passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
         if draftContext:
             reconciliation=draftModule.verify(draftContext,password,SAFE/'native-dossier-reconciliation.json')
             report['nativeDossierServerReconciliationPassed']=reconciliation['allExecutedChecksPassed']
             report['nativeDossierServerAssertionCount']=len(reconciliation['checks'])
+        if focus=='framework_validation':
+            token=frameworkModule.authenticated(fixture,password)
+            after=frameworkModule.request('/api-merchant-portal/api/merchant-onboarding/v2/dossiers/'+fixture['id'],token);token=''
+            report['frameworkSavedDossierVersionPreserved']=after['version']==frameworkVersionBefore
         if kycContext:
             reconciliation=kycModule.verify(kycContext,password,SAFE/'native-kyc-reconciliation.json')
             report['nativeKycServerReconciliationPassed']=reconciliation['allExecutedChecksPassed']
@@ -196,7 +222,7 @@ try:
             passed+=int(second.get('passedTests',0));failed+=int(second.get('failedTests',0));skipped+=int(second.get('skippedTests',0))
             report['reinstallationPassed']=fresh.returncode==0 and int(second.get('passedTests',0))==1 and int(second.get('failedTests',0))==0
             if fresh.returncode:test=fresh
-        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and (passed==expectedCases if authenticated else passed>=3) and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus in ('connection','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents') or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and (passed==expectedCases if authenticated else passed>=3) and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus in ('connection','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents','framework_validation') or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
         rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
         # Curated attachments only; raw XCTest result bundles may contain input activity.
         attachments=OUT/'private-attachments'
@@ -334,6 +360,8 @@ finally:
     if focus=='onboarding_draft' and not (report.get('nativeLegalDossierSaveObserved') and report.get('nativeDossierServerReconciliationPassed') and report.get('nativeDossierFieldConfirmations')==report.get('nativeDossierExpectedFields')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='onboarding_documents' and not (report.get('nativeKeyboardLayoutPassed') and report.get('nativeKycUploadCompleted') and report.get('nativeKycServerReconciliationPassed') and report.get('nativeKycUploadMarkers')==report.get('nativeKycExpectedUploads') and report.get('nativeSavedCopyHashMatched')):
+        report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
+    if focus=='framework_validation' and not (report.get('frameworkWebChecksPassed') and report.get('nativeKeyboardLayoutPassed') and report.get('frameworkSavedDossierVersionPreserved')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     (SAFE/'resultats-ui.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report));raise SystemExit(rc)

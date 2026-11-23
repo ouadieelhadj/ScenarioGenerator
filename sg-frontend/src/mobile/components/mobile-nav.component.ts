@@ -64,7 +64,7 @@ export class MobileNavComponent {
   opening(): void { this.closeRequested = false; this.openingOrOpen = true; }
   closed(): void { this.openingOrOpen = false; }
   @HostListener('document:keydown.escape', ['$event'])
-  onEscape(event: KeyboardEvent): void {
+  onEscape(event: Event): void {
     if (this.openingOrOpen) { event.preventDefault(); void this.close(); }
   }
   opened(): void {

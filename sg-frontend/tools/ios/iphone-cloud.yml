@@ -59,6 +59,7 @@ on:
           - onboarding_request
           - onboarding_draft
           - onboarding_documents
+          - framework_validation
 permissions:
   contents: read
 concurrency:
