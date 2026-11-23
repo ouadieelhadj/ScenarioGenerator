@@ -70,9 +70,21 @@ final class MerchantUITests: XCTestCase {
         _ = XCTWaiter.wait(for: [], timeout: 0.5)
         clearExistingInput(secret)
         secret.typeText(password)
-        let valueCountMatches = (secret.value as? String)?.count == password.count
-        print("FP_LOGIN_INPUT lengthMatches=" + String(valueCountMatches))
         dismissFormKeyboard(app)
+        // Wait for Ionic's last input update before sending a credential. A
+        // second local edit is allowed before the sole network submission;
+        // there is no retry of a failed login or any uncertain server action.
+        func inputLengthReady() -> Bool {
+            let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value MATCHES %@", "^.{\(password.count)}$"), object: secret)
+            return XCTWaiter.wait(for: [ready], timeout: 3) == .completed
+        }
+        var valueCountMatches = inputLengthReady()
+        if !valueCountMatches {
+            secret.tap(); clearExistingInput(secret); secret.typeText(password)
+            dismissFormKeyboard(app); valueCountMatches = inputLengthReady()
+        }
+        print("FP_LOGIN_INPUT lengthMatches=" + String(valueCountMatches))
+        XCTAssertTrue(valueCountMatches, "La saisie sécurisée complète doit être confirmée avant l’unique envoi.")
         XCTAssertTrue((login.value as? String) == user, "Identifiant saisi non confirmé.")
         let button = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Se connecter")).firstMatch
         XCTAssertTrue(button.exists && button.isEnabled, "Le formulaire doit être valide avant envoi.")
@@ -625,7 +637,9 @@ final class MerchantUITests: XCTestCase {
         let app = launch(); try login(app, userOverride: "fp-u000004")
         XCTAssertTrue(element(app, "ONB-D1DB521C").waitForExistence(timeout: 30))
         screenshot(app, "ios05-compte-personnel-dossier-existant")
-        tap(app, "Ouvrir le menu"); tap(app, "Mon dossier")
+        tap(app, "Ouvrir le menu")
+        screenshot(app, "ios05-menu-personnel-avant-depliage")
+        tap(app, "Mon commerce"); tap(app, "Mon dossier")
         XCTAssertTrue(element(app, "Dossier commercant et PDV").waitForExistence(timeout: 30))
         XCTAssertTrue(element(app, "ONB-D1DB521C").exists)
         XCTAssertTrue(element(app, "APPROVED").exists)
@@ -635,7 +649,9 @@ final class MerchantUITests: XCTestCase {
     }
     @MainActor func test12CommercialOnboardingReadOnly() throws {
         let app = launch(); try login(app, userOverride: "damancash.karim")
-        tap(app, "Ouvrir le menu"); tap(app, "Nouveau prospect")
+        tap(app, "Ouvrir le menu")
+        screenshot(app, "ios06-menu-commercial-avant-depliage")
+        tap(app, "Activité commerciale"); tap(app, "Nouveau prospect")
         XCTAssertTrue(element(app, "Créer un prospect commerçant").waitForExistence(timeout: 30))
         let create = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Créer et inviter")).firstMatch
         XCTAssertTrue(create.exists)
