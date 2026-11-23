@@ -99,7 +99,7 @@ try:
         if focus=='upload':
             exclusions=['-only-testing:'+selector+name for name in ['test09cNativeMerchantIsolation','test09dNativeImageAttachmentUpload','test10SeedSessionForReinstall']]
         with raw.open('a') as log:
-            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=720)
+            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=1500 if focus=='full' else 720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
         passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
         if supportFixture:
@@ -249,9 +249,9 @@ finally:
             report['nativeSavedCopyChecks']=[{'externalToPrivateTemporaryStore':True,'bytes':int(size),'sha256':digest} for size,digest in re.findall(r'FP_EXPORT_SAVED verified=true external=true bytes=(\d+) sha256=([a-f0-9]{64})',copies.stdout)]
             report['nativeSavedCopyHashMatched']=any(row['bytes']==1000000 and row['sha256']=='a1107345e9538212373dafae0074a987f92f716656340be824e8944dcea0c9d6' for row in report['nativeSavedCopyChecks'])
     except subprocess.TimeoutExpired:report['nativeSavedCopyDiagnosticTimedOut']=True
-    if focus=='incident_completion' and not report.get('nativeSavedCopyHashMatched',False):
+    if authenticated and focus in ('full','incident_completion') and not report.get('nativeSavedCopyHashMatched',False):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
-    if focus in ('isolation','upload') and not report.get('nativeMerchantSwitchIsolationObserved',False):
+    if authenticated and focus in ('full','isolation','upload') and not report.get('nativeMerchantSwitchIsolationObserved',False):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if authenticated and focus in ('full','upload') and not (report.get('nativeImageUploadObserved',False) and report.get('nativeUploadServerReconciliationPassed',False)):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1

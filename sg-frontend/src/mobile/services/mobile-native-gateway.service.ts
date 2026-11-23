@@ -15,6 +15,10 @@ export class MobileNativeGatewayService {
       if(!response.ok)throw new Error();this.gateway=nativeGatewayConfiguration(await response.json());
     }catch{throw new Error('Configuration HTTPS mobile absente ou invalide. Contactez votre administrateur.');}
   }
+  configuredHttpsGateway():string {
+    if(!this.native||!this.gateway)throw new Error('Configuration HTTPS mobile indisponible.');
+    return this.gateway;
+  }
   rewrite(requestUrl:string):string {
     if(!this.native)return requestUrl;
     if(!this.gateway)throw new Error('Configuration HTTPS mobile indisponible.');

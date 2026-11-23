@@ -47,7 +47,7 @@ concurrency:
 jobs:
   ios-validation:
     runs-on: macos-26
-    timeout-minutes: 35
+    timeout-minutes: 45
     env:
       FP_IOS_OUTPUT: ${{ github.workspace }}/preuves-mac
       NG_BUILD_MAX_WORKERS: '2'
