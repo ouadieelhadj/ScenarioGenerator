@@ -11,7 +11,7 @@ if focus not in ('full','session_files_reinstall','authenticated','connection','
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
 uploadSource=os.environ.get('FP_IOS_UPLOAD_SOURCE','photos')
 if uploadSource not in ('photos','files'):raise SystemExit('Unsupported upload source')
-expectedCases=3 if focus in ('onboarding_documents','framework_validation') else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
+expectedCases=5 if focus=='onboarding_documents' else 3 if focus=='framework_validation' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -157,8 +157,10 @@ try:
         if focus=='upload':
             exclusions=['-only-testing:'+selector+name for name in ((['test09bSaveNativeAttachmentCopy'] if uploadSource=='files' else [])+['test09cNativeMerchantIsolation','test09dNativeImageAttachmentUpload','test10SeedSessionForReinstall'])]
         if focus=='onboarding_documents':
-            exclusions=['-only-testing:'+selector+name for name in ['test09bSaveNativeAttachmentCopy','test14bSavedDossierKeyboardLayout','test15PersonalKycDocumentsNativeUpload']]
-            report['nativeKycUploadOnly']=True
+            exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09bSaveNativeAttachmentCopy','test14bSavedDossierKeyboardLayout','test15PersonalKycDocumentsNativeUpload']]
+            report['nativeKycUploadOnly']=False
+            report['nativeCoreRegressionIncluded']=True
+            report['onlyBusinessWritesAreKycUploads']=True
             report['reinstallationRequested']=False
         if focus=='onboarding_draft':
             exclusions=['-only-testing:'+selector+'test14PersonalLegalDossierNativeSave']

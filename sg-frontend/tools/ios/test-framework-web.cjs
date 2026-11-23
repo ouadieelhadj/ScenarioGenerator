@@ -4,14 +4,14 @@ const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypt
 const {chromium}=require('@playwright/test');
 const F=process.cwd(),OUT=path.join(process.env.FP_IOS_OUTPUT,'preuves-publiables','framework-web');fs.mkdirSync(OUT,{recursive:true});
 const report={utc:new Date().toISOString(),candidateAssetsSubstitutedInBrowser:true,actuallyDeployed:false,realPublicApi:true,
- currentDocumentSecurityHeadersPreserved:true,businessWritesAllowed:false,checks:[],routes:[],authAttempts:[],blockedMutations:[],javascriptErrors:0};
-let password=process.env.FP_IOS_TEST_PASSWORD, browser;
+ currentDocumentSecurityHeadersPreserved:true,businessWritesAllowed:false,checks:[],routes:[],authAttempts:[],blockedMutations:[],apiReadErrors:[],javascriptErrors:0};
+let password=process.env.FP_IOS_TEST_PASSWORD, browser,currentPage;
 const save=()=>fs.writeFileSync(path.join(OUT,'resultats.json'),JSON.stringify(report,null,2));
 function check(name,value){report.checks.push({name,passed:!!value});save();if(!value)throw Error(name);}
 const accounts=[
  ['bim.amina',[['/merchant/dashboard','app-merchant-dashboard'],['/merchant/hierarchy','app-merchant-hierarchy'],['/merchant/requests','app-merchant-operations'],['/merchant/chargebacks','app-merchant-chargebacks'],['/merchant/incidents','app-merchant-incidents']]],
  ['damancash.karim',[['/commercial/dossiers','app-merchant-commercial-queue'],['/commercial/prospects/new','app-merchant-prospect']]],
- ['damancash.salma',[['/backoffice/onboarding','app-merchant-review']]],
+ ['damancash.salma',[['/backoffice/onboarding','heading:Revue KYC']]],
  ['admin',[['/administration/roles','app-roles']]],
 ];
 const origin='https://merchant.futurpayment.com';
@@ -53,16 +53,26 @@ const origin='https://merchant.futurpayment.com';
    const ext=path.extname(file);const types={'.html':'text/html; charset=utf-8','.js':'application/javascript','.css':'text/css','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.woff2':'font/woff2'};
    return route.fulfill({status:200,headers:{...security,'cache-control':'no-store','content-type':types[ext]||'application/octet-stream'},body:fs.readFileSync(file)});
   });
-  const page=await context.newPage();page.on('pageerror',()=>{report.javascriptErrors++;});
-  page.on('response',r=>{if(new URL(r.url()).pathname.startsWith('/api-merchant-portal/')&&r.ok())goodApi++;});
+  const page=await context.newPage();currentPage=page;page.on('pageerror',()=>{report.javascriptErrors++;});
+  page.on('response',r=>{
+   const address=new URL(r.url()),method=r.request().method();
+   if(address.pathname.startsWith('/api-merchant-portal/')){
+    if(r.ok())goodApi++;
+    if(['GET','HEAD'].includes(method)&&r.status()>=400){report.apiReadErrors.push({account,path:address.pathname,http:r.status()});save();}
+   }
+  });
   await page.goto(origin+'/login',{waitUntil:'domcontentloaded'});
   await page.locator('input[name=login]').fill(account);await page.locator('input[name=password]').fill(password);
   const auth=page.waitForResponse(r=>r.request().method()==='POST'&&new URL(r.url()).pathname.endsWith('/auth/login'),{timeout:45000});
   await page.locator('button[type=submit]').click();const response=await auth;report.authAttempts.push({account,http:response.status()});check(account+' authenticates once',response.ok());
   for(const [url,selector] of pages){
-   const priorErrors=report.javascriptErrors;
+   const priorErrors=report.javascriptErrors,priorApiErrors=report.apiReadErrors.length;
+   report.activePage={account,path:url,expected:selector};save();
    await page.goto(origin+url,{waitUntil:'domcontentloaded'});
-   await page.locator(selector).waitFor({state:'visible',timeout:45000});
+   const screen=selector.startsWith('heading:')?page.getByRole('heading',{name:selector.slice(8),exact:true}):page.locator(selector);
+   await screen.waitFor({state:'visible',timeout:45000});
+   await page.waitForLoadState('networkidle',{timeout:20000});
+   check(account+' has no API read refusal on '+url,report.apiReadErrors.length===priorApiErrors);
    check(account+' renders '+url,new URL(page.url()).pathname===url);
    check(account+' has no runtime error on '+url,report.javascriptErrors===priorErrors);
    if(url==='/merchant/dashboard')check('Merchant account identity retained',(await page.locator(selector).innerText()).includes(account));
@@ -77,5 +87,10 @@ const origin='https://merchant.futurpayment.com';
  check('Exactly four successful authentications',report.authAttempts.length===4&&report.authAttempts.every(x=>x.http===200));
  check('All nine planned module screens inspected',report.routes.length===9);
  report.allExecutedChecksPassed=report.checks.every(x=>x.passed);report.screenshotsAwaitingReview=true;
-}catch(e){report.failureType=e.name;report.allExecutedChecksPassed=false;process.exitCode=1;}
+}catch(e){report.failureType=e.name;report.allExecutedChecksPassed=false;process.exitCode=1;
+ if(currentPage&&!currentPage.isClosed()){
+  report.actualPagePath=new URL(currentPage.url()).pathname;
+  try{await currentPage.screenshot({path:path.join(OUT,'failed-page.png'),mask:[currentPage.locator('input')],fullPage:false});}catch{}
+ }
+}
 finally{password='';if(browser)await browser.close();save();console.log(JSON.stringify({allExecutedChecksPassed:report.allExecutedChecksPassed,checks:report.checks.length,routes:report.routes.length,lastCheck:report.checks.at(-1)}));}})();
