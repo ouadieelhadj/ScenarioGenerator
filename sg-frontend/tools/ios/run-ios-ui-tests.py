@@ -7,11 +7,11 @@ OUT=Path(os.environ.get('FP_IOS_OUTPUT',str(F/'ios/App/output/cloud'))).resolve(
 SAFE=OUT/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
 authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
 focus=os.environ.get('FP_IOS_UI_FOCUS','full')
-if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation','upload','attachment','onboarding_readonly'):raise SystemExit('Unsupported native suite')
+if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation','upload','attachment','onboarding_readonly','onboarding_request'):raise SystemExit('Unsupported native suite')
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
 uploadSource=os.environ.get('FP_IOS_UPLOAD_SOURCE','photos')
 if uploadSource not in ('photos','files'):raise SystemExit('Unsupported upload source')
-expectedCases=2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
+expectedCases=1 if focus=='onboarding_request' else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -68,7 +68,22 @@ try:
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         supportFixture=module.prepare(SAFE/'native-support-fixtures.json',password)
         report['supportFixturesPrepared']=True
+    publicOnboarding=None
+    if focus=='onboarding_request':
+        import urllib.request
+        email=os.environ.get('FP_IOS_ONBOARDING_EMAIL','')
+        if not re.fullmatch(r'[a-zA-Z0-9._-]+\+fpios-[a-z0-9-]+@gmail\.com',email):
+            raise RuntimeError('Controlled public-registration test address missing; no registration sent')
+        request=urllib.request.Request('https://merchant.futurpayment.com/api-merchant-portal/api/merchant-onboarding/public/v1/acquirers',headers={'Accept':'application/json'})
+        with urllib.request.urlopen(request,timeout=30) as response:
+            if response.status!=200:raise RuntimeError('Public acquirer catalogue unavailable')
+            catalogue=json.loads(response.read())
+        acquirer=next((a for a in catalogue if a.get('code')=='DAMANCASH'),None)
+        if not acquirer or not isinstance(acquirer.get('name'),str) or not acquirer['name'].strip():raise RuntimeError('Required public acquirer not confirmed')
+        publicOnboarding={'email':email,'acquirerName':acquirer['name']}
+        report['publicRegistrationIsNotActivation']=True
     for target in targets:
+        if publicOnboarding:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_ONBOARDING_EMAIL=publicOnboarding['email'],FP_IOS_ONBOARDING_ACQUIRER_NAME=publicOnboarding['acquirerName'])
         if uploadFixture:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_UPLOAD_REFERENCE=uploadFixture['fixture']['reference'],FP_IOS_UPLOAD_SOURCE=uploadSource)
         if supportFixture:
             target.setdefault('EnvironmentVariables',{}).update(
@@ -87,7 +102,7 @@ try:
         report['nativeUIExecutionStarted']=True
         selector='MerchantUITests/MerchantUITests/'
         base=['xcodebuild','test-without-building','-xctestrun',str(private),'-destination',destination,'-parallel-testing-enabled','NO']
-        exclusions=['-skip-testing:'+selector+name for name in ['test08FreshInstallationRequiresLogin','test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly']]
+        exclusions=['-skip-testing:'+selector+name for name in ['test08FreshInstallationRequiresLogin','test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly','test13PublicPersonalRegistrationRequest']]
         if not authenticated:exclusions+=['-skip-testing:'+selector+'test10SeedSessionForReinstall']
         if focus=='session_files_reinstall':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
@@ -101,6 +116,10 @@ try:
             exclusions=['-only-testing:'+selector+name for name in ['test09cNativeMerchantIsolation','test10SeedSessionForReinstall']]
         if focus=='upload':
             exclusions=['-only-testing:'+selector+name for name in ((['test09bSaveNativeAttachmentCopy'] if uploadSource=='files' else [])+['test09cNativeMerchantIsolation','test09dNativeImageAttachmentUpload','test10SeedSessionForReinstall'])]
+        if focus=='onboarding_request':
+            exclusions=['-only-testing:'+selector+'test13PublicPersonalRegistrationRequest']
+            report['publicRegistrationCountertestOnly']=True
+            report['reinstallationRequested']=False
         if focus=='onboarding_readonly':
             exclusions=['-only-testing:'+selector+name for name in ['test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly']]
             report['onboardingReadOnlyCountertest']=True
@@ -143,7 +162,7 @@ try:
             passed+=int(second.get('passedTests',0));failed+=int(second.get('failedTests',0));skipped+=int(second.get('skippedTests',0))
             report['reinstallationPassed']=fresh.returncode==0 and int(second.get('passedTests',0))==1 and int(second.get('failedTests',0))==0
             if fresh.returncode:test=fresh
-        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and (passed==expectedCases if authenticated else passed>=3) and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus in ('connection','attachment','onboarding_readonly') or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and (passed==expectedCases if authenticated else passed>=3) and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus in ('connection','attachment','onboarding_readonly','onboarding_request') or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
         rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
         # Curated attachments only; raw XCTest result bundles may contain input activity.
         attachments=OUT/'private-attachments'
@@ -178,6 +197,7 @@ finally:
         journal=redacted(raw.read_text(errors='replace'))
         (SAFE/'journal-expurge.txt').write_text(journal,encoding='utf8')
         nativeCases=[{'name':name,'passed':state=='passed'} for name,state in re.findall(r"Test Case '-\[MerchantUITests\.MerchantUITests ([^]]+)\]' (passed|failed) \(",journal)]
+        report['nativePublicRegistrationAcknowledged']='FP_NATIVE_ONBOARDING publicRegistrationAcknowledged=true mailReceiptNotInferred=true' in journal
         report['nativeExistingPersonalDossierReadOnlyObserved']='FP_NATIVE_ONBOARDING existingPersonalDossierRead=true approved=true businessMutation=false' in journal
         report['nativeCommercialOnboardingReadOnlyObserved']='FP_NATIVE_ONBOARDING commercialEntryRead=true commercialListLoaded=true businessMutation=false' in journal
         report['nativeImageUploadObserved']='FP_NATIVE_UPLOAD pickerSelected=true serverAcknowledged=true' in journal
@@ -267,6 +287,8 @@ finally:
     if authenticated and focus in ('full','isolation','upload') and not report.get('nativeMerchantSwitchIsolationObserved',False):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if authenticated and focus in ('full','upload','attachment') and not (report.get('nativeImageUploadObserved',False) and report.get('nativeUploadServerReconciliationPassed',False)):
+        report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
+    if focus=='onboarding_request' and not report.get('nativePublicRegistrationAcknowledged'):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='onboarding_readonly' and not (report.get('nativeExistingPersonalDossierReadOnlyObserved') and report.get('nativeCommercialOnboardingReadOnlyObserved')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1

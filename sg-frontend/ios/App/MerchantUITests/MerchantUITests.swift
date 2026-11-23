@@ -650,4 +650,38 @@ final class MerchantUITests: XCTestCase {
         print("FP_NATIVE_ONBOARDING commercialEntryRead=true commercialListLoaded=true businessMutation=false")
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
     }
+
+    // One real public request from the app. Neutral acknowledgement is not an
+    // activation, an identity allocation or proof of mailbox delivery.
+    @MainActor func test13PublicPersonalRegistrationRequest() throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let email = env["FP_IOS_ONBOARDING_EMAIL"], !email.isEmpty,
+              let acquirerName = env["FP_IOS_ONBOARDING_ACQUIRER_NAME"], !acquirerName.isEmpty else {
+            throw XCTSkip("Adresse de recette contrôlée et acquéreur requis.")
+        }
+        let app = launch(); tap(app, "Commencer mon affiliation")
+        XCTAssertTrue(element(app, "Préparer et suivre votre affiliation").waitForExistence(timeout: 30))
+        let selector = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == %@ OR value == %@", "Acquéreur de votre affiliation", "Choisir un acquéreur")).firstMatch
+        XCTAssertTrue(selector.waitForExistence(timeout: 30))
+        selector.tap()
+        let wheel = app.pickerWheels.firstMatch
+        if wheel.waitForExistence(timeout: 5) {
+            wheel.adjust(toPickerWheelValue: acquirerName); dismissFormKeyboard(app)
+        } else {
+            let choice = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", acquirerName)).firstMatch
+            XCTAssertTrue(choice.waitForExistence(timeout: 10)); choice.tap()
+        }
+        let address = app.webViews.textFields.firstMatch
+        XCTAssertTrue(address.exists); address.tap(); address.typeText(email); dismissFormKeyboard(app)
+        let submit = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Demander mon accès sécurisé")).firstMatch
+        XCTAssertTrue(submit.exists); XCTAssertFalse(submit.isEnabled, "Le consentement reste obligatoire.")
+        tap(app, "J’accepte que ces informations soient utilisées pour ouvrir et suivre mon dossier d’affiliation.")
+        XCTAssertTrue(submit.isEnabled)
+        screenshot(app, "ios05-demande-publique-avant-envoi")
+        submit.tap() // Exactly once; no uncertain-write retry.
+        let accepted = app.webViews.staticTexts.matching(NSPredicate(format: "label BEGINSWITH %@", "Votre demande a été reçue.")).firstMatch
+        XCTAssertTrue(accepted.waitForExistence(timeout: 60))
+        screenshot(app, "ios05-demande-publique-accuse-neutre")
+        print("FP_NATIVE_ONBOARDING publicRegistrationAcknowledged=true mailReceiptNotInferred=true")
+    }
 }
