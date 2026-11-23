@@ -25,7 +25,7 @@ class Api:
         if path.endswith('/commercial/workspace'):return {'actions':['EDIT']}
         if path.endswith('/documents'):return self.docs
         if path.endswith('/kyc-requirements'):return self.checklist
-        if path.endswith('/attachments'):return [{'id':kyc.SOURCE_ATTACHMENT,'scanState':'CLEAN','sizeBytes':1000000,'contentType':'image/png'}]
+        if path.endswith('/attachments'):return [{'id':kyc.SOURCE_ATTACHMENT,'scanState':'CLEAN','contentType':'image/png','createdAt':'2026-11-22T12:00:00Z'}]
         raise AssertionError('Unexpected business endpoint '+path)
 
 class Contracts(unittest.TestCase):
@@ -59,6 +59,19 @@ class Contracts(unittest.TestCase):
     def test_wrong_source_bytes_stop_before_uploads(self):
         with patch.object(kyc,'SYNTHETIC_HASH','0'*64):
             with self.assertRaises(AssertionError):self.prepare()
+    def test_source_without_metadata_size_uses_download_size(self):
+        # Real Incident.Attachment has no sizeBytes attribute. A short download
+        # must still fail; removing a nonexistent metadata field weakens no gate.
+        with patch.object(kyc.urllib.request,'urlopen',return_value=io.BytesIO(self.content[:-1])):
+            with self.assertRaises(AssertionError):self.prepare()
+    def test_unclean_source_stops_before_download(self):
+        original=self.api.request
+        self.api.request=lambda path,*a,**kw: [{'id':kyc.SOURCE_ATTACHMENT,'scanState':'QUARANTINED','contentType':'image/png'}] if path.endswith('/attachments') else original(path,*a,**kw)
+        with self.assertRaises(AssertionError):self.prepare()
+    def test_wrong_source_mime_stops(self):
+        original=self.api.request
+        self.api.request=lambda path,*a,**kw: [{'id':kyc.SOURCE_ATTACHMENT,'scanState':'CLEAN','contentType':'application/pdf'}] if path.endswith('/attachments') else original(path,*a,**kw)
+        with self.assertRaises(AssertionError):self.prepare()
     def test_readonly_reconciliation_exact_and_changed_bytes(self):
         context=self.prepare();self.api.full['version']=2
         self.api.docs=[{'id':'synthetic-doc','caseId':'synthetic-id','type':'BANK_ACCOUNT_PROOF','version':1,'contentType':'image/png','contentLength':1000000,'sha256':self.digest,'reviewStatus':'PENDING','reviewedBy':None,'uploadedBy':'synthetic-user'}]

@@ -32,7 +32,9 @@ def prepare(output,password):
         try:
             rows=m.request(PREFIX+'/v1/acquirers/DAMANCASH/incidents/'+SOURCE_INCIDENT+'/attachments',other)
             source=next(r for r in rows if r['id']==SOURCE_ATTACHMENT)
-            assert source['scanState']=='CLEAN' and source['sizeBytes']==1000000 and source['contentType']=='image/png'
+            # Incident.Attachment exposes id/contentType/scanState/createdAt, not size.
+            # Exact size and hash are checked on the authorized download below.
+            assert source['scanState']=='CLEAN' and source['contentType']=='image/png'
             req=urllib.request.Request(m.ORIGIN+PREFIX+'/v1/acquirers/DAMANCASH/incidents/'+SOURCE_INCIDENT+'/attachments/'+SOURCE_ATTACHMENT,headers={'Authorization':'Bearer '+other,'Accept':'image/png'})
             with urllib.request.urlopen(req,timeout=30) as response:content=response.read(1000001)
             assert len(content)==1000000 and hashlib.sha256(content).hexdigest()==SYNTHETIC_HASH
