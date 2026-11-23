@@ -7,9 +7,9 @@ OUT=Path(os.environ.get('FP_IOS_OUTPUT',str(F/'ios/App/output/cloud'))).resolve(
 SAFE=OUT/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
 authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
 focus=os.environ.get('FP_IOS_UI_FOCUS','full')
-if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation'):raise SystemExit('Unsupported native suite')
+if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation','upload'):raise SystemExit('Unsupported native suite')
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
-expectedCases=3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 13
+expectedCases=4 if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -51,6 +51,13 @@ try:
         if isinstance(value,dict) and 'MerchantUITests' in key:targets.append(value)
     for configuration in data.get('TestConfigurations',[]):targets.extend(t for t in configuration.get('TestTargets',[]) if t.get('BlueprintName')=='MerchantUITests')
     if not targets:raise RuntimeError('UI test target missing from xctestrun')
+    uploadFixture=None
+    if authenticated and focus in ('full','upload'):
+        import importlib.util
+        uploadSpec=importlib.util.spec_from_file_location('native_upload_fixture',F/'tools/ios/prepare-native-upload-fixture.py')
+        uploadModule=importlib.util.module_from_spec(uploadSpec);uploadSpec.loader.exec_module(uploadModule)
+        uploadFixture=uploadModule.prepare(SAFE/'native-upload-fixture.json',password,chosen['udid'],OUT/'private-synthetic-media')
+        report['nativeUploadFixturePrepared']=True
     supportFixture=None
     if authenticated and focus in ('full','authenticated'):
         import importlib.util
@@ -59,6 +66,7 @@ try:
         supportFixture=module.prepare(SAFE/'native-support-fixtures.json',password)
         report['supportFixturesPrepared']=True
     for target in targets:
+        if uploadFixture:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_UPLOAD_REFERENCE=uploadFixture['fixture']['reference'])
         if supportFixture:
             target.setdefault('EnvironmentVariables',{}).update(
                 FP_IOS_REPLY_REFERENCE=supportFixture['fixtures']['reply']['reference'],
@@ -88,6 +96,8 @@ try:
             exclusions=['-only-testing:'+selector+name for name in ['test06bNativeIncidentSubmission','test09bSaveNativeAttachmentCopy','test10SeedSessionForReinstall']]
         if focus=='isolation':
             exclusions=['-only-testing:'+selector+name for name in ['test09cNativeMerchantIsolation','test10SeedSessionForReinstall']]
+        if focus=='upload':
+            exclusions=['-only-testing:'+selector+name for name in ['test09cNativeMerchantIsolation','test09dNativeImageAttachmentUpload','test10SeedSessionForReinstall']]
         with raw.open('a') as log:
             test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
@@ -96,6 +106,9 @@ try:
             reconciliation=module.verify(supportFixture,password,SAFE/'native-support-reconciliation.json')
             report['supportServerReconciliationPassed']=reconciliation['allExecutedChecksPassed']
             report['supportServerReconciliationAssertions']=len(reconciliation['checks'])
+        if uploadFixture:
+            uploadVerification=uploadModule.verify(uploadFixture,password,SAFE/'native-upload-reconciliation.json')
+            report['nativeUploadServerReconciliationPassed']=uploadVerification['allExecutedChecksPassed']
         firstPhaseJournal=raw.read_text(errors='replace')
         seeded=bool(re.search(r"test10SeedSessionForReinstall\]' passed",firstPhaseJournal)) and 'FP_REINSTALL_SEED restored=true' in firstPhaseJournal
         # The target reinstall check is independent of an unrelated first-phase
@@ -154,6 +167,7 @@ finally:
         journal=redacted(raw.read_text(errors='replace'))
         (SAFE/'journal-expurge.txt').write_text(journal,encoding='utf8')
         nativeCases=[{'name':name,'passed':state=='passed'} for name,state in re.findall(r"Test Case '-\[MerchantUITests\.MerchantUITests ([^]]+)\]' (passed|failed) \(",journal)]
+        report['nativeImageUploadObserved']='FP_NATIVE_UPLOAD pickerSelected=true serverAcknowledged=true' in journal
         report['nativeMerchantSwitchIsolationObserved']='FP_NATIVE_ISOLATION switched=true ownRead=true foreignReferenceAbsent=true' in journal
         report['nativeSubmittedSubjects']=sorted(set(re.findall(r'FP_NATIVE_SUBMISSION subject=(iOS depot [a-f0-9]{8})',journal)))
         report['nativeDraftSubjects']=sorted(set(re.findall(r'FP_NATIVE_DRAFT subject=(iOS natif [a-f0-9]{8})',journal)))
@@ -237,7 +251,9 @@ finally:
     except subprocess.TimeoutExpired:report['nativeSavedCopyDiagnosticTimedOut']=True
     if focus=='incident_completion' and not report.get('nativeSavedCopyHashMatched',False):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
-    if focus=='isolation' and not report.get('nativeMerchantSwitchIsolationObserved',False):
+    if focus in ('isolation','upload') and not report.get('nativeMerchantSwitchIsolationObserved',False):
+        report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
+    if authenticated and focus in ('full','upload') and not (report.get('nativeImageUploadObserved',False) and report.get('nativeUploadServerReconciliationPassed',False)):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     (SAFE/'resultats-ui.json').write_text(json.dumps(report,indent=2)+'\n')
 print(json.dumps(report));raise SystemExit(rc)

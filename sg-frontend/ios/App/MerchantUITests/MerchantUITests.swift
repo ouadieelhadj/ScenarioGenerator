@@ -370,7 +370,7 @@ final class MerchantUITests: XCTestCase {
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
         XCTAssertTrue(app.webViews.secureTextFields.firstMatch.waitForExistence(timeout: 20))
         try login(app, userOverride: "carrefour.leila")
-        let commerce = app.webViews.staticTexts.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Carrefour")).firstMatch
+        let commerce = app.webViews.staticTexts.matching(NSPredicate(format: "label ==[cd] %@", "Carrefour")).firstMatch
         XCTAssertTrue(commerce.waitForExistence(timeout: 25), "Le commerce Carrefour doit être chargé depuis son propre rattachement.")
         XCTAssertFalse(element(app, "BIM").exists)
         XCTAssertFalse(element(app, "Bonjour bim.amina").exists)
@@ -393,6 +393,49 @@ final class MerchantUITests: XCTestCase {
         print("FP_NATIVE_ISOLATION switched=true ownRead=true foreignReferenceAbsent=true")
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
         XCTAssertTrue(app.webViews.secureTextFields.firstMatch.waitForExistence(timeout: 20))
+    }
+
+    @MainActor func test09dNativeImageAttachmentUpload() throws {
+        guard let reference = ProcessInfo.processInfo.environment["FP_IOS_UPLOAD_REFERENCE"], reference.hasPrefix("INC-") else {
+            throw XCTSkip("Le dossier synthétique du dépôt natif n'est pas préparé.")
+        }
+        let app = launch(); try login(app)
+        tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
+        XCTAssertTrue(element(app, "Déclarer un incident").waitForExistence(timeout: 30))
+        let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: element(app, "Actualiser"))
+        XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: 30), .completed)
+        let fixture = app.webViews.buttons.matching(NSPredicate(format: "label CONTAINS %@", reference)).firstMatch
+        for _ in 0..<12 {
+            if fixture.exists && fixture.isHittable { break }
+            app.webViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(fixture.exists && fixture.isHittable); fixture.tap()
+        let upload = element(app, "Ajouter un fichier ou une photo")
+        XCTAssertTrue(upload.waitForExistence(timeout: 20))
+        for _ in 0..<18 {
+            if upload.exists && upload.isHittable { break }
+            app.webViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(upload.exists && upload.isHittable)
+        screenshot(app, "ios09-piece-avant-selecteur")
+        upload.tap()
+        screenshot(app, "ios09-choix-source-image")
+        let library = app.buttons.matching(NSPredicate(format: "label IN %@", ["Photothèque", "Photo Library", "Choisir une photo", "Choose Photo", "Choisir une photo ou une vidéo"])).firstMatch
+        XCTAssertTrue(library.waitForExistence(timeout: 10), "La photothèque native doit être proposée explicitement.")
+        library.tap()
+        let photo = app.collectionViews.cells.firstMatch
+        XCTAssertTrue(photo.waitForExistence(timeout: 15), "L'image synthétique doit être disponible dans le sélecteur iOS.")
+        screenshot(app, "ios09-selecteur-photo-synthetique")
+        photo.tap()
+        let add = app.buttons.matching(NSPredicate(format: "label IN %@", ["Ajouter", "Add", "Ajouter (1)", "Add (1)"])).firstMatch
+        if add.waitForExistence(timeout: 3) && add.isEnabled && add.isHittable { add.tap() }
+        let received = app.webViews.staticTexts.matching(NSPredicate(format: "label IN %@", ["Pièce contrôlée.", "Pièce reçue ; consultation bloquée tant que le contrôle de sécurité n’est pas validé."])).firstMatch
+        XCTAssertTrue(received.waitForExistence(timeout: 35), "Le serveur doit accuser réception du dépôt depuis le sélecteur.")
+        XCTAssertFalse(element(app, "Ajout non confirmé ou refusé. Actualisez les pièces avant un nouvel envoi.").exists)
+        for _ in 0..<7 { app.webViews.firstMatch.swipeDown() }
+        screenshot(app, "ios09-piece-recue-depuis-selecteur")
+        print("FP_NATIVE_UPLOAD pickerSelected=true serverAcknowledged=true")
+        tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
     }
 
     @MainActor func test10SeedSessionForReinstall() throws {

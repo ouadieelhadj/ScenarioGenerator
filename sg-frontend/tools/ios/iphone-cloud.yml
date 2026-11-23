@@ -34,6 +34,7 @@ on:
           - connection
           - incident_completion
           - isolation
+          - upload
 permissions:
   contents: read
 concurrency:
