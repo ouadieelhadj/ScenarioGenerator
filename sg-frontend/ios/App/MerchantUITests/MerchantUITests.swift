@@ -643,14 +643,21 @@ final class MerchantUITests: XCTestCase {
     // Existing approved synthetic case, positively checked against OCI on 2026-11-23.
     // Read only: no save, approval, upload, invitation or registration is performed.
     @MainActor func test11PersonalDossierReadOnly() throws {
-        let app = launch(); try login(app, userOverride: "fp-u000004")
-        XCTAssertTrue(element(app, "ONB-D1DB521C").waitForExistence(timeout: 30))
+        var user = "fp-u000004", reference = "ONB-D1DB521C"
+        if let raw = ProcessInfo.processInfo.environment["FP_IOS_APPROVED_READ_FIXTURE"],
+           let bytes = raw.data(using: .utf8),
+           let fixture = try JSONSerialization.jsonObject(with: bytes) as? [String: String],
+           let boundUser = fixture["login"], let boundReference = fixture["reference"] {
+            user = boundUser; reference = boundReference
+        }
+        let app = launch(); try login(app, userOverride: user)
+        XCTAssertTrue(element(app, reference).waitForExistence(timeout: 30))
         screenshot(app, "ios05-compte-personnel-dossier-existant")
         tap(app, "Ouvrir le menu")
         screenshot(app, "ios05-menu-personnel-avant-depliage")
         tap(app, "Mon commerce"); tap(app, "Mon dossier")
         XCTAssertTrue(element(app, "Dossier commercant et PDV").waitForExistence(timeout: 30))
-        XCTAssertTrue(element(app, "ONB-D1DB521C").exists)
+        XCTAssertTrue(element(app, reference).exists)
         XCTAssertTrue(element(app, "APPROVED").exists)
         screenshot(app, "ios05-dossier-approuve-lecture-seule")
         print("FP_NATIVE_ONBOARDING existingPersonalDossierRead=true approved=true businessMutation=false")

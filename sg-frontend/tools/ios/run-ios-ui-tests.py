@@ -102,6 +102,13 @@ try:
         report['frameworkWebChecksPassed']=web.returncode==0 and webResult.is_file() and json.loads(webResult.read_text()).get('allExecutedChecksPassed') is True
         if not report['frameworkWebChecksPassed']:raise RuntimeError('Candidate browser regression failed; inspect protected framework-web report')
 
+    approvedReadContext=None
+    if focus=='onboarding_readonly':
+        import importlib.util
+        approvedSpec=importlib.util.spec_from_file_location('approved_read',F/'tools/ios/prepare-native-approved-read.py')
+        approvedModule=importlib.util.module_from_spec(approvedSpec);approvedSpec.loader.exec_module(approvedModule)
+        approvedReadContext=approvedModule.prepare(SAFE/'native-approved-read-preflight.json',password)
+        report['approvedPersonalReadBoundBefore']=True
     kycReadContext=None
     if focus=='full' and authenticated:
         import importlib.util
@@ -128,6 +135,7 @@ try:
         publicOnboarding={'email':email,'acquirerName':acquirer['name']}
         report['publicRegistrationIsNotActivation']=True
     for target in targets:
+        if approvedReadContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_APPROVED_READ_FIXTURE=json.dumps(approvedReadContext['fixture']))
         if kycReadContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_KYC_READ_FIXTURE=json.dumps({'login':kycReadContext['login'],'reference':kycReadContext['reference'],'documents':kycReadContext['allDocuments']}))
         if kycContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_KYC_FIXTURE=json.dumps(kycContext))
         if frameworkContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_KYC_FIXTURE=json.dumps(frameworkContext))
@@ -217,6 +225,9 @@ try:
             readReconciliation=readModule.verify(kycReadContext,password,SAFE/'native-kyc-read-reconciliation.json')
             report['nativeKycReadServerReconciliationPassed']=readReconciliation['allExecutedChecksPassed']
             report['nativeKycReadServerAssertionCount']=len(readReconciliation['checks'])
+        if approvedReadContext:
+            approvedReadResult=approvedModule.verify(approvedReadContext,password,SAFE/'native-approved-read-reconciliation.json')
+            report['approvedPersonalReadServerReconciliationPassed']=approvedReadResult['allExecutedChecksPassed']
         firstPhaseJournal=raw.read_text(errors='replace')
         if kycReadContext:
             readMarkers=re.findall(r'FP_NATIVE_KYC_READ documents=(\d+) pending=true businessMutation=false',firstPhaseJournal)
@@ -381,7 +392,7 @@ finally:
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='onboarding_request' and not report.get('nativePublicRegistrationAcknowledged'):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
-    if focus=='onboarding_readonly' and not (report.get('nativeExistingPersonalDossierReadOnlyObserved') and report.get('nativeCommercialOnboardingReadOnlyObserved')):
+    if focus=='onboarding_readonly' and not (report.get('nativeExistingPersonalDossierReadOnlyObserved') and report.get('nativeCommercialOnboardingReadOnlyObserved') and report.get('approvedPersonalReadServerReconciliationPassed')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='onboarding_draft' and not (report.get('nativeLegalDossierSaveObserved') and report.get('nativeDossierServerReconciliationPassed') and report.get('nativeDossierFieldConfirmations')==report.get('nativeDossierExpectedFields')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
