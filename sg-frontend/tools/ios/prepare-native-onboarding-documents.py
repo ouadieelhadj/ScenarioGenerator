@@ -21,6 +21,8 @@ def prepare(output,password):
         workspace=m.request(PREFIX+'/v1/dossiers/'+fixture['id']+'/commercial/workspace',token)
         assert 'EDIT' in workspace['actions']
         documents=m.request(PREFIX+'/v1/dossiers/'+fixture['id']+'/documents',token)
+        required_metadata={'id','type','version','reviewStatus','contentType','contentLength','sha256','uploadedBy'}
+        assert all(isinstance(r,dict) and required_metadata.issubset(r) for r in documents), 'Incomplete existing metadata: inspect before recovery'
         assert len({r['type'] for r in documents})==len(documents), 'Existing document types must be unique'
         assert full['version']==1+len(documents), 'Inspect unrelated dossier changes before recovery'
         assert all(r['reviewStatus']=='PENDING' and r['version']==1 and r['contentType']=='image/png'

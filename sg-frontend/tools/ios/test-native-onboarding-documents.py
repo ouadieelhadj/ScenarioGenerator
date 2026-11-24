@@ -88,4 +88,42 @@ class Contracts(unittest.TestCase):
         result=kyc.verify(context,'synthetic-not-a-real-password',self.output)
         self.assertFalse(result['allExecutedChecksPassed'])
 
+
+    def existing(self, kind='BANK_ACCOUNT_PROOF', **overrides):
+        document={'id':'preserved-native-document','caseId':'synthetic-id','type':kind,'version':1,
+                  'reviewStatus':'PENDING','reviewedBy':None,'contentType':'image/png','contentLength':1000000,
+                  'sha256':self.digest,'uploadedBy':self.api.fixture['login']}
+        document.update(overrides);return document
+
+    def test_identical_preserved_document_uploads_only_missing_type(self):
+        self.api.docs=[self.existing()];self.api.full['version']=2
+        self.api.checklist['documents'].append({'type':'STATUTES','label':'Statuts fictifs'})
+        context=self.prepare()
+        self.assertEqual(context['versionBefore'],2)
+        self.assertEqual([d['type'] for d in context['documents']],['STATUTES'])
+        self.assertEqual(len(context['allDocuments']),2)
+        self.assertEqual(context['existingDocuments'][0]['id'],'preserved-native-document')
+        self.assertEqual([path for method,path in self.api.calls if method=='POST'],['/api-merchant-portal/auth/login'])
+
+    def test_complete_existing_set_never_reuploads(self):
+        self.api.docs=[self.existing()];self.api.full['version']=2
+        with self.assertRaises(AssertionError):self.prepare()
+        self.assertFalse(self.output.exists())
+
+    def test_foreign_existing_author_blocks_recovery(self):
+        self.api.docs=[self.existing(uploadedBy='another-account')];self.api.full['version']=2
+        with self.assertRaises(AssertionError):self.prepare()
+
+    def test_changed_existing_bytes_block_recovery(self):
+        self.api.docs=[self.existing(sha256='0'*64)];self.api.full['version']=2
+        with self.assertRaises(AssertionError):self.prepare()
+
+    def test_unrelated_dossier_revision_blocks_recovery(self):
+        self.api.docs=[self.existing()];self.api.full['version']=3
+        with self.assertRaises(AssertionError):self.prepare()
+
+    def test_duplicate_existing_type_blocks_recovery(self):
+        self.api.docs=[self.existing(),self.existing(id='another-version')];self.api.full['version']=3
+        with self.assertRaises(AssertionError):self.prepare()
+
 if __name__=='__main__':unittest.main()
