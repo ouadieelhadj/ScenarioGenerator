@@ -611,13 +611,14 @@ final class MerchantUITests: XCTestCase {
         XCTAssertFalse(element(app, notice).exists, "La nouvelle tentative ne doit pas réutiliser un ancien accusé.")
         tap(app, "Télécharger")
         let owners = [app, XCUIApplication(bundleIdentifier: "com.apple.springboard")]
+        let requireSheetGesture = ProcessInfo.processInfo.environment["FP_IOS_CANCEL_STYLE"] == "sheet_pull_down"
         var cancel: XCUIElement?
         let deadline = Date().addingTimeInterval(35)
         var backs = 0
         // iOS26 may open inside "On My iPhone". Its top-left control navigates
         // back to Locations; Cancel is only available at that root screen.
         // Use the actual native navigation bar, never a guessed screen coordinate.
-        while Date() < deadline {
+        while !requireSheetGesture && Date() < deadline {
             if element(app, notice).exists { print("FP_NATIVE_EXPORT cancelledAfterNativeNavigation=true"); break }
             for owner in owners {
                 // Modern Files uses a native close toolbar item on some iOS runtimes.
@@ -651,7 +652,7 @@ final class MerchantUITests: XCTestCase {
             print("FP_PICKER_CONTROL label=" + label + " app=" + String(app.buttons[label].exists) + " system=" + String(owners[1].buttons[label].exists))
         }
         if !element(app, notice).exists {
-            if let cancel = cancel {
+            if let cancel = cancel, !requireSheetGesture {
                 XCTAssertTrue(cancel.isEnabled && cancel.isHittable)
                 cancel.tap()
             } else {

@@ -58,6 +58,7 @@ on:
           - onboarding_readonly
           - final_readonly
           - export_cancel
+          - sheet_cancel
           - onboarding_request
           - onboarding_draft
           - onboarding_documents
@@ -66,7 +67,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: iphone-damancash-${{ github.ref }}${{ inputs.ui_focus == 'android_build' && '-android' || (inputs.typecheck_only && '-preflight' || '') }}
+  group: iphone-damancash-${{ github.ref }}${{ inputs.ui_focus == 'sheet_cancel' && '-sheet-only' || (inputs.ui_focus == 'android_build' && '-android' || (inputs.typecheck_only && '-preflight' || '')) }}
   cancel-in-progress: false
 jobs:
   ios-validation:
