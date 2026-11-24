@@ -69,7 +69,7 @@ concurrency:
 jobs:
   ios-validation:
     if: ${{ inputs.ui_focus != 'android_build' }}
-    runs-on: ${{ inputs.typecheck_only && inputs.authenticated && !inputs.transport_only && inputs.ui_focus == 'onboarding_documents' && 'ubuntu-24.04' || 'macos-26' }}
+    runs-on: ${{ inputs.typecheck_only && inputs.authenticated && !inputs.transport_only && inputs.ui_focus == 'onboarding_documents' && 'ubuntu-24.04' || (inputs.ui_focus == 'full' && 'macos-26-intel' || 'macos-26') }}
     timeout-minutes: 60
     env:
       FP_IOS_OUTPUT: ${{ github.workspace }}/preuves-mac
