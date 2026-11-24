@@ -454,7 +454,7 @@ final class MerchantUITests: XCTestCase {
             let stem = "incident-d41ce29b-7cfd-439f-bf38-77032b23d605"
             let file = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS %@", stem)).firstMatch
             if !file.waitForExistence(timeout: 12) {
-                let browse = app.buttons.matching(NSPredicate(format: "label IN %@", ["Parcourir", "Browse"])).firstMatch
+                let browse = app.buttons.matching(NSPredicate(format: "label IN %@", ["Explorer", "Parcourir", "Browse"])).firstMatch
                 if browse.exists && browse.isHittable { browse.tap() }
                 let local = app.descendants(matching: .any).matching(NSPredicate(format: "label IN %@", ["Sur mon iPhone", "On My iPhone"])).firstMatch
                 if local.waitForExistence(timeout: 5) && local.isHittable { local.tap() }
