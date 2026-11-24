@@ -46,7 +46,7 @@ try:
     run(['sudo','chmod','0666','/dev/kvm']) # Disposable hosted runner only.
     run([tools/'avdmanager','create','avd','-n',avd,'-k',image,'--device','pixel_2'],stdin=b'no\n')
     config=ROOT/'avds'/(avd+'.avd')/'config.ini'
-    with config.open('a') as stream:stream.write('\nhw.lcd.width=720\nhw.lcd.height=1280\nhw.lcd.density=240\nhw.keyboard=yes\n')
+    with config.open('a') as stream:stream.write('\nhw.lcd.width=720\nhw.lcd.height=1280\nhw.lcd.density=320\nhw.keyboard=yes\n')
     log=(ROOT/'emulator.log').open('wb')
     proc=subprocess.Popen([str(SDK/'emulator/emulator'),'-avd',avd,'-port','5586','-memory','2048','-cores','2',
         '-no-window','-no-audio','-no-snapshot','-no-boot-anim','-gpu','swiftshader_indirect','-camera-back','none','-camera-front','none'],stdout=log,stderr=log)
@@ -60,7 +60,9 @@ try:
     else:raise RuntimeError('OwnedEmulatorBootTimeout')
     check('Dedicated emulator boot completed',True)
     run([ADB,'-s',serial,'shell','wm','size','720x1280'])
-    run([ADB,'-s',serial,'shell','wm','density','240'])
+    # Same 720x1280 / 320 dpi as the previously qualified DAMANCASH API33 bench.
+    # Preserve its exposure guards rather than relaxing them for another layout.
+    run([ADB,'-s',serial,'shell','wm','density','320'])
     run([ADB,'-s',serial,'shell','input','keyevent','82'])
     run([ADB,'-s',serial,'install',str(apk)],timeout=90)
     resolved=run([ADB,'-s',serial,'shell','cmd','package','resolve-activity','--brief',PACKAGE]).decode().strip().splitlines()
