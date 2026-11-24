@@ -599,8 +599,12 @@ final class MerchantUITests: XCTestCase {
         // Use the actual native navigation bar, never a guessed screen coordinate.
         while Date() < deadline {
             for owner in owners {
+                // Modern Files uses a native close toolbar item on some iOS runtimes.
+                // Restrict Close/Fermer to native navigation bars, never a web detail button.
+                let nativeClose = owner.navigationBars.buttons.matching(NSPredicate(format: "label IN %@", ["Annuler", "Cancel", "Fermer", "Close"])).firstMatch
+                if nativeClose.exists && nativeClose.isEnabled && nativeClose.isHittable { cancel = nativeClose; break }
                 let candidate = owner.buttons.matching(NSPredicate(format: "label ==[c] %@ OR label ==[c] %@", "Annuler", "Cancel")).firstMatch
-                if candidate.exists { cancel = candidate; break }
+                if candidate.exists && candidate.isEnabled && candidate.isHittable { cancel = candidate; break }
             }
             if cancel != nil { break }
             let save = app.buttons.matching(NSPredicate(format: "label ==[c] %@ OR label ==[c] %@", "Enregistrer", "Save")).firstMatch
@@ -614,7 +618,12 @@ final class MerchantUITests: XCTestCase {
             }
             _ = XCTWaiter.wait(for: [], timeout: 0.3)
         }
-        screenshot(app, "ios10-selecteur-copie-native")
+        pickerScreen("ios10-selecteur-copie-native")
+        for owner in owners {
+            for control in owner.navigationBars.buttons.allElementsBoundByIndex {
+                print("FP_PICKER_NAV label=" + control.label + " enabled=" + String(control.isEnabled) + " hittable=" + String(control.isHittable))
+            }
+        }
         for label in ["Annuler", "Cancel", "Enregistrer", "Save", "OK", "Done"] {
             print("FP_PICKER_CONTROL label=" + label + " app=" + String(app.buttons[label].exists) + " system=" + String(owners[1].buttons[label].exists))
         }

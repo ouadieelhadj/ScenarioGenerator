@@ -11,7 +11,7 @@ if focus not in ('full','session_files_reinstall','authenticated','connection','
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
 uploadSource=os.environ.get('FP_IOS_UPLOAD_SOURCE','photos')
 if uploadSource not in ('photos','files'):raise SystemExit('Unsupported upload source')
-expectedCases=5 if focus=='onboarding_documents' else 3 if focus=='framework_validation' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else (15 if authenticated else 14)
+expectedCases=5 if focus=='onboarding_documents' else 3 if focus=='framework_validation' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (6 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else (15 if authenticated else 14)
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -167,7 +167,7 @@ try:
         if focus=='isolation':
             exclusions=['-only-testing:'+selector+name for name in ['test09cNativeMerchantIsolation','test10SeedSessionForReinstall']]
         if focus=='upload':
-            exclusions=['-only-testing:'+selector+name for name in ((['test09bSaveNativeAttachmentCopy'] if uploadSource=='files' else [])+['test09cNativeMerchantIsolation','test09dNativeImageAttachmentUpload','test10SeedSessionForReinstall'])]
+            exclusions=['-only-testing:'+selector+name for name in ((['test09bSaveNativeAttachmentCopy','test09CancelNativeAttachmentCopy'] if uploadSource=='files' else [])+['test09cNativeMerchantIsolation','test09dNativeImageAttachmentUpload','test10SeedSessionForReinstall'])]
         if focus=='onboarding_documents':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09bSaveNativeAttachmentCopy','test14bSavedDossierKeyboardLayout','test15PersonalKycDocumentsNativeUpload']]
             report['nativeKycUploadOnly']=False
@@ -191,7 +191,7 @@ try:
             report['attachmentCountertestOnly']=True
             report['reinstallationRequested']=False
         with raw.open('a') as log:
-            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=2100 if focus=='full' else 1800 if focus in ('onboarding_draft','onboarding_documents','framework_validation') else 720)
+            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=3600 if focus=='full' else 2700 if focus=='upload' and uploadSource=='files' else 1800 if focus in ('onboarding_draft','onboarding_documents','framework_validation') else 720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
         passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
         if draftContext:
@@ -376,6 +376,8 @@ finally:
     if authenticated and focus in ('full','upload','attachment') and not (report.get('nativeImageUploadObserved',False) and report.get('nativeUploadServerReconciliationPassed',False)):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='full' and authenticated and not (report.get('nativeKycReadOnlyObserved') and report.get('nativeKycReadServerReconciliationPassed')):
+        report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
+    if focus=='upload' and uploadSource=='files' and not report.get('nativeExportCancellationObserved'):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='onboarding_request' and not report.get('nativePublicRegistrationAcknowledged'):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
