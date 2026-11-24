@@ -5,7 +5,7 @@ Only UI login, session, commerce/isolation views and logout are exercised here.
 """
 from pathlib import Path
 import datetime,hashlib,json,os,subprocess,time,urllib.request,sys,socket,zipfile
-from android_native_ui_qualified import NativeUi, NativeFailure, PACKAGE
+from android_native_ui_qualified import NativeUi, NativeFailure, PACKAGE, require_foreground
 
 F=Path(__file__).resolve().parents[2]
 O=Path(os.environ['FP_IOS_OUTPUT']);SAFE=O/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
@@ -63,11 +63,22 @@ try:
     run([ADB,'-s',serial,'shell','wm','density','240'])
     run([ADB,'-s',serial,'shell','input','keyevent','82'])
     run([ADB,'-s',serial,'install',str(apk)],timeout=90)
+    resolved=run([ADB,'-s',serial,'shell','cmd','package','resolve-activity','--brief',PACKAGE]).decode().strip().splitlines()
+    component=resolved[-1]
+    check('Installed launch activity resolved from package manager',component.startswith(PACKAGE+'/') and len(component)<250 and '\n' not in component)
+    def start_app():
+        run([ADB,'-s',serial,'shell','am','start','-n',component])
+        until=time.monotonic()+25
+        while time.monotonic()<until:
+            raw=run([ADB,'-s',serial,'shell','dumpsys','window']).decode(errors='replace')
+            try:require_foreground(raw);return
+            except NativeFailure:time.sleep(1)
+        report['launchFocus']=[line.strip() for line in raw.splitlines() if 'mFocusedApp=' in line or 'mCurrentFocus=' in line]
+        raise NativeFailure('OWNED_ACTIVITY_NOT_FOREGROUND_AFTER_LAUNCH')
     for login,commerce in [('bim.amina','BIM'),('carrefour.leila','Carrefour'),('damancash.karim',None),('damancash.salma',None)]:
         out=SAFE/login;out.mkdir()
         run([ADB,'-s',serial,'shell','am','force-stop',PACKAGE])
-        run([ADB,'-s',serial,'shell','am','start','-n',PACKAGE+'/.MainActivity'])
-        time.sleep(3)
+        start_app()
         ui=NativeUi(ADB,serial,avd,sha,out,private_values=(password,))
         ui.allow_resource_read_retry=True;ui.validate_device()
         ui.wait_text('Se connecter','login-ready')
@@ -78,7 +89,7 @@ try:
             labels=' '.join(n.get('text','')+' '+n.get('content-desc','') for n in tree.iter('node'))
             check(login+': own commerce visible',commerce.casefold() in labels.casefold())
         ui.run('shell','am','force-stop',PACKAGE)
-        ui.run('shell','am','start','-n',PACKAGE+'/.MainActivity');time.sleep(2)
+        start_app()
         ui.wait_text('Bonjour '+login,'session-restored')
         check(login+': valid session restored',True)
         ui.tap_text('Ouvrir le menu','open-menu',False)
@@ -87,7 +98,7 @@ try:
         check(login+': incident screen accessible',True)
         ui.tap_text('Ouvrir le menu','logout-menu',False);ui.tap_text('Se déconnecter','logout')
         ui.wait_text('Se connecter','logged-out')
-        ui.run('shell','am','force-stop',PACKAGE);ui.run('shell','am','start','-n',PACKAGE+'/.MainActivity');time.sleep(2)
+        ui.run('shell','am','force-stop',PACKAGE);start_app()
         ui.wait_text('Se connecter','logout-persists')
         check(login+': logout remains effective after relaunch',True)
         ui.report.update(result='PASS',phase='read-only-regression',realOci=True,version='1.3.11-test');ui.save();ui.close();ui=None
