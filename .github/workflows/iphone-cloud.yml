@@ -233,6 +233,11 @@ jobs:
           node-version: '24'
       - name: Compiler Android avec certificat intermediaire jetable
         run: python3 tools/ios/build-android-cloud.py
+      - name: Tester le candidat chiffre sur emulateur dedie
+        if: ${{ inputs.authenticated }}
+        env:
+          FP_IOS_TEST_PASSWORD: ${{ secrets.FP_IOS_TEST_PASSWORD }}
+        run: python3 tools/ios/test-android-runtime.py
       - name: Chiffrer le candidat Android et les preuves
         if: always()
         run: python3 tools/ios/protect-cloud-evidence.py
