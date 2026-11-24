@@ -17,11 +17,15 @@ def prepare(output,password):
         own=m.request(PREFIX+'/v1/dossiers/verified-mine',token)
         full=m.request(PREFIX+'/v2/dossiers/'+fixture['id'],token)
         assert own['id']==fixture['id'] and full['reference']==fixture['reference'] and own['acquirerId']=='DAMANCASH'
-        assert full['version']==1 and full['status']=='DRAFT' and full['merchantType']=='PM' and full['legalName']==fixture['legalName']
+        assert full['version']>=1 and full['status']=='DRAFT' and full['merchantType']=='PM' and full['legalName']==fixture['legalName']
         workspace=m.request(PREFIX+'/v1/dossiers/'+fixture['id']+'/commercial/workspace',token)
         assert 'EDIT' in workspace['actions']
         documents=m.request(PREFIX+'/v1/dossiers/'+fixture['id']+'/documents',token)
-        assert documents==[], 'Existing uploads must be reconciled before a distinct recovery, never duplicated'
+        assert len({r['type'] for r in documents})==len(documents), 'Existing document types must be unique'
+        assert full['version']==1+len(documents), 'Inspect unrelated dossier changes before recovery'
+        assert all(r['reviewStatus']=='PENDING' and r['version']==1 and r['contentType']=='image/png'
+                   and r['contentLength']==1000000 and r['sha256']==SYNTHETIC_HASH and r['uploadedBy']==fixture['login']
+                   for r in documents), 'Preserve any different existing document without replay'
         checklist=m.request(PREFIX+'/v2/dossiers/'+fixture['id']+'/kyc-requirements',token)
         assert not checklist['selectionRequired'] and checklist['merchantType']=='PM'
         required=checklist['documents'];assert 1<=len(required)<=8
@@ -39,10 +43,14 @@ def prepare(output,password):
             with urllib.request.urlopen(req,timeout=30) as response:content=response.read(1000001)
             assert len(content)==1000000 and hashlib.sha256(content).hexdigest()==SYNTHETIC_HASH
         finally:other=''
-        expected=[{'index':n,'type':r['type'],'label':r['label'],'contentType':'image/png','bytes':1000000,'sha256':SYNTHETIC_HASH} for n,r in enumerate(required,1)]
-        context={'id':fixture['id'],'reference':fixture['reference'],'login':fixture['login'],'versionBefore':1,'documents':expected}
+        all_expected=[{'index':n,'type':r['type'],'label':r['label'],'contentType':'image/png','bytes':1000000,'sha256':SYNTHETIC_HASH} for n,r in enumerate(required,1)]
+        present={r['type'] for r in documents}
+        assert present.issubset({r['type'] for r in required})
+        expected=[r for r in all_expected if r['type'] not in present]
+        assert expected, 'All documents already present; only reconcile, never repeat uploads'
+        context={'id':fixture['id'],'reference':fixture['reference'],'login':fixture['login'],'versionBefore':full['version'],'documents':expected,'allDocuments':all_expected,'existingDocuments':documents}
         report={'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'reference':fixture['reference'],'account':fixture['login'],
-                'readOnlyApiPreflight':True,'versionBefore':1,'status':'DRAFT','documentsBefore':0,'requiredDocumentTypes':[r['type'] for r in required],
+                'readOnlyApiPreflight':True,'versionBefore':full['version'],'status':'DRAFT','documentsBefore':len(documents),'existingDocumentTypes':sorted(present),'missingDocumentTypes':[r['type'] for r in expected],'requiredDocumentTypes':[r['type'] for r in required],
                 'nativeFilesSaveRequiredBeforeSelection':True,'syntheticImageReusedForRequiredTypes':True,'documentsUploadedByHelper':False,
                 'businessWritesByHelper':False,'fileSharingOrSecurityChanged':False,'expectedFiles':expected}
         Path(output).write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');return context
@@ -60,8 +68,8 @@ def verify(context,password,output):
         check('One document change per upload',full['version']==context['versionBefore']+len(context['documents']))
         check('Legal profile unchanged by uploads',full['legalName']==fixture['legalName'] and len(full['outlets'])==1 and full['outlets'][0]['code']==fixture['outletCode'])
         rows=m.request(PREFIX+'/v1/dossiers/'+context['id']+'/documents',token)
-        check('Exactly one upload for each required type',len(rows)==len(context['documents']) and len({r['type'] for r in rows})==len(rows))
-        for expected in context['documents']:
+        check('Exactly one upload for each required type',len(rows)==len(context['allDocuments']) and len({r['type'] for r in rows})==len(rows))
+        for expected in context['allDocuments']:
             actual=[r for r in rows if r['type']==expected['type']]
             check(expected['type']+' present exactly once',len(actual)==1)
             if len(actual)!=1:continue

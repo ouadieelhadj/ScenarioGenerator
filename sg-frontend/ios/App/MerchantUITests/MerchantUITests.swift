@@ -905,12 +905,25 @@ final class MerchantUITests: XCTestCase {
             revealDraftControl(app, upload, diagnostic: "dépôt " + String(index + 1))
             XCTAssertTrue(upload.isEnabled)
             upload.tap() // Exactly one upload per required type; no retry after uncertainty.
-            let pending = app.webViews.staticTexts.matching(NSPredicate(format: "label == %@", "PENDING"))
-            for _ in 0..<40 {
-                if pending.count >= index + 1 { break }
+            // WebKit exposes only the visible document cards. Never count all
+            // off-screen PENDING labels as a server acknowledgement.
+            let title = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
+            revealDraftControl(app, title, diagnostic: "état du justificatif " + String(index + 1))
+            let pending = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "PENDING"))
+            var ownPendingVisible = false
+            for _ in 0..<12 {
+                let top = title.frame.maxY
+                let bottom = choose.frame.minY
+                ownPendingVisible = pending.allElementsBoundByIndex.contains { value in
+                    let frame = value.frame
+                    return !frame.isEmpty && frame.minY >= top - 2 && frame.maxY <= bottom + 2
+                        && frame.intersects(app.webViews.firstMatch.frame)
+                }
+                if ownPendingVisible { break }
                 _ = XCTWaiter.wait(for: [], timeout: 0.5)
             }
-            XCTAssertGreaterThanOrEqual(pending.count, index + 1, "Le dépôt doit être relu depuis le serveur en attente de revue.")
+            screenshot(app, "ios05-kyc-etat-apres-depot-" + String(index + 1))
+            XCTAssertTrue(ownPendingVisible, "L'état du justificatif courant doit être visible entre son titre et sa sélection de fichier.")
             screenshot(app, "ios05-kyc-piece-deposee-" + String(index + 1))
             print("FP_NATIVE_KYC_UPLOADED index=" + String(index + 1) + " pending=true")
         }
