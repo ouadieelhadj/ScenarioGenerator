@@ -8,7 +8,7 @@ import CryptoKit
 // The server checks permission and CLEAN before providing the bytes. This bridge accepts
 // no URL, credentials or destination path: only bounded bytes and a generated filename.
 @objc(IncidentFileDownloadPlugin)
-public final class IncidentFileDownloadPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelegate {
+public final class IncidentFileDownloadPlugin: CAPPlugin, CAPBridgedPlugin, UIDocumentPickerDelegate, UIAdaptivePresentationControllerDelegate {
     public let identifier = "IncidentFileDownloadPlugin"
     public let jsName = "IncidentFileDownload"
     public let pluginMethods: [CAPPluginMethod] = [CAPPluginMethod(name: "save", returnType: CAPPluginReturnPromise)]
@@ -57,7 +57,13 @@ public final class IncidentFileDownloadPlugin: CAPPlugin, CAPBridgedPlugin, UIDo
                 let picker = UIDocumentPickerViewController(forExporting: [source], asCopy: true)
                 picker.delegate = self; picker.allowsMultipleSelection = false
                 self.pending = call
-                controller.present(picker, animated: true)
+                // A sheet may be dismissed by a real pull-down gesture even when
+                // Files does not expose a Cancel button. Observe that lifecycle
+                // as well as UIDocumentPickerDelegate's explicit cancellation.
+                picker.presentationController?.delegate = self
+                controller.present(picker, animated: true) { [weak self, weak picker] in
+                    picker?.presentationController?.delegate = self
+                }
             } catch {
                 self.pending = call; self.finish(saved: false, error: "INCIDENT_COPY_PREPARE_FAILED")
             }
@@ -96,6 +102,13 @@ public final class IncidentFileDownloadPlugin: CAPPlugin, CAPBridgedPlugin, UIDo
     }
     #endif
     public func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) { finish(saved: false) }
+    public func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        guard presentationController.presentedViewController is UIDocumentPickerViewController,
+              pending != nil else { return }
+        // UIKit invokes this only after a user-driven dismissal, not a
+        // programmatic Save completion. Reuse the same cleanup and saved=false.
+        finish(saved: false)
+    }
     private func finish(saved: Bool, error: String? = nil) {
         let call = pending; pending = nil
         var failure = error

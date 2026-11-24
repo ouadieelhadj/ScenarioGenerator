@@ -651,9 +651,21 @@ final class MerchantUITests: XCTestCase {
             print("FP_PICKER_CONTROL label=" + label + " app=" + String(app.buttons[label].exists) + " system=" + String(owners[1].buttons[label].exists))
         }
         if !element(app, notice).exists {
-            guard let cancel = cancel else { XCTFail("Annulation native indisponible ; voir la capture du sélecteur."); return }
-            XCTAssertTrue(cancel.isEnabled && cancel.isHittable)
-            cancel.tap()
+            if let cancel = cancel {
+                XCTAssertTrue(cancel.isEnabled && cancel.isHittable)
+                cancel.tap()
+            } else {
+                // The captured iOS26 sheet has no Cancel button. Perform the
+                // actual system pull-down gesture; never call a plugin/test hook
+                // or infer success from the disappearance of the picker.
+                let window = app.windows.firstMatch
+                XCTAssertTrue(window.exists && !window.frame.isEmpty)
+                let start = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.10))
+                let finish = window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.82))
+                start.press(forDuration: 0.15, thenDragTo: finish)
+                print("FP_PICKER_DISMISS gesture=system_sheet_pull_down")
+                pickerScreen("ios10-apres-glissement-annulation")
+            }
         }
         XCTAssertTrue(element(app, notice).waitForExistence(timeout: 20), "Une annulation ne doit pas être présentée comme une copie réussie.")
         for _ in 0..<7 { app.webViews.firstMatch.swipeDown() }

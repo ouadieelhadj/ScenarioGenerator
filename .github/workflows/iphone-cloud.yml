@@ -57,6 +57,7 @@ on:
           - attachment
           - onboarding_readonly
           - final_readonly
+          - export_cancel
           - onboarding_request
           - onboarding_draft
           - onboarding_documents

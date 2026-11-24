@@ -7,11 +7,11 @@ OUT=Path(os.environ.get('FP_IOS_OUTPUT',str(F/'ios/App/output/cloud'))).resolve(
 SAFE=OUT/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
 authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
 focus=os.environ.get('FP_IOS_UI_FOCUS','full')
-if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation','upload','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents','framework_validation','final_readonly'):raise SystemExit('Unsupported native suite')
+if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation','upload','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents','framework_validation','final_readonly','export_cancel'):raise SystemExit('Unsupported native suite')
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
 uploadSource=os.environ.get('FP_IOS_UPLOAD_SOURCE','photos')
 if uploadSource not in ('photos','files'):raise SystemExit('Unsupported upload source')
-expectedCases=5 if focus in ('onboarding_documents','final_readonly') else 3 if focus=='framework_validation' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (6 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else (15 if authenticated else 14)
+expectedCases=2 if focus=='export_cancel' else 5 if focus in ('onboarding_documents','final_readonly') else 3 if focus=='framework_validation' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (6 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else (15 if authenticated else 14)
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -184,6 +184,9 @@ try:
             exclusions=['-only-testing:'+selector+name for name in ['test09cNativeMerchantIsolation','test10SeedSessionForReinstall']]
         if focus=='upload':
             exclusions=['-only-testing:'+selector+name for name in ((['test09bSaveNativeAttachmentCopy','test09CancelNativeAttachmentCopy'] if uploadSource=='files' else [])+['test09cNativeMerchantIsolation','test09dNativeImageAttachmentUpload','test10SeedSessionForReinstall'])]
+        if focus=='export_cancel':
+            exclusions=['-only-testing:'+selector+name for name in ['test09bSaveNativeAttachmentCopy','test09CancelNativeAttachmentCopy']]
+            report.update(exportCancellationCountertest=True,businessWritesBySuite=False,reinstallationRequested=False)
         if focus=='final_readonly':
             exclusions=['-only-testing:'+selector+name for name in ['test09bSaveNativeAttachmentCopy','test09CancelNativeAttachmentCopy','test09eReadUploadedAttachment','test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly']]
             report['finalReadOnlyCountertest']=True
@@ -212,7 +215,7 @@ try:
             report['attachmentCountertestOnly']=True
             report['reinstallationRequested']=False
         with raw.open('a') as log:
-            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=3600 if focus=='full' else 2700 if (focus=='upload' and uploadSource=='files') or focus=='final_readonly' else 1800 if focus in ('onboarding_draft','onboarding_documents','framework_validation') else 720)
+            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=3600 if focus=='full' else 2700 if (focus=='upload' and uploadSource=='files') or focus in ('final_readonly','export_cancel') else 1800 if focus in ('onboarding_draft','onboarding_documents','framework_validation') else 720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
         passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
         if draftContext:
@@ -244,7 +247,7 @@ try:
         if receivedReadContext:
             receivedResult=receivedModule.verify(receivedReadContext,password,SAFE/'native-received-read-reconciliation.json')
             report['receivedAttachmentReadServerReconciliationPassed']=receivedResult['allExecutedChecksPassed']
-        if focus=='final_readonly' and authenticated:
+        if focus in ('final_readonly','export_cancel') and authenticated:
             identifier=report['simulatorSignature']['bundleIdentifier']
             container=Path(run(['xcrun','simctl','get_app_container',chosen['udid'],identifier,'data']).strip())
             exports=container/'tmp/merchant-incident-exports'
@@ -278,7 +281,7 @@ try:
             passed+=int(second.get('passedTests',0));failed+=int(second.get('failedTests',0));skipped+=int(second.get('skippedTests',0))
             report['reinstallationPassed']=fresh.returncode==0 and int(second.get('passedTests',0))==1 and int(second.get('failedTests',0))==0
             if fresh.returncode:test=fresh
-        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and (passed==expectedCases if authenticated else passed>=3) and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus in ('connection','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents','framework_validation','final_readonly') or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and (passed==expectedCases if authenticated else passed>=3) and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus in ('connection','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents','framework_validation','final_readonly','export_cancel') or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
         rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
         # Curated attachments only; raw XCTest result bundles may contain input activity.
         attachments=OUT/'private-attachments'
@@ -398,7 +401,7 @@ finally:
 
     except subprocess.TimeoutExpired:
         report['nativeAuthDiagnosticCollectionTimedOut']=True
-    if focus=='final_readonly' and any(c['name']=='test09bSaveNativeAttachmentCopy' and c['passed'] for c in report.get('nativeCaseResultsFromJournal',[])):
+    if focus in ('final_readonly','export_cancel') and any(c['name']=='test09bSaveNativeAttachmentCopy' and c['passed'] for c in report.get('nativeCaseResultsFromJournal',[])):
         # Read only the known synthetic filename in this fresh simulator's Files
         # provider. Nothing is seeded, shared, deleted or read from the app's
         # private temporary store to manufacture a successful copy.
@@ -433,6 +436,8 @@ finally:
     if focus=='full' and authenticated and not (report.get('nativeKycReadOnlyObserved') and report.get('nativeKycReadServerReconciliationPassed')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='upload' and uploadSource=='files' and not report.get('nativeExportCancellationObserved'):
+        report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
+    if focus=='export_cancel' and not (report.get('nativeSavedCopyHashMatched') and report.get('nativeExportCancellationObserved') and report.get('nativeExportTemporaryCleanupPassed')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='final_readonly' and not (report.get('nativeSavedCopyHashMatched') and report.get('nativeExportCancellationObserved') and report.get('nativeExportTemporaryCleanupPassed') and report.get('nativeExistingPersonalDossierReadOnlyObserved') and report.get('nativeCommercialOnboardingReadOnlyObserved') and report.get('approvedPersonalReadServerReconciliationPassed') and report.get('nativeReceivedAttachmentReadObserved') and report.get('receivedAttachmentReadServerReconciliationPassed')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
