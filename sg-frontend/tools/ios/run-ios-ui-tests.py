@@ -11,7 +11,7 @@ if focus not in ('full','session_files_reinstall','authenticated','connection','
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
 uploadSource=os.environ.get('FP_IOS_UPLOAD_SOURCE','photos')
 if uploadSource not in ('photos','files'):raise SystemExit('Unsupported upload source')
-expectedCases=5 if focus=='onboarding_documents' else 3 if focus=='framework_validation' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else 14
+expectedCases=5 if focus=='onboarding_documents' else 3 if focus=='framework_validation' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (5 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else (15 if authenticated else 14)
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -102,6 +102,17 @@ try:
         report['frameworkWebChecksPassed']=web.returncode==0 and webResult.is_file() and json.loads(webResult.read_text()).get('allExecutedChecksPassed') is True
         if not report['frameworkWebChecksPassed']:raise RuntimeError('Candidate browser regression failed; inspect protected framework-web report')
 
+    kycReadContext=None
+    if focus=='full' and authenticated:
+        import importlib.util
+        readSpec=importlib.util.spec_from_file_location('saved_kyc_read_only',F/'tools/ios/prepare-native-onboarding-documents.py')
+        readModule=importlib.util.module_from_spec(readSpec);readSpec.loader.exec_module(readModule)
+        kycReadContext=readModule.prepare(SAFE/'native-kyc-read-preflight.json',password,read_only_complete=True)
+        assert len(kycReadContext['allDocuments'])==6 and not kycReadContext['documents']
+        report['nativeKycReadPreflightPassed']=True
+        report['nativeKycReadExpectedDocuments']=len(kycReadContext['allDocuments'])
+        report['nativeKycReadVersionBefore']=kycReadContext['versionBefore']
+
     publicOnboarding=None
     if focus=='onboarding_request':
         import urllib.request
@@ -117,6 +128,7 @@ try:
         publicOnboarding={'email':email,'acquirerName':acquirer['name']}
         report['publicRegistrationIsNotActivation']=True
     for target in targets:
+        if kycReadContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_KYC_READ_FIXTURE=json.dumps({'login':kycReadContext['login'],'reference':kycReadContext['reference'],'documents':kycReadContext['allDocuments']}))
         if kycContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_KYC_FIXTURE=json.dumps(kycContext))
         if frameworkContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_KYC_FIXTURE=json.dumps(frameworkContext))
         if draftContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_DRAFT_FIXTURE=json.dumps(draftContext['fixture']))
@@ -140,7 +152,7 @@ try:
         selector='MerchantUITests/MerchantUITests/'
         base=['xcodebuild','test-without-building','-xctestrun',str(private),'-destination',destination,'-parallel-testing-enabled','NO']
         exclusions=['-skip-testing:'+selector+name for name in ['test08FreshInstallationRequiresLogin','test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly','test13PublicPersonalRegistrationRequest','test14PersonalLegalDossierNativeSave','test14bSavedDossierKeyboardLayout','test15PersonalKycDocumentsNativeUpload']]
-        if not authenticated:exclusions+=['-skip-testing:'+selector+'test10SeedSessionForReinstall']
+        if not authenticated:exclusions+=['-skip-testing:'+selector+'test10SeedSessionForReinstall','-skip-testing:'+selector+'test00SavedKycDocumentStatusesReadOnly']
         if focus=='session_files_reinstall':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
         if focus=='authenticated':
@@ -201,7 +213,15 @@ try:
         if uploadFixture:
             uploadVerification=uploadModule.verify(uploadFixture,password,SAFE/'native-upload-reconciliation.json')
             report['nativeUploadServerReconciliationPassed']=uploadVerification['allExecutedChecksPassed']
+        if kycReadContext:
+            readReconciliation=readModule.verify(kycReadContext,password,SAFE/'native-kyc-read-reconciliation.json')
+            report['nativeKycReadServerReconciliationPassed']=readReconciliation['allExecutedChecksPassed']
+            report['nativeKycReadServerAssertionCount']=len(readReconciliation['checks'])
         firstPhaseJournal=raw.read_text(errors='replace')
+        if kycReadContext:
+            readMarkers=re.findall(r'FP_NATIVE_KYC_READ documents=(\d+) pending=true businessMutation=false',firstPhaseJournal)
+            report['nativeKycReadDocumentCount']=int(readMarkers[-1]) if readMarkers else 0
+            report['nativeKycReadOnlyObserved']=len(readMarkers)==1 and report['nativeKycReadDocumentCount']==report['nativeKycReadExpectedDocuments']
         seeded=bool(re.search(r"test10SeedSessionForReinstall\]' passed",firstPhaseJournal)) and 'FP_REINSTALL_SEED restored=true' in firstPhaseJournal
         # The target reinstall check is independent of an unrelated first-phase
         # failure; the original failures still count in the final global verdict.
@@ -354,6 +374,8 @@ finally:
     if authenticated and focus in ('full','isolation','upload') and not report.get('nativeMerchantSwitchIsolationObserved',False):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if authenticated and focus in ('full','upload','attachment') and not (report.get('nativeImageUploadObserved',False) and report.get('nativeUploadServerReconciliationPassed',False)):
+        report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
+    if focus=='full' and authenticated and not (report.get('nativeKycReadOnlyObserved') and report.get('nativeKycReadServerReconciliationPassed')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='onboarding_request' and not report.get('nativePublicRegistrationAcknowledged'):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1

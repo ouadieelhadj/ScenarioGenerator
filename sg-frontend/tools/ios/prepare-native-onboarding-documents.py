@@ -11,7 +11,7 @@ def api():
     spec=importlib.util.spec_from_file_location('native_draft',Path(__file__).with_name('prepare-native-onboarding-draft.py'))
     module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module);return module
 
-def prepare(output,password):
+def prepare(output,password,*,read_only_complete=False):
     m=api();fixture=m.load_fixture();token=m.authenticated(fixture,password)
     try:
         own=m.request(PREFIX+'/v1/dossiers/verified-mine',token)
@@ -49,11 +49,14 @@ def prepare(output,password):
         present={r['type'] for r in documents}
         assert present.issubset({r['type'] for r in required})
         expected=[r for r in all_expected if r['type'] not in present]
-        assert expected, 'All documents already present; only reconcile, never repeat uploads'
+        if read_only_complete:
+            assert not expected, 'Read-only countertest requires all documents already present'
+        else:
+            assert expected, 'All documents already present; only reconcile, never repeat uploads'
         context={'id':fixture['id'],'reference':fixture['reference'],'login':fixture['login'],'versionBefore':full['version'],'documents':expected,'allDocuments':all_expected,'existingDocuments':documents}
         report={'utc':datetime.datetime.now(datetime.timezone.utc).isoformat(),'reference':fixture['reference'],'account':fixture['login'],
                 'readOnlyApiPreflight':True,'versionBefore':full['version'],'status':'DRAFT','documentsBefore':len(documents),'existingDocumentTypes':sorted(present),'missingDocumentTypes':[r['type'] for r in expected],'requiredDocumentTypes':[r['type'] for r in required],
-                'nativeFilesSaveRequiredBeforeSelection':True,'syntheticImageReusedForRequiredTypes':True,'documentsUploadedByHelper':False,
+                'nativeFilesSaveRequiredBeforeSelection':not read_only_complete,'readOnlyCompleteSet':read_only_complete,'syntheticImageReusedForRequiredTypes':True,'documentsUploadedByHelper':False,
                 'businessWritesByHelper':False,'fileSharingOrSecurityChanged':False,'expectedFiles':expected}
         Path(output).write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n');return context
     finally:token=''

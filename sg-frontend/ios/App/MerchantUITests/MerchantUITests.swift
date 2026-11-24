@@ -855,6 +855,53 @@ final class MerchantUITests: XCTestCase {
         Self.savedDossierLayoutVerified = true
     }
 
+    @MainActor func test00SavedKycDocumentStatusesReadOnly() throws {
+        guard let raw = ProcessInfo.processInfo.environment["FP_IOS_KYC_READ_FIXTURE"],
+              let data = raw.data(using: .utf8),
+              let input = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw XCTSkip("Le contre-test en lecture seule exige le dossier dédié complet.")
+        }
+        let user = try XCTUnwrap(input["login"] as? String)
+        let reference = try XCTUnwrap(input["reference"] as? String)
+        let documents = try XCTUnwrap(input["documents"] as? [[String: Any]])
+        XCTAssertEqual(documents.count, 6)
+        let app = launch()
+        if element(app, "Bonjour bim.amina").waitForExistence(timeout: 3) {
+            tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+        }
+        try login(app, userOverride: user)
+        XCTAssertTrue(element(app, reference).waitForExistence(timeout: 30))
+        tap(app, "Ouvrir le menu"); tap(app, "Mon commerce"); tap(app, "Mon dossier")
+        XCTAssertTrue(element(app, "Dossier commercant et PDV").waitForExistence(timeout: 30))
+        var checked = 0
+        for (index, row) in documents.enumerated() {
+            let label = try XCTUnwrap(row["label"] as? String)
+            let choose = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Choisir le justificatif : " + label)).firstMatch
+            revealDraftControl(app, choose, diagnostic: "lecture KYC " + String(index + 1))
+            let title = app.webViews.staticTexts.matching(NSPredicate(format: "label == %@", label)).firstMatch
+            let pending = app.webViews.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "PENDING"))
+            var visiblePending = false
+            for _ in 0..<12 {
+                let bounds = app.webViews.firstMatch.frame
+                let top = title.frame.maxY, bottom = choose.frame.minY
+                visiblePending = pending.allElementsBoundByIndex.contains { value in
+                    let frame = value.frame
+                    return !frame.isEmpty && frame.minY >= top - 2 && frame.maxY <= bottom + 2
+                        && frame.minY > bounds.minY + 12 && frame.maxY < bounds.maxY - 12
+                }
+                if visiblePending { break }
+                if top < bounds.minY + 24 { app.webViews.firstMatch.swipeDown() }
+                else { app.webViews.firstMatch.swipeUp() }
+            }
+            screenshot(app, "ios05-lecture-kyc-piece-" + String(index + 1))
+            XCTAssertTrue(visiblePending, "Le statut de la pièce déjà reçue doit être visible sur sa propre carte.")
+            checked += 1
+        }
+        XCTAssertEqual(checked, 6)
+        print("FP_NATIVE_KYC_READ documents=" + String(checked) + " pending=true businessMutation=false")
+        tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+    }
+
     @MainActor func test15PersonalKycDocumentsNativeUpload() throws {
         XCTAssertTrue(Self.savedDossierLayoutVerified, "Le contrôle de lisibilité doit réussir avant tout dépôt KYC.")
         guard let raw = ProcessInfo.processInfo.environment["FP_IOS_KYC_FIXTURE"],

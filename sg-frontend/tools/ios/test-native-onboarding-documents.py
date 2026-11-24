@@ -126,4 +126,18 @@ class Contracts(unittest.TestCase):
         self.api.docs=[self.existing(),self.existing(id='another-version')];self.api.full['version']=3
         with self.assertRaises(AssertionError):self.prepare()
 
+
+    def test_read_only_complete_set_has_no_uploads_and_no_mutation(self):
+        self.api.docs=[self.existing()];self.api.full['version']=2
+        context=kyc.prepare(self.output,'synthetic-not-a-real-password',read_only_complete=True)
+        self.assertEqual(context['documents'],[])
+        self.assertEqual(len(context['allDocuments']),1)
+        report=json.loads(self.output.read_text());self.assertTrue(report['readOnlyCompleteSet'])
+        self.assertFalse(report['nativeFilesSaveRequiredBeforeSelection'])
+        self.assertEqual([path for method,path in self.api.calls if method=='POST'],['/api-merchant-portal/auth/login'])
+
+    def test_read_only_mode_refuses_incomplete_set(self):
+        with self.assertRaises(AssertionError):kyc.prepare(self.output,'synthetic-not-a-real-password',read_only_complete=True)
+        self.assertFalse(self.output.exists())
+
 if __name__=='__main__':unittest.main()
