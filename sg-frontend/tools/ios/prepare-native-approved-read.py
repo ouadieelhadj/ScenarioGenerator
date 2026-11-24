@@ -11,9 +11,9 @@ def snapshot(fixture,password):
         full=source.request(source.PREFIX+'/v2/dossiers/'+fixture['id'],token)
         docs=source.request(source.PREFIX+'/v1/dossiers/'+fixture['id']+'/documents',token)
         assert own['id']==fixture['id'] and own['reference']==fixture['reference'] and own['acquirerId']=='DAMANCASH'
-        assert full['status']=='APPROVED' and full['kycStatus']=='VALIDATED' and full['legalName']==fixture['legalName']
+        assert full['status']=='APPROVED' and own['kycStatus']=='VALIDATED' and full['legalName']==fixture['legalName']
         assert len(docs)==6 and all(d['reviewStatus']=='ACCEPTED' for d in docs)
-        return {'id':fixture['id'],'reference':fixture['reference'],'version':full['version'],'status':full['status'],'kycStatus':full['kycStatus'],'documents':sorted([{'id':d['id'],'type':d['type'],'version':d['version'],'sha256':d['sha256'],'reviewStatus':d['reviewStatus']} for d in docs],key=lambda d:d['id'])}
+        return {'id':fixture['id'],'reference':fixture['reference'],'version':full['version'],'status':full['status'],'kycStatus':own['kycStatus'],'documents':sorted([{'id':d['id'],'type':d['type'],'version':d['version'],'sha256':d['sha256'],'reviewStatus':d['reviewStatus']} for d in docs],key=lambda d:d['id'])}
     finally:token=''
 def prepare(output,password):
     fixture=source.load_fixture();before=snapshot(fixture,password)

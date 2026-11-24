@@ -560,6 +560,24 @@ final class MerchantUITests: XCTestCase {
         tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
     }
 
+    @MainActor func test09eReadUploadedAttachment() throws {
+        let app = launch(); try login(app)
+        guard let reference = ProcessInfo.processInfo.environment["FP_IOS_RECEIVED_FILE_REFERENCE"] else { XCTFail("La pièce déjà reçue doit être liée avant la lecture."); return }
+        tap(app, "Ouvrir le menu"); tap(app, "Assistance · Incidents")
+        openIncident(app, reference: reference)
+        let clean = app.webViews.staticTexts.matching(NSPredicate(format: "label CONTAINS %@ AND label CONTAINS %@", "image/png", "CLEAN")).firstMatch
+        for _ in 0..<18 {
+            if clean.exists && clean.isHittable { break }
+            app.webViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(clean.exists && clean.isHittable, "La pièce contrôlée doit être réellement affichée.")
+        let download = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Télécharger")).firstMatch
+        XCTAssertTrue(download.exists && download.isEnabled)
+        screenshot(app, "ios09-piece-fichiers-deja-recue-lecture-seule")
+        print("FP_NATIVE_RECEIVED_ATTACHMENT read=true clean=true businessMutation=false")
+        tap(app, "Ouvrir le menu"); tap(app, "Se déconnecter")
+    }
+
     @MainActor func test10SeedSessionForReinstall() throws {
         let app = launch(); try login(app)
         app.terminate(); app.launch()
@@ -589,6 +607,8 @@ final class MerchantUITests: XCTestCase {
         let download = app.webViews.buttons.matching(NSPredicate(format: "label == %@", "Télécharger")).firstMatch
         XCTAssertTrue(download.waitForExistence(timeout: 20))
         XCTAssertTrue(download.isEnabled, "Seule une pièce CLEAN doit être copiable.")
+        let notice = "Enregistrement annulé. Le dossier reste disponible."
+        XCTAssertFalse(element(app, notice).exists, "La nouvelle tentative ne doit pas réutiliser un ancien accusé.")
         tap(app, "Télécharger")
         let owners = [app, XCUIApplication(bundleIdentifier: "com.apple.springboard")]
         var cancel: XCUIElement?
@@ -598,11 +618,14 @@ final class MerchantUITests: XCTestCase {
         // back to Locations; Cancel is only available at that root screen.
         // Use the actual native navigation bar, never a guessed screen coordinate.
         while Date() < deadline {
+            if element(app, notice).exists { print("FP_NATIVE_EXPORT cancelledAfterNativeNavigation=true"); break }
             for owner in owners {
                 // Modern Files uses a native close toolbar item on some iOS runtimes.
                 // Restrict Close/Fermer to native navigation bars, never a web detail button.
                 let nativeClose = owner.navigationBars.buttons.matching(NSPredicate(format: "label IN %@", ["Annuler", "Cancel", "Fermer", "Close"])).firstMatch
                 if nativeClose.exists && nativeClose.isEnabled && nativeClose.isHittable { cancel = nativeClose; break }
+                let toolbarClose = owner.toolbars.buttons.matching(NSPredicate(format: "label BEGINSWITH[cd] %@ OR label BEGINSWITH[cd] %@", "Fermer", "Close")).firstMatch
+                if toolbarClose.exists && toolbarClose.isEnabled && toolbarClose.isHittable { cancel = toolbarClose; break }
                 let candidate = owner.buttons.matching(NSPredicate(format: "label ==[c] %@ OR label ==[c] %@", "Annuler", "Cancel")).firstMatch
                 if candidate.exists && candidate.isEnabled && candidate.isHittable { cancel = candidate; break }
             }
@@ -627,11 +650,11 @@ final class MerchantUITests: XCTestCase {
         for label in ["Annuler", "Cancel", "Enregistrer", "Save", "OK", "Done"] {
             print("FP_PICKER_CONTROL label=" + label + " app=" + String(app.buttons[label].exists) + " system=" + String(owners[1].buttons[label].exists))
         }
-        guard let cancel = cancel else { XCTFail("Annulation native indisponible ; voir la capture du sélecteur."); return }
-        let frame = cancel.frame
-        XCTAssertFalse(frame.isEmpty || frame.isNull || frame.isInfinite)
-        app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: frame.midX - app.frame.minX, dy: frame.midY - app.frame.minY)).tap()
-        let notice = "Enregistrement annulé. Le dossier reste disponible."
+        if !element(app, notice).exists {
+            guard let cancel = cancel else { XCTFail("Annulation native indisponible ; voir la capture du sélecteur."); return }
+            XCTAssertTrue(cancel.isEnabled && cancel.isHittable)
+            cancel.tap()
+        }
         XCTAssertTrue(element(app, notice).waitForExistence(timeout: 20), "Une annulation ne doit pas être présentée comme une copie réussie.")
         for _ in 0..<7 { app.webViews.firstMatch.swipeDown() }
         screenshot(app, "ios10-annulation-confirmee")

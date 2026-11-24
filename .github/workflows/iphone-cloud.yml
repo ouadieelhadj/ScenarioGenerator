@@ -56,6 +56,7 @@ on:
           - upload
           - attachment
           - onboarding_readonly
+          - final_readonly
           - onboarding_request
           - onboarding_draft
           - onboarding_documents
@@ -69,7 +70,7 @@ concurrency:
 jobs:
   ios-validation:
     if: ${{ inputs.ui_focus != 'android_build' }}
-    runs-on: ${{ inputs.typecheck_only && inputs.authenticated && !inputs.transport_only && inputs.ui_focus == 'onboarding_documents' && 'ubuntu-24.04' || ((inputs.ui_focus == 'full' || inputs.ui_focus == 'upload' || inputs.ui_focus == 'onboarding_readonly') && 'macos-26-intel' || 'macos-26') }}
+    runs-on: ${{ inputs.typecheck_only && inputs.authenticated && !inputs.transport_only && inputs.ui_focus == 'onboarding_documents' && 'ubuntu-24.04' || ((inputs.ui_focus == 'full' || inputs.ui_focus == 'upload' || inputs.ui_focus == 'onboarding_readonly' || inputs.ui_focus == 'final_readonly') && 'macos-26-intel' || 'macos-26') }}
     timeout-minutes: 90
     env:
       FP_IOS_OUTPUT: ${{ github.workspace }}/preuves-mac
@@ -190,7 +191,9 @@ jobs:
         if: always()
         run: python3 tools/ios/protect-cloud-evidence.py
       - name: Conserver seulement les preuves expurgees
+        id: evidence_upload
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: iphone-resultats-${{ github.run_number }}
@@ -210,6 +213,10 @@ jobs:
             preuves-mac/preuves-publiables/resultats-ui.json
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Secours chiffre si le service artefacts ne repond pas
+        if: ${{ always() && steps.evidence_upload.outcome == 'failure' }}
+        run: python3 tools/ios/print-encrypted-evidence-fallback.py
 
   android-validation:
     if: ${{ inputs.ui_focus == 'android_build' }}

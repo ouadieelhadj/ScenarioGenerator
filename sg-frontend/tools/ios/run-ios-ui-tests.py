@@ -7,11 +7,11 @@ OUT=Path(os.environ.get('FP_IOS_OUTPUT',str(F/'ios/App/output/cloud'))).resolve(
 SAFE=OUT/'preuves-publiables';SAFE.mkdir(parents=True,exist_ok=True)
 authenticated=os.environ.get('FP_IOS_AUTHENTICATED_TESTS','false')=='true'
 focus=os.environ.get('FP_IOS_UI_FOCUS','full')
-if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation','upload','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents','framework_validation'):raise SystemExit('Unsupported native suite')
+if focus not in ('full','session_files_reinstall','authenticated','connection','incident_completion','isolation','upload','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents','framework_validation','final_readonly'):raise SystemExit('Unsupported native suite')
 if focus!='full' and not authenticated:raise SystemExit('The focused suite requires its authenticated fixture')
 uploadSource=os.environ.get('FP_IOS_UPLOAD_SOURCE','photos')
 if uploadSource not in ('photos','files'):raise SystemExit('Unsupported upload source')
-expectedCases=5 if focus=='onboarding_documents' else 3 if focus=='framework_validation' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (6 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else (15 if authenticated else 14)
+expectedCases=5 if focus in ('onboarding_documents','final_readonly') else 3 if focus=='framework_validation' else 1 if focus in ('onboarding_request','onboarding_draft') else 2 if focus=='onboarding_readonly' else (2 if uploadSource=='files' else 1) if focus=='attachment' else (6 if uploadSource=='files' else 4) if focus=='upload' else 3 if focus=='isolation' else 4 if focus=='incident_completion' else 2 if focus=='connection' else 5 if focus=='session_files_reinstall' else 7 if focus=='authenticated' else (15 if authenticated else 14)
 password=os.environ.get('FP_IOS_TEST_PASSWORD','')
 if authenticated and not password:raise SystemExit('Secret GitHub FP_IOS_TEST_PASSWORD requis pour les tests authentifiés.')
 def run(args,timeout=180):return subprocess.check_output(args,text=True,timeout=timeout)
@@ -103,12 +103,19 @@ try:
         if not report['frameworkWebChecksPassed']:raise RuntimeError('Candidate browser regression failed; inspect protected framework-web report')
 
     approvedReadContext=None
-    if focus=='onboarding_readonly':
+    if focus in ('onboarding_readonly','final_readonly'):
         import importlib.util
         approvedSpec=importlib.util.spec_from_file_location('approved_read',F/'tools/ios/prepare-native-approved-read.py')
         approvedModule=importlib.util.module_from_spec(approvedSpec);approvedSpec.loader.exec_module(approvedModule)
         approvedReadContext=approvedModule.prepare(SAFE/'native-approved-read-preflight.json',password)
         report['approvedPersonalReadBoundBefore']=True
+    receivedReadContext=None
+    if focus=='final_readonly':
+        import importlib.util
+        receivedSpec=importlib.util.spec_from_file_location('received_read',F/'tools/ios/prepare-native-received-attachment-read.py')
+        receivedModule=importlib.util.module_from_spec(receivedSpec);receivedSpec.loader.exec_module(receivedModule)
+        receivedReadContext=receivedModule.prepare(SAFE/'native-received-read-preflight.json',password)
+        report['receivedAttachmentReadBoundBefore']=True
     kycReadContext=None
     if focus=='full' and authenticated:
         import importlib.util
@@ -135,6 +142,7 @@ try:
         publicOnboarding={'email':email,'acquirerName':acquirer['name']}
         report['publicRegistrationIsNotActivation']=True
     for target in targets:
+        if receivedReadContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_RECEIVED_FILE_REFERENCE=receivedReadContext['before']['reference'])
         if approvedReadContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_APPROVED_READ_FIXTURE=json.dumps(approvedReadContext['fixture']))
         if kycReadContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_KYC_READ_FIXTURE=json.dumps({'login':kycReadContext['login'],'reference':kycReadContext['reference'],'documents':kycReadContext['allDocuments']}))
         if kycContext:target.setdefault('EnvironmentVariables',{}).update(FP_IOS_KYC_FIXTURE=json.dumps(kycContext))
@@ -159,7 +167,7 @@ try:
         report['nativeUIExecutionStarted']=True
         selector='MerchantUITests/MerchantUITests/'
         base=['xcodebuild','test-without-building','-xctestrun',str(private),'-destination',destination,'-parallel-testing-enabled','NO']
-        exclusions=['-skip-testing:'+selector+name for name in ['test08FreshInstallationRequiresLogin','test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly','test13PublicPersonalRegistrationRequest','test14PersonalLegalDossierNativeSave','test14bSavedDossierKeyboardLayout','test15PersonalKycDocumentsNativeUpload']]
+        exclusions=['-skip-testing:'+selector+name for name in ['test08FreshInstallationRequiresLogin','test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly','test13PublicPersonalRegistrationRequest','test14PersonalLegalDossierNativeSave','test14bSavedDossierKeyboardLayout','test15PersonalKycDocumentsNativeUpload','test09eReadUploadedAttachment']]
         if not authenticated:exclusions+=['-skip-testing:'+selector+'test10SeedSessionForReinstall','-skip-testing:'+selector+'test00SavedKycDocumentStatusesReadOnly']
         if focus=='session_files_reinstall':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09CancelNativeAttachmentCopy','test10SeedSessionForReinstall']]
@@ -176,6 +184,11 @@ try:
             exclusions=['-only-testing:'+selector+name for name in ['test09cNativeMerchantIsolation','test10SeedSessionForReinstall']]
         if focus=='upload':
             exclusions=['-only-testing:'+selector+name for name in ((['test09bSaveNativeAttachmentCopy','test09CancelNativeAttachmentCopy'] if uploadSource=='files' else [])+['test09cNativeMerchantIsolation','test09dNativeImageAttachmentUpload','test10SeedSessionForReinstall'])]
+        if focus=='final_readonly':
+            exclusions=['-only-testing:'+selector+name for name in ['test09bSaveNativeAttachmentCopy','test09CancelNativeAttachmentCopy','test09eReadUploadedAttachment','test11PersonalDossierReadOnly','test12CommercialOnboardingReadOnly']]
+            report['finalReadOnlyCountertest']=True
+            report['businessWritesBySuite']=False
+            report['reinstallationRequested']=False
         if focus=='onboarding_documents':
             exclusions=['-only-testing:'+selector+name for name in ['test04MerchantSessionRestoreAndLogout','test05MerchantIncidentsEntry','test09bSaveNativeAttachmentCopy','test14bSavedDossierKeyboardLayout','test15PersonalKycDocumentsNativeUpload']]
             report['nativeKycUploadOnly']=False
@@ -199,7 +212,7 @@ try:
             report['attachmentCountertestOnly']=True
             report['reinstallationRequested']=False
         with raw.open('a') as log:
-            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=3600 if focus=='full' else 2700 if focus=='upload' and uploadSource=='files' else 1800 if focus in ('onboarding_draft','onboarding_documents','framework_validation') else 720)
+            test=subprocess.run(base+exclusions+['-resultBundlePath',str(bundle)],cwd=F,stdout=log,stderr=subprocess.STDOUT,timeout=3600 if focus=='full' else 2700 if (focus=='upload' and uploadSource=='files') or focus=='final_readonly' else 1800 if focus in ('onboarding_draft','onboarding_documents','framework_validation') else 720)
         summary=json.loads(run(['xcrun','xcresulttool','get','test-results','summary','--path',str(bundle)]))
         passed=int(summary.get('passedTests',0));failed=int(summary.get('failedTests',0));skipped=int(summary.get('skippedTests',0))
         if draftContext:
@@ -228,6 +241,16 @@ try:
         if approvedReadContext:
             approvedReadResult=approvedModule.verify(approvedReadContext,password,SAFE/'native-approved-read-reconciliation.json')
             report['approvedPersonalReadServerReconciliationPassed']=approvedReadResult['allExecutedChecksPassed']
+        if receivedReadContext:
+            receivedResult=receivedModule.verify(receivedReadContext,password,SAFE/'native-received-read-reconciliation.json')
+            report['receivedAttachmentReadServerReconciliationPassed']=receivedResult['allExecutedChecksPassed']
+        if focus=='final_readonly' and authenticated:
+            identifier=report['simulatorSignature']['bundleIdentifier']
+            container=Path(run(['xcrun','simctl','get_app_container',chosen['udid'],identifier,'data']).strip())
+            exports=container/'tmp/merchant-incident-exports'
+            remaining=sum(1 for item in exports.rglob('*') if item.is_file()) if exports.exists() else 0
+            report['nativeExportTemporaryFilesRemaining']=remaining
+            report['nativeExportTemporaryCleanupPassed']=remaining==0
         firstPhaseJournal=raw.read_text(errors='replace')
         if kycReadContext:
             readMarkers=re.findall(r'FP_NATIVE_KYC_READ documents=(\d+) pending=true businessMutation=false',firstPhaseJournal)
@@ -255,7 +278,7 @@ try:
             passed+=int(second.get('passedTests',0));failed+=int(second.get('failedTests',0));skipped+=int(second.get('skippedTests',0))
             report['reinstallationPassed']=fresh.returncode==0 and int(second.get('passedTests',0))==1 and int(second.get('failedTests',0))==0
             if fresh.returncode:test=fresh
-        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and (passed==expectedCases if authenticated else passed>=3) and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus in ('connection','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents','framework_validation') or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
+        report.update(passed=passed,failed=failed,skipped=skipped,allExecutedPassed=test.returncode==0 and failed==0 and (passed==expectedCases if authenticated else passed>=3) and report.get('nativeExportTemporaryCleanupPassed',True) and report.get('supportServerReconciliationPassed',True),authenticatedCasesPassed=authenticated and test.returncode==0 and passed==expectedCases and skipped==0 and (focus in ('connection','attachment','onboarding_readonly','onboarding_request','onboarding_draft','onboarding_documents','framework_validation','final_readonly') or (report.get('reinstallationPassed',False) and report.get('nativeExportTemporaryCleanupPassed',False))) and report.get('supportServerReconciliationPassed',True))
         rc=0 if report['allExecutedPassed'] and (not authenticated or report['authenticatedCasesPassed']) else 1
         # Curated attachments only; raw XCTest result bundles may contain input activity.
         attachments=OUT/'private-attachments'
@@ -299,6 +322,7 @@ finally:
         report['nativeExistingPersonalDossierReadOnlyObserved']='FP_NATIVE_ONBOARDING existingPersonalDossierRead=true approved=true businessMutation=false' in journal
         report['nativeCommercialOnboardingReadOnlyObserved']='FP_NATIVE_ONBOARDING commercialEntryRead=true commercialListLoaded=true businessMutation=false' in journal
         report['nativeImageUploadObserved']='FP_NATIVE_UPLOAD pickerSelected=true serverAcknowledged=true' in journal
+        report['nativeReceivedAttachmentReadObserved']='FP_NATIVE_RECEIVED_ATTACHMENT read=true clean=true businessMutation=false' in journal
         report['nativeMerchantSwitchIsolationObserved']='FP_NATIVE_ISOLATION switched=true ownRead=true foreignReferenceAbsent=true' in journal
         report['nativeSubmittedSubjects']=sorted(set(re.findall(r'FP_NATIVE_SUBMISSION subject=(iOS depot [a-f0-9]{8})',journal)))
         report['nativeDraftSubjects']=sorted(set(re.findall(r'FP_NATIVE_DRAFT subject=(iOS natif [a-f0-9]{8})',journal)))
@@ -374,12 +398,32 @@ finally:
 
     except subprocess.TimeoutExpired:
         report['nativeAuthDiagnosticCollectionTimedOut']=True
-    try:
-        copies=subprocess.run(['xcrun','simctl','spawn',chosen['udid'],'log','show','--last','30m','--style','compact','--predicate','eventMessage BEGINSWITH "FP_EXPORT_SAVED"'],capture_output=True,text=True,timeout=45)
-        if copies.returncode==0:
-            report['nativeSavedCopyChecks']=[{'externalToPrivateTemporaryStore':True,'bytes':int(size),'sha256':digest} for size,digest in re.findall(r'FP_EXPORT_SAVED verified=true external=true bytes=(\d+) sha256=([a-f0-9]{64})',copies.stdout)]
-            report['nativeSavedCopyHashMatched']=any(row['bytes']==1000000 and row['sha256']=='a1107345e9538212373dafae0074a987f92f716656340be824e8944dcea0c9d6' for row in report['nativeSavedCopyChecks'])
-    except subprocess.TimeoutExpired:report['nativeSavedCopyDiagnosticTimedOut']=True
+    if focus=='final_readonly' and any(c['name']=='test09bSaveNativeAttachmentCopy' and c['passed'] for c in report.get('nativeCaseResultsFromJournal',[])):
+        # Read only the known synthetic filename in this fresh simulator's Files
+        # provider. Nothing is seeded, shared, deleted or read from the app's
+        # private temporary store to manufacture a successful copy.
+        shared=Path.home()/'Library/Developer/CoreSimulator/Devices'/chosen['udid']/'data/Containers/Shared/AppGroup'
+        checks=[]
+        if shared.is_dir():
+            for item in shared.rglob('incident-d41ce29b-7cfd-439f-bf38-77032b23d605*'):
+                actual=item.resolve()
+                if not item.is_file() or item.is_symlink() or not actual.is_relative_to(shared.resolve()) or 'FileProviderStorage' not in actual.parts:continue
+                if item.stat().st_size!=1000000:continue
+                import hashlib
+                digest=hashlib.sha256(item.read_bytes()).hexdigest()
+                checks.append({'externalToPrivateTemporaryStore':True,'bytes':1000000,'sha256':digest})
+                if len(checks)>=12:break
+        report['nativeExternalSavedCopyChecks']=checks
+        if any(c['sha256']=='a1107345e9538212373dafae0074a987f92f716656340be824e8944dcea0c9d6' for c in checks):
+            report['nativeSavedCopyHashMatched']=True
+            report['nativeSavedCopyVerificationMethod']='Real UI save plus exact bytes read from the owned simulator Files provider, outside the private temporary store.'
+    if not report.get('nativeSavedCopyHashMatched',False):
+        try:
+            copies=subprocess.run(['xcrun','simctl','spawn',chosen['udid'],'log','show','--last','90m','--style','compact','--predicate','process == "App" AND eventMessage BEGINSWITH "FP_EXPORT_SAVED"'],capture_output=True,text=True,timeout=90)
+            if copies.returncode==0:
+                report['nativeSavedCopyChecks']=[{'externalToPrivateTemporaryStore':True,'bytes':int(size),'sha256':digest} for size,digest in re.findall(r'FP_EXPORT_SAVED verified=true external=true bytes=(\d+) sha256=([a-f0-9]{64})',copies.stdout)]
+                report['nativeSavedCopyHashMatched']=any(row['bytes']==1000000 and row['sha256']=='a1107345e9538212373dafae0074a987f92f716656340be824e8944dcea0c9d6' for row in report['nativeSavedCopyChecks'])
+        except subprocess.TimeoutExpired:report['nativeSavedCopyDiagnosticTimedOut']=True
     if authenticated and (focus in ('full','incident_completion') or (focus in ('upload','attachment') and uploadSource=='files')) and not report.get('nativeSavedCopyHashMatched',False):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if authenticated and focus in ('full','isolation','upload') and not report.get('nativeMerchantSwitchIsolationObserved',False):
@@ -389,6 +433,8 @@ finally:
     if focus=='full' and authenticated and not (report.get('nativeKycReadOnlyObserved') and report.get('nativeKycReadServerReconciliationPassed')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='upload' and uploadSource=='files' and not report.get('nativeExportCancellationObserved'):
+        report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
+    if focus=='final_readonly' and not (report.get('nativeSavedCopyHashMatched') and report.get('nativeExportCancellationObserved') and report.get('nativeExportTemporaryCleanupPassed') and report.get('nativeExistingPersonalDossierReadOnlyObserved') and report.get('nativeCommercialOnboardingReadOnlyObserved') and report.get('approvedPersonalReadServerReconciliationPassed') and report.get('nativeReceivedAttachmentReadObserved') and report.get('receivedAttachmentReadServerReconciliationPassed')):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
     if focus=='onboarding_request' and not report.get('nativePublicRegistrationAcknowledged'):
         report.update(allExecutedPassed=False,authenticatedCasesPassed=False);rc=1
